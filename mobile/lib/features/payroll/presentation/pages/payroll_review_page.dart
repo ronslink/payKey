@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/models/payroll_model.dart';
 import '../providers/payroll_provider.dart';
+import '../../../../core/network/api_service.dart';
 
 class PayrollReviewPage extends ConsumerStatefulWidget {
   final String payPeriodId;
@@ -127,32 +128,103 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
             ? SafeArea(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      try {
-                        await ref.read(payrollProvider.notifier).finalizePayroll(widget.payPeriodId);
-                        if (context.mounted) {
-                          // Navigate to payment or success page
-                          // For now, just show success and go back or to history
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Payroll Finalized Successfully')),
-                          );
-                          context.go('/payroll'); // Or wherever appropriate
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error finalizing payroll: $e')),
-                          );
-                        }
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.all(16),
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text('Confirm & Pay'),
+                  child: Row(
+                    children: [
+                      // Export to CSV button
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            try {
+                              final apiService = ApiService();
+                              final response = await apiService.exportPayrollToCSV(widget.payPeriodId);
+                              
+                              if (context.mounted) {
+                                final csvData = response.data['data'] as String;
+                                final filename = response.data['filename'] as String;
+                                
+                                // Show success message
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('CSV exported: $filename'),
+                                    backgroundColor: Colors.blue,
+                                    action: SnackBarAction(
+                                      label: 'View',
+                                      textColor: Colors.white,
+                                      onPressed: () {
+                                        // TODO: Show CSV data in a dialog or save to file
+                                        showDialog(
+                                          context: context,
+                                          builder: (context) => AlertDialog(
+                                            title: const Text('CSV Export'),
+                                            content: SingleChildScrollView(
+                                              child: Text(csvData),
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(context),
+                                                child: const Text('Close'),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Export failed: $e')),
+                                );
+                              }
+                            }
+                          },
+                          icon: const Icon(Icons.download),
+                          label: const Text('Export CSV'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.all(16),
+                            side: const BorderSide(color: Colors.blue),
+                            foregroundColor: Colors.blue,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // Confirm & Pay button
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            try {
+                              await ref.read(payrollProvider.notifier).finalizePayroll(widget.payPeriodId);
+                              if (context.mounted) {
+                                // Navigate to payment or success page
+                                // For now, just show success and go back or to history
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Payroll Finalized & Payments Initiated Successfully'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                                context.go('/payroll'); // Or wherever appropriate
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Error finalizing payroll: $e')),
+                                );
+                              }
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.all(16),
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Confirm & Pay'),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               )
@@ -299,6 +371,30 @@ class _WorkerPayrollCardState extends State<_WorkerPayrollCard> {
                       _isEditMode = true;
                       _isExpanded = true;
                     }),
+                  ),
+                if (calc.id != null && calc.status == 'finalized')
+                  IconButton(
+                    icon: const Icon(Icons.picture_as_pdf),
+                    tooltip: 'View Payslip',
+                    onPressed: () async {
+                      try {
+                        await ref.read(payrollProvider.notifier).downloadPayslip(
+                          calc.id!,
+                          calc.workerName,
+                        );
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Opening payslip...')),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: $e')),
+                          );
+                        }
+                      }
+                    },
                   ),
                 IconButton(
                   icon: Icon(_isExpanded ? Icons.expand_less : Icons.expand_more),

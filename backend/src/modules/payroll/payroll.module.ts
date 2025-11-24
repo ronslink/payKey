@@ -15,6 +15,7 @@ import { PayPeriodsService } from './pay-periods.service';
 import { PaymentsModule } from '../payments/payments.module';
 import { TaxesModule } from '../taxes/taxes.module';
 import { TaxPaymentsModule } from '../tax-payments/tax-payments.module';
+import { PayslipService } from './payslip.service';
 
 @Module({
   imports: [
@@ -29,7 +30,7 @@ import { TaxPaymentsModule } from '../tax-payments/tax-payments.module';
     PayrollRecordsController,
     PayPeriodsController,
   ],
-  providers: [PayrollService, BatchPayrollService, PayPeriodsService],
+  providers: [PayrollService, BatchPayrollService, PayPeriodsService, PayslipService],
   exports: [PayrollService, BatchPayrollService, PayPeriodsService],
 })
-export class PayrollModule {}
+export class PayrollModule { }

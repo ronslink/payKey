@@ -8,6 +8,7 @@ import {
 } from './entities/tax-submission.entity';
 import { TaxBreakdown, PayrollCalculation } from './interfaces/tax.interface';
 import { UsersService } from '../users/users.service';
+import { PayrollRecord } from '../payroll/entities/payroll-record.entity';
 
 @Injectable()
 export class TaxesService {
@@ -16,6 +17,8 @@ export class TaxesService {
     private taxTableRepository: Repository<TaxTable>,
     @InjectRepository(TaxSubmission)
     private taxSubmissionRepository: Repository<TaxSubmission>,
+    @InjectRepository(PayrollRecord)
+    private payrollRecordRepository: Repository<PayrollRecord>,
     private usersService: UsersService,
   ) { }
 
@@ -224,6 +227,60 @@ export class TaxesService {
     return this.taxSubmissionRepository.find({
       where: { userId },
       order: { createdAt: 'DESC' },
+      relations: ['payPeriod'],
+    });
+  }
+
+  async generateTaxSubmission(payPeriodId: string, userId: string): Promise<TaxSubmission> {
+    // Get all finalized payroll records for this period
+    const payrollRecords = await this.payrollRecordRepository.find({
+      where: {
+        payPeriodId,
+        userId,
+        status: 'finalized' as any, // PayrollStatus.FINALIZED
+      },
+    });
+
+    if (payrollRecords.length === 0) {
+      throw new NotFoundException('No finalized payroll records found for this period');
+    }
+
+    // Aggregate tax amounts
+    const totalPaye = payrollRecords.reduce((sum, record) => sum + Number(record.taxAmount), 0);
+    const totalNssf = payrollRecords.reduce((sum, record) => sum + Number(record.taxBreakdown.nssf), 0);
+    const totalNhif = payrollRecords.reduce((sum, record) => sum + Number(record.taxBreakdown.nhif), 0);
+    const totalHousingLevy = payrollRecords.reduce((sum, record) => sum + Number(record.taxBreakdown.housingLevy), 0);
+
+    // Check if submission already exists
+    let submission = await this.taxSubmissionRepository.findOne({
+      where: { payPeriodId, userId },
+    });
+
+    if (submission) {
+      // Update existing submission
+      submission.totalPaye = totalPaye;
+      submission.totalNssf = totalNssf;
+      submission.totalNhif = totalNhif;
+      submission.totalHousingLevy = totalHousingLevy;
+    } else {
+      // Create new submission
+      submission = this.taxSubmissionRepository.create({
+        userId,
+        payPeriodId,
+        totalPaye,
+        totalNssf,
+        totalNhif,
+        totalHousingLevy,
+        status: TaxSubmissionStatus.PENDING,
+      });
+    }
+
+    return this.taxSubmissionRepository.save(submission);
+  }
+
+  async getTaxSubmissionByPeriod(payPeriodId: string, userId: string): Promise<TaxSubmission | null> {
+    return this.taxSubmissionRepository.findOne({
+      where: { payPeriodId, userId },
       relations: ['payPeriod'],
     });
   }

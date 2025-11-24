@@ -145,6 +145,22 @@ class PayrollRepository {
     }
   }
 
+  Future<List<int>> downloadPayslip(String payrollRecordId) async {
+    try {
+      final token = await _storage.read(key: 'access_token');
+      final response = await _dio.get<List<int>>(
+        '/payroll/payslip/$payrollRecordId',
+        options: Options(
+          headers: {'Authorization': 'Bearer $token'},
+          responseType: ResponseType.bytes,
+        ),
+      );
+      return response.data ?? [];
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   Exception _handleError(dynamic error) {
     if (error is DioException) {
       if (error.response != null) {

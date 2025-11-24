@@ -46,6 +46,16 @@ export class TaxesController {
     return this.taxesService.getSubmissions(req.user.userId);
   }
 
+  @Post('submissions/generate/:payPeriodId')
+  generateTaxSubmission(@Request() req: any, @Param('payPeriodId') payPeriodId: string) {
+    return this.taxesService.generateTaxSubmission(payPeriodId, req.user.userId);
+  }
+
+  @Get('submissions/period/:payPeriodId')
+  getTaxSubmissionByPeriod(@Request() req: any, @Param('payPeriodId') payPeriodId: string) {
+    return this.taxesService.getTaxSubmissionByPeriod(payPeriodId, req.user.userId);
+  }
+
   @Patch('submissions/:id/file')
   markAsFiled(@Request() req: any, @Param('id') id: string) {
     return this.taxesService.markAsFiled(id, req.user.userId);

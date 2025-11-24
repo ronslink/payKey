@@ -14,6 +14,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { CountriesModule } from './modules/countries/countries.module';
 import { PayrollModule } from './modules/payroll/payroll.module';
 import { TaxPaymentsModule } from './modules/tax-payments/tax-payments.module';
+import { AccountingModule } from './modules/accounting/accounting.module';
 
 // Explicit Entity Imports
 // Explicit Entity Imports
@@ -31,6 +32,8 @@ import { Property } from './modules/properties/entities/property.entity';
 import { Country } from './modules/countries/entities/country.entity';
 import { LeaveRequest } from './modules/workers/entities/leave-request.entity';
 import { Termination } from './modules/workers/entities/termination.entity';
+import { AccountMapping } from './modules/accounting/entities/account-mapping.entity';
+import { AccountingExport } from './modules/accounting/entities/accounting-export.entity';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -58,6 +61,8 @@ import { Termination } from './modules/workers/entities/termination.entity';
           Country,
           LeaveRequest,
           Termination,
+          AccountMapping,
+          AccountingExport,
         ],
         synchronize: false,
         logging: ['query', 'error'],
@@ -75,9 +80,10 @@ import { Termination } from './modules/workers/entities/termination.entity';
     CountriesModule,
     PayrollModule,
     TaxPaymentsModule,
+    AccountingModule,
   ],
   controllers: [AppController],
   providers: [AppService],
   exports: [],
 })
-export class AppModule {}
+export class AppModule { }

@@ -7,15 +7,26 @@ import {
   Body,
   UseGuards,
   Request,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { PayrollRecord } from './entities/payroll-record.entity';
 import type { AuthenticatedRequest } from '../../common/interfaces/user.interface';
 import { PayrollService } from './payroll.service';
+import { PayslipService } from './payslip.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('payroll')
 @UseGuards(JwtAuthGuard)
 export class PayrollController {
-  constructor(private readonly payrollService: PayrollService) { }
+  constructor(
+    private readonly payrollService: PayrollService,
+    private readonly payslipService: PayslipService,
+    @InjectRepository(PayrollRecord)
+    private payrollRepository: Repository<PayrollRecord>,
+  ) { }
 
   @Get('calculate')
   async calculatePayroll(@Request() req: AuthenticatedRequest) {
@@ -148,5 +159,31 @@ export class PayrollController {
       req.user.userId,
       payPeriodId,
     );
+  }
+
+  @Get('payslip/:payrollRecordId')
+  async downloadPayslip(
+    @Request() req: AuthenticatedRequest,
+    @Param('payrollRecordId') payrollRecordId: string,
+    @Res() res: Response,
+  ) {
+    const record = await this.payrollRepository.findOne({
+      where: { id: payrollRecordId, userId: req.user.userId },
+      relations: ['worker'],
+    });
+
+    if (!record) {
+      throw new Error('Payroll record not found');
+    }
+
+    const buffer = await this.payslipService.generatePayslip(record);
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename=payslip-${record.worker.name}-${record.payPeriodId}.pdf`,
+      'Content-Length': buffer.length,
+    });
+
+    res.end(buffer);
   }
 }

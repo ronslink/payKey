@@ -277,6 +277,17 @@ class ApiService {
     }
     return error.toString();
   }
+
+  Exception _handleError(dynamic error) {
+    if (error is DioException) {
+      if (error.response != null) {
+        return Exception(error.response?.data['message'] ?? 'An error occurred');
+      }
+      return Exception(error.message);
+    }
+    return Exception(error.toString());
+  }
+
   // Payroll Draft Management
   Future<Response> saveDraftPayroll(String payPeriodId, List<Map<String, dynamic>> items) async {
     return _dio.post('/payroll/draft', data: {
@@ -295,5 +306,43 @@ class ApiService {
 
   Future<Response> finalizePayroll(String payPeriodId) async {
     return _dio.post('/payroll/finalize/$payPeriodId');
+  }
+
+  Future<List<int>> downloadPayslip(String payrollRecordId) async {
+    try {
+      final response = await _dio.get<List<int>>(
+        '/payroll/payslip/$payrollRecordId',
+        options: Options(responseType: ResponseType.bytes),
+      );
+      return response.data ?? [];
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  // Tax Submission Management
+  Future<Response> generateTaxSubmission(String payPeriodId) async {
+    return _dio.post('/taxes/submissions/generate/$payPeriodId');
+  }
+
+  Future<Response> getTaxSubmissionByPeriod(String payPeriodId) async {
+    return _dio.get('/taxes/submissions/period/$payPeriodId');
+  }
+
+  // Accounting Export
+  Future<Response> exportPayrollToCSV(String payPeriodId) async {
+    return _dio.post('/accounting/export/$payPeriodId', data: {'format': 'CSV'});
+  }
+
+  Future<Response> getAccountingFormats() async {
+    return _dio.get('/accounting/formats');
+  }
+
+  Future<Response> getAccountMappings() async {
+    return _dio.get('/accounting/mappings');
+  }
+
+  Future<Response> saveAccountMappings(Map<String, dynamic> mappings) async {
+    return _dio.post('/accounting/mappings', data: mappings);
   }
 }

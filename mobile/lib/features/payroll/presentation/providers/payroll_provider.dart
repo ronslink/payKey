@@ -1,4 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
 import '../../data/models/payroll_model.dart';
 import '../../data/repositories/payroll_repository.dart';
 import '../../../payments/data/models/payment_model.dart';
@@ -123,6 +126,24 @@ class PayrollNotifier extends StateNotifier<AsyncValue<List<PayrollCalculation>>
     try {
       await _repository.finalizePayroll(payPeriodId);
       // Optionally refresh state or navigate away
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> downloadPayslip(String payrollRecordId, String workerName) async {
+    try {
+      final bytes = await _repository.downloadPayslip(payrollRecordId);
+      
+      // Get temporary directory
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/payslip_$workerName.pdf');
+      
+      // Write bytes to file
+      await file.writeAsBytes(bytes);
+      
+      // Open the file
+      await OpenFilex.open(file.path);
     } catch (e) {
       rethrow;
     }

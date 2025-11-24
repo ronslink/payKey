@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Worker } from '../workers/entities/worker.entity';
 import { TaxesService } from '../taxes/taxes.service';
 import { PayrollRecord, PayrollStatus } from './entities/payroll-record.entity';
+import { PayrollPaymentService } from '../payments/payroll-payment.service';
 
 @Injectable()
 export class PayrollService {
@@ -13,6 +14,7 @@ export class PayrollService {
     @InjectRepository(PayrollRecord)
     private payrollRepository: Repository<PayrollRecord>,
     private taxesService: TaxesService,
+    private payrollPaymentService: PayrollPaymentService,
   ) { }
 
   async calculatePayrollForUser(userId: string) {
@@ -85,6 +87,7 @@ export class PayrollService {
       },
     };
   }
+
   async saveDraftPayroll(
     userId: string,
     payPeriodId: string,
@@ -113,7 +116,7 @@ export class PayrollService {
         let record = await this.payrollRepository.findOne({
           where: {
             userId,
-            payPeriodId, // Assuming we add payPeriodId to entity, wait, I need to check if I added it.
+            payPeriodId,
             workerId: item.workerId,
             status: PayrollStatus.DRAFT,
           },
@@ -133,9 +136,6 @@ export class PayrollService {
         record.bonuses = item.bonuses || 0;
         record.otherEarnings = item.otherEarnings || 0;
         record.otherDeductions = item.otherDeductions || 0;
-        record.taxAmount = taxBreakdown.paye; // Storing PAYE as taxAmount? Or total tax?
-        // Let's store PAYE as taxAmount for now, or total deductions?
-        // Entity has taxAmount. Let's use PAYE.
         record.taxAmount = taxBreakdown.paye;
 
         record.netSalary = netPay;
@@ -225,6 +225,7 @@ export class PayrollService {
         payPeriodId,
         status: PayrollStatus.DRAFT,
       },
+      relations: ['worker'],
     });
 
     if (records.length === 0) {
@@ -233,6 +234,7 @@ export class PayrollService {
 
     const finalizedDate = new Date();
 
+    // 1. Mark as finalized
     const updatedRecords = await Promise.all(
       records.map(async (record) => {
         record.status = PayrollStatus.FINALIZED;
@@ -241,6 +243,20 @@ export class PayrollService {
       }),
     );
 
-    return updatedRecords;
+    // 2. Process Payouts
+    const payoutResults = await this.payrollPaymentService.processPayouts(updatedRecords);
+
+    // 3. Generate Tax Submission
+    try {
+      await this.taxesService.generateTaxSubmission(payPeriodId, userId);
+    } catch (error) {
+      // Log error but don't fail the finalization
+      console.error('Failed to generate tax submission:', error);
+    }
+
+    return {
+      finalizedRecords: updatedRecords,
+      payoutResults,
+    };
   }
 }
