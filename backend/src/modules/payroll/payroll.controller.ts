@@ -1,0 +1,152 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Param,
+  Body,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
+import type { AuthenticatedRequest } from '../../common/interfaces/user.interface';
+import { PayrollService } from './payroll.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+
+@Controller('payroll')
+@UseGuards(JwtAuthGuard)
+export class PayrollController {
+  constructor(private readonly payrollService: PayrollService) { }
+
+  @Get('calculate')
+  async calculatePayroll(@Request() req: AuthenticatedRequest) {
+    return this.payrollService.calculatePayrollForUser(req.user.userId);
+  }
+
+  @Post('calculate')
+  async calculatePayrollForWorkers(
+    @Request() req: AuthenticatedRequest,
+    @Body() body: { workerIds: string[]; startDate?: string; endDate?: string },
+  ) {
+    // For now, we ignore dates as calculation is based on fixed salary
+    // In the future, we can use dates to prorate salary
+    const fullPayroll = await this.payrollService.calculatePayrollForUser(
+      req.user.userId,
+    );
+
+    if (body.workerIds && body.workerIds.length > 0) {
+      const filteredItems = fullPayroll.payrollItems.filter((item) =>
+        body.workerIds.includes(item.workerId),
+      );
+
+      // Recalculate summary
+      const totalGross = filteredItems.reduce((sum, item) => sum + item.grossSalary, 0);
+      const totalDeductions = filteredItems.reduce((sum, item) => sum + item.taxBreakdown.totalDeductions, 0);
+      const totalNetPay = filteredItems.reduce((sum, item) => sum + item.netPay, 0);
+
+      return {
+        payrollItems: filteredItems,
+        summary: {
+          totalGross: Math.round(totalGross * 100) / 100,
+          totalDeductions: Math.round(totalDeductions * 100) / 100,
+          totalNetPay: Math.round(totalNetPay * 100) / 100,
+          workerCount: filteredItems.length,
+        },
+      };
+    }
+
+    return fullPayroll;
+  }
+
+  @Get('calculate/:workerId')
+  async calculateSingleWorkerPayroll(
+    @Request() req: AuthenticatedRequest,
+    @Param('workerId') workerId: string,
+  ) {
+    return this.payrollService.calculateSingleWorkerPayroll(
+      workerId,
+      req.user.userId,
+    );
+  }
+
+  @Post('process')
+  async processPayroll(
+    @Request() req: AuthenticatedRequest,
+    @Body() body: { workerIds: string[] },
+  ) {
+    // TODO: Implement actual payroll processing with payments
+    // For now, just return calculation
+    const payrollCalculation =
+      await this.payrollService.calculatePayrollForUser(req.user.userId);
+
+    // Filter for selected workers
+    const selectedPayrollItems = payrollCalculation.payrollItems.filter(
+      (item) => body.workerIds.includes(item.workerId),
+    );
+
+    return {
+      ...payrollCalculation,
+      payrollItems: selectedPayrollItems,
+      message: 'Payroll processing initiated',
+    };
+  }
+  @Post('draft')
+  async saveDraftPayroll(
+    @Request() req: AuthenticatedRequest,
+    @Body() body: {
+      payPeriodId: string;
+      payrollItems: Array<{
+        workerId: string;
+        grossSalary: number;
+        bonuses?: number;
+        otherEarnings?: number;
+        otherDeductions?: number;
+      }>;
+    },
+  ) {
+    return this.payrollService.saveDraftPayroll(
+      req.user.userId,
+      body.payPeriodId,
+      body.payrollItems,
+    );
+  }
+
+  @Patch('draft/:payrollRecordId')
+  async updateDraftPayrollItem(
+    @Request() req: AuthenticatedRequest,
+    @Param('payrollRecordId') payrollRecordId: string,
+    @Body() body: {
+      grossSalary?: number;
+      bonuses?: number;
+      otherEarnings?: number;
+      otherDeductions?: number;
+    },
+  ) {
+    return this.payrollService.updateDraftPayrollItem(
+      req.user.userId,
+      payrollRecordId,
+      body,
+    );
+  }
+
+  @Get('draft/:payPeriodId')
+  async getDraftPayroll(
+    @Request() req: AuthenticatedRequest,
+    @Param('payPeriodId') payPeriodId: string,
+  ) {
+    return this.payrollService.getDraftPayroll(
+      req.user.userId,
+      payPeriodId,
+    );
+  }
+
+  @Post('finalize/:payPeriodId')
+  async finalizePayroll(
+    @Request() req: AuthenticatedRequest,
+    @Param('payPeriodId') payPeriodId: string,
+  ) {
+    return this.payrollService.finalizePayroll(
+      req.user.userId,
+      payPeriodId,
+    );
+  }
+}

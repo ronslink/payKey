@@ -1,0 +1,70 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
+import { PropertiesService } from '../services/properties.service';
+import {
+  CreatePropertyDto,
+  UpdatePropertyDto,
+  PropertySummaryDto,
+} from '../dto/property.dto';
+import { Property } from '../entities/property.entity';
+import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+
+@Controller('properties')
+@UseGuards(JwtAuthGuard)
+export class PropertiesController {
+  constructor(private readonly propertiesService: PropertiesService) {}
+
+  @Post()
+  async createProperty(
+    @Request() req: any,
+    @Body() dto: CreatePropertyDto,
+  ): Promise<Property> {
+    return this.propertiesService.createProperty(req.user.userId, dto);
+  }
+
+  @Get()
+  async getProperties(@Request() req: any): Promise<Property[]> {
+    return this.propertiesService.getProperties(req.user.userId);
+  }
+
+  @Get('summaries')
+  async getPropertySummaries(
+    @Request() req: any,
+  ): Promise<PropertySummaryDto[]> {
+    return this.propertiesService.getPropertySummaries(req.user.userId);
+  }
+
+  @Get(':id')
+  async getProperty(
+    @Request() req: any,
+    @Param('id') id: string,
+  ): Promise<Property> {
+    return this.propertiesService.getProperty(id, req.user.userId);
+  }
+
+  @Patch(':id')
+  async updateProperty(
+    @Request() req: any,
+    @Param('id') id: string,
+    @Body() dto: UpdatePropertyDto,
+  ): Promise<Property> {
+    return this.propertiesService.updateProperty(id, req.user.userId, dto);
+  }
+
+  @Delete(':id')
+  async deleteProperty(
+    @Request() req: any,
+    @Param('id') id: string,
+  ): Promise<void> {
+    return this.propertiesService.deleteProperty(id, req.user.userId);
+  }
+}

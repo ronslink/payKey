@@ -1,0 +1,1 @@
+INSERT INTO users (id, email, "passwordHash", "firstName", "lastName") VALUES ('b0f45d1f-10a2-4bc8-ada3-48289edd9820', 'testuser@paykey.com', 'SecurePass123!', 'Test', 'User');

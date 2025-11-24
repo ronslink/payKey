@@ -1,0 +1,1 @@
+SELECT email, "firstName", "lastName", tier, "createdAt" FROM users;
