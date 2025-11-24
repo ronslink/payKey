@@ -7,10 +7,30 @@ import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { WorkersModule } from './modules/workers/workers.module';
 import { SubscriptionsModule } from './modules/subscriptions/subscriptions.module';
+import { TransactionsModule } from './modules/transactions/transactions.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { TaxesModule } from './modules/taxes/taxes.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { CountriesModule } from './modules/countries/countries.module';
+import { PayrollModule } from './modules/payroll/payroll.module';
+import { TaxPaymentsModule } from './modules/tax-payments/tax-payments.module';
 
+// Explicit Entity Imports
+// Explicit Entity Imports
+import { User } from './modules/users/entities/user.entity';
+import { Worker } from './modules/workers/entities/worker.entity';
+import { PayPeriod } from './modules/payroll/entities/pay-period.entity';
+import { PayrollRecord } from './modules/payroll/entities/payroll-record.entity';
+import { Transaction } from './modules/payments/entities/transaction.entity';
+import { TaxTable } from './modules/taxes/entities/tax-table.entity';
+import { TaxSubmission } from './modules/taxes/entities/tax-submission.entity';
+import { TaxPayment } from './modules/tax-payments/entities/tax-payment.entity';
+import { TaxConfig } from './modules/tax-config/entities/tax-config.entity';
+import { Subscription } from './modules/subscriptions/entities/subscription.entity';
+import { Property } from './modules/properties/entities/property.entity';
+import { Country } from './modules/countries/entities/country.entity';
+import { LeaveRequest } from './modules/workers/entities/leave-request.entity';
+import { Termination } from './modules/workers/entities/termination.entity';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -18,13 +38,29 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
-        host: configService.get<string>('DB_HOST'),
-        port: configService.get<number>('DB_PORT'),
-        username: configService.get<string>('DB_USERNAME'),
-        password: configService.get<string>('DB_PASSWORD'),
-        database: configService.get<string>('DB_NAME'),
-        entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: true, // Set to false in production
+        host: configService.get('DB_HOST', 'localhost'),
+        port: parseInt(configService.get('DB_PORT', '5432')),
+        username: configService.get('DB_USERNAME', 'postgres'),
+        password: configService.get('DB_PASSWORD', 'admin'),
+        database: configService.get('DB_NAME', 'paykey'),
+        entities: [
+          User,
+          Worker,
+          PayPeriod,
+          PayrollRecord,
+          Transaction,
+          TaxTable,
+          TaxSubmission,
+          TaxPayment,
+          TaxConfig,
+          Subscription,
+          Property,
+          Country,
+          LeaveRequest,
+          Termination,
+        ],
+        synchronize: false,
+        logging: ['query', 'error'],
       }),
       inject: [ConfigService],
     }),
@@ -32,11 +68,16 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     UsersModule,
     WorkersModule,
     SubscriptionsModule,
+    TransactionsModule,
     PaymentsModule,
     TaxesModule,
     NotificationsModule,
+    CountriesModule,
+    PayrollModule,
+    TaxPaymentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
+  exports: [],
 })
 export class AppModule {}
