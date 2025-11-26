@@ -31,7 +31,7 @@ services:
       - paykey-network
 
   backend:
-    image: node:18-alpine
+    image: node:20-alpine
     container_name: paykey_backend
     restart: always
     ports:

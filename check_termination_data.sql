@@ -1,0 +1,1 @@
+SELECT id, "terminationId" FROM workers WHERE "terminationId" IS NOT NULL AND "terminationId" != '' LIMIT 10;
