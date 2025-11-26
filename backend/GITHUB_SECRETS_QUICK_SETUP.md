@@ -53,8 +53,8 @@ For container registry access:
 Name: DOCKER_USERNAME
 Value: rondockerlink
 
-Name: DOCKER_PASSWORD  
-Value: dckr_pat_IfDD9pLSxQBOX6hC_f0Alzhz18g
+Name: DOCKER_PASSWORD
+Value: your_docker_personal_access_token_here
 ```
 
 ---
