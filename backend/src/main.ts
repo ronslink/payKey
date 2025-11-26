@@ -1,9 +1,15 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import * as crypto from 'crypto';
+
+// Fix for Node.js 18 compatibility with TypeORM
+if (!globalThis.crypto) {
+  globalThis.crypto = crypto as any;
+}
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  
+
   // Enable CORS for all localhost development ports
   app.enableCors({
     origin: true, // Allow all origins in development (including all localhost ports)
@@ -27,7 +33,7 @@ async function bootstrap() {
     ],
     exposedHeaders: ['Content-Type', 'Authorization'],
   });
-  
+
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();

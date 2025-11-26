@@ -50,7 +50,9 @@ async function seedDemoData() {
         await dataSource.getRepository(payroll_record_entity_1.PayrollRecord).delete({});
         await dataSource.getRepository(pay_period_entity_1.PayPeriod).delete({});
         await dataSource.getRepository(worker_entity_1.Worker).delete({});
-        await dataSource.getRepository(user_entity_1.User).delete({ email: 'testuser@paykey.com' });
+        await dataSource
+            .getRepository(user_entity_1.User)
+            .delete({ email: 'testuser@paykey.com' });
         console.log('Creating demo user...');
         const userRepository = dataSource.getRepository(user_entity_1.User);
         const workerRepository = dataSource.getRepository(worker_entity_1.Worker);
@@ -177,7 +179,7 @@ async function seedDemoData() {
         threeMonthsAgo.setMonth(currentDate.getMonth() - 3);
         const payPeriods = [];
         const periodStart = new Date(threeMonthsAgo);
-        let currentPeriodStart = new Date(periodStart);
+        const currentPeriodStart = new Date(periodStart);
         while (currentPeriodStart <= currentDate) {
             const periodEnd = new Date(currentPeriodStart);
             periodEnd.setDate(periodEnd.getDate() + 13);
@@ -260,7 +262,9 @@ async function seedDemoData() {
                         netSalary,
                     },
                     deductions: {
-                        loanDeduction: Math.random() < 0.1 ? Math.round(grossSalary * 0.1 * 100) / 100 : 0,
+                        loanDeduction: Math.random() < 0.1
+                            ? Math.round(grossSalary * 0.1 * 100) / 100
+                            : 0,
                         insurance: Math.round(grossSalary * 0.02 * 100) / 100,
                     },
                 });
@@ -270,7 +274,8 @@ async function seedDemoData() {
         console.log(`Created ${savedPayrollRecords.length} payroll records`);
         console.log('Updating pay period totals...');
         for (const payPeriod of savedPayPeriods) {
-            const periodRecords = savedPayrollRecords.filter((r) => r.periodStart.getTime() === payPeriod.startDate.getTime() && r.periodEnd.getTime() === payPeriod.endDate.getTime());
+            const periodRecords = savedPayrollRecords.filter((r) => r.periodStart.getTime() === payPeriod.startDate.getTime() &&
+                r.periodEnd.getTime() === payPeriod.endDate.getTime());
             const totals = periodRecords.reduce((acc, record) => ({
                 grossAmount: acc.grossAmount + Number(record.grossSalary),
                 netAmount: acc.netAmount + Number(record.netSalary),
@@ -306,7 +311,7 @@ function calculateTax(grossSalary) {
         grossSalary = 83333;
     }
     if (grossSalary > 500000 / 12) {
-        tax += (grossSalary - 41667) * 0.20;
+        tax += (grossSalary - 41667) * 0.2;
         grossSalary = 41667;
     }
     if (grossSalary > 240000 / 12) {
@@ -314,7 +319,7 @@ function calculateTax(grossSalary) {
         grossSalary = 20000;
     }
     if (grossSalary > 120000 / 12) {
-        tax += (grossSalary - 10000) * 0.10;
+        tax += (grossSalary - 10000) * 0.1;
     }
     tax = Math.max(0, tax - 2400 / 12);
     return Math.round(tax * 100) / 100;

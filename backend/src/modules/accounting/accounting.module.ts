@@ -7,11 +7,11 @@ import { AccountingExport } from './entities/accounting-export.entity';
 import { PayrollRecord } from '../payroll/entities/payroll-record.entity';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([AccountMapping, AccountingExport, PayrollRecord]),
-    ],
-    controllers: [AccountingController],
-    providers: [AccountingExportService],
-    exports: [AccountingExportService],
+  imports: [
+    TypeOrmModule.forFeature([AccountMapping, AccountingExport, PayrollRecord]),
+  ],
+  controllers: [AccountingController],
+  providers: [AccountingExportService],
+  exports: [AccountingExportService],
 })
-export class AccountingModule { }
+export class AccountingModule {}

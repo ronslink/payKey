@@ -6,7 +6,11 @@ import {
   IsOptional,
   IsEnum,
 } from 'class-validator';
-import { EmploymentType, PaymentFrequency, PaymentMethod } from '../entities/worker.entity';
+import {
+  EmploymentType,
+  PaymentFrequency,
+  PaymentMethod,
+} from '../entities/worker.entity';
 
 export class CreateWorkerDto {
   @IsString()

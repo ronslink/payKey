@@ -183,6 +183,9 @@ export class WorkersController {
     @Request() req: AuthenticatedRequest,
     @Param('id') workerId: string,
   ) {
-    return this.leaveManagementService.getLeaveBalance(workerId, req.user.userId);
+    return this.leaveManagementService.getLeaveBalance(
+      workerId,
+      req.user.userId,
+    );
   }
 }

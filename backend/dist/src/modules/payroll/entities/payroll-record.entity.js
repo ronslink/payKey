@@ -100,7 +100,7 @@ __decorate([
     (0, typeorm_1.Column)({
         type: 'simple-enum',
         enum: PayrollStatus,
-        default: PayrollStatus.DRAFT
+        default: PayrollStatus.DRAFT,
     }),
     __metadata("design:type", String)
 ], PayrollRecord.prototype, "status", void 0);

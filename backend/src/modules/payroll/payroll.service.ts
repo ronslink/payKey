@@ -15,7 +15,7 @@ export class PayrollService {
     private payrollRepository: Repository<PayrollRecord>,
     private taxesService: TaxesService,
     private payrollPaymentService: PayrollPaymentService,
-  ) { }
+  ) {}
 
   async calculatePayrollForUser(userId: string) {
     const workers = await this.workersRepository.find({
@@ -101,15 +101,18 @@ export class PayrollService {
   ) {
     // Get pay period dates (mocking for now, ideally fetch from PayPeriod entity)
     const periodStart = new Date(); // Should be fetched
-    const periodEnd = new Date();   // Should be fetched
+    const periodEnd = new Date(); // Should be fetched
 
     const savedRecords = await Promise.all(
       items.map(async (item) => {
         // Calculate taxes
-        const totalEarnings = item.grossSalary + (item.bonuses || 0) + (item.otherEarnings || 0);
-        const taxBreakdown = await this.taxesService.calculateTaxes(totalEarnings);
+        const totalEarnings =
+          item.grossSalary + (item.bonuses || 0) + (item.otherEarnings || 0);
+        const taxBreakdown =
+          await this.taxesService.calculateTaxes(totalEarnings);
 
-        const totalDeductions = taxBreakdown.totalDeductions + (item.otherDeductions || 0);
+        const totalDeductions =
+          taxBreakdown.totalDeductions + (item.otherDeductions || 0);
         const netPay = totalEarnings - totalDeductions;
 
         // Check if draft exists
@@ -170,16 +173,23 @@ export class PayrollService {
       throw new Error('Draft payroll record not found');
     }
 
-    if (updates.grossSalary !== undefined) record.grossSalary = updates.grossSalary;
+    if (updates.grossSalary !== undefined)
+      record.grossSalary = updates.grossSalary;
     if (updates.bonuses !== undefined) record.bonuses = updates.bonuses;
-    if (updates.otherEarnings !== undefined) record.otherEarnings = updates.otherEarnings;
-    if (updates.otherDeductions !== undefined) record.otherDeductions = updates.otherDeductions;
+    if (updates.otherEarnings !== undefined)
+      record.otherEarnings = updates.otherEarnings;
+    if (updates.otherDeductions !== undefined)
+      record.otherDeductions = updates.otherDeductions;
 
     // Recalculate
-    const totalEarnings = Number(record.grossSalary) + Number(record.bonuses) + Number(record.otherEarnings);
+    const totalEarnings =
+      Number(record.grossSalary) +
+      Number(record.bonuses) +
+      Number(record.otherEarnings);
     const taxBreakdown = await this.taxesService.calculateTaxes(totalEarnings);
 
-    const totalDeductions = taxBreakdown.totalDeductions + Number(record.otherDeductions);
+    const totalDeductions =
+      taxBreakdown.totalDeductions + Number(record.otherDeductions);
     const netPay = totalEarnings - totalDeductions;
 
     record.taxAmount = taxBreakdown.paye;
@@ -204,7 +214,7 @@ export class PayrollService {
     });
 
     // Transform to match the expected format (PayrollCalculation)
-    return records.map(record => ({
+    return records.map((record) => ({
       id: record.id,
       workerId: record.workerId,
       workerName: record.worker.name,
@@ -244,7 +254,8 @@ export class PayrollService {
     );
 
     // 2. Process Payouts
-    const payoutResults = await this.payrollPaymentService.processPayouts(updatedRecords);
+    const payoutResults =
+      await this.payrollPaymentService.processPayouts(updatedRecords);
 
     // 3. Generate Tax Submission
     try {

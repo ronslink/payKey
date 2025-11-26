@@ -137,7 +137,8 @@ let TaxesService = class TaxesService {
     async calculateHousingLevy(grossSalary, date) {
         const housingConfig = await this.taxConfigService.getActiveTaxConfig(tax_config_entity_1.TaxType.HOUSING_LEVY, date);
         if (housingConfig && housingConfig.configuration.percentage !== undefined) {
-            return Math.round(grossSalary * housingConfig.configuration.percentage * 100) / 100;
+            return (Math.round(grossSalary * housingConfig.configuration.percentage * 100) /
+                100);
         }
         return Math.round(grossSalary * 0.015 * 100) / 100;
     }

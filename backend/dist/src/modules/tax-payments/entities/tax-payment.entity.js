@@ -76,7 +76,12 @@ __decorate([
     __metadata("design:type", Number)
 ], TaxPayment.prototype, "paymentMonth", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ type: 'decimal', precision: 12, scale: 2, transformer: decimalTransformer }),
+    (0, typeorm_1.Column)({
+        type: 'decimal',
+        precision: 12,
+        scale: 2,
+        transformer: decimalTransformer,
+    }),
     __metadata("design:type", Number)
 ], TaxPayment.prototype, "amount", void 0);
 __decorate([

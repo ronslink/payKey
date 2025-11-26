@@ -18,7 +18,7 @@ import { ConfigService } from '@nestjs/config';
 
 async function syncDatabase() {
   const configService = new ConfigService();
-  
+
   const dataSource = new DataSource({
     type: 'postgres',
     host: configService.get('DB_HOST', 'localhost'),

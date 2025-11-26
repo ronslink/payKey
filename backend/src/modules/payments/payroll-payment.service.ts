@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -10,7 +7,10 @@ import {
   TransactionStatus,
 } from './entities/transaction.entity';
 import { MpesaService } from './mpesa.service';
-import { PayrollRecord, PayrollStatus } from '../payroll/entities/payroll-record.entity';
+import {
+  PayrollRecord,
+  PayrollStatus,
+} from '../payroll/entities/payroll-record.entity';
 
 @Injectable()
 export class PayrollPaymentService {
@@ -22,7 +22,7 @@ export class PayrollPaymentService {
     private mpesaService: MpesaService,
     @InjectRepository(PayrollRecord)
     private payrollRecordRepository: Repository<PayrollRecord>,
-  ) { }
+  ) {}
 
   /**
    * Process payouts for a list of finalized payroll records
@@ -56,7 +56,8 @@ export class PayrollPaymentService {
           },
         });
 
-        const savedTransaction = await this.transactionRepository.save(transaction);
+        const savedTransaction =
+          await this.transactionRepository.save(transaction);
 
         // Initiate M-Pesa B2C
         // Note: In a real scenario, we might queue this or handle it asynchronously
@@ -96,7 +97,10 @@ export class PayrollPaymentService {
 
         successCount++;
       } catch (error) {
-        this.logger.error(`Failed to process payout for record ${record.id}`, error);
+        this.logger.error(
+          `Failed to process payout for record ${record.id}`,
+          error,
+        );
         results.push({
           workerId: record.workerId,
           workerName: record.worker?.name || 'Unknown',

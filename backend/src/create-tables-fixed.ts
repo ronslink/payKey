@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 
 async function createMissingTables() {
   const configService = new ConfigService();
-  
+
   const dataSource = new DataSource({
     type: 'postgres',
     host: configService.get('DB_HOST', 'localhost'),
@@ -22,43 +22,57 @@ async function createMissingTables() {
 
     // First, create ENUM types (check if they exist first)
     try {
-      await dataSource.query(`CREATE TYPE "public"."tax_configs_taxtype_enum" AS ENUM('PAYE', 'SHIF', 'NSSF_TIER1', 'NSSF_TIER2', 'HOUSING_LEVY');`);
+      await dataSource.query(
+        `CREATE TYPE "public"."tax_configs_taxtype_enum" AS ENUM('PAYE', 'SHIF', 'NSSF_TIER1', 'NSSF_TIER2', 'HOUSING_LEVY');`,
+      );
     } catch (e) {
       // Type already exists, ignore error
     }
-    
+
     try {
-      await dataSource.query(`CREATE TYPE "public"."tax_configs_ratetype_enum" AS ENUM('PERCENTAGE', 'GRADUATED', 'TIERED');`);
+      await dataSource.query(
+        `CREATE TYPE "public"."tax_configs_ratetype_enum" AS ENUM('PERCENTAGE', 'GRADUATED', 'TIERED');`,
+      );
     } catch (e) {
       // Type already exists, ignore error
     }
-    
+
     try {
-      await dataSource.query(`CREATE TYPE "public"."tax_payments_taxtype_enum" AS ENUM('PAYE', 'SHIF', 'NSSF_TIER1', 'NSSF_TIER2', 'HOUSING_LEVY');`);
+      await dataSource.query(
+        `CREATE TYPE "public"."tax_payments_taxtype_enum" AS ENUM('PAYE', 'SHIF', 'NSSF_TIER1', 'NSSF_TIER2', 'HOUSING_LEVY');`,
+      );
     } catch (e) {
       // Type already exists, ignore error
     }
-    
+
     try {
-      await dataSource.query(`CREATE TYPE "public"."tax_payments_paymentmethod_enum" AS ENUM('MPESA', 'BANK');`);
+      await dataSource.query(
+        `CREATE TYPE "public"."tax_payments_paymentmethod_enum" AS ENUM('MPESA', 'BANK');`,
+      );
     } catch (e) {
       // Type already exists, ignore error
     }
-    
+
     try {
-      await dataSource.query(`CREATE TYPE "public"."tax_payments_status_enum" AS ENUM('PENDING', 'PAID', 'OVERDUE');`);
+      await dataSource.query(
+        `CREATE TYPE "public"."tax_payments_status_enum" AS ENUM('PENDING', 'PAID', 'OVERDUE');`,
+      );
     } catch (e) {
       // Type already exists, ignore error
     }
-    
+
     try {
-      await dataSource.query(`CREATE TYPE "public"."subscriptions_tier_enum" AS ENUM('FREE', 'BASIC', 'GOLD', 'PLATINUM');`);
+      await dataSource.query(
+        `CREATE TYPE "public"."subscriptions_tier_enum" AS ENUM('FREE', 'BASIC', 'GOLD', 'PLATINUM');`,
+      );
     } catch (e) {
       // Type already exists, ignore error
     }
-    
+
     try {
-      await dataSource.query(`CREATE TYPE "public"."subscriptions_status_enum" AS ENUM('ACTIVE', 'CANCELLED', 'EXPIRED', 'PAST_DUE', 'TRIAL');`);
+      await dataSource.query(
+        `CREATE TYPE "public"."subscriptions_status_enum" AS ENUM('ACTIVE', 'CANCELLED', 'EXPIRED', 'PAST_DUE', 'TRIAL');`,
+      );
     } catch (e) {
       // Type already exists, ignore error
     }
@@ -138,7 +152,6 @@ async function createMissingTables() {
     }
 
     console.log('\n🎉 Database schema is now complete!');
-    
   } catch (error) {
     console.error('Error creating tables:', error);
   } finally {

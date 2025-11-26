@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 
 async function checkTables() {
   const configService = new ConfigService();
-  
+
   const dataSource = new DataSource({
     type: 'postgres',
     host: configService.get('DB_HOST', 'localhost'),
@@ -19,7 +19,7 @@ async function checkTables() {
   try {
     await dataSource.initialize();
     console.log('Connected to database successfully');
-    
+
     // Query to list all tables in the public schema
     const result = await dataSource.query(`
       SELECT table_name 
@@ -27,7 +27,7 @@ async function checkTables() {
       WHERE table_schema = 'public' 
       ORDER BY table_name;
     `);
-    
+
     console.log('\nTables in database:');
     result.forEach((row: any) => {
       console.log(`- ${row.table_name}`);

@@ -17,10 +17,7 @@ let PayslipService = class PayslipService {
             doc.on('data', (buffer) => buffers.push(buffer));
             doc.on('end', () => resolve(Buffer.concat(buffers)));
             doc.on('error', (err) => reject(err));
-            doc
-                .fontSize(20)
-                .text('PAYSLIP', { align: 'center' })
-                .moveDown();
+            doc.fontSize(20).text('PAYSLIP', { align: 'center' }).moveDown();
             doc
                 .fontSize(12)
                 .text('PayKey Payroll Services', { align: 'center' })
@@ -43,7 +40,9 @@ let PayslipService = class PayslipService {
             if (Number(record.otherEarnings) > 0) {
                 this.addCurrencyRow(doc, 'Other Earnings', Number(record.otherEarnings));
             }
-            const totalEarnings = Number(record.grossSalary) + Number(record.bonuses) + Number(record.otherEarnings);
+            const totalEarnings = Number(record.grossSalary) +
+                Number(record.bonuses) +
+                Number(record.otherEarnings);
             doc.moveDown(0.5);
             this.addCurrencyRow(doc, 'Total Earnings', totalEarnings, true);
             doc.moveDown();
@@ -59,14 +58,17 @@ let PayslipService = class PayslipService {
             if (Number(record.otherDeductions) > 0) {
                 this.addCurrencyRow(doc, 'Other Deductions', Number(record.otherDeductions));
             }
-            const totalDeductions = Number(record.taxBreakdown.totalDeductions) + Number(record.otherDeductions);
+            const totalDeductions = Number(record.taxBreakdown.totalDeductions) +
+                Number(record.otherDeductions);
             doc.moveDown(0.5);
             this.addCurrencyRow(doc, 'Total Deductions', totalDeductions, true);
             doc.moveDown();
             doc
                 .fontSize(16)
                 .font('Helvetica-Bold')
-                .text(`Net Pay: KES ${Number(record.netSalary).toFixed(2)}`, { align: 'right' });
+                .text(`Net Pay: KES ${Number(record.netSalary).toFixed(2)}`, {
+                align: 'right',
+            });
             doc
                 .moveDown(2)
                 .fontSize(8)

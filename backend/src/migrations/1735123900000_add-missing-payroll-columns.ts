@@ -1,6 +1,8 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddMissingPayrollColumns1735123900000 implements MigrationInterface {
+export class AddMissingPayrollColumns1735123900000
+  implements MigrationInterface
+{
   name = 'AddMissingPayrollColumns1735123900000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {

@@ -82,7 +82,12 @@ __decorate([
     __metadata("design:type", String)
 ], Worker.prototype, "employmentType", void 0);
 __decorate([
-    (0, typeorm_1.Column)('decimal', { precision: 10, scale: 2, nullable: true, transformer: decimalTransformer }),
+    (0, typeorm_1.Column)('decimal', {
+        precision: 10,
+        scale: 2,
+        nullable: true,
+        transformer: decimalTransformer,
+    }),
     __metadata("design:type", Number)
 ], Worker.prototype, "hourlyRate", void 0);
 __decorate([
@@ -110,7 +115,11 @@ __decorate([
     __metadata("design:type", String)
 ], Worker.prototype, "kraPin", void 0);
 __decorate([
-    (0, typeorm_1.Column)('decimal', { precision: 12, scale: 2, transformer: decimalTransformer }),
+    (0, typeorm_1.Column)('decimal', {
+        precision: 12,
+        scale: 2,
+        transformer: decimalTransformer,
+    }),
     __metadata("design:type", Number)
 ], Worker.prototype, "salaryGross", void 0);
 __decorate([
@@ -142,11 +151,21 @@ __decorate([
     __metadata("design:type", String)
 ], Worker.prototype, "jobTitle", void 0);
 __decorate([
-    (0, typeorm_1.Column)('decimal', { precision: 12, scale: 2, default: 0, transformer: decimalTransformer }),
+    (0, typeorm_1.Column)('decimal', {
+        precision: 12,
+        scale: 2,
+        default: 0,
+        transformer: decimalTransformer,
+    }),
     __metadata("design:type", Number)
 ], Worker.prototype, "housingAllowance", void 0);
 __decorate([
-    (0, typeorm_1.Column)('decimal', { precision: 12, scale: 2, default: 0, transformer: decimalTransformer }),
+    (0, typeorm_1.Column)('decimal', {
+        precision: 12,
+        scale: 2,
+        default: 0,
+        transformer: decimalTransformer,
+    }),
     __metadata("design:type", Number)
 ], Worker.prototype, "transportAllowance", void 0);
 __decorate([

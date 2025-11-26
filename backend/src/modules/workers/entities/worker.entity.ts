@@ -46,7 +46,12 @@ export class Worker {
   })
   employmentType: EmploymentType;
 
-  @Column('decimal', { precision: 10, scale: 2, nullable: true, transformer: decimalTransformer })
+  @Column('decimal', {
+    precision: 10,
+    scale: 2,
+    nullable: true,
+    transformer: decimalTransformer,
+  })
   hourlyRate: number;
 
   @ManyToOne(() => User, (user) => user.id)
@@ -67,7 +72,11 @@ export class Worker {
   @Column({ nullable: true })
   kraPin: string;
 
-  @Column('decimal', { precision: 12, scale: 2, transformer: decimalTransformer })
+  @Column('decimal', {
+    precision: 12,
+    scale: 2,
+    transformer: decimalTransformer,
+  })
   salaryGross: number;
 
   @Column({ type: 'date' })
@@ -91,10 +100,20 @@ export class Worker {
   @Column({ nullable: true })
   jobTitle: string;
 
-  @Column('decimal', { precision: 12, scale: 2, default: 0, transformer: decimalTransformer })
+  @Column('decimal', {
+    precision: 12,
+    scale: 2,
+    default: 0,
+    transformer: decimalTransformer,
+  })
   housingAllowance: number;
 
-  @Column('decimal', { precision: 12, scale: 2, default: 0, transformer: decimalTransformer })
+  @Column('decimal', {
+    precision: 12,
+    scale: 2,
+    default: 0,
+    transformer: decimalTransformer,
+  })
   transportAllowance: number;
 
   @Column({

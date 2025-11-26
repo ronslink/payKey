@@ -16,7 +16,10 @@ import { PayrollRecord } from './entities/payroll-record.entity';
 import { TaxPaymentsService } from '../tax-payments/services/tax-payments.service';
 import { TaxType } from '../tax-config/entities/tax-config.entity';
 import { InjectRepository as InjectTaxRepository } from '@nestjs/typeorm';
-import { TaxPayment, PaymentStatus } from '../tax-payments/entities/tax-payment.entity';
+import {
+  TaxPayment,
+  PaymentStatus,
+} from '../tax-payments/entities/tax-payment.entity';
 
 @Injectable()
 export class PayPeriodsService {
@@ -194,7 +197,9 @@ export class PayPeriodsService {
       payPeriod.status !== PayPeriodStatus.ACTIVE &&
       payPeriod.status !== PayPeriodStatus.DRAFT
     ) {
-      throw new BadRequestException('Only draft or active pay periods can be processed');
+      throw new BadRequestException(
+        'Only draft or active pay periods can be processed',
+      );
     }
 
     // Calculate totals from payroll records
@@ -232,7 +237,9 @@ export class PayPeriodsService {
 
     // Validate that the pay period is in PROCESSING state
     if (payPeriod.status !== PayPeriodStatus.PROCESSING) {
-      throw new BadRequestException('Only processing pay periods can be completed');
+      throw new BadRequestException(
+        'Only processing pay periods can be completed',
+      );
     }
 
     // Generate tax submission data automatically
@@ -273,17 +280,23 @@ export class PayPeriodsService {
     for (const userId of uniqueUserIds) {
       try {
         // Use existing TaxPaymentsService to generate monthly summary
-        const monthlySummary = await this.taxPaymentsService.generateMonthlySummary(
-          userId,
-          paymentYear,
-          paymentMonth,
-        );
+        const monthlySummary =
+          await this.taxPaymentsService.generateMonthlySummary(
+            userId,
+            paymentYear,
+            paymentMonth,
+          );
 
         // The generateMonthlySummary method will create the tax payment entries
         // as part of its implementation
-        console.log(`Tax submission data generated for user ${userId}: ${monthlySummary.totalDue} total due`);
+        console.log(
+          `Tax submission data generated for user ${userId}: ${monthlySummary.totalDue} total due`,
+        );
       } catch (error) {
-        console.error(`Failed to generate tax submission for user ${userId}:`, error);
+        console.error(
+          `Failed to generate tax submission for user ${userId}:`,
+          error,
+        );
         // Continue with other users even if one fails
       }
     }
@@ -297,14 +310,8 @@ export class PayPeriodsService {
     currentStatus: PayPeriodStatus,
     newStatus: PayPeriodStatus,
   ): void {
-    const validTransitions: Record<
-      PayPeriodStatus,
-      PayPeriodStatus[]
-    > = {
-      [PayPeriodStatus.DRAFT]: [
-        PayPeriodStatus.ACTIVE,
-        PayPeriodStatus.CLOSED,
-      ],
+    const validTransitions: Record<PayPeriodStatus, PayPeriodStatus[]> = {
+      [PayPeriodStatus.DRAFT]: [PayPeriodStatus.ACTIVE, PayPeriodStatus.CLOSED],
       [PayPeriodStatus.ACTIVE]: [
         PayPeriodStatus.PROCESSING,
         PayPeriodStatus.CLOSED,

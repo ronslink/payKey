@@ -36,11 +36,28 @@ let AuthController = class AuthController {
         }
     }
     async login(loginDto) {
-        const user = await this.authService.validateUser(loginDto.email, loginDto.password);
-        if (!user) {
-            throw new common_1.HttpException('Invalid credentials', common_1.HttpStatus.UNAUTHORIZED);
+        try {
+            console.log('Login attempt for:', loginDto.email);
+            const user = await this.authService.validateUser(loginDto.email, loginDto.password);
+            console.log('User validation result:', user ? 'Success' : 'Failed');
+            if (!user) {
+                console.log('Invalid credentials for:', loginDto.email);
+                throw new common_1.HttpException('Invalid credentials', common_1.HttpStatus.UNAUTHORIZED);
+            }
+            console.log('Generating token for user:', user.id);
+            const result = await this.authService.login(user);
+            console.log('Login successful for:', loginDto.email);
+            return result;
         }
-        return this.authService.login(user);
+        catch (error) {
+            console.error('Login error for', loginDto.email + ':', error);
+            if (error instanceof common_1.HttpException) {
+                console.error('HttpException:', error.message, 'Status:', error.getStatus());
+                throw error;
+            }
+            console.error('Unexpected error:', error);
+            throw new common_1.HttpException('Internal server error', common_1.HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 };
 exports.AuthController = AuthController;

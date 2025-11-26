@@ -1,8 +1,19 @@
-import { Controller, Get, Post, Body, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { Subscription, SubscriptionStatus } from './entities/subscription.entity';
+import {
+  Subscription,
+  SubscriptionStatus,
+  SubscriptionTier,
+} from './entities/subscription.entity';
 import { SubscriptionPayment } from './entities/subscription-payment.entity';
 import { SUBSCRIPTION_PLANS } from './subscription-plans.config';
 
@@ -14,7 +25,7 @@ export class SubscriptionsController {
     private subscriptionRepository: Repository<Subscription>,
     @InjectRepository(SubscriptionPayment)
     private subscriptionPaymentRepository: Repository<SubscriptionPayment>,
-  ) { }
+  ) {}
 
   @Get('plans')
   getPlans() {
@@ -38,8 +49,9 @@ export class SubscriptionsController {
 
   private convertFeaturesToMap(features: string[]): Record<string, boolean> {
     const featureMap: Record<string, boolean> = {};
-    features.forEach(feature => {
-      const key = feature.toLowerCase()
+    features.forEach((feature) => {
+      const key = feature
+        .toLowerCase()
         .replace(/\s+/g, '_')
         .replace(/[^a-z0-9_]/g, '')
         .replace(/_+/g, '_');
@@ -53,17 +65,20 @@ export class SubscriptionsController {
     const subscription = await this.subscriptionRepository.findOne({
       where: {
         userId: req.user.userId,
-        status: SubscriptionStatus.ACTIVE
+        status: SubscriptionStatus.ACTIVE,
       },
-      relations: ['user']
+      relations: ['user'],
     });
 
     // Return free tier if no active subscription found
     if (!subscription) {
       // Get full user data
-      const userData = await this.subscriptionRepository.manager.findOne('users', {
-        where: { id: req.user.userId }
-      });
+      const userData = await this.subscriptionRepository.manager.findOne(
+        'users',
+        {
+          where: { id: req.user.userId },
+        },
+      );
 
       return {
         id: null,
@@ -81,7 +96,9 @@ export class SubscriptionsController {
 
     return {
       ...subscription,
-      planName: SUBSCRIPTION_PLANS.find(p => p.tier === subscription.tier)?.name || 'Unknown Plan'
+      planName:
+        SUBSCRIPTION_PLANS.find((p) => p.tier === subscription.tier)?.name ||
+        'Unknown Plan',
     };
   }
 
@@ -90,24 +107,26 @@ export class SubscriptionsController {
     // TODO: Implement actual payment integration
     // For now, just update/create subscription record
 
-    const plan = SUBSCRIPTION_PLANS.find(p => p.tier.toLowerCase() === body.planId.toLowerCase());
+    const plan = SUBSCRIPTION_PLANS.find(
+      (p) => p.tier.toLowerCase() === body.planId.toLowerCase(),
+    );
     if (!plan) {
       throw new Error('Invalid plan ID');
     }
 
     let subscription = await this.subscriptionRepository.findOne({
-      where: { userId: req.user.userId }
+      where: { userId: req.user.userId },
     });
 
     if (!subscription) {
       subscription = this.subscriptionRepository.create({
         userId: req.user.userId,
-        tier: plan.tier,
+        tier: plan.tier as SubscriptionTier,
         status: SubscriptionStatus.ACTIVE,
         startDate: new Date(),
       });
     } else {
-      subscription.tier = plan.tier;
+      subscription.tier = plan.tier as SubscriptionTier;
       subscription.status = SubscriptionStatus.ACTIVE;
       subscription.updatedAt = new Date();
     }
@@ -120,7 +139,7 @@ export class SubscriptionsController {
     // Get all subscription payments for the current user
     const payments = await this.subscriptionPaymentRepository.find({
       where: { userId: req.user.userId },
-      order: { createdAt: 'DESC' }
+      order: { createdAt: 'DESC' },
     });
 
     // Return empty array if no payments found

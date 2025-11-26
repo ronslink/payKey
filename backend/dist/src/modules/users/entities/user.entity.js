@@ -109,6 +109,7 @@ __decorate([
         type: 'enum',
         enum: IdType,
         nullable: true,
+        name: 'idtype',
     }),
     __metadata("design:type", String)
 ], User.prototype, "idType", void 0);
@@ -117,7 +118,7 @@ __decorate([
     __metadata("design:type", String)
 ], User.prototype, "idNumber", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ nullable: true }),
+    (0, typeorm_1.Column)({ nullable: true, name: 'nationalityid' }),
     __metadata("design:type", String)
 ], User.prototype, "nationalityId", void 0);
 __decorate([
@@ -133,7 +134,7 @@ __decorate([
     __metadata("design:type", String)
 ], User.prototype, "countryId", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: false }),
+    (0, typeorm_1.Column)({ default: false, name: 'isonboardingcompleted' }),
     __metadata("design:type", Boolean)
 ], User.prototype, "isOnboardingCompleted", void 0);
 __decorate([

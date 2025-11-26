@@ -19,7 +19,13 @@ import { PayslipService } from './payslip.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([PayPeriod, PayrollRecord, Worker, Transaction, TaxSubmission]), // Added TaxSubmission
+    TypeOrmModule.forFeature([
+      PayPeriod,
+      PayrollRecord,
+      Worker,
+      Transaction,
+      TaxSubmission,
+    ]), // Added TaxSubmission
     PaymentsModule,
     TaxesModule,
     TaxPaymentsModule,
@@ -30,7 +36,12 @@ import { PayslipService } from './payslip.service';
     PayrollRecordsController,
     PayPeriodsController,
   ],
-  providers: [PayrollService, BatchPayrollService, PayPeriodsService, PayslipService],
+  providers: [
+    PayrollService,
+    BatchPayrollService,
+    PayPeriodsService,
+    PayslipService,
+  ],
   exports: [PayrollService, BatchPayrollService, PayPeriodsService],
 })
-export class PayrollModule { }
+export class PayrollModule {}

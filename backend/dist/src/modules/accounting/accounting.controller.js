@@ -44,11 +44,35 @@ let AccountingController = class AccountingController {
     getAvailableFormats() {
         return {
             formats: [
-                { id: 'CSV', name: 'CSV (Comma Separated Values)', description: 'Compatible with Excel and most accounting software' },
-                { id: 'EXCEL', name: 'Excel Spreadsheet', description: 'Microsoft Excel format (Coming soon)', disabled: true },
-                { id: 'QUICKBOOKS', name: 'QuickBooks Online', description: 'Direct integration with QuickBooks (Coming soon)', disabled: true },
-                { id: 'XERO', name: 'Xero', description: 'Direct integration with Xero (Coming soon)', disabled: true },
-                { id: 'SAGE', name: 'Sage', description: 'Sage-compatible CSV format (Coming soon)', disabled: true },
+                {
+                    id: 'CSV',
+                    name: 'CSV (Comma Separated Values)',
+                    description: 'Compatible with Excel and most accounting software',
+                },
+                {
+                    id: 'EXCEL',
+                    name: 'Excel Spreadsheet',
+                    description: 'Microsoft Excel format (Coming soon)',
+                    disabled: true,
+                },
+                {
+                    id: 'QUICKBOOKS',
+                    name: 'QuickBooks Online',
+                    description: 'Direct integration with QuickBooks (Coming soon)',
+                    disabled: true,
+                },
+                {
+                    id: 'XERO',
+                    name: 'Xero',
+                    description: 'Direct integration with Xero (Coming soon)',
+                    disabled: true,
+                },
+                {
+                    id: 'SAGE',
+                    name: 'Sage',
+                    description: 'Sage-compatible CSV format (Coming soon)',
+                    disabled: true,
+                },
             ],
         };
     }

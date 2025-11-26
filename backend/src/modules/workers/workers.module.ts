@@ -11,7 +11,11 @@ import { TaxesModule } from '../taxes/taxes.module';
 import { UsersModule } from '../users/users.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Worker, Termination, LeaveRequest]), TaxesModule, UsersModule],
+  imports: [
+    TypeOrmModule.forFeature([Worker, Termination, LeaveRequest]),
+    TaxesModule,
+    UsersModule,
+  ],
   controllers: [WorkersController],
   providers: [WorkersService, TerminationService, LeaveManagementService],
   exports: [WorkersService],

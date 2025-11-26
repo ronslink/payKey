@@ -18,6 +18,12 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:unit": "jest --testPathPatterns=src/.*\\.spec\\.ts$ --coverage",
+    "test:integration": "jest --testPathPatterns=test/integration/ --coverage",
+    "test:security": "jest --testPathPatterns=test/security/ --coverage",
+    "test:compliance": "jest --testPathPatterns=test/compliance/ --coverage",
+    "test:performance": "jest --testPathPattern=test/performance/ --timeout=30000",
+    "test:coverage-report": "npm run test:cov && node scripts/check-coverage.js",
     "typeorm:migration:generate": "typeorm-ts-node-commonjs migration:generate -d ormconfig.ts",
     "typeorm:migration:run": "typeorm-ts-node-commonjs migration:run -d ormconfig.ts",
     "typeorm:migration:revert": "typeorm-ts-node-commonjs migration:revert -d ormconfig.ts"
@@ -37,10 +43,12 @@
     "class-validator": "^0.14.2",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
+    "pdfkit": "^0.17.2",
     "pg": "^8.16.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "typeorm": "^0.3.27"
+    "stripe": "^16.0.0",
+    "typeorm": "^0.3.20"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

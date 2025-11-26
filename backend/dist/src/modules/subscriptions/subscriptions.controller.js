@@ -47,8 +47,9 @@ let SubscriptionsController = class SubscriptionsController {
     }
     convertFeaturesToMap(features) {
         const featureMap = {};
-        features.forEach(feature => {
-            const key = feature.toLowerCase()
+        features.forEach((feature) => {
+            const key = feature
+                .toLowerCase()
                 .replace(/\s+/g, '_')
                 .replace(/[^a-z0-9_]/g, '')
                 .replace(/_+/g, '_');
@@ -60,13 +61,13 @@ let SubscriptionsController = class SubscriptionsController {
         const subscription = await this.subscriptionRepository.findOne({
             where: {
                 userId: req.user.userId,
-                status: subscription_entity_1.SubscriptionStatus.ACTIVE
+                status: subscription_entity_1.SubscriptionStatus.ACTIVE,
             },
-            relations: ['user']
+            relations: ['user'],
         });
         if (!subscription) {
             const userData = await this.subscriptionRepository.manager.findOne('users', {
-                where: { id: req.user.userId }
+                where: { id: req.user.userId },
             });
             return {
                 id: null,
@@ -83,16 +84,17 @@ let SubscriptionsController = class SubscriptionsController {
         }
         return {
             ...subscription,
-            planName: subscription_plans_config_1.SUBSCRIPTION_PLANS.find(p => p.tier === subscription.tier)?.name || 'Unknown Plan'
+            planName: subscription_plans_config_1.SUBSCRIPTION_PLANS.find((p) => p.tier === subscription.tier)?.name ||
+                'Unknown Plan',
         };
     }
     async subscribe(req, body) {
-        const plan = subscription_plans_config_1.SUBSCRIPTION_PLANS.find(p => p.tier.toLowerCase() === body.planId.toLowerCase());
+        const plan = subscription_plans_config_1.SUBSCRIPTION_PLANS.find((p) => p.tier.toLowerCase() === body.planId.toLowerCase());
         if (!plan) {
             throw new Error('Invalid plan ID');
         }
         let subscription = await this.subscriptionRepository.findOne({
-            where: { userId: req.user.userId }
+            where: { userId: req.user.userId },
         });
         if (!subscription) {
             subscription = this.subscriptionRepository.create({
@@ -112,7 +114,7 @@ let SubscriptionsController = class SubscriptionsController {
     async getSubscriptionPaymentHistory(req) {
         const payments = await this.subscriptionPaymentRepository.find({
             where: { userId: req.user.userId },
-            order: { createdAt: 'DESC' }
+            order: { createdAt: 'DESC' },
         });
         return payments || [];
     }

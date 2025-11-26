@@ -26,7 +26,7 @@ export class PayrollController {
     private readonly payslipService: PayslipService,
     @InjectRepository(PayrollRecord)
     private payrollRepository: Repository<PayrollRecord>,
-  ) { }
+  ) {}
 
   @Get('calculate')
   async calculatePayroll(@Request() req: AuthenticatedRequest) {
@@ -50,9 +50,18 @@ export class PayrollController {
       );
 
       // Recalculate summary
-      const totalGross = filteredItems.reduce((sum, item) => sum + item.grossSalary, 0);
-      const totalDeductions = filteredItems.reduce((sum, item) => sum + item.taxBreakdown.totalDeductions, 0);
-      const totalNetPay = filteredItems.reduce((sum, item) => sum + item.netPay, 0);
+      const totalGross = filteredItems.reduce(
+        (sum, item) => sum + item.grossSalary,
+        0,
+      );
+      const totalDeductions = filteredItems.reduce(
+        (sum, item) => sum + item.taxBreakdown.totalDeductions,
+        0,
+      );
+      const totalNetPay = filteredItems.reduce(
+        (sum, item) => sum + item.netPay,
+        0,
+      );
 
       return {
         payrollItems: filteredItems,
@@ -103,7 +112,8 @@ export class PayrollController {
   @Post('draft')
   async saveDraftPayroll(
     @Request() req: AuthenticatedRequest,
-    @Body() body: {
+    @Body()
+    body: {
       payPeriodId: string;
       payrollItems: Array<{
         workerId: string;
@@ -125,7 +135,8 @@ export class PayrollController {
   async updateDraftPayrollItem(
     @Request() req: AuthenticatedRequest,
     @Param('payrollRecordId') payrollRecordId: string,
-    @Body() body: {
+    @Body()
+    body: {
       grossSalary?: number;
       bonuses?: number;
       otherEarnings?: number;
@@ -144,10 +155,7 @@ export class PayrollController {
     @Request() req: AuthenticatedRequest,
     @Param('payPeriodId') payPeriodId: string,
   ) {
-    return this.payrollService.getDraftPayroll(
-      req.user.userId,
-      payPeriodId,
-    );
+    return this.payrollService.getDraftPayroll(req.user.userId, payPeriodId);
   }
 
   @Post('finalize/:payPeriodId')
@@ -155,10 +163,7 @@ export class PayrollController {
     @Request() req: AuthenticatedRequest,
     @Param('payPeriodId') payPeriodId: string,
   ) {
-    return this.payrollService.finalizePayroll(
-      req.user.userId,
-      payPeriodId,
-    );
+    return this.payrollService.finalizePayroll(req.user.userId, payPeriodId);
   }
 
   @Get('payslip/:payrollRecordId')

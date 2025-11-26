@@ -9,7 +9,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Subscription = exports.SubscriptionStatus = void 0;
+exports.Subscription = exports.SubscriptionTier = exports.SubscriptionStatus = void 0;
 const typeorm_1 = require("typeorm");
 const user_entity_1 = require("../../users/entities/user.entity");
 var SubscriptionStatus;
@@ -20,6 +20,13 @@ var SubscriptionStatus;
     SubscriptionStatus["PAST_DUE"] = "PAST_DUE";
     SubscriptionStatus["TRIAL"] = "TRIAL";
 })(SubscriptionStatus || (exports.SubscriptionStatus = SubscriptionStatus = {}));
+var SubscriptionTier;
+(function (SubscriptionTier) {
+    SubscriptionTier["FREE"] = "FREE";
+    SubscriptionTier["BASIC"] = "BASIC";
+    SubscriptionTier["GOLD"] = "GOLD";
+    SubscriptionTier["PLATINUM"] = "PLATINUM";
+})(SubscriptionTier || (exports.SubscriptionTier = SubscriptionTier = {}));
 const decimalTransformer = {
     to: (value) => value,
     from: (value) => {
@@ -60,7 +67,8 @@ __decorate([
 __decorate([
     (0, typeorm_1.Column)({
         type: 'enum',
-        enum: ['FREE', 'BASIC', 'GOLD', 'PLATINUM'],
+        enum: SubscriptionTier,
+        default: SubscriptionTier.FREE,
     }),
     __metadata("design:type", String)
 ], Subscription.prototype, "tier", void 0);

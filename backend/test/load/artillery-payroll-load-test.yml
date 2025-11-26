@@ -1,0 +1,69 @@
+# test/load/artillery-payroll-load-test.yml
+config:
+  target: 'http://localhost:3000'
+  phases:
+    - duration: 60
+      arrivalRate: 10 # 10 requests per second
+    - duration: 120
+      arrivalRate: 20 # Ramp up to 20 requests per second
+    - duration: 60
+      arrivalRate: 5 # Cool down
+  defaults:
+    headers:
+      Content-Type: 'application/json'
+      Authorization: 'Bearer {{ token }}'
+
+scenarios:
+  - name: 'Payroll Calculation Load Test'
+    requests:
+      - post:
+          url: '/auth/login'
+          json:
+            email: 'loadtest@paykey.com'
+            password: 'password123'
+          capture:
+            - json: '$.access_token'
+              as: 'token'
+      - loop:
+        - post:
+            url: '/payroll/calculate'
+            json:
+              userId: 'loadtest-user-123'
+        count: 100
+  
+  - name: 'Worker Management Load Test'
+    requests:
+      - post:
+          url: '/auth/login'
+          json:
+            email: 'loadtest@paykey.com'
+            password: 'password123'
+          capture:
+            - json: '$.access_token'
+              as: 'token'
+      - loop:
+        - get:
+            url: '/workers'
+        count: 50
+
+  - name: 'Mixed Operations Load Test'
+    requests:
+      - post:
+          url: '/auth/login'
+          json:
+            email: 'loadtest@paykey.com'
+            password: 'password123'
+          capture:
+            - json: '$.access_token'
+              as: 'token'
+      - loop:
+        - post:
+            url: '/workers'
+            json:
+              name: 'Load Test Worker {{ $loopIndex }}'
+              phoneNumber: '+25471234567{{ $loopIndex }}'
+              salaryGross: 50000
+              startDate: '2024-01-01'
+        - get:
+            url: '/workers'
+        count: 25

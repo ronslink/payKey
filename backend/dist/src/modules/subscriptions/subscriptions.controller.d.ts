@@ -1,5 +1,5 @@
 import { Repository } from 'typeorm';
-import { Subscription, SubscriptionStatus } from './entities/subscription.entity';
+import { Subscription, SubscriptionStatus, SubscriptionTier } from './entities/subscription.entity';
 import { SubscriptionPayment } from './entities/subscription-payment.entity';
 export declare class SubscriptionsController {
     private subscriptionRepository;
@@ -40,7 +40,7 @@ export declare class SubscriptionsController {
         id: string;
         user: import("../users/entities/user.entity").User;
         userId: string;
-        tier: string;
+        tier: SubscriptionTier;
         status: SubscriptionStatus;
         amount: number;
         currency: string;

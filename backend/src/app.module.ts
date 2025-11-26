@@ -88,4 +88,4 @@ import { AccountingExport } from './modules/accounting/entities/accounting-expor
   providers: [AppService],
   exports: [],
 })
-export class AppModule { }
+export class AppModule {}

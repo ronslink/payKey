@@ -23,7 +23,7 @@ export class TaxesService {
     private payrollRecordRepository: Repository<PayrollRecord>,
     private taxConfigService: TaxConfigService,
     private usersService: UsersService,
-  ) { }
+  ) {}
 
   async createTaxTable(data: Partial<TaxTable>): Promise<TaxTable> {
     const taxTable = this.taxTableRepository.create(data);
@@ -80,10 +80,19 @@ export class TaxesService {
    * Calculate NSSF (National Social Security Fund)
    * Using TaxConfigService for current rates
    */
-  private async calculateNSSF(grossSalary: number, date: Date): Promise<number> {
+  private async calculateNSSF(
+    grossSalary: number,
+    date: Date,
+  ): Promise<number> {
     // Get current NSSF configurations
-    const tier1Config = await this.taxConfigService.getActiveTaxConfig(TaxType.NSSF_TIER1, date);
-    const tier2Config = await this.taxConfigService.getActiveTaxConfig(TaxType.NSSF_TIER2, date);
+    const tier1Config = await this.taxConfigService.getActiveTaxConfig(
+      TaxType.NSSF_TIER1,
+      date,
+    );
+    const tier2Config = await this.taxConfigService.getActiveTaxConfig(
+      TaxType.NSSF_TIER2,
+      date,
+    );
 
     let totalNssf = 0;
 
@@ -112,9 +121,16 @@ export class TaxesService {
    * Calculate PAYE using TaxConfigService
    * Using current graduated tax brackets
    */
-  private async calculatePAYEFromConfig(grossSalary: number, nssf: number, date: Date): Promise<number> {
-    const payeConfig = await this.taxConfigService.getActiveTaxConfig(TaxType.PAYE, date);
-    
+  private async calculatePAYEFromConfig(
+    grossSalary: number,
+    nssf: number,
+    date: Date,
+  ): Promise<number> {
+    const payeConfig = await this.taxConfigService.getActiveTaxConfig(
+      TaxType.PAYE,
+      date,
+    );
+
     if (payeConfig && payeConfig.configuration.brackets) {
       const taxableIncome = grossSalary - nssf;
       let tax = 0;
@@ -148,9 +164,15 @@ export class TaxesService {
    * Calculate SHIF (Social Health Insurance Fund)
    * Using TaxConfigService for current rates
    */
-  private async calculateSHIF(grossSalary: number, date: Date): Promise<number> {
-    const shifConfig = await this.taxConfigService.getActiveTaxConfig(TaxType.SHIF, date);
-    
+  private async calculateSHIF(
+    grossSalary: number,
+    date: Date,
+  ): Promise<number> {
+    const shifConfig = await this.taxConfigService.getActiveTaxConfig(
+      TaxType.SHIF,
+      date,
+    );
+
     if (shifConfig && shifConfig.configuration.percentage !== undefined) {
       const shifAmount = grossSalary * shifConfig.configuration.percentage;
       const minAmount = shifConfig.configuration.minAmount || 0;
@@ -166,11 +188,20 @@ export class TaxesService {
    * Calculate Housing Levy (Employee portion)
    * Using TaxConfigService for current rates
    */
-  private async calculateHousingLevy(grossSalary: number, date: Date): Promise<number> {
-    const housingConfig = await this.taxConfigService.getActiveTaxConfig(TaxType.HOUSING_LEVY, date);
-    
+  private async calculateHousingLevy(
+    grossSalary: number,
+    date: Date,
+  ): Promise<number> {
+    const housingConfig = await this.taxConfigService.getActiveTaxConfig(
+      TaxType.HOUSING_LEVY,
+      date,
+    );
+
     if (housingConfig && housingConfig.configuration.percentage !== undefined) {
-      return Math.round(grossSalary * housingConfig.configuration.percentage * 100) / 100;
+      return (
+        Math.round(grossSalary * housingConfig.configuration.percentage * 100) /
+        100
+      );
     }
 
     // Fallback calculation
@@ -222,7 +253,7 @@ export class TaxesService {
   ): Promise<TaxBreakdown> {
     // Calculate NSSF first (needed for PAYE calculation)
     const nssf = await this.calculateNSSF(grossSalary, date);
-    
+
     // Calculate remaining components
     const [shif, housingLevy, payeConfig] = await Promise.all([
       this.calculateSHIF(grossSalary, date),
@@ -303,7 +334,10 @@ export class TaxesService {
     });
   }
 
-  async generateTaxSubmission(payPeriodId: string, userId: string): Promise<TaxSubmission> {
+  async generateTaxSubmission(
+    payPeriodId: string,
+    userId: string,
+  ): Promise<TaxSubmission> {
     // Get all finalized payroll records for this period
     const payrollRecords = await this.payrollRecordRepository.find({
       where: {
@@ -314,14 +348,28 @@ export class TaxesService {
     });
 
     if (payrollRecords.length === 0) {
-      throw new NotFoundException('No finalized payroll records found for this period');
+      throw new NotFoundException(
+        'No finalized payroll records found for this period',
+      );
     }
 
     // Aggregate tax amounts
-    const totalPaye = payrollRecords.reduce((sum, record) => sum + Number(record.taxAmount), 0);
-    const totalNssf = payrollRecords.reduce((sum, record) => sum + Number(record.taxBreakdown.nssf), 0);
-    const totalNhif = payrollRecords.reduce((sum, record) => sum + Number(record.taxBreakdown.nhif), 0);
-    const totalHousingLevy = payrollRecords.reduce((sum, record) => sum + Number(record.taxBreakdown.housingLevy), 0);
+    const totalPaye = payrollRecords.reduce(
+      (sum, record) => sum + Number(record.taxAmount),
+      0,
+    );
+    const totalNssf = payrollRecords.reduce(
+      (sum, record) => sum + Number(record.taxBreakdown.nssf),
+      0,
+    );
+    const totalNhif = payrollRecords.reduce(
+      (sum, record) => sum + Number(record.taxBreakdown.nhif),
+      0,
+    );
+    const totalHousingLevy = payrollRecords.reduce(
+      (sum, record) => sum + Number(record.taxBreakdown.housingLevy),
+      0,
+    );
 
     // Check if submission already exists
     let submission = await this.taxSubmissionRepository.findOne({
@@ -350,7 +398,10 @@ export class TaxesService {
     return this.taxSubmissionRepository.save(submission);
   }
 
-  async getTaxSubmissionByPeriod(payPeriodId: string, userId: string): Promise<TaxSubmission | null> {
+  async getTaxSubmissionByPeriod(
+    payPeriodId: string,
+    userId: string,
+  ): Promise<TaxSubmission | null> {
     return this.taxSubmissionRepository.findOne({
       where: { payPeriodId, userId },
       relations: ['payPeriod'],

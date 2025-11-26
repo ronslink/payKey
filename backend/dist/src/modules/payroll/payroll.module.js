@@ -31,7 +31,13 @@ exports.PayrollModule = PayrollModule;
 exports.PayrollModule = PayrollModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            typeorm_1.TypeOrmModule.forFeature([pay_period_entity_1.PayPeriod, payroll_record_entity_1.PayrollRecord, worker_entity_1.Worker, transaction_entity_1.Transaction, tax_submission_entity_1.TaxSubmission]),
+            typeorm_1.TypeOrmModule.forFeature([
+                pay_period_entity_1.PayPeriod,
+                payroll_record_entity_1.PayrollRecord,
+                worker_entity_1.Worker,
+                transaction_entity_1.Transaction,
+                tax_submission_entity_1.TaxSubmission,
+            ]),
             payments_module_1.PaymentsModule,
             taxes_module_1.TaxesModule,
             tax_payments_module_1.TaxPaymentsModule,
@@ -42,7 +48,12 @@ exports.PayrollModule = PayrollModule = __decorate([
             payroll_records_controller_1.PayrollRecordsController,
             pay_periods_controller_1.PayPeriodsController,
         ],
-        providers: [payroll_service_1.PayrollService, batch_payroll_service_1.BatchPayrollService, pay_periods_service_1.PayPeriodsService, payslip_service_1.PayslipService],
+        providers: [
+            payroll_service_1.PayrollService,
+            batch_payroll_service_1.BatchPayrollService,
+            pay_periods_service_1.PayPeriodsService,
+            payslip_service_1.PayslipService,
+        ],
         exports: [payroll_service_1.PayrollService, batch_payroll_service_1.BatchPayrollService, pay_periods_service_1.PayPeriodsService],
     })
 ], PayrollModule);

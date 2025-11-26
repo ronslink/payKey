@@ -217,7 +217,7 @@ export class BatchPayrollService {
       let totalPaye = 0;
 
       for (const transaction of transactions) {
-        const metadata = transaction.metadata as any;
+        const metadata = transaction.metadata;
         if (metadata?.taxBreakdown) {
           totalNssf += metadata.taxBreakdown.nssf || 0;
           totalShif += metadata.taxBreakdown.nhif || 0;
@@ -232,7 +232,9 @@ export class BatchPayrollService {
       console.log(`SHIF: ${totalShif}`);
       console.log(`Housing Levy: ${totalHousingLevy}`);
       console.log(`PAYE: ${totalPaye}`);
-      console.log(`Total: ${totalNssf + totalShif + totalHousingLevy + totalPaye}`);
+      console.log(
+        `Total: ${totalNssf + totalShif + totalHousingLevy + totalPaye}`,
+      );
 
       // Here you could also create TaxPayment records if needed
       // This would be useful for generating tax payment summaries
@@ -242,7 +244,6 @@ export class BatchPayrollService {
       //   paymentYear: year,
       //   paymentMonth: month,
       // });
-
     } catch (error) {
       console.error('Error accumulating tax payments:', error);
       // Don't throw error - tax accumulation is secondary to payroll

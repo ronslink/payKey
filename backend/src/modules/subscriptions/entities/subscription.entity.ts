@@ -17,6 +17,13 @@ export enum SubscriptionStatus {
   TRIAL = 'TRIAL',
 }
 
+export enum SubscriptionTier {
+  FREE = 'FREE',
+  BASIC = 'BASIC',
+  GOLD = 'GOLD',
+  PLATINUM = 'PLATINUM',
+}
+
 // Transformer to convert decimal strings to numbers
 const decimalTransformer = {
   to: (value: number | null): number | null => value,
@@ -39,9 +46,10 @@ export class Subscription {
 
   @Column({
     type: 'enum',
-    enum: ['FREE', 'BASIC', 'GOLD', 'PLATINUM'],
+    enum: SubscriptionTier,
+    default: SubscriptionTier.FREE,
   })
-  tier: string;
+  tier: SubscriptionTier;
 
   @Column({
     type: 'enum',

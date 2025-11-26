@@ -189,10 +189,7 @@ let PayPeriodsService = class PayPeriodsService {
     }
     validateStatusTransition(currentStatus, newStatus) {
         const validTransitions = {
-            [pay_period_entity_1.PayPeriodStatus.DRAFT]: [
-                pay_period_entity_1.PayPeriodStatus.ACTIVE,
-                pay_period_entity_1.PayPeriodStatus.CLOSED,
-            ],
+            [pay_period_entity_1.PayPeriodStatus.DRAFT]: [pay_period_entity_1.PayPeriodStatus.ACTIVE, pay_period_entity_1.PayPeriodStatus.CLOSED],
             [pay_period_entity_1.PayPeriodStatus.ACTIVE]: [
                 pay_period_entity_1.PayPeriodStatus.PROCESSING,
                 pay_period_entity_1.PayPeriodStatus.CLOSED,

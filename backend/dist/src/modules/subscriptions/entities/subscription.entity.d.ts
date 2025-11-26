@@ -6,11 +6,17 @@ export declare enum SubscriptionStatus {
     PAST_DUE = "PAST_DUE",
     TRIAL = "TRIAL"
 }
+export declare enum SubscriptionTier {
+    FREE = "FREE",
+    BASIC = "BASIC",
+    GOLD = "GOLD",
+    PLATINUM = "PLATINUM"
+}
 export declare class Subscription {
     id: string;
     user: User;
     userId: string;
-    tier: string;
+    tier: SubscriptionTier;
     status: SubscriptionStatus;
     amount: number;
     currency: string;

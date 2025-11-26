@@ -1,4 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Worker } from '../../workers/entities/worker.entity';
 
 export enum PayrollStatus {
@@ -52,7 +60,7 @@ export class PayrollRecord {
   @Column({
     type: 'simple-enum',
     enum: PayrollStatus,
-    default: PayrollStatus.DRAFT
+    default: PayrollStatus.DRAFT,
   })
   status: PayrollStatus;
 

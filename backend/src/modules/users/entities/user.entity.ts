@@ -72,13 +72,14 @@ export class User {
     type: 'enum',
     enum: IdType,
     nullable: true,
+    name: 'idtype',
   })
   idType: IdType;
 
   @Column({ nullable: true })
   idNumber: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, name: 'nationalityid' })
   nationalityId: string;
 
   @Column({ nullable: true })
@@ -90,7 +91,7 @@ export class User {
   @Column({ nullable: true })
   countryId: string;
 
-  @Column({ default: false })
+  @Column({ default: false, name: 'isonboardingcompleted' })
   isOnboardingCompleted: boolean;
 
   @CreateDateColumn()

@@ -12,7 +12,10 @@ import {
 import { PayPeriodsService } from './pay-periods.service';
 import { CreatePayPeriodDto } from './dto/create-pay-period.dto';
 import { UpdatePayPeriodDto } from './dto/update-pay-period.dto';
-import { PayPeriodStatus, PayPeriodFrequency } from './entities/pay-period.entity';
+import {
+  PayPeriodStatus,
+  PayPeriodFrequency,
+} from './entities/pay-period.entity';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('pay-periods')
@@ -34,7 +37,7 @@ export class PayPeriodsController {
   ) {
     const pageNum = parseInt(page, 10) || 1;
     const limitNum = parseInt(limit, 10) || 10;
-    
+
     return this.payPeriodsService.findAll(pageNum, limitNum, status, frequency);
   }
 
@@ -44,7 +47,10 @@ export class PayPeriodsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePayPeriodDto: UpdatePayPeriodDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updatePayPeriodDto: UpdatePayPeriodDto,
+  ) {
     return this.payPeriodsService.update(id, updatePayPeriodDto);
   }
 

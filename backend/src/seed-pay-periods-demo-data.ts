@@ -1,9 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DataSource } from 'typeorm';
-import {
-  Worker,
-} from './modules/workers/entities/worker.entity';
+import { Worker } from './modules/workers/entities/worker.entity';
 import {
   PayPeriod,
   PayPeriodStatus,
@@ -27,7 +25,9 @@ async function seedDemoData() {
     await dataSource.getRepository(PayrollRecord).delete({});
     await dataSource.getRepository(PayPeriod).delete({});
     await dataSource.getRepository(Worker).delete({});
-    await dataSource.getRepository(User).delete({ email: 'testuser@paykey.com' });
+    await dataSource
+      .getRepository(User)
+      .delete({ email: 'testuser@paykey.com' });
 
     console.log('Creating demo user...');
     const userRepository = dataSource.getRepository(User);
@@ -165,7 +165,7 @@ async function seedDemoData() {
     const periodStart = new Date(threeMonthsAgo);
 
     // Generate bi-weekly periods for 3 months
-    let currentPeriodStart = new Date(periodStart);
+    const currentPeriodStart = new Date(periodStart);
     while (currentPeriodStart <= currentDate) {
       const periodEnd = new Date(currentPeriodStart);
       periodEnd.setDate(periodEnd.getDate() + 13); // 2 weeks = 14 days, but end date is inclusive
@@ -260,7 +260,8 @@ async function seedDemoData() {
           taxAmount: Math.round(taxAmount * 100) / 100,
           paymentStatus,
           paymentMethod: 'mpesa',
-          paymentDate: paymentStatus === 'paid' ? new Date(payPeriod.payDate) : undefined,
+          paymentDate:
+            paymentStatus === 'paid' ? new Date(payPeriod.payDate) : undefined,
           taxBreakdown: {
             incomeTax: taxAmount,
             nhif: Math.min(grossSalary * 0.015, 300), // 1.5% up to 300
@@ -269,21 +270,27 @@ async function seedDemoData() {
             netSalary,
           },
           deductions: {
-            loanDeduction: Math.random() < 0.1 ? Math.round(grossSalary * 0.1 * 100) / 100 : 0,
+            loanDeduction:
+              Math.random() < 0.1
+                ? Math.round(grossSalary * 0.1 * 100) / 100
+                : 0,
             insurance: Math.round(grossSalary * 0.02 * 100) / 100,
           },
         });
       }
     }
 
-    const savedPayrollRecords = await payrollRecordRepository.save(payrollRecords);
+    const savedPayrollRecords =
+      await payrollRecordRepository.save(payrollRecords);
     console.log(`Created ${savedPayrollRecords.length} payroll records`);
 
     // Update pay period totals
     console.log('Updating pay period totals...');
     for (const payPeriod of savedPayPeriods) {
       const periodRecords = savedPayrollRecords.filter(
-        (r) => r.periodStart.getTime() === payPeriod.startDate.getTime() && r.periodEnd.getTime() === payPeriod.endDate.getTime(),
+        (r) =>
+          r.periodStart.getTime() === payPeriod.startDate.getTime() &&
+          r.periodEnd.getTime() === payPeriod.endDate.getTime(),
       );
 
       const totals = periodRecords.reduce(
@@ -311,7 +318,6 @@ async function seedDemoData() {
     console.log(`✅ Created ${savedPayPeriods.length} pay periods`);
     console.log(`✅ Created ${savedPayrollRecords.length} payroll records`);
     console.log('\nLogin with: testuser@paykey.com / password123');
-
   } catch (error) {
     console.error('Error seeding demo data:', error);
   } finally {
@@ -331,7 +337,7 @@ function calculateTax(grossSalary: number): number {
   }
   if (grossSalary > 500000 / 12) {
     // Over 41,667/month
-    tax += (grossSalary - 41667) * 0.20;
+    tax += (grossSalary - 41667) * 0.2;
     grossSalary = 41667;
   }
   if (grossSalary > 240000 / 12) {
@@ -341,7 +347,7 @@ function calculateTax(grossSalary: number): number {
   }
   if (grossSalary > 120000 / 12) {
     // Over 10,000/month
-    tax += (grossSalary - 10000) * 0.10;
+    tax += (grossSalary - 10000) * 0.1;
   }
 
   // Personal relief

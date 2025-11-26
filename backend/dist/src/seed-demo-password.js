@@ -43,7 +43,7 @@ async function updateDemoPassword() {
     const dataSource = app.get(typeorm_1.DataSource);
     const userRepository = dataSource.getRepository(user_entity_1.User);
     const demoUser = await userRepository.findOne({
-        where: { email: 'testuser@paykey.com' }
+        where: { email: 'testuser@paykey.com' },
     });
     if (!demoUser) {
         console.log('Demo user not found');

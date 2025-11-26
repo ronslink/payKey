@@ -53,7 +53,12 @@ export class TaxPayment {
   @Column({ type: 'int' })
   paymentMonth: number;
 
-  @Column({ type: 'decimal', precision: 12, scale: 2, transformer: decimalTransformer })
+  @Column({
+    type: 'decimal',
+    precision: 12,
+    scale: 2,
+    transformer: decimalTransformer,
+  })
   amount: number;
 
   @Column({ type: 'date', nullable: true })

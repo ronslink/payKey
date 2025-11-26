@@ -26,7 +26,8 @@ let TransactionsController = class TransactionsController {
     async getTransactions(req, page, limit, type) {
         const pageNum = page ? parseInt(page.toString()) : 1;
         const limitNum = limit ? parseInt(limit.toString()) : 50;
-        const queryBuilder = this.transactionsRepository.createQueryBuilder('transaction')
+        const queryBuilder = this.transactionsRepository
+            .createQueryBuilder('transaction')
             .where('transaction.userId = :userId', { userId: req.user.userId })
             .orderBy('transaction.createdAt', 'DESC')
             .skip((pageNum - 1) * limitNum)

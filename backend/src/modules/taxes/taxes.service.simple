@@ -1,0 +1,79 @@
+// src/modules/taxes/taxes.service.simple.spec.ts
+import { Test, TestingModule } from '@nestjs/testing';
+import { TaxesService } from './taxes.service';
+import { TaxConfigService } from '../tax-config/tax-config.service';
+
+describe('TaxesService (Simple)', () => {
+  let service: TaxesService;
+  let mockTaxConfigService: Partial<TaxConfigService>;
+
+  beforeEach(async () => {
+    mockTaxConfigService = {
+      getNSSFRate: jest.fn().mockResolvedValue(0.06),
+      getSHIFRate: jest.fn().mockResolvedValue(0.0275),
+      getHousingLevyRate: jest.fn().mockResolvedValue(0.015),
+      getPAYEBrackets: jest.fn().mockResolvedValue([
+        { min: 0, max: 24000, rate: 0.1 },
+        { min: 24001, max: 32333, rate: 0.25 },
+        { min: 32334, max: 500000, rate: 0.3 },
+        { min: 500001, max: 800000, rate: 0.325 },
+        { min: 800001, max: Infinity, rate: 0.35 },
+      ]),
+      getPersonalRelief: jest.fn().mockResolvedValue(2400),
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        TaxesService,
+        {
+          provide: TaxConfigService,
+          useValue: mockTaxConfigService,
+        },
+      ],
+    }).compile();
+
+    service = module.get<TaxesService>(TaxesService);
+  });
+
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+
+  describe('Tax Calculations', () => {
+    it('should calculate NSSF correctly for salary of 50000', async () => {
+      const nssf = await service.calculateNSSF(50000, new Date());
+      expect(nssf).toBe(3000); // 6% of 50000
+    });
+
+    it('should calculate PAYE correctly for taxable income in first bracket', async () => {
+      const grossSalary = 20000;
+      const nssf = 1200;
+      const paye = await service.calculatePAYEFromConfig(
+        grossSalary,
+        nssf,
+        new Date(),
+      );
+
+      // Taxable = 20000 - 1200 = 18800
+      // PAYE = 18800 * 0.1 = 1880
+      // After personal relief: 1880 - 2400 = 0 (minimum 0)
+      expect(paye).toBe(0);
+    });
+
+    it('should calculate PAYE correctly for taxable income in multiple brackets', async () => {
+      const grossSalary = 50000;
+      const nssf = 3000;
+      const paye = await service.calculatePAYEFromConfig(
+        grossSalary,
+        nssf,
+        new Date(),
+      );
+
+      // Taxable = 50000 - 3000 = 47000
+      // PAYE = (24000 * 0.1) + (8333 * 0.25) + (14667 * 0.3)
+      //      = 2400 + 2083.25 + 4400.1 = 8883.35
+      // After personal relief: 8883.35 - 2400 = 6483.35
+      expect(paye).toBeCloseTo(6483, 0);
+    });
+  });
+});

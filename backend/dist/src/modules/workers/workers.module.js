@@ -23,7 +23,11 @@ let WorkersModule = class WorkersModule {
 exports.WorkersModule = WorkersModule;
 exports.WorkersModule = WorkersModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([worker_entity_1.Worker, termination_entity_1.Termination, leave_request_entity_1.LeaveRequest]), taxes_module_1.TaxesModule, users_module_1.UsersModule],
+        imports: [
+            typeorm_1.TypeOrmModule.forFeature([worker_entity_1.Worker, termination_entity_1.Termination, leave_request_entity_1.LeaveRequest]),
+            taxes_module_1.TaxesModule,
+            users_module_1.UsersModule,
+        ],
         controllers: [workers_controller_1.WorkersController],
         providers: [workers_service_1.WorkersService, termination_service_1.TerminationService, leave_management_service_1.LeaveManagementService],
         exports: [workers_service_1.WorkersService],

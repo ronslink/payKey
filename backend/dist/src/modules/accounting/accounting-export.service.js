@@ -116,8 +116,15 @@ let AccountingExportService = class AccountingExportService {
         if (!journalEntries.isBalanced) {
             throw new Error('Journal entries are not balanced. Cannot export.');
         }
-        const headers = ['Date', 'Account Code', 'Account Name', 'Debit', 'Credit', 'Description'];
-        const rows = journalEntries.entries.map(entry => [
+        const headers = [
+            'Date',
+            'Account Code',
+            'Account Name',
+            'Debit',
+            'Credit',
+            'Description',
+        ];
+        const rows = journalEntries.entries.map((entry) => [
             entry.date.toISOString().split('T')[0],
             entry.account,
             entry.accountName,
@@ -134,7 +141,7 @@ let AccountingExportService = class AccountingExportService {
             '',
         ]);
         const csv = [headers, ...rows]
-            .map(row => row.map(cell => `"${cell}"`).join(','))
+            .map((row) => row.map((cell) => `"${cell}"`).join(','))
             .join('\n');
         return csv;
     }
@@ -190,7 +197,7 @@ let AccountingExportService = class AccountingExportService {
     }
     async saveAccountMappings(userId, mappings) {
         await this.accountMappingRepository.delete({ userId });
-        const entities = mappings.map(m => this.accountMappingRepository.create({
+        const entities = mappings.map((m) => this.accountMappingRepository.create({
             userId,
             category: m.category,
             accountCode: m.accountCode,

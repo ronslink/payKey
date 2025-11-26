@@ -133,7 +133,9 @@ let PayrollService = class PayrollService {
             record.otherEarnings = updates.otherEarnings;
         if (updates.otherDeductions !== undefined)
             record.otherDeductions = updates.otherDeductions;
-        const totalEarnings = Number(record.grossSalary) + Number(record.bonuses) + Number(record.otherEarnings);
+        const totalEarnings = Number(record.grossSalary) +
+            Number(record.bonuses) +
+            Number(record.otherEarnings);
         const taxBreakdown = await this.taxesService.calculateTaxes(totalEarnings);
         const totalDeductions = taxBreakdown.totalDeductions + Number(record.otherDeductions);
         const netPay = totalEarnings - totalDeductions;
@@ -155,7 +157,7 @@ let PayrollService = class PayrollService {
             },
             relations: ['worker'],
         });
-        return records.map(record => ({
+        return records.map((record) => ({
             id: record.id,
             workerId: record.workerId,
             workerName: record.worker.name,

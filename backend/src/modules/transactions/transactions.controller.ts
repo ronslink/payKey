@@ -1,4 +1,11 @@
-import { Controller, Get, UseGuards, Request, Param, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  UseGuards,
+  Request,
+  Param,
+  Query,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -22,7 +29,8 @@ export class TransactionsController {
     const pageNum = page ? parseInt(page.toString()) : 1;
     const limitNum = limit ? parseInt(limit.toString()) : 50;
 
-    const queryBuilder = this.transactionsRepository.createQueryBuilder('transaction')
+    const queryBuilder = this.transactionsRepository
+      .createQueryBuilder('transaction')
       .where('transaction.userId = :userId', { userId: req.user.userId })
       .orderBy('transaction.createdAt', 'DESC')
       .skip((pageNum - 1) * limitNum)

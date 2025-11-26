@@ -1,4 +1,13 @@
-import { Controller, Post, Get, Patch, Body, Param, UseGuards, Request } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Patch,
+  Body,
+  Param,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { TaxesService } from './taxes.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard, Roles } from '../auth/guards/roles.guard';
@@ -12,7 +21,7 @@ class CalculateTaxDto {
 @Controller('taxes')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class TaxesController {
-  constructor(private readonly taxesService: TaxesService) { }
+  constructor(private readonly taxesService: TaxesService) {}
 
   @Post('calculate')
   calculateTaxes(@Body() dto: CalculateTaxDto) {
@@ -47,13 +56,25 @@ export class TaxesController {
   }
 
   @Post('submissions/generate/:payPeriodId')
-  generateTaxSubmission(@Request() req: any, @Param('payPeriodId') payPeriodId: string) {
-    return this.taxesService.generateTaxSubmission(payPeriodId, req.user.userId);
+  generateTaxSubmission(
+    @Request() req: any,
+    @Param('payPeriodId') payPeriodId: string,
+  ) {
+    return this.taxesService.generateTaxSubmission(
+      payPeriodId,
+      req.user.userId,
+    );
   }
 
   @Get('submissions/period/:payPeriodId')
-  getTaxSubmissionByPeriod(@Request() req: any, @Param('payPeriodId') payPeriodId: string) {
-    return this.taxesService.getTaxSubmissionByPeriod(payPeriodId, req.user.userId);
+  getTaxSubmissionByPeriod(
+    @Request() req: any,
+    @Param('payPeriodId') payPeriodId: string,
+  ) {
+    return this.taxesService.getTaxSubmissionByPeriod(
+      payPeriodId,
+      req.user.userId,
+    );
   }
 
   @Patch('submissions/:id/file')
