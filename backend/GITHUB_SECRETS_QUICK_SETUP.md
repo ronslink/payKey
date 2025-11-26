@@ -51,10 +51,10 @@ Description: Code quality analysis
 For container registry access:
 ```
 Name: DOCKER_USERNAME
-Value: <your_dockerhub_username>
+Value: rondockerlink
 
 Name: DOCKER_PASSWORD  
-Value: <your_dockerhub_password_or_token>
+Value: dckr_pat_IfDD9pLSxQBOX6hC_f0Alzhz18g
 ```
 
 ---
