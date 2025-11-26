@@ -13,7 +13,13 @@ import {
 import { WorkersService } from './workers.service';
 import { CreateWorkerDto } from './dto/create-worker.dto';
 import { CreateTerminationDto } from './dto/termination.dto';
+import {
+  CreateLeaveRequestDto,
+  ApproveLeaveRequestDto,
+  UpdateLeaveRequestDto,
+} from './dto/create-leave-request.dto';
 import { TerminationService } from './services/termination.service';
+import { LeaveManagementService } from './services/leave-management.service';
 import type { AuthenticatedRequest } from '../../common/interfaces/user.interface';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SubscriptionGuard } from '../subscriptions/subscription.guard';
@@ -25,7 +31,8 @@ export class WorkersController {
   constructor(
     private readonly workersService: WorkersService,
     private readonly terminationService: TerminationService,
-  ) { }
+    private readonly leaveManagementService: LeaveManagementService,
+  ) {}
 
   @Post()
   @UseGuards(SubscriptionGuard)
@@ -95,5 +102,87 @@ export class WorkersController {
   @Get('terminated/history')
   getTerminationHistory(@Request() req: AuthenticatedRequest) {
     return this.terminationService.getTerminationHistory(req.user.userId);
+  }
+
+  // Leave Management endpoints
+  @Post(':id/leave-requests')
+  @UseGuards(SubscriptionGuard)
+  createLeaveRequest(
+    @Request() req: AuthenticatedRequest,
+    @Param('id') workerId: string,
+    @Body() createLeaveRequestDto: CreateLeaveRequestDto,
+  ) {
+    return this.leaveManagementService.createLeaveRequest(
+      req.user.userId,
+      workerId,
+      createLeaveRequestDto,
+    );
+  }
+
+  @Get('leave-requests')
+  @UseGuards(SubscriptionGuard)
+  getLeaveRequests(@Request() req: AuthenticatedRequest) {
+    return this.leaveManagementService.getLeaveRequestsForUser(req.user.userId);
+  }
+
+  @Get(':id/leave-requests')
+  @UseGuards(SubscriptionGuard)
+  getWorkerLeaveRequests(
+    @Request() req: AuthenticatedRequest,
+    @Param('id') workerId: string,
+  ) {
+    return this.leaveManagementService.getLeaveRequestsForWorker(
+      req.user.userId,
+      workerId,
+    );
+  }
+
+  @Patch('leave-requests/:requestId/approve')
+  @UseGuards(SubscriptionGuard)
+  approveLeaveRequest(
+    @Request() req: AuthenticatedRequest,
+    @Param('requestId') requestId: string,
+    @Body() approveLeaveRequestDto: ApproveLeaveRequestDto,
+  ) {
+    return this.leaveManagementService.approveLeaveRequest(
+      req.user.userId,
+      requestId,
+      approveLeaveRequestDto,
+    );
+  }
+
+  @Patch('leave-requests/:requestId')
+  @UseGuards(SubscriptionGuard)
+  updateLeaveRequest(
+    @Request() req: AuthenticatedRequest,
+    @Param('requestId') requestId: string,
+    @Body() updateLeaveRequestDto: UpdateLeaveRequestDto,
+  ) {
+    return this.leaveManagementService.updateLeaveRequest(
+      req.user.userId,
+      requestId,
+      updateLeaveRequestDto,
+    );
+  }
+
+  @Delete('leave-requests/:requestId')
+  @UseGuards(SubscriptionGuard)
+  cancelLeaveRequest(
+    @Request() req: AuthenticatedRequest,
+    @Param('requestId') requestId: string,
+  ) {
+    return this.leaveManagementService.cancelLeaveRequest(
+      req.user.userId,
+      requestId,
+    );
+  }
+
+  @Get(':id/leave-balance')
+  @UseGuards(SubscriptionGuard)
+  getLeaveBalance(
+    @Request() req: AuthenticatedRequest,
+    @Param('id') workerId: string,
+  ) {
+    return this.leaveManagementService.getLeaveBalance(workerId, req.user.userId);
   }
 }

@@ -3,7 +3,7 @@ import '../../data/models/pay_period_model.dart';
 import '../../data/repositories/pay_periods_repository.dart';
 
 class PayPeriodsNotifier extends StateNotifier<AsyncValue<List<PayPeriodModel>>> {
-  final PayPeriodsRepository _repository;
+  final PayPeriodsRepositoryImpl _repository;
 
   PayPeriodsNotifier(this._repository) : super(const AsyncValue.loading()) {
     loadPayPeriods();

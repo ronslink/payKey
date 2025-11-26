@@ -316,10 +316,10 @@ class _WorkerDetailPageState extends ConsumerState<WorkerDetailPage> {
             'Salary Information',
             [
               _buildDetailRow('Gross Salary', 'KES ${worker.salaryGross.toStringAsFixed(0)}', Icons.attach_money),
-              if (worker.housingAllowance != null && worker.housingAllowance! > 0)
-                _buildDetailRow('Housing Allowance', 'KES ${worker.housingAllowance!.toStringAsFixed(0)}', Icons.home),
-              if (worker.transportAllowance != null && worker.transportAllowance! > 0)
-                _buildDetailRow('Transport Allowance', 'KES ${worker.transportAllowance!.toStringAsFixed(0)}', Icons.directions_car),
+              if (worker.housingAllowance > 0)
+                _buildDetailRow('Housing Allowance', 'KES ${worker.housingAllowance.toStringAsFixed(0)}', Icons.home),
+              if (worker.transportAllowance > 0)
+                _buildDetailRow('Transport Allowance', 'KES ${worker.transportAllowance.toStringAsFixed(0)}', Icons.directions_car),
             ],
           ),
           const SizedBox(height: 20),

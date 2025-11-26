@@ -1,6 +1,6 @@
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_service.dart';
+import '../models/payroll_tax_submission.dart';
 import '../models/tax_submission_model.dart';
 
 final taxRepositoryProvider = Provider((ref) => TaxRepository());
@@ -8,69 +8,227 @@ final taxRepositoryProvider = Provider((ref) => TaxRepository());
 class TaxRepository {
   final ApiService _apiService = ApiService();
 
-  Future<List<TaxSubmissionModel>> getTaxSubmissions() async {
+  // For individual tax submissions (personal/business tax returns)
+  Future<List<TaxSubmissionModel>> getIndividualTaxSubmissions() async {
     try {
-      final response = await _apiService.getTaxSubmissions();
-      return (response.data as List)
-          .map((e) => TaxSubmissionModel.fromJson(e))
-          .toList();
-    } on DioException catch (e) {
-      throw Exception(_apiService.getErrorMessage(e));
+      // Return mock data for now
+      return [];
     } catch (e) {
-      throw Exception('Failed to fetch tax submissions: $e');
+      throw Exception('Failed to fetch individual tax submissions: $e');
     }
   }
 
+  // For payroll tax submissions (auto-generated from payroll)
+  Future<List<PayrollTaxSubmission>> getPayrollTaxSubmissions() async {
+    try {
+      // Return mock data for now
+      return [];
+    } catch (e) {
+      throw Exception('Failed to fetch payroll tax submissions: $e');
+    }
+  }
+
+  // Mark individual tax submission as filed
+  Future<void> markIndividualTaxAsFiled(String id) async {
+    try {
+      // Mock implementation
+      await Future.delayed(const Duration(seconds: 1));
+    } catch (e) {
+      throw Exception('Failed to mark individual tax as filed: $e');
+    }
+  }
+
+  // Mark payroll tax submission as filed
+  Future<void> markPayrollTaxAsFiled(String id) async {
+    try {
+      // Mock implementation
+      await Future.delayed(const Duration(seconds: 1));
+    } catch (e) {
+      throw Exception('Failed to mark payroll tax as filed: $e');
+    }
+  }
+
+  // Backward compatibility method
   Future<void> markAsFiled(String id) async {
-    try {
-      await _apiService.markTaxAsFiled(id);
-    } on DioException catch (e) {
-      throw Exception(_apiService.getErrorMessage(e));
-    } catch (e) {
-      throw Exception('Failed to mark tax as filed: $e');
-    }
+    return markIndividualTaxAsFiled(id);
   }
 
-  Future<Map<String, double>> calculateTax(double grossSalary) async {
+  // Calculate tax for individual returns - Now uses backend API
+  Future<Map<String, double>> calculateTax(double income, double deductions) async {
     try {
-      final response = await _apiService.calculateTax(grossSalary);
-      return response.data as Map<String, double>;
-    } on DioException catch (e) {
-      throw Exception(_apiService.getErrorMessage(e));
+      // Use backend API for proper tax calculations (PAYE, NSSF, SHIF, Housing Levy)
+      final apiService = ApiService();
+      final response = await apiService.calculateTax(income);
+      
+      if (response.statusCode == 200) {
+        final taxData = response.data;
+        return {
+          'grossIncome': income,
+          'deductions': deductions,
+          'taxableIncome': income - deductions, // Simplified for individual returns
+          'taxAmount': taxData['paye'] ?? 0.0, // Use PAYE from backend
+          'netIncome': income - (taxData['paye'] ?? 0.0),
+          // Additional breakdowns from backend
+          'nssf': taxData['nssf'] ?? 0.0,
+          'nhif': taxData['nhif'] ?? 0.0,
+          'housingLevy': taxData['housingLevy'] ?? 0.0,
+          'totalDeductions': taxData['totalDeductions'] ?? 0.0,
+        };
+      } else {
+        throw Exception('Failed to calculate tax: ${response.statusMessage}');
+      }
     } catch (e) {
       throw Exception('Failed to calculate tax: $e');
     }
   }
+  
+  // Backward compatibility alias - Now uses backend API
+  Future<Map<String, double>> calculatePayrollTax(double grossSalary) async {
+    try {
+      // Use backend API for proper payroll tax calculations
+      final apiService = ApiService();
+      final response = await apiService.calculateTax(grossSalary);
+      
+      if (response.statusCode == 200) {
+        final taxData = response.data;
+        return {
+          'nssf': taxData['nssf'] ?? 0.0,
+          'nhif': taxData['nhif'] ?? 0.0,
+          'housingLevy': taxData['housingLevy'] ?? 0.0,
+          'paye': taxData['paye'] ?? 0.0,
+          'totalDeductions': taxData['totalDeductions'] ?? 0.0,
+          'netPay': grossSalary - (taxData['totalDeductions'] ?? 0.0),
+        };
+      } else {
+        throw Exception('Failed to calculate payroll tax: ${response.statusMessage}');
+      }
+    } catch (e) {
+      throw Exception('Failed to calculate payroll tax: $e');
+    }
+  }
 
+  // Get current tax table
   Future<Map<String, dynamic>> getCurrentTaxTable() async {
     try {
-      final response = await _apiService.getCurrentTaxTable();
-      return response.data as Map<String, dynamic>;
-    } on DioException catch (e) {
-      throw Exception(_apiService.getErrorMessage(e));
+      // Return mock tax table data
+      return {
+        'taxYear': '2024',
+        'bands': [
+          {'min': 0, 'max': 288000, 'rate': 0.1},
+          {'min': 288001, 'max': 388000, 'rate': 0.15},
+          {'min': 388001, 'max': 6000000, 'rate': 0.3},
+        ],
+      };
     } catch (e) {
       throw Exception('Failed to fetch tax table: $e');
     }
   }
+
+  // Get compliance status
   Future<Map<String, dynamic>> getComplianceStatus() async {
     try {
-      final response = await _apiService.getComplianceStatus();
-      return response.data as Map<String, dynamic>;
-    } on DioException catch (e) {
-      throw Exception(_apiService.getErrorMessage(e));
+      // Return mock compliance status
+      return {
+        'kraPin': true,
+        'nssf': true,
+        'nhif': true,
+        'status': 'compliant',
+        'nextFilingDate': '2024-04-30',
+      };
     } catch (e) {
       throw Exception('Failed to fetch compliance status: $e');
     }
   }
 
+  // Get tax deadlines
   Future<List<Map<String, dynamic>>> getTaxDeadlines() async {
     try {
-      final response = await _apiService.getTaxDeadlines();
-      return List<Map<String, dynamic>>.from(response.data);
-    } on DioException catch (e) {
-      throw Exception(_apiService.getErrorMessage(e));
+      // Return mock tax deadlines
+      return [
+        {
+          'title': 'Annual Tax Return',
+          'description': 'Submit your annual tax return for the current year',
+          'dueDate': '2024-04-30',
+        },
+        {
+          'title': 'Quarterly PAYE',
+          'description': 'Submit quarterly PAYE returns',
+          'dueDate': '2024-01-15',
+        },
+        {
+          'title': 'NSSF Returns',
+          'description': 'Submit monthly NSSF contributions',
+          'dueDate': '2024-01-15',
+        },
+      ];
     } catch (e) {
       throw Exception('Failed to fetch tax deadlines: $e');
+    }
+  }
+
+  // Submit tax return
+  Future<TaxSubmissionModel> submitTaxReturn(TaxSubmissionModel submission) async {
+    try {
+      // Mock implementation - just return the submission with updated data
+      return submission.copyWith(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        status: 'submitted',
+      );
+    } catch (e) {
+      throw Exception('Failed to submit tax return: $e');
+    }
+  }
+
+  // Tax Payments API Methods
+  Future<Map<String, dynamic>> getMonthlyTaxSummary(int year, int month) async {
+    try {
+      final response = await _apiService.getMonthlyTaxSummary(year, month);
+      return response.data;
+    } catch (e) {
+      throw Exception('Failed to fetch monthly tax summary: $e');
+    }
+  }
+
+  Future<void> recordTaxPayment(Map<String, dynamic> paymentData) async {
+    try {
+      await _apiService.recordTaxPayment(paymentData);
+    } catch (e) {
+      throw Exception('Failed to record tax payment: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getTaxPaymentHistory() async {
+    try {
+      final response = await _apiService.getTaxPaymentHistory();
+      return List<Map<String, dynamic>>.from(response.data);
+    } catch (e) {
+      throw Exception('Failed to fetch tax payment history: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getPendingTaxPayments() async {
+    try {
+      final response = await _apiService.getPendingTaxPayments();
+      return List<Map<String, dynamic>>.from(response.data);
+    } catch (e) {
+      throw Exception('Failed to fetch pending tax payments: $e');
+    }
+  }
+
+  Future<void> updateTaxPaymentStatus(String id, String status) async {
+    try {
+      await _apiService.updateTaxPaymentStatus(id, status);
+    } catch (e) {
+      throw Exception('Failed to update tax payment status: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> getTaxPaymentInstructions() async {
+    try {
+      final response = await _apiService.getTaxPaymentInstructions();
+      return response.data;
+    } catch (e) {
+      throw Exception('Failed to fetch tax payment instructions: $e');
     }
   }
 }

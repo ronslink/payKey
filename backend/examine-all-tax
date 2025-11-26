@@ -1,0 +1,72 @@
+const { Client } = require('pg');
+
+const client = new Client({
+  host: 'localhost',
+  database: 'paykey',
+  user: 'postgres',
+  password: 'admin',
+  port: 5432,
+});
+
+async function examineTaxTables() {
+  try {
+    await client.connect();
+    console.log('🔍 Examining all tax-related tables in database...\n');
+    
+    // Get all tax-related tables
+    const tablesResult = await client.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name LIKE '%tax%'
+      ORDER BY table_name
+    `);
+    
+    console.log('📋 Tax-related tables found:');
+    if (tablesResult.rows.length === 0) {
+      console.log('   ❌ No tax tables found');
+    } else {
+      tablesResult.rows.forEach(table => {
+        console.log(`   • ${table.table_name}`);
+      });
+    }
+    
+    // Check for payment-related tables too
+    const paymentTables = await client.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name LIKE '%payment%'
+      ORDER BY table_name
+    `);
+    
+    console.log('\n📋 Payment-related tables:');
+    if (paymentTables.rows.length === 0) {
+      console.log('   ❌ No payment tables found');
+    } else {
+      paymentTables.rows.forEach(table => {
+        console.log(`   • ${table.table_name}`);
+      });
+    }
+    
+    // List all tables to understand the schema
+    console.log('\n📋 All tables in database:');
+    const allTables = await client.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
+      ORDER BY table_name
+    `);
+    
+    allTables.rows.forEach(table => {
+      console.log(`   • ${table.table_name}`);
+    });
+    
+  } catch (error) {
+    console.error('❌ Error:', error.message);
+  } finally {
+    await client.end();
+  }
+}
+
+examineTaxTables();

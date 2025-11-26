@@ -34,7 +34,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
           final isOnboardingCompleted = user?['isOnboardingCompleted'] ?? false;
           
           // Navigate based on onboarding status
-          if (context != null) {
+          if (context != null && context.mounted) {
             if (isOnboardingCompleted) {
               context.go('/home');
             } else {
@@ -65,7 +65,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
           state = const AsyncValue.data(null);
           
           // New users always need to complete onboarding
-          if (context != null) {
+          if (context != null && context.mounted) {
             context.go('/onboarding');
           }
         } else {

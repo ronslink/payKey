@@ -1,63 +1,44 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../data/models/subscription_plan_model.dart';
 import '../../data/repositories/subscription_repository.dart';
+import '../../data/models/subscription_model.dart';
 
-final subscriptionRepositoryProvider = Provider((ref) => SubscriptionRepository());
-
-final subscriptionPlansProvider = StateNotifierProvider<SubscriptionPlansNotifier, AsyncValue<List<SubscriptionPlanModel>>>((ref) {
-  return SubscriptionPlansNotifier(
-    ref.read(subscriptionRepositoryProvider),
-  );
+// Provider for subscription plans
+final subscriptionPlansProvider =
+    FutureProvider<List<SubscriptionPlan>>((ref) async {
+  final repository = ref.read(subscriptionRepositoryProvider);
+  return repository.getSubscriptionPlans();
 });
 
-final userSubscriptionProvider = StateNotifierProvider<UserSubscriptionNotifier, AsyncValue<UserSubscriptionModel?>>((ref) {
-  return UserSubscriptionNotifier(
-    ref.read(subscriptionRepositoryProvider),
-  );
+// Provider for user subscription
+final userSubscriptionProvider =
+    FutureProvider<Subscription?>((ref) async {
+  final repository = ref.read(subscriptionRepositoryProvider);
+  return repository.getUserSubscription();
 });
 
-class SubscriptionPlansNotifier extends StateNotifier<AsyncValue<List<SubscriptionPlanModel>>> {
-  final SubscriptionRepository _repository;
+// Combined subscription data provider
+final subscriptionDataProvider = Provider<AsyncValue<({
+  List<SubscriptionPlan>? plans,
+  Subscription? userSubscription,
+})>>((ref) {
+  final plansState = ref.watch(subscriptionPlansProvider);
+  final userSubState = ref.watch(userSubscriptionProvider);
+  
+  return AsyncValue.data((
+    plans: plansState.value,
+    userSubscription: userSubState.value,
+  ));
+});
 
-  SubscriptionPlansNotifier(this._repository) : super(const AsyncValue.loading()) {
-    fetchPlans();
-  }
+// Helper provider to check if user has an active subscription
+final hasActiveSubscriptionProvider = Provider<bool>((ref) {
+  final userSubState = ref.watch(userSubscriptionProvider);
+  return userSubState.value?.status == 'active';
+});
 
-  Future<void> fetchPlans() async {
-    state = const AsyncValue.loading();
-    try {
-      final plans = await _repository.getSubscriptionPlans();
-      state = AsyncValue.data(plans);
-    } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-    }
-  }
-}
-
-class UserSubscriptionNotifier extends StateNotifier<AsyncValue<UserSubscriptionModel?>> {
-  final SubscriptionRepository _repository;
-
-  UserSubscriptionNotifier(this._repository) : super(const AsyncValue.loading()) {
-    fetchUserSubscription();
-  }
-
-  Future<void> fetchUserSubscription() async {
-    state = const AsyncValue.loading();
-    try {
-      final subscription = await _repository.getUserSubscription();
-      state = AsyncValue.data(subscription);
-    } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-    }
-  }
-
-  Future<void> subscribeToPlan(String planId) async {
-    try {
-      await _repository.subscribeToPlan(planId);
-      await fetchUserSubscription(); // Refresh the subscription
-    } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-      rethrow;
-    }
-  }
-}
+// Provider for subscription payment history
+final subscriptionPaymentHistoryProvider =
+    FutureProvider<List<SubscriptionPayment>>((ref) async {
+  final repository = ref.read(subscriptionRepositoryProvider);
+  return repository.getSubscriptionPayments();
+});

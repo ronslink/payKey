@@ -42,7 +42,7 @@ class _TimeTrackingHistoryPageState extends ConsumerState<TimeTrackingHistoryPag
               return Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: DropdownButtonFormField<String>(
-                  value: _selectedPropertyId,
+                  initialValue: _selectedPropertyId,
                   decoration: const InputDecoration(
                     labelText: 'Filter by Property',
                     border: OutlineInputBorder(),

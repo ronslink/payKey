@@ -8,52 +8,93 @@ class ApiService {
     _initializeDio();
   }
 
-  final Dio _dio = Dio();
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  // Public fields for extension methods to access
+  final Dio dio = Dio();
+  final FlutterSecureStorage secureStorage = const FlutterSecureStorage();
 
   static const String baseUrl = 'http://localhost:3000'; // Replace with actual backend URL
 
   void _initializeDio() {
-    _dio.options.baseUrl = baseUrl;
-    _dio.options.connectTimeout = const Duration(seconds: 30);
-    _dio.options.receiveTimeout = const Duration(seconds: 30);
+    dio.options.baseUrl = baseUrl;
+    dio.options.connectTimeout = const Duration(seconds: 30);
+    dio.options.receiveTimeout = const Duration(seconds: 30);
+    dio.options.headers.addAll({
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Origin': 'http://localhost:62750', // Flutter mobile origin for CORS
+    });
     
     // Add interceptors for auth and error handling
-    _dio.interceptors.add(InterceptorsWrapper(
+    dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
         // Add auth token to requests (but not for login/register requests)
         final isAuthEndpoint = options.uri.path.contains('/auth/login') ||
                                options.uri.path.contains('/auth/register');
         
         if (!isAuthEndpoint) {
-          final token = await _secureStorage.read(key: 'access_token');
-          if (token != null) {
-            print('🔑 Adding token to request: ${options.uri.path}');
-            options.headers['Authorization'] = 'Bearer $token';
-          } else {
-            print('⚠️ No token found for: ${options.uri.path}');
+          try {
+            final token = await secureStorage.read(key: 'access_token');
+            if (token != null) {
+              print('🔑 Adding token to request: ${options.uri.path}');
+              options.headers['Authorization'] = 'Bearer $token';
+              
+              // Add cache control headers to prevent 304 responses
+              options.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+              options.headers['Pragma'] = 'no-cache';
+              options.headers['Expires'] = '0';
+            } else {
+              print('⚠️ No token found for protected endpoint: ${options.uri.path}');
+              print('   This will likely result in 401 Unauthorized error');
+            }
+          } catch (e) {
+            print('❌ Error reading token from secure storage: $e');
           }
         } else {
           print('🔒 Skipping auth for auth endpoint: ${options.uri.path}');
         }
+        
+        // Log the complete request for debugging
+        print('📤 Request: ${options.method} ${options.uri.path}');
+        print('   Headers: ${options.headers}');
+        if (options.data != null) {
+          print('   Data: ${options.data}');
+        }
+        
         return handler.next(options);
       },
+      onResponse: (response, handler) {
+        print('✅ Response: ${response.statusCode} ${response.requestOptions.uri.path}');
+        print('   Data length: ${response.data?.length ?? 0}');
+        return handler.next(response);
+      },
       onError: (error, handler) async {
-        // Handle different types of errors
-        print('API Error: ${error.response?.statusCode} - ${error.response?.data}');
-        print('Error message: ${error.message}');
-        print('Error type: ${error.type}');
+        // Enhanced error logging
+        print('❌ API Error Details:');
+        print('   Status: ${error.response?.statusCode}');
+        print('   Path: ${error.requestOptions.uri.path}');
+        print('   Method: ${error.requestOptions.method}');
+        print('   Error Type: ${error.type}');
+        print('   Error Message: ${error.message}');
         
+        if (error.response?.data != null) {
+          print('   Response Data: ${error.response?.data}');
+        }
+        
+        // Handle authentication errors
         if (error.response?.statusCode == 401) {
-          await _secureStorage.delete(key: 'access_token');
+          print('🔐 401 Unauthorized - Clearing stored token');
+          await secureStorage.delete(key: 'access_token');
           // TODO: Navigate to login page
         }
         
-        // Log connection/CORS errors specifically
+        // Handle CORS errors specifically
         if (error.type == DioExceptionType.connectionTimeout ||
             error.type == DioExceptionType.sendTimeout ||
             error.type == DioExceptionType.receiveTimeout) {
-          print('Connection error - likely CORS or network issue');
+          print('🌐 Network/CORS Error - Check:');
+          print('   1. Backend is running on localhost:3000');
+          print('   2. CORS is enabled in backend');
+          print('   3. No firewall blocking requests');
         }
         
         return handler.next(error);
@@ -63,19 +104,19 @@ class ApiService {
 
   // Generic HTTP methods
   Future<Response> get(String path, {Map<String, dynamic>? queryParams, Options? options}) async {
-    return _dio.get(path, queryParameters: queryParams, options: options);
+    return dio.get(path, queryParameters: queryParams, options: options);
   }
 
   Future<Response> post(String path, {dynamic data, Map<String, dynamic>? queryParams, Options? options}) async {
-    return _dio.post(path, data: data, queryParameters: queryParams, options: options);
+    return dio.post(path, data: data, queryParameters: queryParams, options: options);
   }
 
   Future<Response> patch(String path, {dynamic data, Map<String, dynamic>? queryParams, Options? options}) async {
-    return _dio.patch(path, data: data, queryParameters: queryParams, options: options);
+    return dio.patch(path, data: data, queryParameters: queryParams, options: options);
   }
 
   Future<Response> delete(String path, {dynamic data, Map<String, dynamic>? queryParams, Options? options}) async {
-    return _dio.delete(path, data: data, queryParameters: queryParams, options: options);
+    return dio.delete(path, data: data, queryParameters: queryParams, options: options);
   }
 
   // Auth endpoints
@@ -85,11 +126,11 @@ class ApiService {
       'password': password,
     };
     print('📤 Sending login request with data: $loginData');
-    return _dio.post('/auth/login', data: loginData);
+    return dio.post('/auth/login', data: loginData);
   }
 
   Future<Response> register(String email, String password, {String? firstName, String? lastName}) async {
-    return _dio.post('/auth/register', data: {
+    return dio.post('/auth/register', data: {
       'email': email,
       'password': password,
       'firstName': firstName,
@@ -99,7 +140,7 @@ class ApiService {
 
   // Worker endpoints
   Future<Response> getWorkers() async {
-    return _dio.get(
+    return dio.get(
       '/workers',
       options: Options(
         headers: {
@@ -112,7 +153,7 @@ class ApiService {
   }
 
   Future<Response> createWorker(Map<String, dynamic> workerData) async {
-    return _dio.post(
+    return dio.post(
       '/workers',
       data: workerData,
       options: Options(
@@ -126,7 +167,7 @@ class ApiService {
   }
 
   Future<Response> updateWorker(String workerId, Map<String, dynamic> workerData) async {
-    return _dio.patch(
+    return dio.patch(
       '/workers/$workerId',
       data: workerData,
       options: Options(
@@ -140,19 +181,19 @@ class ApiService {
   }
 
   Future<Response> deleteWorker(String workerId) async {
-    return _dio.delete('/workers/$workerId');
+    return dio.delete('/workers/$workerId');
   }
 
   // Payment endpoints
   Future<Response> initiateStkPush(String phoneNumber, double amount) async {
-    return _dio.post('/payments/initiate-stk', data: {
+    return dio.post('/payments/initiate-stk', data: {
       'phoneNumber': phoneNumber,
       'amount': amount,
     });
   }
 
   Future<Response> sendB2CPayment(String transactionId, String phoneNumber, double amount, String remarks) async {
-    return _dio.post('/payments/send-b2c', data: {
+    return dio.post('/payments/send-b2c', data: {
       'transactionId': transactionId,
       'phoneNumber': phoneNumber,
       'amount': amount,
@@ -162,39 +203,39 @@ class ApiService {
 
   // Tax calculation methods
   Future<Response> calculateTax(double grossSalary) async {
-    return _dio.post('/taxes/calculate', data: {
+    return dio.post('/taxes/calculate', data: {
       'grossSalary': grossSalary,
     });
   }
 
   // Transaction endpoints
   Future<Response> getTransactions() async {
-    return _dio.get('/transactions');
+    return dio.get('/transactions');
   }
 
   Future<Response> getTransactionById(String transactionId) async {
-    return _dio.get('/transactions/$transactionId');
+    return dio.get('/transactions/$transactionId');
   }
 
   // Payroll record endpoints
   Future<Response> getPayrollRecords() async {
-    return _dio.get('/payroll-records');
+    return dio.get('/payroll-records');
   }
 
   Future<Response> updatePayrollStatus(String recordId, String status, String? paymentDate) async {
-    return _dio.patch('/payroll-records/$recordId/status', data: {
+    return dio.patch('/payroll-records/$recordId/status', data: {
       'status': status,
       if (paymentDate != null) 'paymentDate': paymentDate,
     });
   }
 
   Future<Response> deletePayrollRecord(String recordId) async {
-    return _dio.delete('/payroll-records/$recordId');
+    return dio.delete('/payroll-records/$recordId');
   }
 
   // Subscription endpoints
   Future<Response> getSubscriptionPlans() async {
-    return _dio.get(
+    return dio.get(
       '/subscriptions/plans',
       options: Options(
         headers: {
@@ -207,13 +248,13 @@ class ApiService {
   }
 
   Future<Response> subscribeToPlan(String planId) async {
-    return _dio.post('/subscriptions/subscribe', data: {
+    return dio.post('/subscriptions/subscribe', data: {
       'planId': planId,
     });
   }
 
   Future<Response> getUserSubscription() async {
-    return _dio.get(
+    return dio.get(
       '/subscriptions/current',
       options: Options(
         headers: {
@@ -225,42 +266,126 @@ class ApiService {
     );
   }
 
+  Future<Response> getSubscriptionPaymentHistory({
+    int? page,
+    int? limit,
+    String? status,
+    String? startDate,
+    String? endDate,
+  }) async {
+    final queryParams = <String, dynamic>{};
+    
+    if (page != null) queryParams['page'] = page.toString();
+    if (limit != null) queryParams['limit'] = limit.toString();
+    if (status != null) queryParams['status'] = status;
+    if (startDate != null) queryParams['startDate'] = startDate;
+    if (endDate != null) queryParams['endDate'] = endDate;
+    
+    return dio.get(
+      '/subscriptions/subscription-payment-history',
+      queryParameters: queryParams,
+      options: Options(
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      )
+    );
+  }
+
+  Future<Response> getSubscriptionUsage() async {
+    return dio.get(
+      '/subscriptions/usage',
+      options: Options(
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      )
+    );
+  }
+
+  Future<Response> cancelSubscription(String subscriptionId) async {
+    return dio.post('/subscriptions/$subscriptionId/cancel');
+  }
+
+  Future<Response> updateSubscription(String subscriptionId, Map<String, dynamic> updates) async {
+    return dio.patch('/subscriptions/$subscriptionId', data: updates);
+  }
+
+  Future<Response> resumeSubscription(String subscriptionId) async {
+    return dio.post('/subscriptions/$subscriptionId/resume');
+  }
+
+  Future<Response> upgradeSubscription(String subscriptionId, String newPlanId) async {
+    return dio.post('/subscriptions/$subscriptionId/upgrade', data: {
+      'newPlanId': newPlanId,
+    });
+  }
+
   // Tax endpoints
   Future<Response> getTaxSubmissions() async {
-    return _dio.get('/taxes/submissions');
+    return dio.get('/taxes/submissions');
   }
 
   Future<Response> markTaxAsFiled(String id) async {
-    return _dio.patch('/taxes/submissions/$id/file');
+    return dio.patch('/taxes/submissions/$id/file');
   }
 
   Future<Response> getCurrentTaxTable() async {
-    return _dio.get('/taxes/current');
+    return dio.get('/taxes/current');
   }
 
   Future<Response> getComplianceStatus() async {
-    return _dio.get('/taxes/compliance');
+    return dio.get('/taxes/compliance');
   }
 
   Future<Response> getTaxDeadlines() async {
-    return _dio.get('/taxes/deadlines');
+    return dio.get('/taxes/deadlines');
+  }
+
+  // Tax Payments API Endpoints
+  Future<Response> getMonthlyTaxSummary(int year, int month) async {
+    return dio.get('/tax-payments/summary/$year/$month');
+  }
+
+  Future<Response> recordTaxPayment(Map<String, dynamic> paymentData) async {
+    return dio.post('/tax-payments', data: paymentData);
+  }
+
+  Future<Response> getTaxPaymentHistory() async {
+    return dio.get('/tax-payments/history');
+  }
+
+  Future<Response> getPendingTaxPayments() async {
+    return dio.get('/tax-payments/pending');
+  }
+
+  Future<Response> updateTaxPaymentStatus(String id, String status) async {
+    return dio.patch('/tax-payments/$id/status', data: {'status': status});
+  }
+
+  Future<Response> getTaxPaymentInstructions() async {
+    return dio.get('/tax-payments/instructions');
   }
 
   Future<Response> updateUserProfile(Map<String, dynamic> data) async {
-    return _dio.patch('/users/profile', data: data);
+    return dio.patch('/users/profile', data: data);
   }
 
   // Token management
   Future<void> saveToken(String token) async {
-    await _secureStorage.write(key: 'access_token', value: token);
+    await secureStorage.write(key: 'access_token', value: token);
   }
 
   Future<void> clearToken() async {
-    await _secureStorage.delete(key: 'access_token');
+    await secureStorage.delete(key: 'access_token');
   }
 
   Future<String?> getToken() async {
-    return await _secureStorage.read(key: 'access_token');
+    return await secureStorage.read(key: 'access_token');
   }
 
   // Error handling helper
@@ -278,7 +403,7 @@ class ApiService {
     return error.toString();
   }
 
-  Exception _handleError(dynamic error) {
+  Exception handleError(dynamic error) {
     if (error is DioException) {
       if (error.response != null) {
         return Exception(error.response?.data['message'] ?? 'An error occurred');
@@ -290,59 +415,128 @@ class ApiService {
 
   // Payroll Draft Management
   Future<Response> saveDraftPayroll(String payPeriodId, List<Map<String, dynamic>> items) async {
-    return _dio.post('/payroll/draft', data: {
+    return dio.post('/payroll/draft', data: {
       'payPeriodId': payPeriodId,
       'payrollItems': items,
     });
   }
 
   Future<Response> updatePayrollItem(String payrollRecordId, Map<String, dynamic> updates) async {
-    return _dio.patch('/payroll/draft/$payrollRecordId', data: updates);
+    return dio.patch('/payroll/draft/$payrollRecordId', data: updates);
   }
 
   Future<Response> getDraftPayroll(String payPeriodId) async {
-    return _dio.get('/payroll/draft/$payPeriodId');
+    return dio.get('/payroll/draft/$payPeriodId');
   }
 
   Future<Response> finalizePayroll(String payPeriodId) async {
-    return _dio.post('/payroll/finalize/$payPeriodId');
+    return dio.post('/payroll/finalize/$payPeriodId');
   }
 
   Future<List<int>> downloadPayslip(String payrollRecordId) async {
     try {
-      final response = await _dio.get<List<int>>(
+      final response = await dio.get<List<int>>(
         '/payroll/payslip/$payrollRecordId',
         options: Options(responseType: ResponseType.bytes),
       );
       return response.data ?? [];
     } catch (e) {
-      throw _handleError(e);
+      throw handleError(e);
     }
   }
 
   // Tax Submission Management
   Future<Response> generateTaxSubmission(String payPeriodId) async {
-    return _dio.post('/taxes/submissions/generate/$payPeriodId');
+    return dio.post('/taxes/submissions/generate/$payPeriodId');
   }
 
   Future<Response> getTaxSubmissionByPeriod(String payPeriodId) async {
-    return _dio.get('/taxes/submissions/period/$payPeriodId');
+    return dio.get('/taxes/submissions/period/$payPeriodId');
   }
 
   // Accounting Export
   Future<Response> exportPayrollToCSV(String payPeriodId) async {
-    return _dio.post('/accounting/export/$payPeriodId', data: {'format': 'CSV'});
+    return dio.post('/accounting/export/$payPeriodId', data: {'format': 'CSV'});
   }
 
   Future<Response> getAccountingFormats() async {
-    return _dio.get('/accounting/formats');
+    return dio.get('/accounting/formats');
   }
 
   Future<Response> getAccountMappings() async {
-    return _dio.get('/accounting/mappings');
+    return dio.get('/accounting/mappings');
   }
 
   Future<Response> saveAccountMappings(Map<String, dynamic> mappings) async {
-    return _dio.post('/accounting/mappings', data: mappings);
+    return dio.post('/accounting/mappings', data: mappings);
+  }
+
+  // Leave Management API Endpoints
+  Future<Response> getLeaveRequests() async {
+    return dio.get('/workers/leave-requests');
+  }
+
+  Future<Response> getWorkerLeaveRequests(String workerId) async {
+    return dio.get('/workers/$workerId/leave-requests');
+  }
+
+  Future<Response> createLeaveRequest(String workerId, Map<String, dynamic> leaveData) async {
+    return dio.post('/workers/$workerId/leave-requests', data: leaveData);
+  }
+
+  Future<Response> updateLeaveRequest(String leaveRequestId, Map<String, dynamic> updateData) async {
+    return dio.patch('/workers/leave-requests/$leaveRequestId', data: updateData);
+  }
+
+  Future<Response> deleteLeaveRequest(String leaveRequestId) async {
+    return dio.delete('/workers/leave-requests/$leaveRequestId');
+  }
+
+  Future<Response> approveLeaveRequest(String leaveRequestId, bool approved, {String? comments}) async {
+    return dio.patch('/workers/leave-requests/$leaveRequestId/approve', data: {
+      'approved': approved,
+      if (comments != null) 'comments': comments,
+    });
+  }
+
+  Future<Response> getLeaveBalance(String workerId) async {
+    return dio.get('/workers/$workerId/leave-balance');
+  }
+
+  // Pay Period API Endpoints
+  Future<Response> getPayPeriods() async {
+    return dio.get('/pay-periods');
+  }
+
+  Future<Response> getPayPeriodById(String payPeriodId) async {
+    return dio.get('/pay-periods/$payPeriodId');
+  }
+
+  Future<Response> createPayPeriod(Map<String, dynamic> payPeriodData) async {
+    return dio.post('/pay-periods', data: payPeriodData);
+  }
+
+  Future<Response> updatePayPeriod(String payPeriodId, Map<String, dynamic> updateData) async {
+    return dio.patch('/pay-periods/$payPeriodId', data: updateData);
+  }
+
+  Future<Response> deletePayPeriod(String payPeriodId) async {
+    return dio.delete('/pay-periods/$payPeriodId');
+  }
+
+  Future<Response> updatePayPeriodStatus(String payPeriodId, String action) async {
+    return dio.patch('/pay-periods/$payPeriodId/status', data: {'action': action});
+  }
+
+  Future<Response> getCurrentPayPeriod() async {
+    return dio.get('/pay-periods/current');
+  }
+
+  Future<Response> getPayPeriodsByStatus(String status) async {
+    return dio.get('/pay-periods/status/$status');
+  }
+
+  Future<Response> getPayPeriodStatistics(String payPeriodId) async {
+    return dio.get('/pay-periods/$payPeriodId/statistics');
   }
 }

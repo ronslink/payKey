@@ -2,7 +2,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../../core/network/api_client.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
 import '../models/time_tracking_model.dart';
 
 final timeTrackingRepositoryProvider = Provider<TimeTrackingRepository>((ref) {

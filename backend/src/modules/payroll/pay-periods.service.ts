@@ -13,6 +13,10 @@ import {
 import { CreatePayPeriodDto } from './dto/create-pay-period.dto';
 import { UpdatePayPeriodDto } from './dto/update-pay-period.dto';
 import { PayrollRecord } from './entities/payroll-record.entity';
+import { TaxPaymentsService } from '../tax-payments/services/tax-payments.service';
+import { TaxType } from '../tax-config/entities/tax-config.entity';
+import { InjectRepository as InjectTaxRepository } from '@nestjs/typeorm';
+import { TaxPayment, PaymentStatus } from '../tax-payments/entities/tax-payment.entity';
 
 @Injectable()
 export class PayPeriodsService {
@@ -21,6 +25,7 @@ export class PayPeriodsService {
     private payPeriodRepository: Repository<PayPeriod>,
     @InjectRepository(PayrollRecord)
     private payrollRecordRepository: Repository<PayrollRecord>,
+    private taxPaymentsService: TaxPaymentsService,
   ) {}
 
   async create(createPayPeriodDto: CreatePayPeriodDto): Promise<PayPeriod> {
@@ -223,7 +228,65 @@ export class PayPeriodsService {
   }
 
   async complete(id: string): Promise<PayPeriod> {
+    const payPeriod = await this.findOne(id);
+
+    // Validate that the pay period is in PROCESSING state
+    if (payPeriod.status !== PayPeriodStatus.PROCESSING) {
+      throw new BadRequestException('Only processing pay periods can be completed');
+    }
+
+    // Generate tax submission data automatically
+    await this.generateTaxSubmissionData(id);
+
+    // Update status to completed
     return this.update(id, { status: PayPeriodStatus.COMPLETED });
+  }
+
+  /**
+   * Generate tax submission data for completed pay period
+   * Automatically creates TaxPayment entries for all tax types
+   */
+  private async generateTaxSubmissionData(payPeriodId: string): Promise<void> {
+    const payPeriod = await this.findOne(payPeriodId);
+
+    // Get all payroll records for this pay period
+    const payrollRecords = await this.payrollRecordRepository.find({
+      where: {
+        periodStart: payPeriod.startDate,
+        periodEnd: payPeriod.endDate,
+      },
+    });
+
+    if (payrollRecords.length === 0) {
+      return; // No payroll records, nothing to generate
+    }
+
+    // Get unique user IDs from payroll records
+    const uniqueUserIds = [...new Set(payrollRecords.map((r) => r.userId))];
+
+    // Get pay period date components
+    const startDate = new Date(payPeriod.startDate);
+    const paymentYear = startDate.getFullYear();
+    const paymentMonth = startDate.getMonth() + 1;
+
+    // For each user, generate tax submission data using existing TaxPaymentsService
+    for (const userId of uniqueUserIds) {
+      try {
+        // Use existing TaxPaymentsService to generate monthly summary
+        const monthlySummary = await this.taxPaymentsService.generateMonthlySummary(
+          userId,
+          paymentYear,
+          paymentMonth,
+        );
+
+        // The generateMonthlySummary method will create the tax payment entries
+        // as part of its implementation
+        console.log(`Tax submission data generated for user ${userId}: ${monthlySummary.totalDue} total due`);
+      } catch (error) {
+        console.error(`Failed to generate tax submission for user ${userId}:`, error);
+        // Continue with other users even if one fails
+      }
+    }
   }
 
   async close(id: string): Promise<PayPeriod> {

@@ -1,9 +1,9 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_service.dart';
-import '../models/transaction_model.dart';
+import '../models/payroll_record_model.dart';
 
-final payrollRecordsRepositoryProvider = Provider((ref) => PayrollRecordsRepository());
+final payrollRecordsRepositoryProvider = Provider<PayrollRecordsRepository>((ref) => PayrollRecordsRepository());
 
 class PayrollRecordsRepository {
   final ApiService _apiService = ApiService();

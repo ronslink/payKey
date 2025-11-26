@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../../workers/presentation/providers/workers_provider.dart';
 import '../providers/time_tracking_provider.dart';
 import '../../data/models/time_tracking_model.dart';
 
 class TimeTrackingPage extends ConsumerStatefulWidget {
-  const TimeTrackingPage({super.key});
+  final String? selectedWorkerId;
+  
+  const TimeTrackingPage({
+    super.key,
+    this.selectedWorkerId,
+  });
 
   @override
   ConsumerState<TimeTrackingPage> createState() => _TimeTrackingPageState();
@@ -15,6 +19,12 @@ class TimeTrackingPage extends ConsumerStatefulWidget {
 class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage> {
   String? _selectedWorkerId;
   final _notesController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedWorkerId = widget.selectedWorkerId;
+  }
 
   @override
   void dispose() {
@@ -27,22 +37,13 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage> {
     final workersState = ref.watch(workersProvider);
     final timeTrackingState = ref.watch(timeTrackingProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Time Tracking'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.history),
-            onPressed: () => context.push('/time-tracking/history'),
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Worker Selection
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Worker Selection (only show if not provided from parent)
+          if (_selectedWorkerId == null) ...[
             workersState.when(
               data: (workers) {
                 final activeWorkers = workers.where((w) => w.isActive).toList();
@@ -68,7 +69,7 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage> {
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          value: _selectedWorkerId,
+                          initialValue: _selectedWorkerId,
                           decoration: const InputDecoration(
                             border: OutlineInputBorder(),
                             hintText: 'Choose a worker',
@@ -99,38 +100,38 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage> {
                 ),
               ),
             ),
-
+            
             const SizedBox(height: 24),
+          ],
 
-            // Current Status
-            if (_selectedWorkerId != null)
-              timeTrackingState.when(
-                data: (activeEntry) {
-                  if (activeEntry == null) {
-                    return _buildClockInCard();
-                  } else {
-                    return _buildClockedInCard(activeEntry);
-                  }
-                },
-                loading: () => const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(32),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
+          // Current Status
+          if (_selectedWorkerId != null)
+            timeTrackingState.when(
+              data: (activeEntry) {
+                if (activeEntry == null) {
+                  return _buildClockInCard();
+                } else {
+                  return _buildClockedInCard(activeEntry);
+                }
+              },
+              loading: () => const Card(
+                child: Padding(
+                  padding: EdgeInsets.all(32),
+                  child: Center(child: CircularProgressIndicator()),
                 ),
-                error: (error, _) => Card(
-                  color: Colors.red.shade50,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      'Error: ${error.toString()}',
-                      style: const TextStyle(color: Colors.red),
-                    ),
+              ),
+              error: (error, _) => Card(
+                color: Colors.red.shade50,
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    'Error: ${error.toString()}',
+                    style: const TextStyle(color: Colors.red),
                   ),
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }

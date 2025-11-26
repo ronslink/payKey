@@ -237,7 +237,7 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
                 'Payment Details',
                 [
                   DropdownButtonFormField<String>(
-                    value: _paymentFrequency,
+                    initialValue: _paymentFrequency,
                     decoration: const InputDecoration(
                       labelText: 'Payment Frequency',
                       border: OutlineInputBorder(),
@@ -252,7 +252,7 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
-                    value: _paymentMethod,
+                    initialValue: _paymentMethod,
                     decoration: const InputDecoration(
                       labelText: 'Payment Method',
                       border: OutlineInputBorder(),

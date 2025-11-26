@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'providers/countries_provider.dart';
 import '../../../../core/network/api_service.dart';
-import '../models/country_model.dart';
 
 class OnboardingPage extends ConsumerStatefulWidget {
   const OnboardingPage({super.key});
@@ -102,7 +101,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
 
               // Country Selection
               DropdownButtonFormField<String>(
-                value: _selectedCountryId,
+                initialValue: _selectedCountryId,
                 decoration: const InputDecoration(
                   labelText: 'Country',
                   border: OutlineInputBorder(),

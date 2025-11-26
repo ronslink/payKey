@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/network/api_service.dart';
 import '../../data/models/subscription_plan_model.dart';
 import '../providers/subscription_provider.dart';
 
@@ -60,7 +59,7 @@ class _PricingPageState extends ConsumerState<PricingPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _buildHeader(),
-                ...plans.map((plan) => _buildPlanCard(plan, subscriptionState)).toList(),
+                ...plans.map((plan) => _buildPlanCard(plan, subscriptionState)),
                 _buildFooter(),
               ],
             ),
@@ -256,7 +255,7 @@ class _PricingPageState extends ConsumerState<PricingPage> {
                 // Features
                 ...plan.features.entries.where((entry) => entry.value == true).map((entry) => 
                   _buildFeature(entry.key)
-                ).toList(),
+                ),
                 
                 const SizedBox(height: 24),
                 

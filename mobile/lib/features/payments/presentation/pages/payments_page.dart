@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/network/api_service.dart';
 import '../../data/models/transaction_model.dart';
 // PayrollRecordModel is defined in transaction_model.dart
-import '../providers/payments_provider.dart';
 import '../providers/transactions_provider.dart';
 import '../../data/repositories/payroll_records_repository.dart';
 

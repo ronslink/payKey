@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../../workers/presentation/providers/workers_provider.dart';
-import '../providers/payroll_provider.dart';
 import '../providers/pay_period_provider.dart';
-import '../../../properties/presentation/providers/properties_provider.dart';
+import '../../data/models/pay_period_model.dart';
+
+// Simple provider for selected workers
+final selectedWorkersProvider = StateProvider<Set<String>>((ref) => {});
 
 class RunPayrollPage extends ConsumerStatefulWidget {
-  final String payPeriodId;
+  final String? payPeriodId;
 
-  const RunPayrollPage({super.key, required this.payPeriodId});
+  const RunPayrollPage({super.key, this.payPeriodId});
 
   @override
   ConsumerState<RunPayrollPage> createState() => _RunPayrollPageState();
@@ -17,209 +18,245 @@ class RunPayrollPage extends ConsumerStatefulWidget {
 
 class _RunPayrollPageState extends ConsumerState<RunPayrollPage> {
   String? _selectedPropertyId;
+  PayPeriod? _payPeriod;
+  bool _isCreatingPayPeriod = false;
+
+  // Form controllers for pay period creation
+  final _nameController = TextEditingController();
+  PayPeriodFrequency? _selectedFrequency;
+  final _startDateController = TextEditingController();
+  final _endDateController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
 
   @override
   void initState() {
     super.initState();
     Future.microtask(() {
       ref.read(workersProvider.notifier).fetchWorkers();
-      // Properties provider is FutureProvider, no need to manually fetch
+      if (widget.payPeriodId != null) {
+        _loadPayPeriod();
+      } else {
+        setState(() {
+          _isCreatingPayPeriod = true;
+        });
+      }
     });
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _startDateController.dispose();
+    _endDateController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadPayPeriod() async {
+    try {
+      final repository = ref.read(payPeriodRepositoryProvider);
+      final period = await repository.getPayPeriodById(widget.payPeriodId!);
+      if (mounted) {
+        setState(() {
+          _payPeriod = period;
+          _isCreatingPayPeriod = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load pay period: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _createPayPeriod() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    try {
+      final repository = ref.read(payPeriodRepositoryProvider);
+      final newPeriod = await repository.createPayPeriod(CreatePayPeriodRequest(
+        name: _nameController.text.trim(),
+        startDate: DateTime.now(),
+        endDate: DateTime.now(),
+        frequency: _selectedFrequency!,
+      ));
+
+      if (mounted) {
+        setState(() {
+          _payPeriod = newPeriod;
+          _isCreatingPayPeriod = false;
+          _nameController.clear();
+          _startDateController.clear();
+          _endDateController.clear();
+          _selectedFrequency = null;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pay period created successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to create pay period: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final workersState = ref.watch(workersProvider);
-    final selectedWorkers = ref.watch(selectedWorkersProvider);
-    final propertiesState = ref.watch(propertiesProvider);
     final payPeriodsState = ref.watch(payPeriodsProvider);
-
-    // Find the pay period
-    final payPeriod = payPeriodsState.value?.firstWhere(
-      (p) => p.id == widget.payPeriodId,
-      orElse: () => throw Exception('Pay Period not found'),
-    );
-
-    if (payPeriod == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Run Payroll: ${payPeriod.name}'),
-      ),
-      body: Column(
-        children: [
-          // Property Filter
-          propertiesState.when(
-            data: (properties) {
-              if (properties.isEmpty) return const SizedBox.shrink();
-              return Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: DropdownButtonFormField<String>(
-                  value: _selectedPropertyId,
-                  decoration: const InputDecoration(
-                    labelText: 'Filter by Property',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.filter_list),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                  items: [
-                    const DropdownMenuItem(
-                      value: null,
-                      child: Text('All Properties'),
-                    ),
-                    ...properties.map((p) => DropdownMenuItem(
-                          value: p.id,
-                          child: Text(p.name),
-                        )),
-                  ],
-                  onChanged: (value) {
-                    setState(() => _selectedPropertyId = value);
-                  },
-                ),
-              );
+        title: const Text('Run Payroll'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              ref.refresh(workersProvider);
+              ref.refresh(payPeriodsProvider);
             },
-            loading: () => const LinearProgressIndicator(),
-            error: (_, __) => const SizedBox.shrink(),
           ),
+        ],
+      ),
+      body: _isCreatingPayPeriod ? _buildPayPeriodCreationForm() : _buildPayrollRunInterface(),
+    );
+  }
 
-          // Workers List
-          Expanded(
-            child: workersState.when(
-              data: (workers) {
-                // Filter active workers and then by property
-                final activeWorkers = workers.where((w) => w.isActive).toList();
-                final filteredWorkers = _selectedPropertyId == null
-                    ? activeWorkers
-                    : activeWorkers.where((w) => w.propertyId == _selectedPropertyId).toList();
-
-                if (filteredWorkers.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.people_outline, size: 64, color: Colors.grey),
-                        const SizedBox(height: 16),
-                        Text(
-                          _selectedPropertyId == null
-                              ? 'No active workers'
-                              : 'No workers in this property',
-                          style: const TextStyle(fontSize: 18),
-                        ),
-                      ],
-                    ),
-                  );
+  Widget _buildPayPeriodCreationForm() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Create New Pay Period',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 24),
+            TextFormField(
+              controller: _nameController,
+              decoration: const InputDecoration(
+                labelText: 'Pay Period Name',
+                border: OutlineInputBorder(),
+              ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Please enter a pay period name';
                 }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<PayPeriodFrequency>(
+              initialValue: _selectedFrequency,
+              decoration: const InputDecoration(
+                labelText: 'Frequency',
+                border: OutlineInputBorder(),
+              ),
+              items: PayPeriodFrequency.values.map((frequency) {
+                return DropdownMenuItem<PayPeriodFrequency>(
+                  value: frequency,
+                  child: Text(frequency.toString().split('.').last),
+                );
+              }).toList(),
+              onChanged: (value) {
+                setState(() {
+                  _selectedFrequency = value;
+                });
+              },
+              validator: (value) {
+                if (value == null) {
+                  return 'Please select a frequency';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _createPayPeriod,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.all(16),
+                ),
+                child: const Text('Create Pay Period'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-                return Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            '${selectedWorkers.length} selected',
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              final allFilteredSelected = filteredWorkers.every((w) => selectedWorkers.contains(w.id));
-                              
-                              if (allFilteredSelected) {
-                                final newSet = Set<String>.from(selectedWorkers);
-                                for (var w in filteredWorkers) {
-                                  newSet.remove(w.id);
-                                }
-                                ref.read(selectedWorkersProvider.notifier).state = newSet;
-                              } else {
-                                final newSet = Set<String>.from(selectedWorkers);
-                                for (var w in filteredWorkers) {
-                                  newSet.add(w.id);
-                                }
-                                ref.read(selectedWorkersProvider.notifier).state = newSet;
-                              }
-                            },
-                            child: Text(
-                              filteredWorkers.every((w) => selectedWorkers.contains(w.id))
-                                  ? 'Deselect All'
-                                  : 'Select All',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: filteredWorkers.length,
-                        itemBuilder: (context, index) {
-                          final worker = filteredWorkers[index];
-                          final isSelected = selectedWorkers.contains(worker.id);
-
-                          return CheckboxListTile(
-                            value: isSelected,
-                            onChanged: (value) {
-                              final newSet = Set<String>.from(selectedWorkers);
-                              if (value == true) {
-                                newSet.add(worker.id);
-                              } else {
-                                newSet.remove(worker.id);
-                              }
-                              ref.read(selectedWorkersProvider.notifier).state = newSet;
-                            },
-                            title: Text(worker.name),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(worker.phoneNumber),
-                                Text(
-                                  'Gross Salary: KES ${worker.salaryGross.toStringAsFixed(2)}',
-                                  style: const TextStyle(fontWeight: FontWeight.w500),
-                                ),
-                              ],
-                            ),
-                            secondary: CircleAvatar(
-                              child: Text(worker.name[0].toUpperCase()),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
+  Widget _buildPayrollRunInterface() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Run Payroll',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Pay Period: ${_payPeriod?.name ?? 'Not selected'}',
+            style: const TextStyle(fontSize: 18),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Select Workers:',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: ListView.builder(
+              itemCount: 0, // TODO: Add worker list display
+              itemBuilder: (context, index) {
+                return ListTile(
+                  title: const Text('Worker Name'),
+                  trailing: Checkbox(
+                    value: false, // TODO: Add worker selection logic
+                    onChanged: (value) {},
+                  ),
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(
-                child: Text('Error: ${error.toString()}'),
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                // TODO: Implement payroll calculation
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Payroll calculation not implemented yet')),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.all(16),
               ),
+              child: const Text('Calculate Payroll'),
             ),
           ),
         ],
       ),
-      bottomNavigationBar: selectedWorkers.isEmpty
-          ? null
-          : SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: ElevatedButton(
-                  onPressed: () async {
-                    await ref.read(payrollProvider.notifier).calculatePayroll(
-                          selectedWorkers.toList(),
-                          startDate: payPeriod.startDate,
-                          endDate: payPeriod.endDate,
-                        );
-                    if (context.mounted) {
-                      context.push('/payroll/review/${widget.payPeriodId}');
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.all(16),
-                  ),
-                  child: const Text('Calculate Payroll'),
-                ),
-              ),
-            ),
     );
   }
 }

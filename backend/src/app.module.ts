@@ -28,6 +28,7 @@ import { TaxSubmission } from './modules/taxes/entities/tax-submission.entity';
 import { TaxPayment } from './modules/tax-payments/entities/tax-payment.entity';
 import { TaxConfig } from './modules/tax-config/entities/tax-config.entity';
 import { Subscription } from './modules/subscriptions/entities/subscription.entity';
+import { SubscriptionPayment } from './modules/subscriptions/entities/subscription-payment.entity';
 import { Property } from './modules/properties/entities/property.entity';
 import { Country } from './modules/countries/entities/country.entity';
 import { LeaveRequest } from './modules/workers/entities/leave-request.entity';
@@ -57,6 +58,7 @@ import { AccountingExport } from './modules/accounting/entities/accounting-expor
           TaxPayment,
           TaxConfig,
           Subscription,
+          SubscriptionPayment,
           Property,
           Country,
           LeaveRequest,

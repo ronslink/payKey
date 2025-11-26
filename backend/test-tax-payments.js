@@ -6,7 +6,7 @@ async function testTaxPayments() {
     console.log('Logging in...');
     const loginResponse = await axios.post('http://localhost:3000/auth/login', {
       email: 'testuser@paykey.com',
-      password: 'SecurePass123!'
+      password: 'testuser123'
     });
     
     const token = loginResponse.data.access_token;

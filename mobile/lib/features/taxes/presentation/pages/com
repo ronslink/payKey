@@ -1,0 +1,487 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import '../providers/tax_submission_provider.dart';
+import '../../data/models/tax_submission_model.dart';
+import '../../data/models/payroll_tax_submission.dart';
+
+class ComprehensiveTaxPage extends ConsumerStatefulWidget {
+  const ComprehensiveTaxPage({super.key});
+
+  @override
+  ConsumerState<ComprehensiveTaxPage> createState() => _ComprehensiveTaxPageState();
+}
+
+class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
+  int _currentIndex = 0;
+  final _salaryController = TextEditingController();
+  late Future<Map<String, dynamic>> _complianceFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _complianceFuture = ref.read(taxComplianceProvider)!.call();
+  }
+
+  @override
+  void dispose() {
+    _salaryController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF9FAFB),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF111827),
+        elevation: 0,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Tax Management',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            Text(
+              _currentIndex == 0 ? 'Individual Tax Returns' : 'Payroll Tax Submissions',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      ),
+      body: Column(
+        children: [
+          _buildTabBar(),
+          Expanded(
+            child: _currentIndex == 0 ? _buildIndividualTaxTab() : _buildPayrollTaxTab(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabBar() {
+    return Container(
+      color: Colors.white,
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildTabButton(0, 'Individual Tax'),
+          ),
+          Expanded(
+            child: _buildTabButton(1, 'Payroll Tax'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabButton(int index, String label) {
+    final isSelected = _currentIndex == index;
+    return GestureDetector(
+      onTap: () => setState(() => _currentIndex = index),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: isSelected ? Colors.blue : Colors.transparent,
+              width: 2,
+            ),
+          ),
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: isSelected ? Colors.blue : Colors.grey[600],
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildIndividualTaxTab() {
+    final taxState = ref.watch(taxSubmissionProvider);
+
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _complianceFuture,
+      builder: (context, snapshot) {
+        return Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildComplianceCard(snapshot),
+              const SizedBox(height: 16),
+              _buildTaxCalculationCard(),
+              const SizedBox(height: 16),
+              Expanded(
+                child: _buildSubmissionsList(taxState),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPayrollTaxTab() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Payroll Tax Submissions',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Payroll tax submissions are generated automatically from payroll data.',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildPayrollSubmissionsList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildComplianceCard(AsyncSnapshot<Map<String, dynamic>> snapshot) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Compliance Status',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            if (snapshot.hasData)
+              _buildComplianceInfo(snapshot.data!)
+            else if (snapshot.hasError)
+              Text('Error: ${snapshot.error}')
+            else
+              const CircularProgressIndicator(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildComplianceInfo(Map<String, dynamic> data) {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Status:'),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: (data['status'] ?? '') == 'compliant' ? Colors.green[100] : Colors.orange[100],
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                (data['status'] ?? 'Unknown').toString(),
+                style: TextStyle(
+                  color: (data['status'] ?? '') == 'compliant' ? Colors.green[700] : Colors.orange[700],
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Next Filing:'),
+            Text(
+              data['nextFilingDate'] ?? 'N/A',
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTaxCalculationCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Tax Calculator',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _salaryController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Annual Income (KES)',
+                prefixText: 'KES ',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () async {
+                final income = double.tryParse(_salaryController.text) ?? 0;
+                final deductions = 0; // Could add deduction input
+                final result = await ref.read(taxCalculatorProvider)!(income, deductions);
+                _showTaxResult(result.first);
+              },
+              child: const Text('Calculate Tax'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showTaxResult(TaxSubmissionModel result) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Tax Calculation Result'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Annual Income: KES ${NumberFormat('#,##0').format(result.income)}'),
+            Text('Deductions: KES ${NumberFormat('#,##0').format(result.deductions)}'),
+            Text('Taxable Income: KES ${NumberFormat('#,##0').format(result.taxableIncome)}'),
+            Text(
+              'Tax Due: KES ${NumberFormat('#,##0').format(result.taxDue)}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubmissionsList(AsyncValue<List<TaxSubmissionModel>> taxState) {
+    return Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Tax Submissions',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                ElevatedButton(
+                  onPressed: () => _showNewSubmissionDialog(),
+                  child: const Text('New Submission'),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: taxState.when(
+              data: (submissions) => ListView.builder(
+                itemCount: submissions.length,
+                itemBuilder: (context, index) {
+                  final submission = submissions[index];
+                  return _buildSubmissionCard(submission);
+                },
+              ),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => Center(child: Text('Error: $error')),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubmissionCard(TaxSubmissionModel submission) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: ListTile(
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: submission.status == 'filed' ? Colors.green[100] : Colors.orange[100],
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Icon(
+            submission.status == 'filed' ? Icons.check : Icons.pending,
+            color: submission.status == 'filed' ? Colors.green : Colors.orange,
+            size: 20,
+          ),
+        ),
+        title: Text('${submission.taxYear} Tax Return'),
+        subtitle: Text('Income: KES ${NumberFormat('#,##0').format(submission.income)}'),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              'KES ${NumberFormat('#,##0').format(submission.taxDue)}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            Text(
+              submission.status,
+              style: TextStyle(
+                fontSize: 12,
+                color: submission.status == 'filed' ? Colors.green : Colors.orange,
+              ),
+            ),
+          ],
+        ),
+        onTap: () => _showSubmissionDetails(submission),
+      ),
+    );
+  }
+
+  void _showSubmissionDetails(TaxSubmissionModel submission) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('${submission.taxYear} Tax Return'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Status: ${submission.status}'),
+            Text('Annual Income: KES ${NumberFormat('#,##0').format(submission.income)}'),
+            Text('Deductions: KES ${NumberFormat('#,##0').format(submission.deductions)}'),
+            Text('Taxable Income: KES ${NumberFormat('#,##0').format(submission.taxableIncome)}'),
+            Text('Tax Due: KES ${NumberFormat('#,##0').format(submission.taxDue)}'),
+            if (submission.filingDate != null)
+              Text('Filed: ${DateFormat('MMM dd, yyyy').format(submission.filingDate!)}'),
+          ],
+        ),
+        actions: [
+          if (submission.status != 'filed')
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                ref.read(taxSubmissionProvider.notifier).markAsFiled(submission.id);
+              },
+              child: const Text('Mark as Filed'),
+            ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showNewSubmissionDialog() {
+    final incomeController = TextEditingController();
+    final deductionsController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('New Tax Submission'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: incomeController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Annual Income (KES)'),
+            ),
+            TextField(
+              controller: deductionsController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Deductions (KES)'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final income = double.tryParse(incomeController.text) ?? 0;
+              final deductions = double.tryParse(deductionsController.text) ?? 0;
+              
+              Navigator.of(context).pop();
+              
+              // Create new submission
+              final newSubmission = TaxSubmissionModel(
+                id: DateTime.now().millisecondsSinceEpoch.toString(),
+                userId: 'current-user',
+                taxYear: DateTime.now().year.toString(),
+                income: income,
+                deductions: deductions,
+                taxableIncome: income - deductions,
+                taxDue: income * 0.3, // Simplified calculation
+                status: 'draft',
+                createdAt: DateTime.now(),
+                updatedAt: DateTime.now(),
+              );
+              
+              await ref.read(taxSubmissionProvider.notifier).submitTaxReturn(newSubmission);
+            },
+            child: const Text('Submit'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPayrollSubmissionsList() {
+    return Expanded(
+      child: Card(
+        child: ListView.builder(
+          itemCount: 5, // Mock data
+          itemBuilder: (context, index) {
+            final month = DateFormat('MMM').format(DateTime.now().subtract(Duration(days: 30 * index)));
+            return ListTile(
+              leading: Icon(Icons.account_balance_wallet, color: Colors.blue),
+              title: Text('$month 2024 Payroll Tax'),
+              subtitle: Text('PAYE: KES 45,000 • NSSF: KES 2,160 • NHIF: KES 1,200'),
+              trailing: Icon(Icons.check_circle, color: Colors.green),
+              onTap: () {
+                // Handle payroll tax submission details
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+}

@@ -2,8 +2,6 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../../core/network/api_client.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
-import '../../../payments/data/models/payment_model.dart';
 import '../models/payroll_model.dart';
 
 final payrollRepositoryProvider = Provider<PayrollRepository>((ref) {

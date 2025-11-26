@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/properties_provider.dart';
-import '../models/property_model.dart';
 
 class PropertiesPage extends ConsumerWidget {
   const PropertiesPage({super.key});

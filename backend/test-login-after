@@ -1,0 +1,33 @@
+const axios = require('axios');
+
+async function testLogin() {
+  console.log('🧪 Testing PayKey Login After Database Fix...');
+  
+  try {
+    console.log('\n1️⃣ Testing login endpoint...');
+    
+    const loginResponse = await axios.post('http://localhost:3000/auth/login', {
+      email: 'testuser@paykey.com',
+      password: 'testuser123'
+    });
+
+    console.log('✅ Login successful!');
+    console.log('Status:', loginResponse.status);
+    console.log('Response data:', JSON.stringify(loginResponse.data, null, 2));
+
+    if (loginResponse.data.access_token) {
+      console.log('\n2️⃣ JWT token received successfully!');
+    }
+
+  } catch (error) {
+    console.log('❌ Login failed:', error.response?.data || error.message);
+    if (error.response) {
+      console.log('Status code:', error.response.status);
+      console.log('Headers:', error.response.headers);
+    }
+    console.log('Full error:', error);
+  }
+}
+
+// Test the login
+testLogin();

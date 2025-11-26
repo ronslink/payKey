@@ -12,9 +12,9 @@ const pool = new Pool({
 
 async function fixDemoUserPassword() {
   try {
-    // Generate a new bcrypt hash for "SecurePass123!"
+    // Generate a new bcrypt hash for "testuser123"
     const saltRounds = 10;
-    const passwordHash = await bcrypt.hash('SecurePass123!', saltRounds);
+    const passwordHash = await bcrypt.hash('testuser123', saltRounds);
     
     console.log('Generated password hash:', passwordHash);
     

@@ -7,19 +7,12 @@ import 'features/home/presentation/pages/home_page.dart';
 import 'features/workers/presentation/pages/workers_list_page.dart';
 import 'features/workers/presentation/pages/worker_form_page.dart';
 import 'features/workers/data/models/worker_model.dart';
-import 'features/payments/presentation/pages/topup_page.dart';
-import 'features/payments/presentation/pages/transactions_page.dart';
-import 'features/payments/presentation/pages/payments_page.dart';
-import 'features/payments/presentation/pages/payment_detail_page.dart';
-import 'features/profile/presentation/pages/profile_page.dart';
-import 'features/payroll/presentation/pages/payroll_page.dart';
 import 'features/payroll/presentation/pages/run_payroll_page.dart';
 import 'features/payroll/presentation/pages/payslip_page.dart';
-import 'features/payroll/presentation/pages/payroll_review_page.dart';
-import 'features/payroll/presentation/pages/payroll_confirm_page.dart';
 import 'features/finance/presentation/pages/finance_page.dart';
 import 'features/onboarding/presentation/pages/onboarding_page.dart';
-import 'features/subscriptions/presentation/pages/pricing_page.dart';
+import 'features/subscriptions/presentation/pages/subscription_management_page.dart';
+import 'features/payroll/presentation/pages/payroll_page.dart';
 import 'features/time_tracking/presentation/pages/time_tracking_page.dart';
 import 'features/time_tracking/presentation/pages/time_tracking_history_page.dart';
 import 'features/workers/presentation/pages/terminate_worker_page.dart';
@@ -40,12 +33,20 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/login',
     redirect: (context, state) async {
-      // Simple redirect logic without async token checking to avoid interference
       final currentPath = state.matchedLocation;
-      final isLoggingIn = currentPath == '/login' || currentPath == '/register';
+      final isAuthPage = currentPath == '/login' || currentPath == '/register';
       
-      // Only redirect to login if we're not on auth pages and no token check
-      // This prevents multiple requests during login process
+      // Check if user is authenticated by looking for token
+      // This helps prevent authenticated users from staying on login page
+      final apiService = ApiService();
+      final token = await apiService.getToken();
+      
+      // If user is authenticated and trying to access auth pages, redirect to home
+      if (token != null && isAuthPage) {
+        return '/home';
+      }
+      
+      // Let the authentication be handled by providers
       return null; // Let authentication be handled by providers
     },
     routes: [
@@ -62,60 +63,46 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/home',
         builder: (context, state) => const MainLayout(
-          child: HomePage(),
           currentIndex: 0,
+          child: HomePage(),
         ),
       ),
       GoRoute(
         path: '/workers',
         builder: (context, state) => const MainLayout(
-          child: WorkersListPage(),
           currentIndex: 1,
+          child: WorkersListPage(),
         ),
       ),
       GoRoute(
         path: '/time-tracking',
         builder: (context, state) => const MainLayout(
-          child: TimeTrackingPage(),
           currentIndex: 2,
-        ),
-      ),
-      GoRoute(
-        path: '/payments',
-        builder: (context, state) => const MainLayout(
-          child: PaymentsPage(),
-          currentIndex: 3,
+          child: TimeTrackingPage(),
         ),
       ),
       GoRoute(
         path: '/tax',
         builder: (context, state) => const MainLayout(
-          child: TaxPage(),
           currentIndex: 4,
+          child: TaxPage(),
         ),
       ),
       GoRoute(
-        path: '/pricing',
+        path: '/subscriptions',
         builder: (context, state) => const MainLayout(
-          child: PricingPage(),
-          currentIndex: 5,
+          currentIndex: 3,
+          child: SubscriptionManagementPage(),
         ),
       ),
-      
-      // Payment detail route
-      GoRoute(
-        path: '/payments/:id',
-        builder: (context, state) {
-          final transactionId = state.pathParameters['id']!;
-          return PaymentDetailPage(transactionId: transactionId);
-        },
-      ),
-      
-      // Payroll Routes
       GoRoute(
         path: '/payroll',
-        builder: (context, state) => const PayrollPage(),
+        builder: (context, state) => const MainLayout(
+          currentIndex: 5,
+          child: PayrollPage(),
+        ),
       ),
+      // Payroll Routes (sub-routes for payroll management)
       GoRoute(
         path: '/payroll/run/:id',
         builder: (context, state) {
@@ -227,54 +214,8 @@ class TaxPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF111827),
-        elevation: 0,
-        title: const Text(
-          'Tax',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFEF3C7),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Icon(
-                Icons.receipt,
-                size: 40,
-                color: Color(0xFFFBBF24),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Tax Management',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF111827),
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Tax filing and management coming soon',
-              style: TextStyle(
-                color: Color(0xFF6B7280),
-                fontSize: 16,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return const Scaffold(
+      body: ComprehensiveTaxPage(),
     );
   }
 }

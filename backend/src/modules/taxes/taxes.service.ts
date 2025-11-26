@@ -9,6 +9,8 @@ import {
 import { TaxBreakdown, PayrollCalculation } from './interfaces/tax.interface';
 import { UsersService } from '../users/users.service';
 import { PayrollRecord } from '../payroll/entities/payroll-record.entity';
+import { TaxConfigService } from '../tax-config/services/tax-config.service';
+import { TaxType } from '../tax-config/entities/tax-config.entity';
 
 @Injectable()
 export class TaxesService {
@@ -19,6 +21,7 @@ export class TaxesService {
     private taxSubmissionRepository: Repository<TaxSubmission>,
     @InjectRepository(PayrollRecord)
     private payrollRecordRepository: Repository<PayrollRecord>,
+    private taxConfigService: TaxConfigService,
     private usersService: UsersService,
   ) { }
 
@@ -75,38 +78,103 @@ export class TaxesService {
 
   /**
    * Calculate NSSF (National Social Security Fund)
-   * Tier I: 6% of pensionable pay (max KES 7,000)
-   * Tier II: 6% of pensionable pay (max KES 36,000)
-   * Total max contribution: KES 2,160/month
+   * Using TaxConfigService for current rates
    */
-  private calculateNSSF(grossSalary: number, table: TaxTable): number {
-    const { tierILimit, tierIILimit, rate } = table.nssfConfig;
+  private async calculateNSSF(grossSalary: number, date: Date): Promise<number> {
+    // Get current NSSF configurations
+    const tier1Config = await this.taxConfigService.getActiveTaxConfig(TaxType.NSSF_TIER1, date);
+    const tier2Config = await this.taxConfigService.getActiveTaxConfig(TaxType.NSSF_TIER2, date);
 
-    const tierI = Math.min(grossSalary, tierILimit) * rate;
-    const tierII =
-      grossSalary > tierILimit
-        ? Math.min(grossSalary - tierILimit, tierIILimit - tierILimit) * rate
-        : 0;
+    let totalNssf = 0;
 
-    return Math.round((tierI + tierII) * 100) / 100;
+    // Calculate Tier 1
+    if (tier1Config && tier1Config.configuration.tiers) {
+      const tier1 = tier1Config.configuration.tiers[0];
+      const tier1Limit = tier1.salaryTo || 8000; // Handle null case
+      totalNssf += Math.min(grossSalary, tier1Limit) * tier1.rate;
+    }
+
+    // Calculate Tier 2
+    if (tier2Config && tier2Config.configuration.tiers) {
+      const tier2 = tier2Config.configuration.tiers[0];
+      if (grossSalary > 8000) {
+        const tier2Limit = tier2.salaryTo || 72000; // Handle null case
+        const tier2From = tier2.salaryFrom || 8001; // Handle null case
+        totalNssf +=
+          Math.min(grossSalary - 8000, tier2Limit - tier2From) * tier2.rate;
+      }
+    }
+
+    return Math.round(totalNssf * 100) / 100;
   }
 
   /**
-   * Calculate NHIF/SHIF (Social Health Insurance Fund)
-   * 2.75% of gross salary
+   * Calculate PAYE using TaxConfigService
+   * Using current graduated tax brackets
    */
-  private calculateNHIF(grossSalary: number, table: TaxTable): number {
-    // Assuming percentage rate for SHIF/NHIF as per recent changes
-    // If bands are needed, we can check table.nhifConfig type
-    return Math.round(grossSalary * table.nhifConfig.rate * 100) / 100;
+  private async calculatePAYEFromConfig(grossSalary: number, nssf: number, date: Date): Promise<number> {
+    const payeConfig = await this.taxConfigService.getActiveTaxConfig(TaxType.PAYE, date);
+    
+    if (payeConfig && payeConfig.configuration.brackets) {
+      const taxableIncome = grossSalary - nssf;
+      let tax = 0;
+      let remainingIncome = taxableIncome;
+      let previousLimit = 0;
+
+      for (const bracket of payeConfig.configuration.brackets) {
+        if (remainingIncome <= 0) break;
+
+        const taxableAmount =
+          bracket.to === null
+            ? remainingIncome
+            : Math.min(remainingIncome, bracket.to - previousLimit);
+
+        tax += taxableAmount * bracket.rate;
+        remainingIncome -= taxableAmount;
+        previousLimit = bracket.to || previousLimit;
+      }
+
+      const personalRelief = payeConfig.configuration.personalRelief || 2400;
+      const paye = Math.max(0, tax - personalRelief);
+      return Math.round(paye * 100) / 100;
+    }
+
+    // Fallback calculation using existing method
+    const table = await this.getTaxTable(date);
+    return this.calculatePAYE(grossSalary, nssf, table);
+  }
+
+  /**
+   * Calculate SHIF (Social Health Insurance Fund)
+   * Using TaxConfigService for current rates
+   */
+  private async calculateSHIF(grossSalary: number, date: Date): Promise<number> {
+    const shifConfig = await this.taxConfigService.getActiveTaxConfig(TaxType.SHIF, date);
+    
+    if (shifConfig && shifConfig.configuration.percentage !== undefined) {
+      const shifAmount = grossSalary * shifConfig.configuration.percentage;
+      const minAmount = shifConfig.configuration.minAmount || 0;
+      return Math.round(Math.max(shifAmount, minAmount) * 100) / 100;
+    }
+
+    // Fallback calculation
+    const shifAmount = grossSalary * 0.0275; // 2.75%
+    return Math.round(Math.max(shifAmount, 300) * 100) / 100; // Min KES 300
   }
 
   /**
    * Calculate Housing Levy (Employee portion)
-   * 1.5% of gross salary
+   * Using TaxConfigService for current rates
    */
-  private calculateHousingLevy(grossSalary: number, table: TaxTable): number {
-    return Math.round(grossSalary * Number(table.housingLevyRate) * 100) / 100;
+  private async calculateHousingLevy(grossSalary: number, date: Date): Promise<number> {
+    const housingConfig = await this.taxConfigService.getActiveTaxConfig(TaxType.HOUSING_LEVY, date);
+    
+    if (housingConfig && housingConfig.configuration.percentage !== undefined) {
+      return Math.round(grossSalary * housingConfig.configuration.percentage * 100) / 100;
+    }
+
+    // Fallback calculation
+    return Math.round(grossSalary * 0.015 * 100) / 100; // 1.5%
   }
 
   /**
@@ -146,25 +214,29 @@ export class TaxesService {
 
   /**
    * Calculate all taxes for a given gross salary
+   * Using TaxConfigService for current Kenya tax rates
    */
   async calculateTaxes(
     grossSalary: number,
     date: Date = new Date(),
   ): Promise<TaxBreakdown> {
-    const table = await this.getTaxTable(date);
+    // Calculate NSSF first (needed for PAYE calculation)
+    const nssf = await this.calculateNSSF(grossSalary, date);
+    
+    // Calculate remaining components
+    const [shif, housingLevy, payeConfig] = await Promise.all([
+      this.calculateSHIF(grossSalary, date),
+      this.calculateHousingLevy(grossSalary, date),
+      this.calculatePAYEFromConfig(grossSalary, nssf, date),
+    ]);
 
-    const nssf = this.calculateNSSF(grossSalary, table);
-    const nhif = this.calculateNHIF(grossSalary, table);
-    const housingLevy = this.calculateHousingLevy(grossSalary, table);
-    const paye = this.calculatePAYE(grossSalary, nssf, table);
-
-    const totalDeductions = nssf + nhif + housingLevy + paye;
+    const totalDeductions = nssf + shif + housingLevy + payeConfig;
 
     return {
       nssf,
-      nhif,
+      nhif: shif,
       housingLevy,
-      paye,
+      paye: payeConfig,
       totalDeductions: Math.round(totalDeductions * 100) / 100,
     };
   }

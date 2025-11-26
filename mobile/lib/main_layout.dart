@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'features/auth/presentation/providers/auth_provider.dart';
-import 'features/home/presentation/pages/home_page.dart';
-import 'features/workers/presentation/pages/workers_list_page.dart';
 
 class MainLayout extends ConsumerStatefulWidget {
   final Widget child;
@@ -32,13 +29,13 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
         context.go('/time-tracking');
         break;
       case 3:
-        context.go('/payments');
+        context.go('/subscriptions');
         break;
       case 4:
         context.go('/tax');
         break;
       case 5:
-        context.go('/pricing');
+        context.go('/payroll');
         break;
     }
   }
@@ -72,10 +69,10 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
               children: [
                 _buildTabItem(0, Icons.home, 'Home'),
                 _buildTabItem(1, Icons.people, 'Workers'),
-                _buildTabItem(2, Icons.access_time, 'Time'),
-                _buildTabItem(3, Icons.payment, 'Payments'),
-                _buildTabItem(4, Icons.receipt, 'Tax'),
-                _buildTabItem(5, Icons.attach_money, 'Pricing'),
+                _buildTabItem(2, Icons.access_time, 'Time & Leave'),
+                _buildTabItem(3, Icons.card_membership, 'Subscriptions'),
+                _buildTabItem(4, Icons.receipt, 'Tax Management'),
+                _buildTabItem(5, Icons.account_balance, 'Payroll'),
               ],
             ),
           ),

@@ -17,7 +17,7 @@ class TransactionsNotifier extends StateNotifier<AsyncValue<List<dynamic>>> {
     try {
       state = const AsyncValue.loading();
       final transactions = await _repository.getTransactions();
-      state = AsyncValue.data(List<dynamic>.from(transactions ?? []));
+      state = AsyncValue.data(List<dynamic>.from(transactions));
     } catch (error, stackTrace) {
       state = AsyncValue.error(error.toString(), stackTrace);
     }

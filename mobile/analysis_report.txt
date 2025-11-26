@@ -1,0 +1,438 @@
+Analyzing mobile...                                             
+
+   info - Don't invoke 'print' in production code - lib\core\network\api_service.dart:45:15 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\network\api_service.dart:53:15 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\network\api_service.dart:54:15 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\network\api_service.dart:57:13 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\network\api_service.dart:60:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\network\api_service.dart:64:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\network\api_service.dart:65:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\network\api_service.dart:67:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\network\api_service.dart:73:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\network\api_service.dart:74:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\network\api_service.dart:79:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\network\api_service.dart:80:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\network\api_service.dart:81:9 - avoid_print
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\network\api_service.dart:81:47 - invalid_null_aware_operator
+warning - The receiver can't be 'null' because of short-circuiting, so the null-aware operator '?.' can't be used - lib\core\network\api_service.dart:81:52 - invalid_null_aware_operator
+   info - Don't invoke 'print' in production code - lib\core\network\api_service.dart:82:9 - avoid_print
+warning - The receiver can't be null, so the null-aware operator '?.' is unnecessary - lib\core\network\api_service.dart:82:49 - invalid_null_aware_operator
+   info - Don't invoke 'print' in production code - lib\core\network\api_service.dart:83:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\network\api_service.dart:84:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\network\api_service.dart:87:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\network\api_service.dart:92:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\network\api_service.dart:101:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\network\api_service.dart:102:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\network\api_service.dart:103:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\network\api_service.dart:104:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\core\network\api_service.dart:135:5 - avoid_print
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\accounting_service.dart:6:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\accounting_service.dart:10:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\accounting_service.dart:14:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\accounting_service.dart:18:12 - invalid_use_of_protected_member
+warning - Unused import: 'package:flutter_secure_storage/flutter_secure_storage.dart' - lib\core\network\services\auth_service.dart:2:8 - unused_import
+   info - Don't invoke 'print' in production code - lib\core\network\services\auth_service.dart:11:5 - avoid_print
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\auth_service.dart:12:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\auth_service.dart:16:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\auth_service.dart:25:12 - invalid_use_of_protected_member
+warning - The member 'secureStorage' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\auth_service.dart:30:11 - invalid_use_of_protected_member
+warning - The member 'secureStorage' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\auth_service.dart:34:11 - invalid_use_of_protected_member
+warning - The member 'secureStorage' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\auth_service.dart:38:18 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\payment_service.dart:6:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\payment_service.dart:13:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\payment_service.dart:22:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\payment_service.dart:26:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\payroll_service.dart:6:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\payroll_service.dart:10:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\payroll_service.dart:17:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\payroll_service.dart:21:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\payroll_service.dart:28:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\payroll_service.dart:32:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\payroll_service.dart:36:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\payroll_service.dart:41:30 - invalid_use_of_protected_member
+  error - The method '_handleError' isn't defined for the type 'ApiService' - lib\core\network\services\payroll_service.dart:47:13 - undefined_method
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\subscription_service.dart:6:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\subscription_service.dart:19:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\subscription_service.dart:25:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\subscription_service.dart:52:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\subscription_service.dart:66:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\subscription_service.dart:79:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\subscription_service.dart:83:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\subscription_service.dart:87:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\subscription_service.dart:91:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\tax_service.dart:6:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\tax_service.dart:12:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\tax_service.dart:16:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\tax_service.dart:20:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\tax_service.dart:24:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\tax_service.dart:28:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\tax_service.dart:32:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\tax_service.dart:36:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\worker_service.dart:6:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\worker_service.dart:19:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\worker_service.dart:33:12 - invalid_use_of_protected_member
+warning - The member 'dio' can only be used within instance members of subclasses of 'ApiService' - lib\core\network\services\worker_service.dart:47:12 - invalid_use_of_protected_member
+warning - The annotation 'JsonKey.new' can only be used on fields or getters - lib\features\auth\data\models\user_model.dart:23:6 - invalid_annotation_target
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\presentation\pages\login_page.dart:178:45 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\presentation\pages\register_page.dart:186:45 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps - lib\features\auth\presentation\providers\auth_provider.dart:39:15 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\auth\presentation\providers\auth_provider.dart:41:15 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\auth\presentation\providers\auth_provider.dart:69:13 - use_build_context_synchronously
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\presentation\pages\home_page.dart:57:47 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\presentation\pages\home_page.dart:83:53 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\presentation\pages\home_page.dart:155:41 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\presentation\pages\home_page.dart:215:41 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\presentation\pages\home_page.dart:279:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\presentation\pages\home_page.dart:294:32 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\presentation\pages\home_page.dart:395:22 - deprecated_member_use
+  error - The argument type 'Map<String, int>' can't be assigned to the parameter type 'LeaveBalanceModel'.  - lib\features\leave_management\presentation\pages\leave_balance_page.dart:49:67 - argument_type_not_assignable
+warning - The value of 'refresh' should be used - lib\features\leave_management\presentation\pages\leave_balance_page.dart:70:27 - unused_result
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\leave_management\presentation\pages\leave_balance_page.dart:365:34 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\leave_management\presentation\pages\leave_balance_page.dart:437:26 - deprecated_member_use
+warning - The value of the local variable 'theme' isn't used - lib\features\leave_management\presentation\pages\leave_management_page.dart:38:11 - unused_local_variable
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\leave_management\presentation\pages\leave_management_page.dart:137:25 - deprecated_member_use
+  error - The expression doesn't evaluate to a function, so it can't be invoked - lib\features\leave_management\presentation\pages\leave_management_page.dart:188:22 - invocation_of_non_function_expression
+  error - There's no constant named 'ANNUAL' in 'LeaveType' - lib\features\leave_management\presentation\pages\leave_request_form_page.dart:28:44 - undefined_enum_constant
+warning - The value of the local variable 'theme' isn't used - lib\features\leave_management\presentation\pages\leave_request_form_page.dart:44:11 - unused_local_variable
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\leave_management\presentation\pages\leave_request_form_page.dart:76:25 - deprecated_member_use
+  error - There's no constant named 'UNPAID' in 'LeaveType' - lib\features\leave_management\presentation\pages\leave_request_form_page.dart:90:76 - undefined_enum_constant
+  error - There's no constant named 'ANNUAL' in 'LeaveType' - lib\features\leave_management\presentation\pages\leave_request_form_page.dart:350:22 - undefined_enum_constant
+  error - There's no constant named 'SICK' in 'LeaveType' - lib\features\leave_management\presentation\pages\leave_request_form_page.dart:352:22 - undefined_enum_constant
+  error - There's no constant named 'MATERNITY' in 'LeaveType' - lib\features\leave_management\presentation\pages\leave_request_form_page.dart:354:22 - undefined_enum_constant
+  error - There's no constant named 'PATERNITY' in 'LeaveType' - lib\features\leave_management\presentation\pages\leave_request_form_page.dart:356:22 - undefined_enum_constant
+  error - There's no constant named 'EMERGENCY' in 'LeaveType' - lib\features\leave_management\presentation\pages\leave_request_form_page.dart:358:22 - undefined_enum_constant
+  error - There's no constant named 'UNPAID' in 'LeaveType' - lib\features\leave_management\presentation\pages\leave_request_form_page.dart:360:22 - undefined_enum_constant
+  error - The expression doesn't evaluate to a function, so it can't be invoked - lib\features\leave_management\presentation\pages\leave_request_form_page.dart:457:22 - invocation_of_non_function_expression
+  error - Undefined name 'token' - lib\features\leave_management\presentation\pages\leave_request_form_page.dart:457:46 - undefined_identifier
+  error - The expression doesn't evaluate to a function, so it can't be invoked - lib\features\leave_management\presentation\pages\leave_requests_list_page.dart:39:34 - invocation_of_non_function_expression
+  error - Undefined name 'token' - lib\features\leave_management\presentation\pages\leave_requests_list_page.dart:39:58 - undefined_identifier
+  error - The expression doesn't evaluate to a function, so it can't be invoked - lib\features\leave_management\presentation\pages\leave_requests_list_page.dart:71:32 - invocation_of_non_function_expression
+  error - Undefined name 'token' - lib\features\leave_management\presentation\pages\leave_requests_list_page.dart:71:56 - undefined_identifier
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\leave_management\presentation\pages\leave_requests_list_page.dart:170:42 - deprecated_member_use
+  error - The getter 'time_off' isn't defined for the type 'Icons' - lib\features\leave_management\presentation\pages\leave_requests_list_page.dart:307:22 - undefined_getter
+  error - Too many positional arguments: 2 expected, but 3 found - lib\features\leave_management\presentation\pages\leave_requests_list_page.dart:371:59 - extra_positional_arguments_could_be_named
+  error - Too many positional arguments: 2 expected, but 3 found - lib\features\leave_management\presentation\pages\leave_requests_list_page.dart:394:50 - extra_positional_arguments_could_be_named
+warning - Unused import: '../models/country_model.dart' - lib\features\onboarding\presentation\pages\onboarding_page.dart:6:8 - unused_import
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\onboarding\presentation\pages\onboarding_page.dart:105:17 - deprecated_member_use
+  error - 1 positional argument expected by 'PayPeriodsRepositoryImpl.new', but 0 found - lib\features\pay_periods\data\repositories\pay_periods_repository.dart:5:81 - not_enough_positional_arguments
+warning - The value of the field '_apiService' isn't used - lib\features\pay_periods\data\repositories\pay_periods_repository.dart:8:20 - unused_field
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\pay_periods\presentation\pages\pay_periods_list_page.dart:87:46 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\pay_periods\presentation\pages\pay_periods_list_page.dart:141:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\pay_periods\presentation\pages\pay_periods_list_page.dart:183:64 - deprecated_member_use
+warning - The value of the local variable 'repository' isn't used - lib\features\pay_periods\presentation\providers\pay_periods_provider.dart:186:9 - unused_local_variable
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\payments\presentation\pages\payment_detail_page.dart:121:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\payments\presentation\pages\payment_detail_page.dart:200:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\payments\presentation\pages\payment_detail_page.dart:237:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\payments\presentation\pages\payment_detail_page.dart:275:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\payments\presentation\pages\payment_detail_page.dart:297:58 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\payments\presentation\pages\payment_detail_page.dart:300:60 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\payments\presentation\pages\payment_detail_page.dart:351:33 - deprecated_member_use
+warning - Unused import: '../../../../core/network/api_service.dart' - lib\features\payments\presentation\pages\payments_page.dart:4:8 - unused_import
+warning - Unused import: '../providers/payments_provider.dart' - lib\features\payments\presentation\pages\payments_page.dart:7:8 - unused_import
+  error - The argument type 'Future<List<PayrollRecordModel>>' can't be assigned to the parameter type 'Future<List<PayrollRecordModel>>?'.  - lib\features\payments\presentation\pages\payments_page.dart:156:15 - argument_type_not_assignable
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\payments\presentation\pages\payments_page.dart:285:35 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\payments\presentation\pages\payments_page.dart:409:33 - deprecated_member_use
+   info - Don't use 'BuildContext's across async gaps - lib\features\payments\presentation\pages\payments_page.dart:694:28 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\payments\presentation\pages\payments_page.dart:721:28 - use_build_context_synchronously
+warning - The value of the field '_repository' isn't used - lib\features\payments\presentation\providers\payments_provider.dart:12:32 - unused_field
+warning - Dead code - lib\features\payments\presentation\providers\transactions_provider.dart:20:63 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\features\payments\presentation\providers\transactions_provider.dart:20:66 - dead_null_aware_expression
+   info - The constant name 'DRAFT' isn't a lowerCamelCase identifier - lib\features\payroll\data\models\pay_period_model.dart:15:3 - constant_identifier_names
+   info - The constant name 'OPEN' isn't a lowerCamelCase identifier - lib\features\payroll\data\models\pay_period_model.dart:16:3 - constant_identifier_names
+   info - The constant name 'PROCESSING' isn't a lowerCamelCase identifier - lib\features\payroll\data\models\pay_period_model.dart:17:3 - constant_identifier_names
+   info - The constant name 'COMPLETED' isn't a lowerCamelCase identifier - lib\features\payroll\data\models\pay_period_model.dart:18:3 - constant_identifier_names
+   info - The constant name 'CLOSED' isn't a lowerCamelCase identifier - lib\features\payroll\data\models\pay_period_model.dart:19:3 - constant_identifier_names
+   info - The constant name 'CANCELLED' isn't a lowerCamelCase identifier - lib\features\payroll\data\models\pay_period_model.dart:20:3 - constant_identifier_names
+   info - The constant name 'ACTIVATE' isn't a lowerCamelCase identifier - lib\features\payroll\data\models\pay_period_model.dart:24:3 - constant_identifier_names
+   info - The constant name 'PROCESS' isn't a lowerCamelCase identifier - lib\features\payroll\data\models\pay_period_model.dart:25:3 - constant_identifier_names
+   info - The constant name 'COMPLETE' isn't a lowerCamelCase identifier - lib\features\payroll\data\models\pay_period_model.dart:26:3 - constant_identifier_names
+   info - The constant name 'CLOSE' isn't a lowerCamelCase identifier - lib\features\payroll\data\models\pay_period_model.dart:27:3 - constant_identifier_names
+   info - The constant name 'CANCEL' isn't a lowerCamelCase identifier - lib\features\payroll\data\models\pay_period_model.dart:28:3 - constant_identifier_names
+   info - The constant name 'REOPEN' isn't a lowerCamelCase identifier - lib\features\payroll\data\models\pay_period_model.dart:29:3 - constant_identifier_names
+  error - Const variables must be initialized with a constant value - lib\features\payroll\data\models\pay_period_model.g.dart:56:3 - const_initialized_with_non_constant_value
+  error - The keys in a const map literal must be constant - lib\features\payroll\data\models\pay_period_model.g.dart:56:3 - non_constant_map_key
+  error - There's no constant named 'draft' in 'PayPeriodStatus' - lib\features\payroll\data\models\pay_period_model.g.dart:56:19 - undefined_enum_constant
+  error - The keys in a const map literal must be constant - lib\features\payroll\data\models\pay_period_model.g.dart:57:3 - non_constant_map_key
+  error - There's no constant named 'open' in 'PayPeriodStatus' - lib\features\payroll\data\models\pay_period_model.g.dart:57:19 - undefined_enum_constant
+  error - The keys in a const map literal must be constant - lib\features\payroll\data\models\pay_period_model.g.dart:58:3 - non_constant_map_key
+  error - There's no constant named 'processing' in 'PayPeriodStatus' - lib\features\payroll\data\models\pay_period_model.g.dart:58:19 - undefined_enum_constant
+  error - The keys in a const map literal must be constant - lib\features\payroll\data\models\pay_period_model.g.dart:59:3 - non_constant_map_key
+  error - There's no constant named 'completed' in 'PayPeriodStatus' - lib\features\payroll\data\models\pay_period_model.g.dart:59:19 - undefined_enum_constant
+  error - The keys in a const map literal must be constant - lib\features\payroll\data\models\pay_period_model.g.dart:60:3 - non_constant_map_key
+  error - There's no constant named 'closed' in 'PayPeriodStatus' - lib\features\payroll\data\models\pay_period_model.g.dart:60:19 - undefined_enum_constant
+  error - The keys in a const map literal must be constant - lib\features\payroll\data\models\pay_period_model.g.dart:61:3 - non_constant_map_key
+  error - There's no constant named 'cancelled' in 'PayPeriodStatus' - lib\features\payroll\data\models\pay_period_model.g.dart:61:19 - undefined_enum_constant
+  error - The method 'getPayPeriodStatistics' isn't defined for the type 'ApiService' - lib\features\payroll\data\repositories\pay_period_repository.dart:79:40 - undefined_method
+warning - Unused import: '../../../auth/presentation/providers/auth_provider.dart' - lib\features\payroll\data\repositories\payroll_repository.dart:5:8 - unused_import
+warning - Unused import: '../../../payments/data/models/payment_model.dart' - lib\features\payroll\data\repositories\payroll_repository.dart:6:8 - unused_import
+  error - There's no constant named 'open' in 'PayPeriodStatus' - lib\features\payroll\presentation\pages\pay_calendar_page.dart:50:58 - undefined_enum_constant
+  error - There's no constant named 'open' in 'PayPeriodStatus' - lib\features\payroll\presentation\pages\pay_calendar_page.dart:77:28 - undefined_enum_constant
+  error - There's no constant named 'processing' in 'PayPeriodStatus' - lib\features\payroll\presentation\pages\pay_calendar_page.dart:80:28 - undefined_enum_constant
+  error - There's no constant named 'closed' in 'PayPeriodStatus' - lib\features\payroll\presentation\pages\pay_calendar_page.dart:83:28 - undefined_enum_constant
+  error - The argument type 'int' can't be assigned to the parameter type 'CreatePayPeriodRequest'.  - lib\features\payroll\presentation\pages\pay_calendar_page.dart:123:28 - argument_type_not_assignable
+  error - Too many positional arguments: 1 expected, but 2 found - lib\features\payroll\presentation\pages\pay_calendar_page.dart:123:38 - extra_positional_arguments
+  error - Target of URI doesn't exist: '../data/models/pay_period_model.dart' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:5:8 - uri_does_not_exist
+  error - Target of URI doesn't exist: '../data/repositories/pay_period_repository.dart' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:6:8 - uri_does_not_exist
+  error - Missing concrete implementation of 'abstract class State<T extends StatefulWidget> with Diagnosticable.build' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:17:7 - non_abstract_class_inherits_abstract_member
+  error - Undefined class 'PayPeriodStatus' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:19:3 - undefined_class
+  error - Undefined class 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:31:5 - undefined_class
+  error - Undefined name 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:39:14 - undefined_identifier
+  error - Undefined name 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:42:14 - undefined_identifier
+  error - Undefined name 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:45:14 - undefined_identifier
+  error - Undefined name 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:48:14 - undefined_identifier
+  error - The body might complete normally, causing 'null' to be returned, but the return type, 'Color', is a potentially non-nullable type - lib\features\payroll\presentation\pages\pay_period_management_page.dart:80:9 - body_might_complete_normally
+  error - Undefined class 'PayPeriodStatus' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:80:25 - undefined_class
+  error - Undefined name 'PayPeriodStatus' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:82:12 - undefined_identifier
+  error - Undefined name 'PayPeriodStatus' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:84:12 - undefined_identifier
+  error - Undefined name 'PayPeriodStatus' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:86:12 - undefined_identifier
+  error - Undefined name 'PayPeriodStatus' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:88:12 - undefined_identifier
+  error - Undefined name 'PayPeriodStatus' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:90:12 - undefined_identifier
+  error - Undefined name 'PayPeriodStatus' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:92:12 - undefined_identifier
+  error - The name 'PayPeriodStatusAction' isn't a type, so it can't be used as a type argument - lib\features\payroll\presentation\pages\pay_period_management_page.dart:95:8 - non_type_as_type_argument
+   info - The local variable '_getAvailableActions' starts with an underscore - lib\features\payroll\presentation\pages\pay_period_management_page.dart:95:31 - no_leading_underscores_for_local_identifiers
+  error - The body might complete normally, causing 'null' to be returned, but the return type, 'List<InvalidType>', is a potentially non-nullable type - lib\features\payroll\presentation\pages\pay_period_management_page.dart:95:31 - body_might_complete_normally
+  error - Undefined class 'PayPeriodStatus' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:95:52 - undefined_class
+  error - Undefined name 'PayPeriodStatus' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:97:12 - undefined_identifier
+  error - Undefined name 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:99:11 - undefined_identifier
+  error - Undefined name 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:100:11 - undefined_identifier
+  error - Undefined name 'PayPeriodStatus' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:102:12 - undefined_identifier
+  error - Undefined name 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:104:11 - undefined_identifier
+  error - Undefined name 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:105:11 - undefined_identifier
+  error - Undefined name 'PayPeriodStatus' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:107:12 - undefined_identifier
+  error - Undefined name 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:109:11 - undefined_identifier
+  error - Undefined name 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:110:11 - undefined_identifier
+  error - Undefined name 'PayPeriodStatus' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:112:12 - undefined_identifier
+  error - Undefined name 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:113:17 - undefined_identifier
+  error - Undefined name 'PayPeriodStatus' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:114:12 - undefined_identifier
+  error - Undefined name 'PayPeriodStatus' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:116:12 - undefined_identifier
+warning - The declaration 'build' isn't referenced - lib\features\payroll\presentation\pages\pay_period_management_page.dart:122:10 - unused_element
+  error - The name 'PayPeriodStatus' isn't a type, so it can't be used as a type argument - lib\features\payroll\presentation\pages\pay_period_management_page.dart:157:50 - non_type_as_type_argument
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\payroll\presentation\pages\pay_period_management_page.dart:158:21 - deprecated_member_use
+  error - Undefined name 'PayPeriodStatus' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:171:26 - undefined_identifier
+  error - The argument type 'DateTime' can't be assigned to the parameter type 'String'.  - lib\features\payroll\presentation\pages\pay_period_management_page.dart:256:79 - argument_type_not_assignable
+  error - The argument type 'DateTime' can't be assigned to the parameter type 'String'.  - lib\features\payroll\presentation\pages\pay_period_management_page.dart:256:136 - argument_type_not_assignable
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\payroll\presentation\pages\pay_period_management_page.dart:280:44 - deprecated_member_use
+warning - The operand can't be 'null', so the condition is always 'true' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:302:59 - unnecessary_null_comparison
+  error - Local variable '_buildStatCard' can't be referenced before it is declared - lib\features\payroll\presentation\pages\pay_period_management_page.dart:306:46 - referenced_before_declaration
+warning - The '!' will have no effect because the receiver can't be null - lib\features\payroll\presentation\pages\pay_period_management_page.dart:308:71 - unnecessary_non_null_assertion
+  error - Local variable '_buildStatCard' can't be referenced before it is declared - lib\features\payroll\presentation\pages\pay_period_management_page.dart:313:46 - referenced_before_declaration
+warning - The '!' will have no effect because the receiver can't be null - lib\features\payroll\presentation\pages\pay_period_management_page.dart:315:69 - unnecessary_non_null_assertion
+  error - Local variable '_buildStatCard' can't be referenced before it is declared - lib\features\payroll\presentation\pages\pay_period_management_page.dart:320:46 - referenced_before_declaration
+warning - Dead code - lib\features\payroll\presentation\pages\pay_period_management_page.dart:322:68 - dead_code
+warning - The left operand can't be null, so the right operand is never executed - lib\features\payroll\presentation\pages\pay_period_management_page.dart:322:71 - dead_null_aware_expression
+  error - Local variable '_getActionColor' can't be referenced before it is declared - lib\features\payroll\presentation\pages\pay_period_management_page.dart:347:47 - referenced_before_declaration
+  error - Local variable '_getActionLabel' can't be referenced before it is declared - lib\features\payroll\presentation\pages\pay_period_management_page.dart:351:43 - referenced_before_declaration
+  error - Local variable '_showStatisticsDialog' can't be referenced before it is declared - lib\features\payroll\presentation\pages\pay_period_management_page.dart:381:43 - referenced_before_declaration
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\payroll\presentation\pages\pay_period_management_page.dart:382:45 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\payroll\presentation\pages\pay_period_management_page.dart:388:62 - use_build_context_synchronously
+   info - The local variable '_buildStatCard' starts with an underscore - lib\features\payroll\presentation\pages\pay_period_management_page.dart:438:10 - no_leading_underscores_for_local_identifiers
+   info - The local variable '_getActionColor' starts with an underscore - lib\features\payroll\presentation\pages\pay_period_management_page.dart:467:9 - no_leading_underscores_for_local_identifiers
+  error - Undefined class 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:467:25 - undefined_class
+  error - Undefined name 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:469:12 - undefined_identifier
+  error - Undefined name 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:471:12 - undefined_identifier
+  error - Undefined name 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:473:12 - undefined_identifier
+  error - Undefined name 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:475:12 - undefined_identifier
+   info - The local variable '_getActionLabel' starts with an underscore - lib\features\payroll\presentation\pages\pay_period_management_page.dart:482:10 - no_leading_underscores_for_local_identifiers
+  error - Undefined class 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:482:26 - undefined_class
+  error - Undefined name 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:484:12 - undefined_identifier
+  error - Undefined name 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:486:12 - undefined_identifier
+  error - Undefined name 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:488:12 - undefined_identifier
+  error - Undefined name 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:490:12 - undefined_identifier
+   info - The local variable '_showStatisticsDialog' starts with an underscore - lib\features\payroll\presentation\pages\pay_period_management_page.dart:497:8 - no_leading_underscores_for_local_identifiers
+  error - Local variable '_buildStatRow' can't be referenced before it is declared - lib\features\payroll\presentation\pages\pay_period_management_page.dart:513:15 - referenced_before_declaration
+  error - Local variable '_buildStatRow' can't be referenced before it is declared - lib\features\payroll\presentation\pages\pay_period_management_page.dart:514:15 - referenced_before_declaration
+  error - Local variable '_buildStatRow' can't be referenced before it is declared - lib\features\payroll\presentation\pages\pay_period_management_page.dart:518:15 - referenced_before_declaration
+  error - Local variable '_buildStatRow' can't be referenced before it is declared - lib\features\payroll\presentation\pages\pay_period_management_page.dart:523:15 - referenced_before_declaration
+  error - Local variable '_buildStatRow' can't be referenced before it is declared - lib\features\payroll\presentation\pages\pay_period_management_page.dart:527:15 - referenced_before_declaration
+  error - Local variable '_buildStatRow' can't be referenced before it is declared - lib\features\payroll\presentation\pages\pay_period_management_page.dart:531:15 - referenced_before_declaration
+   info - The local variable '_buildStatRow' starts with an underscore - lib\features\payroll\presentation\pages\pay_period_management_page.dart:548:10 - no_leading_underscores_for_local_identifiers
+  error - Expected to find '}' - lib\features\payroll\presentation\pages\pay_period_management_page.dart:563:2 - expected_token
+warning - The value of 'refresh' should be used - lib\features\payroll\presentation\pages\payroll_page.dart:25:19 - unused_result
+warning - The value of 'refresh' should be used - lib\features\payroll\presentation\pages\payroll_page.dart:53:27 - unused_result
+  error - The method 'toUpperCase' isn't defined for the type 'PayPeriodStatus' - lib\features\payroll\presentation\pages\payroll_page.dart:81:35 - undefined_method
+   info - The type of the right operand ('String') isn't a subtype or a supertype of the left operand ('PayPeriodStatus') - lib\features\payroll\presentation\pages\payroll_page.dart:84:44 - unrelated_type_equality_checks
+   info - The type of the right operand ('String') isn't a subtype or a supertype of the left operand ('PayPeriodStatus') - lib\features\payroll\presentation\pages\payroll_page.dart:86:43 - unrelated_type_equality_checks
+warning - The value of 'refresh' should be used - lib\features\payroll\presentation\pages\payroll_page.dart:130:23 - unused_result
+warning - Unused import: 'package:mobile/features/workers/data/models/worker_model.dart' - lib\features\payroll\presentation\pages\payroll_review_page.dart:5:8 - unused_import
+warning - Unused import: '../providers/payroll_provider.dart' - lib\features\payroll\presentation\pages\payroll_review_page.dart:8:8 - unused_import
+  error - The name 'PayrollRecord' isn't a type, so it can't be used as a type argument - lib\features\payroll\presentation\pages\payroll_review_page.dart:24:8 - non_type_as_type_argument
+warning - The value of the field '_payrollRecords' isn't used - lib\features\payroll\presentation\pages\payroll_review_page.dart:24:24 - unused_field
+  error - The method 'getPayPeriod' isn't defined for the type 'PayPeriodRepository' - lib\features\payroll\presentation\pages\payroll_review_page.dart:38:42 - undefined_method
+   info - Don't invoke 'print' in production code - lib\features\payroll\presentation\pages\payroll_review_page.dart:66:7 - avoid_print
+  error - This expression has a type of 'void' so its value can't be used - lib\features\payroll\presentation\pages\payroll_review_page.dart:80:27 - use_of_void_result
+  error - There's no constant named 'ACTIVE' in 'PayPeriodStatus' - lib\features\payroll\presentation\pages\payroll_review_page.dart:82:30 - undefined_enum_constant
+  error - This expression has a type of 'void' so its value can't be used - lib\features\payroll\presentation\pages\payroll_review_page.dart:83:27 - use_of_void_result
+  error - This expression has a type of 'void' so its value can't be used - lib\features\payroll\presentation\pages\payroll_review_page.dart:86:27 - use_of_void_result
+   info - Don't use 'BuildContext's across async gaps - lib\features\payroll\presentation\pages\payroll_review_page.dart:102:30 - use_build_context_synchronously
+warning - The value of the local variable 'numberFormat' isn't used - lib\features\payroll\presentation\pages\payroll_review_page.dart:132:11 - unused_local_variable
+warning - The value of the local variable 'dateFormat' isn't used - lib\features\payroll\presentation\pages\payroll_review_page.dart:133:11 - unused_local_variable
+  error - The argument type 'DateTime' can't be assigned to the parameter type 'String'.  - lib\features\payroll\presentation\pages\payroll_review_page.dart:212:61 - argument_type_not_assignable
+  error - The argument type 'DateTime' can't be assigned to the parameter type 'String'.  - lib\features\payroll\presentation\pages\payroll_review_page.dart:212:123 - argument_type_not_assignable
+warning - The receiver can't be 'null' because of short-circuiting, so the null-aware operator '?.' can't be used - lib\features\payroll\presentation\pages\payroll_review_page.dart:238:56 - invalid_null_aware_operator
+warning - The receiver can't be 'null' because of short-circuiting, so the null-aware operator '?.' can't be used - lib\features\payroll\presentation\pages\payroll_review_page.dart:244:54 - invalid_null_aware_operator
+  error - There's no constant named 'ACTIVE' in 'PayPeriodStatus' - lib\features\payroll\presentation\pages\payroll_review_page.dart:270:28 - undefined_enum_constant
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\payroll\presentation\pages\payroll_review_page.dart:294:22 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\payroll\presentation\pages\payroll_review_page.dart:425:22 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\payroll\presentation\pages\payroll_review_page.dart:427:41 - deprecated_member_use
+warning - The value of the local variable 'numberFormat' isn't used - lib\features\payroll\presentation\pages\payroll_review_page.dart:496:11 - unused_local_variable
+  error - There's no constant named 'ACTIVE' in 'PayPeriodStatus' - lib\features\payroll\presentation\pages\payroll_review_page.dart:568:28 - undefined_enum_constant
+  error - There's no constant named 'ACTIVE' in 'PayPeriodStatus' - lib\features\payroll\presentation\pages\payroll_review_page.dart:584:28 - undefined_enum_constant
+   info - Don't invoke 'print' in production code - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:64:7 - avoid_print
+  error - There's no constant named 'activate' in 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:75:36 - undefined_enum_constant
+  error - This expression has a type of 'void' so its value can't be used - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:76:27 - use_of_void_result
+  error - There's no constant named 'process' in 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:78:36 - undefined_enum_constant
+  error - This expression has a type of 'void' so its value can't be used - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:79:27 - use_of_void_result
+  error - There's no constant named 'complete' in 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:81:36 - undefined_enum_constant
+  error - This expression has a type of 'void' so its value can't be used - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:82:27 - use_of_void_result
+  error - There's no constant named 'close' in 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:84:36 - undefined_enum_constant
+  error - This expression has a type of 'void' so its value can't be used - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:85:27 - use_of_void_result
+   info - Don't use 'BuildContext's across async gaps - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:95:30 - use_build_context_synchronously
+  error - There's no constant named 'ACTIVE' in 'PayPeriodStatus' - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:122:28 - undefined_enum_constant
+  error - There's no constant named 'activate' in 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:139:33 - undefined_enum_constant
+  error - There's no constant named 'close' in 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:140:33 - undefined_enum_constant
+  error - There's no constant named 'ACTIVE' in 'PayPeriodStatus' - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:142:28 - undefined_enum_constant
+  error - There's no constant named 'process' in 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:144:33 - undefined_enum_constant
+  error - There's no constant named 'close' in 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:145:33 - undefined_enum_constant
+  error - There's no constant named 'complete' in 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:149:33 - undefined_enum_constant
+  error - There's no constant named 'close' in 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:150:33 - undefined_enum_constant
+  error - There's no constant named 'close' in 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:153:39 - undefined_enum_constant
+warning - The value of the local variable 'numberFormat' isn't used - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:164:11 - unused_local_variable
+  error - The argument type 'DateTime' can't be assigned to the parameter type 'String'.  - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:221:69 - argument_type_not_assignable
+  error - The argument type 'DateTime' can't be assigned to the parameter type 'String'.  - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:221:131 - argument_type_not_assignable
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:236:72 - deprecated_member_use
+  error - There's no constant named 'ACTIVE' in 'PayPeriodStatus' - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:332:65 - undefined_enum_constant
+  error - There's no constant named 'ACTIVE' in 'PayPeriodStatus' - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:366:64 - undefined_enum_constant
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:366:72 - deprecated_member_use
+  error - There's no constant named 'ACTIVE' in 'PayPeriodStatus' - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:372:66 - undefined_enum_constant
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:382:45 - deprecated_member_use
+   info - Unnecessary use of 'toList' in a spread - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:396:16 - unnecessary_to_list_in_spreads
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:481:22 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:483:41 - deprecated_member_use
+  error - There's no constant named 'activate' in 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:619:34 - undefined_enum_constant
+  error - There's no constant named 'process' in 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:621:34 - undefined_enum_constant
+  error - There's no constant named 'complete' in 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:623:34 - undefined_enum_constant
+  error - There's no constant named 'close' in 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:625:34 - undefined_enum_constant
+  error - There's no constant named 'activate' in 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:634:34 - undefined_enum_constant
+  error - There's no constant named 'process' in 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:636:34 - undefined_enum_constant
+  error - There's no constant named 'complete' in 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:638:34 - undefined_enum_constant
+  error - There's no constant named 'close' in 'PayPeriodStatusAction' - lib\features\payroll\presentation\pages\payroll_workflow_page.dart:640:34 - undefined_enum_constant
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\payroll\presentation\pages\payslip_page.dart:63:41 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\payroll\presentation\pages\payslip_page.dart:124:41 - deprecated_member_use
+  error - The getter 'review' isn't defined for the type 'Icons' - lib\features\payroll\presentation\pages\review_payroll_page.dart:30:21 - undefined_getter
+  error - Undefined name 'riverpod' used as an annotation - lib\features\payroll\presentation\pages\run_payroll_page.dart:11:1 - undefined_annotation
+  error - Classes can only extend other classes - lib\features\payroll\presentation\pages\run_payroll_page.dart:12:39 - extends_non_class
+warning - The method doesn't override an inherited method - lib\features\payroll\presentation\pages\run_payroll_page.dart:14:15 - override_on_non_overriding_member
+  error - Undefined name 'riverpod' used as an annotation - lib\features\payroll\presentation\pages\run_payroll_page.dart:18:1 - undefined_annotation
+  error - Undefined class 'SelectedWorkersRef' - lib\features\payroll\presentation\pages\run_payroll_page.dart:19:29 - undefined_class
+  error - The getter 'provider' isn't defined for the type 'SelectedWorkersNotifier' - lib\features\payroll\presentation\pages\run_payroll_page.dart:20:44 - undefined_getter
+  error - 1 positional argument expected by 'createPayPeriod', but 0 found - lib\features\payroll\presentation\pages\run_payroll_page.dart:92:9 - not_enough_positional_arguments
+  error - The named parameter 'name' isn't defined - lib\features\payroll\presentation\pages\run_payroll_page.dart:92:9 - undefined_named_parameter
+  error - The named parameter 'startDate' isn't defined - lib\features\payroll\presentation\pages\run_payroll_page.dart:93:9 - undefined_named_parameter
+  error - The named parameter 'endDate' isn't defined - lib\features\payroll\presentation\pages\run_payroll_page.dart:94:9 - undefined_named_parameter
+  error - The named parameter 'frequency' isn't defined - lib\features\payroll\presentation\pages\run_payroll_page.dart:95:9 - undefined_named_parameter
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\payroll\presentation\pages\run_payroll_page.dart:181:17 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\payroll\presentation\pages\run_payroll_page.dart:304:19 - deprecated_member_use
+   info - Unnecessary use of multiple underscores - lib\features\payroll\presentation\pages\run_payroll_page.dart:328:24 - unnecessary_underscores
+   info - Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check - lib\features\payroll\presentation\pages\run_payroll_page.dart:457:23 - use_build_context_synchronously
+  error - Expected to find ';' - lib\features\payroll\presentation\pages\run_payroll_page.dart:467:11 - expected_token
+warning - Dead code - lib\features\payroll\presentation\pages\run_payroll_page.dart:467:12 - dead_code
+  error - Expected an identifier - lib\features\payroll\presentation\pages\run_payroll_page.dart:467:12 - missing_identifier
+  error - Expected to find ';' - lib\features\payroll\presentation\pages\run_payroll_page.dart:467:12 - expected_token
+  error - Unexpected text ';' - lib\features\payroll\presentation\pages\run_payroll_page.dart:467:12 - unexpected_token
+  error - Expected an identifier - lib\features\payroll\presentation\pages\run_payroll_page.dart:468:3 - missing_identifier
+  error - Unexpected text ';' - lib\features\payroll\presentation\pages\run_payroll_page.dart:468:3 - unexpected_token
+   info - Unnecessary empty statement - lib\features\payroll\presentation\pages\run_payroll_page.dart:468:4 - empty_statements
+warning - Unused import: '../../../payments/data/models/payment_model.dart' - lib\features\payroll\presentation\providers\payroll_provider.dart:7:8 - unused_import
+  error - Target of URI doesn't exist: '../../../../core/network/dio_provider.dart' - lib\features\properties\data\repositories\properties_repository.dart:3:8 - uri_does_not_exist
+  error - Undefined name 'dioProvider' - lib\features\properties\data\repositories\properties_repository.dart:7:40 - undefined_identifier
+warning - Unused import: '../models/property_model.dart' - lib\features\properties\presentation\pages\properties_page.dart:5:8 - unused_import
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\properties\presentation\pages\properties_page.dart:55:69 - deprecated_member_use
+warning - Unused import: '../providers/properties_provider.dart' - lib\features\properties\presentation\pages\property_form_page.dart:4:8 - unused_import
+   info - Don't invoke 'print' in production code - lib\features\subscriptions\data\repositories\subscription_repository.dart:78:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\features\subscriptions\data\repositories\subscription_repository.dart:314:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\features\subscriptions\data\repositories\subscription_repository.dart:336:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\features\subscriptions\data\repositories\subscription_repository.dart:342:7 - avoid_print
+warning - Unused import: '../../../../core/network/api_service.dart' - lib\features\subscriptions\presentation\pages\pricing_page.dart:3:8 - unused_import
+warning - The value of the field '_selectedPlan' isn't used - lib\features\subscriptions\presentation\pages\pricing_page.dart:15:26 - unused_field
+  error - The getter 'notifier' isn't defined for the type 'FutureProvider<List<SubscriptionPlan>>' - lib\features\subscriptions\presentation\pages\pricing_page.dart:22:42 - undefined_getter
+  error - The argument type 'SubscriptionPlan' can't be assigned to the parameter type 'SubscriptionPlanModel'.  - lib\features\subscriptions\presentation\pages\pricing_page.dart:63:55 - argument_type_not_assignable
+   info - Unnecessary use of 'toList' in a spread - lib\features\subscriptions\presentation\pages\pricing_page.dart:63:81 - unnecessary_to_list_in_spreads
+   info - Unnecessary use of multiple underscores - lib\features\subscriptions\presentation\pages\pricing_page.dart:140:18 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\subscriptions\presentation\pages\pricing_page.dart:156:33 - deprecated_member_use
+   info - Unnecessary use of 'toList' in a spread - lib\features\subscriptions\presentation\pages\pricing_page.dart:259:19 - unnecessary_to_list_in_spreads
+  error - Target of URI doesn't exist: '../data/models/subscription_plan_model.dart' - lib\features\subscriptions\presentation\pages\subscription_details_page.dart:7:8 - uri_does_not_exist
+  error - The name 'subscriptionPaymentHistoryProvider' is defined in the libraries 'package:mobile/features/subscriptions/presentation/providers/subscription_payment_history_provider.dart' and 'package:mobile/features/subscriptions/presentation/providers/subscription_provider.dart' - lib\features\subscriptions\presentation\pages\subscription_details_page.dart:22:16 - ambiguous_import
+  error - The name 'subscriptionPaymentHistoryProvider' is defined in the libraries 'package:mobile/features/subscriptions/presentation/providers/subscription_payment_history_provider.dart' and 'package:mobile/features/subscriptions/presentation/providers/subscription_provider.dart' - lib\features\subscriptions\presentation\pages\subscription_details_page.dart:29:43 - ambiguous_import
+  error - The name 'subscriptionPaymentHistoryProvider' is defined in the libraries 'package:mobile/features/subscriptions/presentation/providers/subscription_payment_history_provider.dart' and 'package:mobile/features/subscriptions/presentation/providers/subscription_provider.dart' - lib\features\subscriptions\presentation\pages\subscription_details_page.dart:40:24 - ambiguous_import
+  error - The name 'subscriptionPaymentHistoryProvider' is defined in the libraries 'package:mobile/features/subscriptions/presentation/providers/subscription_payment_history_provider.dart' and 'package:mobile/features/subscriptions/presentation/providers/subscription_provider.dart' - lib\features\subscriptions\presentation\pages\subscription_details_page.dart:48:26 - ambiguous_import
+  error - Undefined class 'UserSubscriptionModel' - lib\features\subscriptions\presentation\pages\subscription_details_page.dart:143:55 - undefined_class
+  error - Undefined class 'SubscriptionPaymentRecord' - lib\features\subscriptions\presentation\pages\subscription_details_page.dart:210:50 - undefined_class
+warning - The value of 'refresh' should be used - lib\features\subscriptions\presentation\pages\subscription_management_page.dart:19:11 - unused_result
+warning - The value of 'refresh' should be used - lib\features\subscriptions\presentation\pages\subscription_management_page.dart:20:11 - unused_result
+warning - The value of 'refresh' should be used - lib\features\subscriptions\presentation\pages\subscription_management_page.dart:21:11 - unused_result
+warning - The value of 'refresh' should be used - lib\features\subscriptions\presentation\pages\subscription_management_page.dart:38:19 - unused_result
+warning - The value of 'refresh' should be used - lib\features\subscriptions\presentation\pages\subscription_management_page.dart:39:19 - unused_result
+warning - The operand can't be 'null', so the condition is always 'true' - lib\features\subscriptions\presentation\pages\subscription_management_page.dart:65:53 - unnecessary_null_comparison
+warning - The '!' will have no effect because the receiver can't be null - lib\features\subscriptions\presentation\pages\subscription_management_page.dart:66:67 - unnecessary_non_null_assertion
+warning - The '!' will have no effect because the receiver can't be null - lib\features\subscriptions\presentation\pages\subscription_management_page.dart:66:93 - unnecessary_non_null_assertion
+warning - The '!' will have no effect because the receiver can't be null - lib\features\subscriptions\presentation\pages\subscription_management_page.dart:66:121 - unnecessary_non_null_assertion
+   info - Unnecessary use of 'toList' in a spread - lib\features\subscriptions\presentation\pages\subscription_management_page.dart:105:76 - unnecessary_to_list_in_spreads
+warning - Unused import: '../../data/models/subscription_plan_model.dart' - lib\features\subscriptions\presentation\providers\subscription_provider.dart:4:8 - unused_import
+warning - Unused import: 'package:dio/dio.dart' - lib\features\taxes\data\repositories\tax_repository.dart:1:8 - unused_import
+warning - Unused import: '../../../../core/network/services/tax_service.dart' - lib\features\taxes\data\repositories\tax_repository.dart:4:8 - unused_import
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\taxes\presentation\pages\comprehensive_tax_page.dart:349:32 - deprecated_member_use
+  error - Undefined name 'taxNotifierProvider' - lib\features\taxes\presentation\pages\comprehensive_tax_page.dart:476:45 - undefined_identifier
+   info - Don't use 'BuildContext's across async gaps - lib\features\taxes\presentation\pages\comprehensive_tax_page.dart:482:11 - use_build_context_synchronously
+   info - Don't use 'BuildContext's across async gaps - lib\features\taxes\presentation\pages\comprehensive_tax_page.dart:511:28 - use_build_context_synchronously
+  error - Undefined name 'taxNotifierProvider' - lib\features\taxes\presentation\pages\tax_filing_page.dart:11:40 - undefined_identifier
+  error - Undefined name 'taxNotifierProvider' - lib\features\taxes\presentation\pages\tax_filing_page.dart:51:24 - undefined_identifier
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\taxes\presentation\pages\tax_filing_page.dart:83:52 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\taxes\presentation\pages\tax_filing_page.dart:84:53 - deprecated_member_use
+  error - Undefined name 'taxNotifierProvider' - lib\features\taxes\presentation\pages\tax_filing_page.dart:150:45 - undefined_identifier
+  error - Undefined name 'taxNotifierProvider' - lib\features\taxes\presentation\pages\tax_filing_page.dart:210:28 - undefined_identifier
+  error - The name 'TaxSubmissionModel' isn't a type, so it can't be used as a type argument - lib\features\taxes\presentation\providers\tax_provider.dart:8:62 - non_type_as_type_argument
+  error - The name 'TaxSubmissionModel' isn't a type, so it can't be used as a type argument - lib\features\taxes\presentation\providers\tax_provider.dart:19:67 - non_type_as_type_argument
+warning - The stack trace variable 'st' isn't used and can be removed - lib\features\taxes\presentation\providers\tax_provider.dart:75:17 - unused_catch_stack
+warning - The stack trace variable 'st' isn't used and can be removed - lib\features\taxes\presentation\providers\tax_provider.dart:83:17 - unused_catch_stack
+warning - The stack trace variable 'st' isn't used and can be removed - lib\features\taxes\presentation\providers\tax_provider.dart:91:17 - unused_catch_stack
+warning - The stack trace variable 'st' isn't used and can be removed - lib\features\taxes\presentation\providers\tax_provider.dart:99:17 - unused_catch_stack
+  error - The name 'TaxSubmissionModel' isn't a type, so it can't be used as a type argument - lib\features\taxes\presentation\providers\tax_provider.dart:132:13 - non_type_as_type_argument
+  error - The method 'TaxSubmissionModel' isn't defined for the type 'TaxNotifier' - lib\features\taxes\presentation\providers\tax_provider.dart:137:20 - undefined_method
+  error - The name 'TaxSubmissionModel' isn't a type, so it can't be used as a type argument - lib\features\taxes\presentation\providers\tax_provider.dart:178:52 - non_type_as_type_argument
+  error - The function 'TaxSubmissionModel' isn't defined - lib\features\taxes\presentation\providers\tax_provider.dart:182:7 - undefined_function
+warning - The value of the local variable 'result' isn't used - lib\features\taxes\presentation\providers\tax_submission_provider.dart:27:13 - unused_local_variable
+warning - The stack trace variable 'stackTrace' isn't used and can be removed - lib\features\taxes\presentation\providers\tax_submission_provider.dart:71:21 - unused_catch_stack
+warning - The stack trace variable 'stackTrace' isn't used and can be removed - lib\features\taxes\presentation\providers\tax_submission_provider.dart:79:21 - unused_catch_stack
+warning - Unused import: '../../../auth/presentation/providers/auth_provider.dart' - lib\features\time_tracking\data\repositories\time_tracking_repository.dart:5:8 - unused_import
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\time_tracking\presentation\pages\time_tracking_history_page.dart:45:19 - deprecated_member_use
+   info - Unnecessary use of multiple underscores - lib\features\time_tracking\presentation\pages\time_tracking_history_page.dart:69:24 - unnecessary_underscores
+warning - Unused import: 'package:go_router/go_router.dart' - lib\features\time_tracking\presentation\pages\time_tracking_page.dart:3:8 - unused_import
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\time_tracking\presentation\pages\time_tracking_page.dart:73:27 - deprecated_member_use
+warning - Unused import: '../../../auth/presentation/providers/auth_provider.dart' - lib\features\workers\data\repositories\termination_repository.dart:4:8 - unused_import
+  error - 1 positional argument expected by 'TerminationRepository.new', but 0 found - lib\features\workers\data\repositories\termination_repository.dart:8:32 - not_enough_positional_arguments
+  error - '_storage' is final and was given a value when it was declared, so it can't be set to a new value - lib\features\workers\data\repositories\termination_repository.dart:18:30 - final_initialized_in_declaration_and_constructor
+warning - Unused import: 'package:go_router/go_router.dart' - lib\features\workers\presentation\pages\archived_workers_page.dart:3:8 - unused_import
+   info - Unnecessary use of multiple underscores - lib\features\workers\presentation\pages\worker_detail_page.dart:38:18 - unnecessary_underscores
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\workers\presentation\pages\worker_detail_page.dart:197:39 - deprecated_member_use
+warning - The operand can't be 'null', so the condition is always 'true' - lib\features\workers\presentation\pages\worker_detail_page.dart:319:43 - unnecessary_null_comparison
+warning - The '!' will have no effect because the receiver can't be null - lib\features\workers\presentation\pages\worker_detail_page.dart:319:77 - unnecessary_non_null_assertion
+warning - The '!' will have no effect because the receiver can't be null - lib\features\workers\presentation\pages\worker_detail_page.dart:320:84 - unnecessary_non_null_assertion
+warning - The operand can't be 'null', so the condition is always 'true' - lib\features\workers\presentation\pages\worker_detail_page.dart:321:45 - unnecessary_null_comparison
+warning - The '!' will have no effect because the receiver can't be null - lib\features\workers\presentation\pages\worker_detail_page.dart:321:81 - unnecessary_non_null_assertion
+warning - The '!' will have no effect because the receiver can't be null - lib\features\workers\presentation\pages\worker_detail_page.dart:322:88 - unnecessary_non_null_assertion
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\workers\presentation\pages\worker_detail_page.dart:421:33 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\workers\presentation\pages\worker_form_page.dart:240:21 - deprecated_member_use
+   info - 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre - lib\features\workers\presentation\pages\worker_form_page.dart:255:21 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\workers\presentation\pages\worker_form_page.dart:324:33 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\workers\presentation\pages\workers_list_page.dart:297:33 - deprecated_member_use
+warning - Unused import: 'features/profile/presentation/pages/profile_page.dart' - lib\main.dart:10:8 - unused_import
+warning - Unused import: 'features/payroll/presentation/pages/payroll_review_page.dart' - lib\main.dart:13:8 - unused_import
+warning - Unused import: 'features/payroll/presentation/pages/payroll_confirm_page.dart' - lib\main.dart:14:8 - unused_import
+   info - The 'child' argument should be last in widget constructor invocations - lib\main.dart:69:11 - sort_child_properties_last
+   info - The 'child' argument should be last in widget constructor invocations - lib\main.dart:76:11 - sort_child_properties_last
+   info - The 'child' argument should be last in widget constructor invocations - lib\main.dart:83:11 - sort_child_properties_last
+   info - The 'child' argument should be last in widget constructor invocations - lib\main.dart:90:11 - sort_child_properties_last
+   info - The 'child' argument should be last in widget constructor invocations - lib\main.dart:97:11 - sort_child_properties_last
+   info - The 'child' argument should be last in widget constructor invocations - lib\main.dart:104:11 - sort_child_properties_last
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\main_layout.dart:58:35 - deprecated_member_use
+

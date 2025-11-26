@@ -47,7 +47,7 @@ class PayCalendarPage extends ConsumerWidget {
                   ),
                   trailing: _buildStatusChip(period.status),
                   onTap: () {
-                    if (period.status == PayPeriodStatus.open) {
+                    if (period.status == PayPeriodStatus.ACTIVE) {
                       context.push('/payroll/run/${period.id}');
                     } else {
                       // TODO: Navigate to Tax Report

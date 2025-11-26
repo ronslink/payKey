@@ -19,6 +19,11 @@ async function bootstrap() {
       'Access-Control-Request-Headers',
       'Accept-Language',
       'Cache-Control',
+      'Pragma',
+      'Expires',
+      'If-Modified-Since',
+      'ETag',
+      'Last-Modified',
     ],
     exposedHeaders: ['Content-Type', 'Authorization'],
   });

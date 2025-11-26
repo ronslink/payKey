@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Subscription, SubscriptionStatus } from './entities/subscription.entity';
+import { SubscriptionPayment } from './entities/subscription-payment.entity';
 import { SUBSCRIPTION_PLANS } from './subscription-plans.config';
 
 @Controller('subscriptions')
@@ -11,6 +12,8 @@ export class SubscriptionsController {
   constructor(
     @InjectRepository(Subscription)
     private subscriptionRepository: Repository<Subscription>,
+    @InjectRepository(SubscriptionPayment)
+    private subscriptionPaymentRepository: Repository<SubscriptionPayment>,
   ) { }
 
   @Get('plans')
@@ -110,5 +113,17 @@ export class SubscriptionsController {
     }
 
     return this.subscriptionRepository.save(subscription);
+  }
+
+  @Get('subscription-payment-history')
+  async getSubscriptionPaymentHistory(@Request() req: any) {
+    // Get all subscription payments for the current user
+    const payments = await this.subscriptionPaymentRepository.find({
+      where: { userId: req.user.userId },
+      order: { createdAt: 'DESC' }
+    });
+
+    // Return empty array if no payments found
+    return payments || [];
   }
 }

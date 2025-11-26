@@ -91,7 +91,7 @@ export class PayslipService {
         });
     }
 
-    private addCurrencyRow(doc: PDFKit.PDFDocument, label: string, amount: number, isBold = false) {
+    private addCurrencyRow(doc: any, label: string, amount: number, isBold = false) {
         const y = doc.y;
         doc
             .font(isBold ? 'Helvetica-Bold' : 'Helvetica')
