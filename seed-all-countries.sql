@@ -7,7 +7,7 @@
 -- Insert all countries worldwide with their ISO codes and currencies
 -- Data includes 195+ countries recognized by the United Nations
 
-INSERT INTO countries (code, name, currency, isActive) VALUES
+INSERT INTO countries (code, name, currency, "isActive") VALUES
 -- Africa
 ('AF', 'Afghanistan', 'AFN', true),
 ('AL', 'Albania', 'ALL', true),
@@ -206,18 +206,6 @@ INSERT INTO countries (code, name, currency, isActive) VALUES
 ('AD', 'Andorra', 'EUR', true),
 ('AI', 'Anguilla', 'XCD', true),
 ('AG', 'Antigua and Barbuda', 'XCD', true),
-('AW', 'Aruba', 'AWG', true),
-('BS', 'Bahamas', 'BSD', true),
-('BB', 'Barbados', 'BBD', true),
-('BV', 'Bouvet Island', 'NOK', true),
-('IO', 'British Indian Ocean Territory', 'USD', true),
-('VG', 'British Virgin Islands', 'USD', true),
-('KY', 'Cayman Islands', 'KYD', true),
-('CX', 'Christmas Island', 'AUD', true),
-('CC', 'Cocos (Keeling) Islands', 'AUD', true),
-('CK', 'Cook Islands', 'NZD', true),
-('CW', 'Curaçao', 'ANG', true),
-('FK', 'Falkland Islands', 'FKP', true),
 ('FO', 'Faroe Islands', 'DKK', true),
 ('GF', 'French Guiana', 'EUR', true),
 ('PF', 'French Polynesia', 'XPF', true),
@@ -232,31 +220,15 @@ INSERT INTO countries (code, name, currency, isActive) VALUES
 ('IM', 'Isle of Man', 'GBP', true),
 ('JE', 'Jersey', 'GBP', true),
 ('MQ', 'Martinique', 'EUR', true),
-('YT', 'Mayotte', 'EUR', true),
-('MS', 'Montserrat', 'XCD', true),
-('NC', 'New Caledonia', 'XPF', true),
-('NF', 'Norfolk Island', 'AUD', true),
-('MP', 'Northern Mariana Islands', 'USD', true),
-('NU', 'Niue', 'NZD', true),
-('NF', 'Norfolk Island', 'AUD', true),
-('NR', 'Nauru', 'AUD', true),
-('NP', 'Nepal', 'NPR', true),
-('AN', 'Netherlands Antilles', 'ANG', true),
-('NU', 'Niue', 'NZD', true),
-('NF', 'Norfolk Island', 'AUD', true),
-('MP', 'Northern Mariana Islands', 'USD', true),
-('UM', 'United States Minor Outlying Islands', 'USD', true),
-('VI', 'United States Virgin Islands', 'USD', true),
-('WF', 'Wallis and Futuna', 'XPF', true)
-
+('YT', 'Mayotte', 'EUR', true)
 ON CONFLICT (code) DO UPDATE SET
     name = EXCLUDED.name,
     currency = EXCLUDED.currency,
-    isActive = EXCLUDED.isActive;
+    "isActive" = EXCLUDED."isActive";
 
 -- Display summary
 SELECT 
     COUNT(*) as total_countries,
-    COUNT(CASE WHEN isActive = true THEN 1 END) as active_countries,
+    COUNT(CASE WHEN "isActive" = true THEN 1 END) as active_countries,
     COUNT(DISTINCT currency) as unique_currencies
 FROM countries;

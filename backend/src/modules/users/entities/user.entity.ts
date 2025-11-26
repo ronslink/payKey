@@ -91,6 +91,12 @@ export class User {
   @Column({ nullable: true })
   countryId: string;
 
+  @Column({ default: true, name: 'isresident' })
+  isResident: boolean;
+
+  @Column({ nullable: true, name: 'countryoforigin' })
+  countryOfOrigin: string;
+
   @Column({ default: false, name: 'isonboardingcompleted' })
   isOnboardingCompleted: boolean;
 
