@@ -134,24 +134,24 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
 
   List<PayPeriodStatusAction> _getAvailableActions(PayPeriodStatus status) {
     switch (status) {
-      case PayPeriodStatus.DRAFT:
+      case PayPeriodStatus.draft:
         return [
           PayPeriodStatusAction.activate,
           PayPeriodStatusAction.close,
         ];
-      case PayPeriodStatus.ACTIVE:
+      case PayPeriodStatus.open:
         return [
           PayPeriodStatusAction.process,
           PayPeriodStatusAction.close,
         ];
-      case PayPeriodStatus.PROCESSING:
+      case PayPeriodStatus.processing:
         return [
           PayPeriodStatusAction.complete,
           PayPeriodStatusAction.close,
         ];
-      case PayPeriodStatus.COMPLETED:
+      case PayPeriodStatus.completed:
         return [PayPeriodStatusAction.close];
-      case PayPeriodStatus.CLOSED:
+      case PayPeriodStatus.closed:
         return []; // No actions available for closed periods
       default:
         return [];

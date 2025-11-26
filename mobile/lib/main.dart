@@ -1,4 +1,3 @@
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -28,9 +27,6 @@ import 'core/network/api_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  
-  FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterError;
   
   runApp(const ProviderScope(child: MyApp()));
 }

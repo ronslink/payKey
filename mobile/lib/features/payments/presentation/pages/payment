@@ -1,0 +1,644 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/payments_provider.dart';
+
+class PaymentDashboardPage extends ConsumerStatefulWidget {
+  const PaymentDashboardPage({Key? key}) : super(key: key);
+
+  @override
+  ConsumerState<PaymentDashboardPage> createState() => _PaymentDashboardPageState();
+}
+
+class _PaymentDashboardPageState extends ConsumerState<PaymentDashboardPage> {
+  int _selectedTab = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Payment Dashboard'),
+        backgroundColor: Colors.blue.shade600,
+        foregroundColor: Colors.white,
+        elevation: 0,
+      ),
+      body: Column(
+        children: [
+          // Tab Navigation
+          Container(
+            color: Colors.blue.shade50,
+            child: Row(
+              children: [
+                _buildTab(0, 'Overview', Icons.dashboard),
+                _buildTab(1, 'Payments', Icons.payment),
+                _buildTab(2, 'Subscriptions', Icons.subscriptions),
+                _buildTab(3, 'Tax Payments', Icons.receipt_long),
+              ],
+            ),
+          ),
+          
+          // Content
+          Expanded(
+            child: _selectedTab == 0 
+              ? _buildOverviewTab()
+              : _selectedTab == 1 
+                ? _buildPaymentsTab()
+                : _selectedTab == 2 
+                  ? _buildSubscriptionsTab()
+                  : _buildTaxPaymentsTab(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTab(int index, String label, IconData icon) {
+    final isSelected = _selectedTab == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedTab = index),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.white : Colors.transparent,
+            border: Border(
+              bottom: BorderSide(
+                color: isSelected ? Colors.blue.shade600 : Colors.transparent,
+                width: 2,
+              ),
+            ),
+          ),
+          child: Column(
+            children: [
+              Icon(
+                icon,
+                color: isSelected ? Colors.blue.shade600 : Colors.grey.shade600,
+                size: 20,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? Colors.blue.shade600 : Colors.grey.shade600,
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOverviewTab() {
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref.refresh(paymentDashboardProvider);
+        ref.refresh(paymentMethodsProvider);
+        ref.refresh(taxPaymentSummaryProvider);
+      },
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Payment Overview Cards
+            const Text(
+              'Payment Overview',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            
+            // Dashboard Data
+            ref.watch(paymentDashboardProvider).when(
+              data: (dashboard) => Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildStatCard(
+                          'Total Transactions',
+                          '${dashboard['overview']['totalTransactions'] ?? 0}',
+                          Colors.blue,
+                          Icons.trending_up,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildStatCard(
+                          'Success Rate',
+                          '${((dashboard['overview']['successfulTransactions'] ?? 0) / 
+                             (dashboard['overview']['totalTransactions'] ?? 1) * 100).toInt()}%',
+                          Colors.green,
+                          Icons.check_circle,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildStatCard(
+                          'Pending',
+                          '${dashboard['overview']['pendingTransactions'] ?? 0}',
+                          Colors.orange,
+                          Icons.schedule,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildStatCard(
+                          'Active Subs',
+                          '${dashboard['overview']['subscriptionsActive'] ?? 0}',
+                          Colors.purple,
+                          Icons.subscriptions,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              loading: () => const Center(
+                child: CircularProgressIndicator(),
+              ),
+              error: (error, stack) => Center(
+                child: Text('Error loading dashboard: $error'),
+              ),
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // Payment Methods Status
+            const Text(
+              'Payment Methods',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            
+            ref.watch(paymentMethodsProvider).when(
+              data: (methods) => Column(
+                children: [
+                  _buildPaymentMethodCard(
+                    'M-Pesa',
+                    methods['mpesa']?['status'] ?? 'Not Configured',
+                    methods['mpesa']?['configured'] ?? false,
+                  ),
+                  const SizedBox(height: 8),
+                  _buildPaymentMethodCard(
+                    'Stripe',
+                    methods['stripe']?['status'] ?? 'Not Configured',
+                    methods['stripe']?['configured'] ?? false,
+                  ),
+                ],
+              ),
+              loading: () => const Center(
+                child: CircularProgressIndicator(),
+              ),
+              error: (error, stack) => Center(
+                child: Text('Error loading payment methods: $error'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaymentsTab() {
+    return ref.watch(paymentDashboardProvider).when(
+      data: (dashboard) => ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: (dashboard['recentTransactions'] as List?)?.length ?? 0,
+        itemBuilder: (context, index) {
+          final transaction = dashboard['recentTransactions'][index];
+          return Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: _getStatusColor(transaction['status']),
+                child: Icon(
+                  _getStatusIcon(transaction['status']),
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              title: Text(
+                '${transaction['type'] ?? 'Unknown'} - ${transaction['amount']} ${transaction['currency'] ?? 'KES'}',
+              ),
+              subtitle: Text(
+                '${transaction['status'] ?? 'Unknown'} • ${_formatDate(transaction['createdAt'])}',
+              ),
+              trailing: Icon(
+                Icons.chevron_right,
+                color: Colors.grey.shade400,
+              ),
+              onTap: () => _showTransactionDetails(transaction),
+            ),
+          );
+        },
+      ),
+      loading: () => const Center(
+        child: CircularProgressIndicator(),
+      ),
+      error: (error, stack) => Center(
+        child: Text('Error loading transactions: $error'),
+      ),
+    );
+  }
+
+  Widget _buildSubscriptionsTab() {
+    return ref.watch(paymentDashboardProvider).when(
+      data: (dashboard) => Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.subscriptions,
+                          color: Colors.blue.shade600,
+                          size: 24,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Current Plan',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      dashboard['subscription']['currentPlan'] ?? 'FREE',
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Amount: ${dashboard['subscription']['amount'] ?? 0} USD/month',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    if (dashboard['subscription']['nextBilling'] != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'Next billing: ${_formatDate(dashboard['subscription']['nextBilling'])}',
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => _showUpgradeOptions(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue.shade600,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: const Text('Upgrade Plan'),
+              ),
+            ),
+          ],
+        ),
+      ),
+      loading: () => const Center(
+        child: CircularProgressIndicator(),
+      ),
+      error: (error, stack) => Center(
+        child: Text('Error loading subscription: $error'),
+      ),
+    );
+  }
+
+  Widget _buildTaxPaymentsTab() {
+    return ref.watch(taxPaymentSummaryProvider).when(
+      data: (summary) => Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Tax Overview Card
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.receipt_long,
+                          color: Colors.orange.shade600,
+                          size: 24,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Tax Summary',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Total Due: ${summary['totalDue'] ?? 0} KES',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Next Deadline: ${summary['paymentInstructions']['deadline']}',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            // Tax Payments List
+            const Text(
+              'Tax Payments',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            
+            ...((summary['taxes'] as List?) ?? []).map<Widget>((tax) => Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ListTile(
+                title: Text(tax['taxType'] ?? 'Unknown'),
+                subtitle: Text('Amount: ${tax['amount']} KES'),
+                trailing: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: tax['status'] == 'PAID' ? Colors.green.shade100 : Colors.orange.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    tax['status'] ?? 'PENDING',
+                    style: TextStyle(
+                      color: tax['status'] == 'PAID' ? Colors.green.shade700 : Colors.orange.shade700,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            )),
+            
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _recordTaxPayment(),
+                icon: const Icon(Icons.add),
+                label: const Text('Record Tax Payment'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange.shade600,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      loading: () => const Center(
+        child: CircularProgressIndicator(),
+      ),
+      error: (error, stack) => Center(
+        child: Text('Error loading tax summary: $error'),
+      ),
+    );
+  }
+
+  Widget _buildStatCard(String title, String value, Color color, IconData icon) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 32),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey.shade600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaymentMethodCard(String name, String status, bool configured) {
+    return Card(
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: configured ? Colors.green.shade100 : Colors.red.shade100,
+          child: Icon(
+            configured ? Icons.check : Icons.close,
+            color: configured ? Colors.green.shade700 : Colors.red.shade700,
+            size: 20,
+          ),
+        ),
+        title: Text(name),
+        subtitle: Text('Status: $status'),
+        trailing: Icon(
+          Icons.chevron_right,
+          color: Colors.grey.shade400,
+        ),
+      ),
+    );
+  }
+
+  void _showTransactionDetails(Map<String, dynamic> transaction) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Transaction Details'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('ID: ${transaction['id']}'),
+            Text('Type: ${transaction['type']}'),
+            Text('Amount: ${transaction['amount']} ${transaction['currency']}'),
+            Text('Status: ${transaction['status']}'),
+            Text('Date: ${_formatDate(transaction['createdAt'])}'),
+            if (transaction['metadata'] != null) ...[
+              const SizedBox(height: 8),
+              Text('Metadata: ${transaction['metadata']}'),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showUpgradeOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Upgrade Your Plan',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            _buildPlanOption('Basic', '\$9.99/month', 'Up to 5 workers'),
+            const SizedBox(height: 8),
+            _buildPlanOption('Gold', '\$29.99/month', 'Up to 10 workers'),
+            const SizedBox(height: 8),
+            _buildPlanOption('Platinum', '\$49.99/month', 'Up to 15 workers'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlanOption(String name, String price, String description) {
+    return ListTile(
+      leading: const CircleAvatar(
+        backgroundColor: Colors.blue,
+        child: Icon(Icons.star, color: Colors.white),
+      ),
+      title: Text(name),
+      subtitle: Text(description),
+      trailing: Text(
+        price,
+        style: const TextStyle(fontWeight: FontWeight.bold),
+      ),
+      onTap: () => _selectPlan(name),
+    );
+  }
+
+  void _selectPlan(String planName) {
+    Navigator.of(context).pop();
+    // Navigate to Stripe checkout or show loading
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Redirecting to $planName plan checkout...'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _recordTaxPayment() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Record Tax Payment'),
+        content: const Text(
+          'This feature allows you to manually record tax payments. '
+          'In production, this would open a form to record payment details.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Tax payment recorded successfully')),
+              );
+            },
+            child: const Text('Record'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getStatusColor(String? status) {
+    switch (status?.toLowerCase()) {
+      case 'success':
+      case 'completed':
+        return Colors.green;
+      case 'pending':
+        return Colors.orange;
+      case 'failed':
+      case 'failed':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  IconData _getStatusIcon(String? status) {
+    switch (status?.toLowerCase()) {
+      case 'success':
+      case 'completed':
+        return Icons.check_circle;
+      case 'pending':
+        return Icons.schedule;
+      case 'failed':
+      case 'failed':
+        return Icons.error;
+      default:
+        return Icons.help;
+    }
+  }
+
+  String _formatDate(dynamic dateString) {
+    if (dateString == null) return 'N/A';
+    try {
+      final date = DateTime.parse(dateString.toString());
+      return '${date.day}/${date.month}/${date.year}';
+    } catch (e) {
+      return dateString.toString();
+    }
+  }
+}

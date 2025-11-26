@@ -79,22 +79,24 @@ class _PayPeriodManagementPageState
 
   Color _getStatusColor(PayPeriodStatus status) {
     switch (status) {
-      case PayPeriodStatus.DRAFT:
+      case PayPeriodStatus.draft:
         return Colors.grey.shade600;
-      case PayPeriodStatus.ACTIVE:
+      case PayPeriodStatus.open:
         return Colors.blue;
-      case PayPeriodStatus.PROCESSING:
+      case PayPeriodStatus.processing:
         return Colors.orange;
-      case PayPeriodStatus.COMPLETED:
+      case PayPeriodStatus.completed:
         return Colors.green;
-      case PayPeriodStatus.CLOSED:
+      case PayPeriodStatus.closed:
         return Colors.deepPurple;
       case PayPeriodStatus.cancelled:
         return Colors.red;
     }
+  }
+
   List<PayPeriodStatusAction> getAvailableActions(PayPeriodStatus status) {
     switch (status) {
-      case PayPeriodStatus.DRAFT:
+      case PayPeriodStatus.draft:
         return [
           PayPeriodStatusAction.activate,
           PayPeriodStatusAction.close,
@@ -117,7 +119,6 @@ class _PayPeriodManagementPageState
         return []; // No actions available for cancelled periods
     }
   }
-
   @override
   Widget build(BuildContext context) {
     final payPeriodsState = ref.watch(payPeriodsProvider);

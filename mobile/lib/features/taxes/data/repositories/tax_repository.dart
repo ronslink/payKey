@@ -191,7 +191,12 @@ class TaxRepository {
 
   Future<void> recordTaxPayment(Map<String, dynamic> paymentData) async {
     try {
-      await _apiService.recordTaxPayment(paymentData);
+      await _apiService.recordTaxPayment(
+        taxType: paymentData['taxType'],
+        amount: paymentData['amount'],
+        paymentDate: paymentData['paymentDate'],
+        reference: paymentData['reference'],
+      );
     } catch (e) {
       throw Exception('Failed to record tax payment: $e');
     }

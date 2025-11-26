@@ -1,25 +1,90 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/repositories/transactions_repository.dart';
+import '../../../../core/network/api_service.dart';
 
 final transactionsRepositoryProvider = Provider((ref) => TransactionsRepository());
 
+// API Service Provider
+final apiServiceProvider = Provider((ref) => ApiService());
+
+// Payment Dashboard Provider
+final paymentDashboardProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  final apiService = ref.read(apiServiceProvider);
+  final response = await apiService.getPaymentDashboard();
+  return response.data;
+});
+
+// Payment Methods Provider
+final paymentMethodsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  final apiService = ref.read(apiServiceProvider);
+  final response = await apiService.getPaymentMethods();
+  return response.data;
+});
+
+// Tax Payment Summary Provider
+final taxPaymentSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  final apiService = ref.read(apiServiceProvider);
+  final response = await apiService.getTaxPaymentSummary();
+  return response.data;
+});
+
 final paymentsProvider = StateNotifierProvider<PaymentsNotifier, AsyncValue<void>>((ref) {
   final repository = ref.read(transactionsRepositoryProvider);
-  return PaymentsNotifier(repository);
+  final apiService = ref.read(apiServiceProvider);
+  return PaymentsNotifier(repository, apiService);
 });
 
 class PaymentsNotifier extends StateNotifier<AsyncValue<void>> {
   final TransactionsRepository _repository;
+  final ApiService _apiService;
 
-  PaymentsNotifier(this._repository) : super(const AsyncValue.data(null));
+  PaymentsNotifier(this._repository, this._apiService) : super(const AsyncValue.data(null));
 
-  Future<void> initiatePayment(String phoneNumber, double amount) async {
+  Future<Map<String, dynamic>> initiatePayment(String phoneNumber, double amount) async {
     try {
       state = const AsyncValue.loading();
-      // Implement payment logic
+      
+      final response = await _apiService.initiateMpesaTopup(phoneNumber, amount);
+      
       state = const AsyncValue.data(null);
+      return response.data;
     } catch (error, stackTrace) {
       state = AsyncValue.error(error.toString(), stackTrace);
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> recordTaxPayment({
+    required String taxType,
+    required double amount,
+    String? paymentDate,
+    required String reference,
+  }) async {
+    try {
+      state = const AsyncValue.loading();
+      
+      final response = await _apiService.recordTaxPayment(
+        taxType: taxType,
+        amount: amount,
+        paymentDate: paymentDate,
+        reference: reference,
+      );
+      
+      state = const AsyncValue.data(null);
+      return response.data;
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error.toString(), stackTrace);
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> getTransactions() async {
+    try {
+      final response = await _apiService.getTransactions();
+      return response.data;
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error.toString(), stackTrace);
+      rethrow;
     }
   }
 }

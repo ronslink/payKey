@@ -184,12 +184,45 @@ class ApiService {
     return dio.delete('/workers/$workerId');
   }
 
-  // Payment endpoints
-  Future<Response> initiateStkPush(String phoneNumber, double amount) async {
-    return dio.post('/payments/initiate-stk', data: {
+  // Unified Payment Dashboard endpoints
+  Future<Response> getPaymentDashboard() async {
+    return dio.get('/payments/unified/dashboard');
+  }
+
+  Future<Response> getPaymentMethods() async {
+    return dio.get('/payments/unified/methods');
+  }
+
+  // M-Pesa Payment endpoints
+  Future<Response> initiateMpesaTopup(String phoneNumber, double amount) async {
+    return dio.post('/payments/unified/mpesa/topup', data: {
       'phoneNumber': phoneNumber,
       'amount': amount,
     });
+  }
+
+  // Tax Payment endpoints
+  Future<Response> getTaxPaymentSummary() async {
+    return dio.get('/payments/unified/tax-payments/summary');
+  }
+
+  Future<Response> recordTaxPayment({
+    required String taxType,
+    required double amount,
+    String? paymentDate,
+    required String reference,
+  }) async {
+    return dio.post('/payments/unified/tax-payments/record', data: {
+      'taxType': taxType,
+      'amount': amount,
+      'paymentDate': paymentDate,
+      'reference': reference,
+    });
+  }
+
+  // Legacy payment endpoints (for backward compatibility)
+  Future<Response> initiateStkPush(String phoneNumber, double amount) async {
+    return initiateMpesaTopup(phoneNumber, amount);
   }
 
   Future<Response> sendB2CPayment(String transactionId, String phoneNumber, double amount, String remarks) async {
@@ -351,10 +384,6 @@ class ApiService {
     return dio.get('/tax-payments/summary/$year/$month');
   }
 
-  Future<Response> recordTaxPayment(Map<String, dynamic> paymentData) async {
-    return dio.post('/tax-payments', data: paymentData);
-  }
-
   Future<Response> getTaxPaymentHistory() async {
     return dio.get('/tax-payments/history');
   }
@@ -471,6 +500,59 @@ class ApiService {
     return dio.post('/accounting/mappings', data: mappings);
   }
 
+  // Pay Period Management
+  Future<Response> getPayPeriods() async {
+    return dio.get('/pay-periods');
+  }
+
+  Future<Response> getPayPeriodById(String id) async {
+    return dio.get('/pay-periods/$id');
+  }
+
+  Future<Response> createPayPeriod(Map<String, dynamic> data) async {
+    return dio.post('/pay-periods', data: data);
+  }
+
+  Future<Response> updatePayPeriod(String id, Map<String, dynamic> data) async {
+    return dio.patch('/pay-periods/$id', data: data);
+  }
+
+  Future<Response> deletePayPeriod(String id) async {
+    return dio.delete('/pay-periods/$id');
+  }
+
+  Future<Response> activatePayPeriod(String id) async {
+    return dio.patch('/pay-periods/$id/activate');
+  }
+
+  Future<Response> processPayPeriod(String id) async {
+    return dio.patch('/pay-periods/$id/process');
+  }
+
+  Future<Response> completePayPeriod(String id) async {
+    return dio.patch('/pay-periods/$id/complete');
+  }
+
+  Future<Response> closePayPeriod(String id) async {
+    return dio.patch('/pay-periods/$id/close');
+  }
+
+  Future<Response> updatePayPeriodStatus(String id, String action) async {
+    return dio.patch('/pay-periods/$id/status', data: {'action': action});
+  }
+
+  Future<Response> getPayPeriodStatistics(String id) async {
+    return dio.get('/pay-periods/$id/statistics');
+  }
+
+  Future<Response> getCurrentPayPeriod() async {
+    return dio.get('/pay-periods/current');
+  }
+
+  Future<Response> getPayPeriodsByStatus(String status) async {
+    return dio.get('/pay-periods/status/$status');
+  }
+
   // Leave Management API Endpoints
   Future<Response> getLeaveRequests() async {
     return dio.get('/workers/leave-requests');
@@ -501,42 +583,5 @@ class ApiService {
 
   Future<Response> getLeaveBalance(String workerId) async {
     return dio.get('/workers/$workerId/leave-balance');
-  }
-
-  // Pay Period API Endpoints
-  Future<Response> getPayPeriods() async {
-    return dio.get('/pay-periods');
-  }
-
-  Future<Response> getPayPeriodById(String payPeriodId) async {
-    return dio.get('/pay-periods/$payPeriodId');
-  }
-
-  Future<Response> createPayPeriod(Map<String, dynamic> payPeriodData) async {
-    return dio.post('/pay-periods', data: payPeriodData);
-  }
-
-  Future<Response> updatePayPeriod(String payPeriodId, Map<String, dynamic> updateData) async {
-    return dio.patch('/pay-periods/$payPeriodId', data: updateData);
-  }
-
-  Future<Response> deletePayPeriod(String payPeriodId) async {
-    return dio.delete('/pay-periods/$payPeriodId');
-  }
-
-  Future<Response> updatePayPeriodStatus(String payPeriodId, String action) async {
-    return dio.patch('/pay-periods/$payPeriodId/status', data: {'action': action});
-  }
-
-  Future<Response> getCurrentPayPeriod() async {
-    return dio.get('/pay-periods/current');
-  }
-
-  Future<Response> getPayPeriodsByStatus(String status) async {
-    return dio.get('/pay-periods/status/$status');
-  }
-
-  Future<Response> getPayPeriodStatistics(String payPeriodId) async {
-    return dio.get('/pay-periods/$payPeriodId/statistics');
   }
 }
