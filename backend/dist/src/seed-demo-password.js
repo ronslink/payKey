@@ -50,7 +50,7 @@ async function updateDemoPassword() {
         return;
     }
     const salt = await bcrypt.genSalt();
-    const hashedPassword = await bcrypt.hash('SecurePass123!', salt);
+    const hashedPassword = await bcrypt.hash('testuser123', salt);
     demoUser.passwordHash = hashedPassword;
     await userRepository.save(demoUser);
     console.log('Demo user password updated successfully');

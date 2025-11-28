@@ -8,6 +8,7 @@ import {
   Delete,
   Query,
   UseGuards,
+  Request,
 } from '@nestjs/common';
 import { PayPeriodsService } from './pay-periods.service';
 import { CreatePayPeriodDto } from './dto/create-pay-period.dto';
@@ -21,15 +22,16 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @Controller('pay-periods')
 @UseGuards(JwtAuthGuard)
 export class PayPeriodsController {
-  constructor(private readonly payPeriodsService: PayPeriodsService) {}
+  constructor(private readonly payPeriodsService: PayPeriodsService) { }
 
   @Post()
-  create(@Body() createPayPeriodDto: CreatePayPeriodDto) {
-    return this.payPeriodsService.create(createPayPeriodDto);
+  create(@Request() req: any, @Body() createPayPeriodDto: CreatePayPeriodDto) {
+    return this.payPeriodsService.create(createPayPeriodDto, req.user.userId);
   }
 
   @Get()
   findAll(
+    @Request() req: any,
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '10',
     @Query('status') status?: PayPeriodStatus,
@@ -38,7 +40,7 @@ export class PayPeriodsController {
     const pageNum = parseInt(page, 10) || 1;
     const limitNum = parseInt(limit, 10) || 10;
 
-    return this.payPeriodsService.findAll(pageNum, limitNum, status, frequency);
+    return this.payPeriodsService.findAll(req.user.userId, pageNum, limitNum, status, frequency);
   }
 
   @Get(':id')

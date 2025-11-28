@@ -12,12 +12,12 @@ _$PayPeriodImpl _$$PayPeriodImplFromJson(Map<String, dynamic> json) =>
       name: json['name'] as String,
       startDate: DateTime.parse(json['startDate'] as String),
       endDate: DateTime.parse(json['endDate'] as String),
-      frequency: $enumDecode(_$PayPeriodFrequencyEnumMap, json['frequency']),
+      frequency: _frequencyFromJson(json['frequency']),
       status: $enumDecode(_$PayPeriodStatusEnumMap, json['status']),
-      totalWorkers: (json['totalWorkers'] as num).toInt(),
-      totalGrossAmount: (json['totalGrossAmount'] as num).toDouble(),
-      totalNetAmount: (json['totalNetAmount'] as num).toDouble(),
-      processedWorkers: (json['processedWorkers'] as num).toInt(),
+      totalWorkers: _intFromJson(json['totalWorkers']),
+      totalGrossAmount: _doubleFromJson(json['totalGrossAmount']),
+      totalNetAmount: _doubleFromJson(json['totalNetAmount']),
+      processedWorkers: _intFromJson(json['processedWorkers']),
       createdAt: json['createdAt'] == null
           ? null
           : DateTime.parse(json['createdAt'] as String),
@@ -44,14 +44,6 @@ Map<String, dynamic> _$$PayPeriodImplToJson(_$PayPeriodImpl instance) =>
       'notes': instance.notes,
     };
 
-const _$PayPeriodFrequencyEnumMap = {
-  PayPeriodFrequency.weekly: 'weekly',
-  PayPeriodFrequency.biWeekly: 'biWeekly',
-  PayPeriodFrequency.monthly: 'monthly',
-  PayPeriodFrequency.quarterly: 'quarterly',
-  PayPeriodFrequency.yearly: 'yearly',
-};
-
 const _$PayPeriodStatusEnumMap = {
   PayPeriodStatus.DRAFT: 'DRAFT',
   PayPeriodStatus.ACTIVE: 'ACTIVE',
@@ -59,6 +51,14 @@ const _$PayPeriodStatusEnumMap = {
   PayPeriodStatus.COMPLETED: 'COMPLETED',
   PayPeriodStatus.CLOSED: 'CLOSED',
   PayPeriodStatus.CANCELLED: 'CANCELLED',
+};
+
+const _$PayPeriodFrequencyEnumMap = {
+  PayPeriodFrequency.weekly: 'WEEKLY',
+  PayPeriodFrequency.biWeekly: 'BIWEEKLY',
+  PayPeriodFrequency.monthly: 'MONTHLY',
+  PayPeriodFrequency.quarterly: 'QUARTERLY',
+  PayPeriodFrequency.yearly: 'YEARLY',
 };
 
 _$CreatePayPeriodRequestImpl _$$CreatePayPeriodRequestImplFromJson(

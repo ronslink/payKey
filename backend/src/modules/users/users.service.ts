@@ -9,7 +9,7 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
-  ) {}
+  ) { }
 
   async create(
     createUserDto: CreateUserDto & { passwordHash: string },
@@ -30,21 +30,52 @@ export class UsersService {
     return this.usersRepository.findOne({ where: { id } });
   }
   async update(id: string, updateUserDto: Partial<User>): Promise<User> {
-    // If compliance data is being updated, mark onboarding as completed
-    const hasComplianceData =
-      updateUserDto.kraPin ||
-      updateUserDto.nssfNumber ||
-      updateUserDto.nhifNumber;
-
-    if (hasComplianceData) {
-      updateUserDto.isOnboardingCompleted = true;
-    }
-
-    await this.usersRepository.update(id, updateUserDto);
+    // Check if all required onboarding fields are present
     const user = await this.usersRepository.findOne({ where: { id } });
     if (!user) {
       throw new Error('User not found');
     }
-    return user;
+
+    // Merge current user data with updates to check completeness
+    const updatedData = { ...user, ...updateUserDto };
+
+    // Check if onboarding is complete based on required fields
+    const hasRequiredPersonalInfo =
+      updatedData.firstName &&
+      updatedData.lastName;
+
+    const hasRequiredIdentification =
+      updatedData.idType &&
+      updatedData.idNumber &&
+      updatedData.nationalityId;
+
+    const hasRequiredTaxCompliance =
+      updatedData.kraPin;
+
+    const hasRequiredLocation =
+      updatedData.countryId;
+
+    // If non-resident, country of origin is required
+    const hasRequiredResidencyInfo =
+      updatedData.isResident !== undefined &&
+      (updatedData.isResident || updatedData.countryOfOrigin);
+
+    // Mark onboarding as completed if all required fields are present
+    if (
+      hasRequiredPersonalInfo &&
+      hasRequiredIdentification &&
+      hasRequiredTaxCompliance &&
+      hasRequiredLocation &&
+      hasRequiredResidencyInfo
+    ) {
+      updateUserDto.isOnboardingCompleted = true;
+    }
+
+    await this.usersRepository.update(id, updateUserDto);
+    const updatedUser = await this.usersRepository.findOne({ where: { id } });
+    if (!updatedUser) {
+      throw new Error('User not found after update');
+    }
+    return updatedUser;
   }
 }

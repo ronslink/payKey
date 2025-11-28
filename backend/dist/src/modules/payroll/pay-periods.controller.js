@@ -24,13 +24,13 @@ let PayPeriodsController = class PayPeriodsController {
     constructor(payPeriodsService) {
         this.payPeriodsService = payPeriodsService;
     }
-    create(createPayPeriodDto) {
-        return this.payPeriodsService.create(createPayPeriodDto);
+    create(req, createPayPeriodDto) {
+        return this.payPeriodsService.create(createPayPeriodDto, req.user.userId);
     }
-    findAll(page = '1', limit = '10', status, frequency) {
+    findAll(req, page = '1', limit = '10', status, frequency) {
         const pageNum = parseInt(page, 10) || 1;
         const limitNum = parseInt(limit, 10) || 10;
-        return this.payPeriodsService.findAll(pageNum, limitNum, status, frequency);
+        return this.payPeriodsService.findAll(req.user.userId, pageNum, limitNum, status, frequency);
     }
     findOne(id) {
         return this.payPeriodsService.findOne(id);
@@ -63,19 +63,21 @@ let PayPeriodsController = class PayPeriodsController {
 exports.PayPeriodsController = PayPeriodsController;
 __decorate([
     (0, common_1.Post)(),
-    __param(0, (0, common_1.Body)()),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [create_pay_period_dto_1.CreatePayPeriodDto]),
+    __metadata("design:paramtypes", [Object, create_pay_period_dto_1.CreatePayPeriodDto]),
     __metadata("design:returntype", void 0)
 ], PayPeriodsController.prototype, "create", null);
 __decorate([
     (0, common_1.Get)(),
-    __param(0, (0, common_1.Query)('page')),
-    __param(1, (0, common_1.Query)('limit')),
-    __param(2, (0, common_1.Query)('status')),
-    __param(3, (0, common_1.Query)('frequency')),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Query)('page')),
+    __param(2, (0, common_1.Query)('limit')),
+    __param(3, (0, common_1.Query)('status')),
+    __param(4, (0, common_1.Query)('frequency')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, String, String]),
+    __metadata("design:paramtypes", [Object, String, String, String, String]),
     __metadata("design:returntype", void 0)
 ], PayPeriodsController.prototype, "findAll", null);
 __decorate([

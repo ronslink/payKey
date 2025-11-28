@@ -37,18 +37,33 @@ let UsersService = class UsersService {
         return this.usersRepository.findOne({ where: { id } });
     }
     async update(id, updateUserDto) {
-        const hasComplianceData = updateUserDto.kraPin ||
-            updateUserDto.nssfNumber ||
-            updateUserDto.nhifNumber;
-        if (hasComplianceData) {
-            updateUserDto.isOnboardingCompleted = true;
-        }
-        await this.usersRepository.update(id, updateUserDto);
         const user = await this.usersRepository.findOne({ where: { id } });
         if (!user) {
             throw new Error('User not found');
         }
-        return user;
+        const updatedData = { ...user, ...updateUserDto };
+        const hasRequiredPersonalInfo = updatedData.firstName &&
+            updatedData.lastName;
+        const hasRequiredIdentification = updatedData.idType &&
+            updatedData.idNumber &&
+            updatedData.nationalityId;
+        const hasRequiredTaxCompliance = updatedData.kraPin;
+        const hasRequiredLocation = updatedData.countryId;
+        const hasRequiredResidencyInfo = updatedData.isResident !== undefined &&
+            (updatedData.isResident || updatedData.countryOfOrigin);
+        if (hasRequiredPersonalInfo &&
+            hasRequiredIdentification &&
+            hasRequiredTaxCompliance &&
+            hasRequiredLocation &&
+            hasRequiredResidencyInfo) {
+            updateUserDto.isOnboardingCompleted = true;
+        }
+        await this.usersRepository.update(id, updateUserDto);
+        const updatedUser = await this.usersRepository.findOne({ where: { id } });
+        if (!updatedUser) {
+            throw new Error('User not found after update');
+        }
+        return updatedUser;
     }
 };
 exports.UsersService = UsersService;

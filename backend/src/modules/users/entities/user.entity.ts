@@ -97,7 +97,7 @@ export class User {
   @Column({ nullable: true, name: 'countryoforigin' })
   countryOfOrigin: string;
 
-  @Column({ default: false, name: 'isonboardingcompleted' })
+  @Column({ default: false, name: 'isOnboardingCompleted' })
   isOnboardingCompleted: boolean;
 
   @CreateDateColumn()

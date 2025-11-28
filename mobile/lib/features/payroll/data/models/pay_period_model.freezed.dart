@@ -25,11 +25,16 @@ mixin _$PayPeriod {
   String get name => throw _privateConstructorUsedError;
   DateTime get startDate => throw _privateConstructorUsedError;
   DateTime get endDate => throw _privateConstructorUsedError;
+  @JsonKey(fromJson: _frequencyFromJson)
   PayPeriodFrequency get frequency => throw _privateConstructorUsedError;
   PayPeriodStatus get status => throw _privateConstructorUsedError;
+  @JsonKey(fromJson: _intFromJson)
   int get totalWorkers => throw _privateConstructorUsedError;
+  @JsonKey(fromJson: _doubleFromJson)
   double get totalGrossAmount => throw _privateConstructorUsedError;
+  @JsonKey(fromJson: _doubleFromJson)
   double get totalNetAmount => throw _privateConstructorUsedError;
+  @JsonKey(fromJson: _intFromJson)
   int get processedWorkers => throw _privateConstructorUsedError;
   DateTime? get createdAt => throw _privateConstructorUsedError;
   DateTime? get updatedAt => throw _privateConstructorUsedError;
@@ -55,12 +60,12 @@ abstract class $PayPeriodCopyWith<$Res> {
     String name,
     DateTime startDate,
     DateTime endDate,
-    PayPeriodFrequency frequency,
+    @JsonKey(fromJson: _frequencyFromJson) PayPeriodFrequency frequency,
     PayPeriodStatus status,
-    int totalWorkers,
-    double totalGrossAmount,
-    double totalNetAmount,
-    int processedWorkers,
+    @JsonKey(fromJson: _intFromJson) int totalWorkers,
+    @JsonKey(fromJson: _doubleFromJson) double totalGrossAmount,
+    @JsonKey(fromJson: _doubleFromJson) double totalNetAmount,
+    @JsonKey(fromJson: _intFromJson) int processedWorkers,
     DateTime? createdAt,
     DateTime? updatedAt,
     String? notes,
@@ -170,12 +175,12 @@ abstract class _$$PayPeriodImplCopyWith<$Res>
     String name,
     DateTime startDate,
     DateTime endDate,
-    PayPeriodFrequency frequency,
+    @JsonKey(fromJson: _frequencyFromJson) PayPeriodFrequency frequency,
     PayPeriodStatus status,
-    int totalWorkers,
-    double totalGrossAmount,
-    double totalNetAmount,
-    int processedWorkers,
+    @JsonKey(fromJson: _intFromJson) int totalWorkers,
+    @JsonKey(fromJson: _doubleFromJson) double totalGrossAmount,
+    @JsonKey(fromJson: _doubleFromJson) double totalNetAmount,
+    @JsonKey(fromJson: _intFromJson) int processedWorkers,
     DateTime? createdAt,
     DateTime? updatedAt,
     String? notes,
@@ -277,12 +282,12 @@ class _$PayPeriodImpl implements _PayPeriod {
     required this.name,
     required this.startDate,
     required this.endDate,
-    required this.frequency,
+    @JsonKey(fromJson: _frequencyFromJson) required this.frequency,
     required this.status,
-    required this.totalWorkers,
-    required this.totalGrossAmount,
-    required this.totalNetAmount,
-    required this.processedWorkers,
+    @JsonKey(fromJson: _intFromJson) required this.totalWorkers,
+    @JsonKey(fromJson: _doubleFromJson) required this.totalGrossAmount,
+    @JsonKey(fromJson: _doubleFromJson) required this.totalNetAmount,
+    @JsonKey(fromJson: _intFromJson) required this.processedWorkers,
     this.createdAt,
     this.updatedAt,
     this.notes,
@@ -300,16 +305,21 @@ class _$PayPeriodImpl implements _PayPeriod {
   @override
   final DateTime endDate;
   @override
+  @JsonKey(fromJson: _frequencyFromJson)
   final PayPeriodFrequency frequency;
   @override
   final PayPeriodStatus status;
   @override
+  @JsonKey(fromJson: _intFromJson)
   final int totalWorkers;
   @override
+  @JsonKey(fromJson: _doubleFromJson)
   final double totalGrossAmount;
   @override
+  @JsonKey(fromJson: _doubleFromJson)
   final double totalNetAmount;
   @override
+  @JsonKey(fromJson: _intFromJson)
   final int processedWorkers;
   @override
   final DateTime? createdAt;
@@ -390,12 +400,13 @@ abstract class _PayPeriod implements PayPeriod {
     required final String name,
     required final DateTime startDate,
     required final DateTime endDate,
+    @JsonKey(fromJson: _frequencyFromJson)
     required final PayPeriodFrequency frequency,
     required final PayPeriodStatus status,
-    required final int totalWorkers,
-    required final double totalGrossAmount,
-    required final double totalNetAmount,
-    required final int processedWorkers,
+    @JsonKey(fromJson: _intFromJson) required final int totalWorkers,
+    @JsonKey(fromJson: _doubleFromJson) required final double totalGrossAmount,
+    @JsonKey(fromJson: _doubleFromJson) required final double totalNetAmount,
+    @JsonKey(fromJson: _intFromJson) required final int processedWorkers,
     final DateTime? createdAt,
     final DateTime? updatedAt,
     final String? notes,
@@ -413,16 +424,21 @@ abstract class _PayPeriod implements PayPeriod {
   @override
   DateTime get endDate;
   @override
+  @JsonKey(fromJson: _frequencyFromJson)
   PayPeriodFrequency get frequency;
   @override
   PayPeriodStatus get status;
   @override
+  @JsonKey(fromJson: _intFromJson)
   int get totalWorkers;
   @override
+  @JsonKey(fromJson: _doubleFromJson)
   double get totalGrossAmount;
   @override
+  @JsonKey(fromJson: _doubleFromJson)
   double get totalNetAmount;
   @override
+  @JsonKey(fromJson: _intFromJson)
   int get processedWorkers;
   @override
   DateTime? get createdAt;

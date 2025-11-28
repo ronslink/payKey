@@ -21,7 +21,6 @@ class ApiService {
     dio.options.headers.addAll({
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Origin': 'http://localhost:62750', // Flutter mobile origin for CORS
     });
     
     // Add interceptors for auth and error handling
@@ -475,12 +474,25 @@ class ApiService {
   }
 
   // Tax Submission Management
+  // Tax Submission Management
   Future<Response> generateTaxSubmission(String payPeriodId) async {
-    return dio.post('/taxes/submissions/generate/$payPeriodId');
+    return dio.post('/taxes/submissions/generate', data: {'payPeriodId': payPeriodId});
   }
 
   Future<Response> getTaxSubmissionByPeriod(String payPeriodId) async {
     return dio.get('/taxes/submissions/period/$payPeriodId');
+  }
+
+  Future<Response> getTaxSubmissions() async {
+    return dio.get('/taxes/submissions');
+  }
+
+  Future<Response> markTaxSubmissionAsFiled(String id) async {
+    return dio.patch('/taxes/submissions/$id/file');
+  }
+
+  Future<Response> calculateTax(double income) async {
+    return dio.post('/taxes/calculate', data: {'income': income});
   }
 
   // Accounting Export
@@ -522,19 +534,19 @@ class ApiService {
   }
 
   Future<Response> activatePayPeriod(String id) async {
-    return dio.patch('/pay-periods/$id/activate');
+    return dio.post('/pay-periods/$id/activate');
   }
 
   Future<Response> processPayPeriod(String id) async {
-    return dio.patch('/pay-periods/$id/process');
+    return dio.post('/pay-periods/$id/process');
   }
 
   Future<Response> completePayPeriod(String id) async {
-    return dio.patch('/pay-periods/$id/complete');
+    return dio.post('/pay-periods/$id/complete');
   }
 
   Future<Response> closePayPeriod(String id) async {
-    return dio.patch('/pay-periods/$id/close');
+    return dio.post('/pay-periods/$id/close');
   }
 
   Future<Response> updatePayPeriodStatus(String id, String action) async {
@@ -550,7 +562,7 @@ class ApiService {
   }
 
   Future<Response> getPayPeriodsByStatus(String status) async {
-    return dio.get('/pay-periods/status/$status');
+    return dio.get('/pay-periods', queryParameters: {'status': status});
   }
 
   // Leave Management API Endpoints

@@ -28,14 +28,15 @@ let PayPeriodsService = class PayPeriodsService {
         this.payrollRecordRepository = payrollRecordRepository;
         this.taxPaymentsService = taxPaymentsService;
     }
-    async create(createPayPeriodDto) {
+    async create(createPayPeriodDto, userId) {
         if (new Date(createPayPeriodDto.startDate) >=
             new Date(createPayPeriodDto.endDate)) {
             throw new common_1.BadRequestException('Start date must be before end date');
         }
         const overlapping = await this.payPeriodRepository
             .createQueryBuilder('pp')
-            .where('pp.startDate <= :endDate', {
+            .where('pp.userId = :userId', { userId })
+            .andWhere('pp.startDate <= :endDate', {
             endDate: createPayPeriodDto.endDate,
         })
             .andWhere('pp.endDate >= :startDate', {
@@ -47,12 +48,14 @@ let PayPeriodsService = class PayPeriodsService {
         }
         const payPeriod = this.payPeriodRepository.create({
             ...createPayPeriodDto,
+            userId,
             status: pay_period_entity_1.PayPeriodStatus.DRAFT,
         });
         return this.payPeriodRepository.save(payPeriod);
     }
-    async findAll(page = 1, limit = 10, status, frequency) {
+    async findAll(userId, page = 1, limit = 10, status, frequency) {
         const queryBuilder = this.payPeriodRepository.createQueryBuilder('pp');
+        queryBuilder.where('pp.userId = :userId', { userId });
         if (status) {
             queryBuilder.andWhere('pp.status = :status', { status });
         }
@@ -87,6 +90,7 @@ let PayPeriodsService = class PayPeriodsService {
             const overlapping = await this.payPeriodRepository
                 .createQueryBuilder('pp')
                 .where('pp.id != :id', { id })
+                .andWhere('pp.userId = :userId', { userId: payPeriod.userId })
                 .andWhere('pp.startDate <= :endDate', { endDate: newEndDate })
                 .andWhere('pp.endDate >= :startDate', { startDate: newStartDate })
                 .getOne();

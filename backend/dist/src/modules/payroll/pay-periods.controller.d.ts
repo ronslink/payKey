@@ -5,8 +5,8 @@ import { PayPeriodStatus, PayPeriodFrequency } from './entities/pay-period.entit
 export declare class PayPeriodsController {
     private readonly payPeriodsService;
     constructor(payPeriodsService: PayPeriodsService);
-    create(createPayPeriodDto: CreatePayPeriodDto): Promise<import("./entities/pay-period.entity").PayPeriod>;
-    findAll(page?: string, limit?: string, status?: PayPeriodStatus, frequency?: string): Promise<{
+    create(req: any, createPayPeriodDto: CreatePayPeriodDto): Promise<import("./entities/pay-period.entity").PayPeriod>;
+    findAll(req: any, page?: string, limit?: string, status?: PayPeriodStatus, frequency?: string): Promise<{
         data: import("./entities/pay-period.entity").PayPeriod[];
         total: number;
         page: number;

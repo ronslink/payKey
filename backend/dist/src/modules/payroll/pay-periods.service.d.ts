@@ -9,8 +9,8 @@ export declare class PayPeriodsService {
     private payrollRecordRepository;
     private taxPaymentsService;
     constructor(payPeriodRepository: Repository<PayPeriod>, payrollRecordRepository: Repository<PayrollRecord>, taxPaymentsService: TaxPaymentsService);
-    create(createPayPeriodDto: CreatePayPeriodDto): Promise<PayPeriod>;
-    findAll(page?: number, limit?: number, status?: PayPeriodStatus, frequency?: string): Promise<{
+    create(createPayPeriodDto: CreatePayPeriodDto, userId: string): Promise<PayPeriod>;
+    findAll(userId: string, page?: number, limit?: number, status?: PayPeriodStatus, frequency?: string): Promise<{
         data: PayPeriod[];
         total: number;
         page: number;

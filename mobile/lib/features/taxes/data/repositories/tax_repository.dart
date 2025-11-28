@@ -21,18 +21,22 @@ class TaxRepository {
   // For payroll tax submissions (auto-generated from payroll)
   Future<List<PayrollTaxSubmission>> getPayrollTaxSubmissions() async {
     try {
-      // Return mock data for now
-      return [];
+      final response = await _apiService.getTaxSubmissions();
+      final List<dynamic> data = response.data;
+      // Map backend TaxSubmission to frontend PayrollTaxSubmission
+      // Note: You might need to adjust the model mapping depending on backend response structure
+      return data.map((json) => PayrollTaxSubmission.fromJson(json)).toList();
     } catch (e) {
-      throw Exception('Failed to fetch payroll tax submissions: $e');
+      // Fallback to empty list if parsing fails or endpoint not ready
+      print('Error fetching tax submissions: $e');
+      return [];
     }
   }
 
   // Mark individual tax submission as filed
   Future<void> markIndividualTaxAsFiled(String id) async {
     try {
-      // Mock implementation
-      await Future.delayed(const Duration(seconds: 1));
+      await _apiService.markTaxSubmissionAsFiled(id);
     } catch (e) {
       throw Exception('Failed to mark individual tax as filed: $e');
     }
@@ -41,8 +45,7 @@ class TaxRepository {
   // Mark payroll tax submission as filed
   Future<void> markPayrollTaxAsFiled(String id) async {
     try {
-      // Mock implementation
-      await Future.delayed(const Duration(seconds: 1));
+      await _apiService.markTaxSubmissionAsFiled(id);
     } catch (e) {
       throw Exception('Failed to mark payroll tax as filed: $e');
     }
@@ -176,6 +179,14 @@ class TaxRepository {
       );
     } catch (e) {
       throw Exception('Failed to submit tax return: $e');
+    }
+  }
+
+  Future<void> generateTaxSubmission(String payPeriodId) async {
+    try {
+      await _apiService.generateTaxSubmission(payPeriodId);
+    } catch (e) {
+      throw Exception('Failed to generate tax submission: $e');
     }
   }
 

@@ -27,6 +27,9 @@ let TaxSubmissionController = class TaxSubmissionController {
     async markAsFiled(req, id) {
         return this.taxesService.markAsFiled(id, req.user.userId);
     }
+    async generateSubmission(req, body) {
+        return this.taxesService.generateTaxSubmission(body.payPeriodId, req.user.userId);
+    }
 };
 exports.TaxSubmissionController = TaxSubmissionController;
 __decorate([
@@ -44,6 +47,14 @@ __decorate([
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", Promise)
 ], TaxSubmissionController.prototype, "markAsFiled", null);
+__decorate([
+    (0, common_1.Post)('generate'),
+    __param(0, (0, common_1.Request)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], TaxSubmissionController.prototype, "generateSubmission", null);
 exports.TaxSubmissionController = TaxSubmissionController = __decorate([
     (0, common_1.Controller)('taxes/submissions'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

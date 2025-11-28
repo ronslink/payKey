@@ -31,6 +31,8 @@ export declare class User {
     address: string;
     city: string;
     countryId: string;
+    isResident: boolean;
+    countryOfOrigin: string;
     isOnboardingCompleted: boolean;
     createdAt: Date;
     updatedAt: Date;

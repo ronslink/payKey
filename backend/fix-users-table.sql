@@ -22,3 +22,31 @@ CREATE INDEX IF NOT EXISTS idx_users_country_code ON users("countryCode");
 CREATE INDEX IF NOT EXISTS idx_users_nationality_id ON users("nationalityId");
 CREATE INDEX IF NOT EXISTS idx_users_id_type ON users("idType");
 CREATE INDEX IF NOT EXISTS idx_users_onboarding_completed ON users("isOnboardingCompleted");
+-- Add missing columns to subscriptions table
+ALTER TABLE subscriptions
+ADD COLUMN IF NOT EXISTS "createdAt" timestamptz NOT NULL DEFAULT now(),
+ADD COLUMN IF NOT EXISTS "updatedAt" timestamptz NOT NULL DEFAULT now();
+
+-- Create subscription_payments table if it does not exist
+CREATE TABLE IF NOT EXISTS "subscription_payments" (
+    "id" uuid NOT NULL DEFAULT uuid_generate_v4() PRIMARY KEY,
+    "subscriptionId" uuid,
+    "userId" uuid,
+    "amount" numeric,
+    "currency" varchar,
+    "status" varchar,
+    "paymentMethod" varchar,
+    "billingPeriod" varchar,
+    "periodStart" timestamptz,
+    "periodEnd" timestamptz,
+    "dueDate" timestamptz,
+    "paidDate" timestamptz,
+    "invoiceNumber" varchar,
+    "paymentProvider" varchar,
+    "transactionId" varchar,
+    "metadata" jsonb,
+    "notes" text,
+    "createdAt" timestamptz NOT NULL DEFAULT now(),
+    "updatedAt" timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT "FK_subscription_payments_subscription" FOREIGN KEY ("subscriptionId") REFERENCES "subscriptions"("id") ON DELETE CASCADE
+);

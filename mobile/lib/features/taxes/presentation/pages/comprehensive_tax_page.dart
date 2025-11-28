@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../providers/tax_submission_provider.dart';
 import '../../data/models/tax_submission_model.dart';
-// Import the tax notifier provider for tax calculations
+import '../providers/tax_provider.dart';
 
 class ComprehensiveTaxPage extends ConsumerStatefulWidget {
   const ComprehensiveTaxPage({super.key});
@@ -417,6 +417,9 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
   }
 
   Widget _buildPayrollTaxInfo() {
+    // Use the same provider as TaxFilingPage for consistency
+    final payrollTaxState = ref.watch(taxNotifierProvider);
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -441,17 +444,40 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
             ),
             const SizedBox(height: 12),
             Expanded(
-              child: ListView.builder(
-                itemCount: 3,
-                itemBuilder: (context, index) {
-                  final month = DateFormat('MMM').format(DateTime.now().subtract(Duration(days: 30 * index)));
-                  return ListTile(
-                    leading: Icon(Icons.account_balance_wallet, color: Colors.blue),
-                    title: Text('$month 2024 Payroll Tax'),
-                    subtitle: Text('PAYE: KES 45,000 • NSSF: KES 2,160 • NHIF: KES 1,200'),
-                    trailing: Icon(Icons.check_circle, color: Colors.green),
+              child: payrollTaxState.when(
+                data: (submissions) {
+                  if (submissions.isEmpty) {
+                    return const Center(child: Text('No submissions found'));
+                  }
+                  return ListView.builder(
+                    itemCount: submissions.length,
+                    itemBuilder: (context, index) {
+                      final submission = submissions[index];
+                      // Handle dynamic typing safely
+                      final date = submission.createdAt; 
+                      final month = DateFormat('MMM yyyy').format(date);
+                      final paye = submission.totalPaye;
+                      final nssf = submission.totalNssf;
+                      final nhif = submission.totalNhif;
+                      final isFiled = submission.status == 'FILED';
+
+                      return ListTile(
+                        leading: const Icon(Icons.account_balance_wallet, color: Colors.blue),
+                        title: Text('$month Payroll Tax'),
+                        subtitle: Text('PAYE: KES ${NumberFormat('#,##0').format(paye)} • NSSF: KES ${NumberFormat('#,##0').format(nssf)} • SHIF: KES ${NumberFormat('#,##0').format(nhif)}'),
+                        trailing: Icon(
+                          isFiled ? Icons.check_circle : Icons.pending, 
+                          color: isFiled ? Colors.green : Colors.orange
+                        ),
+                        onTap: () {
+                          // Optional: Navigate to detailed view
+                        },
+                      );
+                    },
                   );
                 },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, s) => Text('Error: $e'),
               ),
             ),
           ],

@@ -7,10 +7,59 @@ final payPeriodRepositoryProvider = Provider((ref) => PayPeriodRepository());
 class PayPeriodRepository {
   final ApiService _apiService = ApiService();
 
+  /// Fetch all pay periods (no status filter).
+  /// Use this for admin or overview screens where you want to show all periods.
   Future<List<PayPeriod>> getPayPeriods() async {
-    final response = await _apiService.getPayPeriods();
-    final data = response.data as List;
-    return data.map((json) => PayPeriod.fromJson(json)).toList();
+    try {
+      print('Fetching pay periods...');
+      final response = await _apiService.getPayPeriods();
+      print('Pay periods response: ${response.data}');
+      final raw = response.data;
+      final data = raw is List
+          ? raw
+          : (raw is Map && raw['data'] is List ? raw['data'] : []);
+      
+      print('Parsing ${data.length} pay periods...');
+      final parsedPeriods = (data as List).map((json) {
+        try {
+          return PayPeriod.fromJson(Map<String, dynamic>.from(json as Map));
+        } catch (e) {
+          print('Error parsing pay period: $e');
+          print('JSON: $json');
+          return null;
+        }
+      }).where((item) => item != null).cast<PayPeriod>().toList();
+      
+      return parsedPeriods;
+    } catch (e, stack) {
+      print('Error in getPayPeriods: $e');
+      print(stack);
+      rethrow;
+    }
+  }
+
+  /// Fetch pay periods by status.
+  /// Use this for dashboards or filtered views (e.g., only active or draft periods).
+  Future<List<PayPeriod>> getPayPeriodsByStatus(PayPeriodStatus status) async {
+    try {
+      print('Fetching pay periods by status: $status');
+      final response = await _apiService.getPayPeriodsByStatus(status.name);
+      final raw = response.data;
+      final data = raw is List
+          ? raw
+          : (raw is Map && raw['data'] is List ? raw['data'] : []);
+      return (data as List).map((json) {
+        try {
+          return PayPeriod.fromJson(Map<String, dynamic>.from(json as Map));
+        } catch (e) {
+          print('Error parsing pay period in status filter: $e');
+          return null;
+        }
+      }).where((item) => item != null).cast<PayPeriod>().toList();
+    } catch (e) {
+      print('Error in getPayPeriodsByStatus: $e');
+      rethrow;
+    }
   }
 
   Future<PayPeriod> getPayPeriodById(String payPeriodId) async {
@@ -21,9 +70,9 @@ class PayPeriodRepository {
   Future<PayPeriod> createPayPeriod(CreatePayPeriodRequest request) async {
     final response = await _apiService.createPayPeriod({
       'name': request.name,
-      'startDate': request.startDate.toIso8601String(),
-      'endDate': request.endDate.toIso8601String(),
-      'frequency': request.frequency.name,
+      'startDate': request.startDate.toIso8601String().split('T')[0],
+      'endDate': request.endDate.toIso8601String().split('T')[0],
+      'frequency': request.frequency.name.toUpperCase(),
       if (request.notes != null) 'notes': request.notes,
     });
     return PayPeriod.fromJson(response.data);
@@ -48,32 +97,37 @@ class PayPeriodRepository {
   }
 
   Future<void> activatePayPeriod(String payPeriodId) async {
-    await _apiService.updatePayPeriodStatus(payPeriodId, 'activate');
+    await _apiService.activatePayPeriod(payPeriodId);
   }
 
   Future<void> processPayPeriod(String payPeriodId) async {
-    await _apiService.updatePayPeriodStatus(payPeriodId, 'process');
+    await _apiService.processPayPeriod(payPeriodId);
   }
 
   Future<void> completePayPeriod(String payPeriodId) async {
-    await _apiService.updatePayPeriodStatus(payPeriodId, 'complete');
+    await _apiService.completePayPeriod(payPeriodId);
   }
 
   Future<void> closePayPeriod(String payPeriodId) async {
-    await _apiService.updatePayPeriodStatus(payPeriodId, 'close');
+    await _apiService.closePayPeriod(payPeriodId);
   }
 
   Future<List<PayPeriod>> getCurrentPayPeriod() async {
     final response = await _apiService.getCurrentPayPeriod();
     final data = response.data as List;
-    return data.map((json) => PayPeriod.fromJson(json)).toList();
+    return data.map((json) => PayPeriod.fromJson(json as Map<String, dynamic>)).toList();
   }
 
-  Future<List<PayPeriod>> getPayPeriodsByStatus(PayPeriodStatus status) async {
-    final response = await _apiService.getPayPeriodsByStatus(status.name);
-    final data = response.data as List;
-    return data.map((json) => PayPeriod.fromJson(json)).toList();
+  Future<PayPeriod> getPayPeriod(String payPeriodId) async {
+    final response = await _apiService.getPayPeriodById(payPeriodId);
+    return PayPeriod.fromJson(response.data);
   }
+
+  Future<void> generatePayslips(String payPeriodId) async {
+    await _apiService.post('/payroll/payslips/generate/$payPeriodId', data: {});
+  }
+
+  // Duplicate removed. Use the version above that handles both array and {data: [...]} responses.
 
   Future<Map<String, dynamic>> getPayPeriodStatistics(String payPeriodId) async {
     final response = await _apiService.getPayPeriodStatistics(payPeriodId);

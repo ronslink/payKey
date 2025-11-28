@@ -8,6 +8,7 @@ import 'features/workers/presentation/pages/workers_list_page.dart';
 import 'features/workers/presentation/pages/worker_form_page.dart';
 import 'features/workers/data/models/worker_model.dart';
 import 'features/payroll/presentation/pages/run_payroll_page.dart';
+import 'features/payroll/presentation/pages/payroll_review_page.dart';
 import 'features/payroll/presentation/pages/payslip_page.dart';
 import 'features/finance/presentation/pages/finance_page.dart';
 import 'features/onboarding/presentation/pages/onboarding_page.dart';
@@ -106,10 +107,21 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       // Payroll Routes (sub-routes for payroll management)
       GoRoute(
+        path: '/payroll/run',
+        builder: (context, state) => const RunPayrollPage(),
+      ),
+      GoRoute(
         path: '/payroll/run/:id',
         builder: (context, state) {
           final id = state.pathParameters['id']!;
           return RunPayrollPage(payPeriodId: id);
+        },
+      ),
+      GoRoute(
+        path: '/payroll/review/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return PayrollReviewPage(payPeriodId: id);
         },
       ),
       GoRoute(

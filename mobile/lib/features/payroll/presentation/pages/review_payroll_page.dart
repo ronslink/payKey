@@ -19,7 +19,13 @@ class ReviewPayrollPage extends ConsumerWidget {
         foregroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (Navigator.of(context).canPop()) {
+              context.pop();
+            } else {
+              context.go('/'); // fallback to home or a safe route
+            }
+          },
         ),
       ),
       body: Center(

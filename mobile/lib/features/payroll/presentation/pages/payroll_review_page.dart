@@ -3,7 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/pay_period_model.dart';
+import '../../data/models/payroll_model.dart';
 import '../../data/repositories/pay_period_repository.dart';
+import '../../data/repositories/payroll_repository.dart';
+import '../../../workers/presentation/providers/workers_provider.dart';
+import '../../../taxes/presentation/providers/tax_provider.dart';
 
 class PayrollReviewPage extends ConsumerStatefulWidget {
   final String payPeriodId;
@@ -19,9 +23,11 @@ class PayrollReviewPage extends ConsumerStatefulWidget {
 
 class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
   PayPeriod? _payPeriod;
-  List<PayrollRecord>? _payrollRecords;
   bool _isLoading = false;
+  bool _isGeneratingPayslips = false;
   Map<String, dynamic>? _statistics;
+  Map<String, dynamic>? _taxSummary;
+  List<PayrollCalculation> _payrollItems = [];
 
   @override
   void initState() {
@@ -54,14 +60,198 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
   Future<void> _loadPayrollData() async {
     try {
       final repository = ref.read(payPeriodRepositoryProvider);
+      final payrollRepo = ref.read(payrollRepositoryProvider);
+      
+      // Load statistics
       final stats = await repository.getPayPeriodStatistics(widget.payPeriodId);
+      
+      // Load draft items
+      List<PayrollCalculation> items = [];
+      try {
+        items = await payrollRepo.getDraftPayroll(widget.payPeriodId);
+      } catch (e) {
+        print('No draft items found or error loading them: $e');
+      }
+
       if (mounted) {
         setState(() {
           _statistics = stats;
+          _payrollItems = items;
+          // Extract tax summary if available
+          if (stats.containsKey('taxSummary')) {
+            _taxSummary = stats['taxSummary'] as Map<String, dynamic>?;
+          }
         });
       }
     } catch (e) {
       print('Failed to load payroll data: $e');
+    }
+  }
+
+  Future<void> _showAddWorkersDialog() async {
+    final workers = await ref.read(workersProvider.future);
+    // Filter out workers already in the payroll
+    final existingWorkerIds = _payrollItems.map((item) => item.workerId).toSet();
+    final availableWorkers = workers.where((w) => !existingWorkerIds.contains(w.id)).toList();
+
+    if (!mounted) return;
+
+    if (availableWorkers.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('All active workers are already added to this payroll.')),
+      );
+      return;
+    }
+
+    final selectedWorkers = <String>{};
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: const Text('Add Workers'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: availableWorkers.length,
+              itemBuilder: (context, index) {
+                final worker = availableWorkers[index];
+                final isSelected = selectedWorkers.contains(worker.id);
+                return CheckboxListTile(
+                  title: Text('${worker.firstName} ${worker.lastName}'),
+                  subtitle: Text(worker.role ?? 'No Role'),
+                  value: isSelected,
+                  onChanged: (bool? value) {
+                    setState(() {
+                      if (value == true) {
+                        selectedWorkers.add(worker.id);
+                      } else {
+                        selectedWorkers.remove(worker.id);
+                      }
+                    });
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: selectedWorkers.isEmpty
+                  ? null
+                  : () {
+                      Navigator.pop(context);
+                      _addWorkersToPayroll(selectedWorkers.toList());
+                    },
+              child: Text('Add (${selectedWorkers.length})'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _addWorkersToPayroll(List<String> workerIds) async {
+    setState(() => _isLoading = true);
+    try {
+      final payrollRepo = ref.read(payrollRepositoryProvider);
+      
+      // 1. Calculate initial payroll for selected workers
+      final calculations = await payrollRepo.calculatePayroll(workerIds);
+      
+      // 2. Prepare items for saving
+      final itemsToSave = calculations.map((calc) => {
+        'workerId': calc.workerId,
+        'grossSalary': calc.grossSalary,
+        'bonuses': calc.bonuses,
+        'otherEarnings': calc.otherEarnings,
+        'otherDeductions': calc.otherDeductions,
+      }).toList();
+
+      // 3. Save to draft
+      await payrollRepo.saveDraftPayroll(widget.payPeriodId, itemsToSave);
+      
+      // 4. Refresh data
+      await _loadPayrollData();
+      await _loadPayPeriod(); // To update totals on the pay period itself
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Added ${workerIds.length} workers to payroll')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to add workers: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _generatePayslips() async {
+    if (_payPeriod == null) return;
+
+    setState(() => _isGeneratingPayslips = true);
+    try {
+      final repository = ref.read(payPeriodRepositoryProvider);
+      await repository.generatePayslips(widget.payPeriodId);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Payslips generated successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        await _loadPayrollData();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to generate payslips: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isGeneratingPayslips = false);
+      }
+    }
+  }
+
+  Future<void> _prepareTaxSubmission() async {
+    if (_payPeriod == null) return;
+
+    setState(() => _isLoading = true);
+    try {
+      // Navigate to tax page with pre-filled data
+      if (mounted) {
+        context.push('/taxes?payPeriodId=${widget.payPeriodId}');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to prepare tax submission: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -74,20 +264,24 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
       PayPeriod updatedPeriod;
 
       switch (_payPeriod!.status) {
-        case PayPeriodStatus.draft:
-          updatedPeriod = await repository.activatePayPeriod(widget.payPeriodId);
+        case PayPeriodStatus.DRAFT:
+          await repository.activatePayPeriod(widget.payPeriodId);
+          updatedPeriod = await repository.getPayPeriod(widget.payPeriodId);
           break;
-        case PayPeriodStatus.open:
-          updatedPeriod = await repository.processPayPeriod(widget.payPeriodId);
+        case PayPeriodStatus.ACTIVE:
+          await repository.processPayPeriod(widget.payPeriodId);
+          updatedPeriod = await repository.getPayPeriod(widget.payPeriodId);
           break;
-        case PayPeriodStatus.processing:
-          updatedPeriod = await repository.completePayPeriod(widget.payPeriodId);
+        case PayPeriodStatus.PROCESSING:
+          await repository.completePayPeriod(widget.payPeriodId);
+          updatedPeriod = await repository.getPayPeriod(widget.payPeriodId);
+          break;
+        case PayPeriodStatus.COMPLETED:
+          await repository.closePayPeriod(widget.payPeriodId);
+          updatedPeriod = await repository.getPayPeriod(widget.payPeriodId);
           break;
         default:
-          // For completed or closed periods, navigate to workflow page
-          if (mounted) {
-            context.push('/payroll/workflow/${widget.payPeriodId}');
-          }
+          // For completed or closed periods, stay on review page
           return;
       }
 
@@ -103,11 +297,6 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
             backgroundColor: Colors.green,
           ),
         );
-
-        // Auto-navigate to workflow page after transition
-        if (mounted) {
-          context.push('/payroll/workflow/${widget.payPeriodId}');
-        }
       }
     } catch (e) {
       if (mounted) {
@@ -154,30 +343,50 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header with Status
-            _buildHeader(),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight,
+              ),
+              child: IntrinsicHeight(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header with Status
+                    _buildHeader(),
 
-            const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-            // Summary Statistics
-            if (_statistics != null) _buildSummarySection(),
+                    // Summary Statistics
+                    if (_statistics != null) _buildSummarySection(),
 
-            const SizedBox(height: 24),
+                    const SizedBox(height: 24),
 
-            // Individual Records
-            _buildRecordsSection(),
+                    // Tax Summary (if completed)
+                    if (_payPeriod!.status == PayPeriodStatus.COMPLETED || 
+                        _payPeriod!.status == PayPeriodStatus.CLOSED)
+                      _buildTaxSummarySection(),
 
-            const SizedBox(height: 24),
+                    if (_payPeriod!.status == PayPeriodStatus.COMPLETED || 
+                        _payPeriod!.status == PayPeriodStatus.CLOSED)
+                      const SizedBox(height: 24),
 
-            // Action Buttons
-            _buildActionButtons(),
-          ],
-        ),
+                    // Individual Records
+                    _buildRecordsSection(),
+
+                    const SizedBox(height: 24),
+
+                    // Action Buttons
+                    _buildActionButtons(),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -207,7 +416,7 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${dateFormat.format(DateTime.parse(_payPeriod!.startDate))} - ${dateFormat.format(DateTime.parse(_payPeriod!.endDate))}',
+                        '${dateFormat.format(_payPeriod!.startDate)} - ${dateFormat.format(_payPeriod!.endDate)}',
                         style: const TextStyle(
                           fontSize: 16,
                           color: Colors.grey,
@@ -261,23 +470,23 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
     String displayText;
 
     switch (status) {
-      case PayPeriodStatus.draft:
+      case PayPeriodStatus.DRAFT:
         color = Colors.grey.shade600;
         displayText = 'DRAFT';
         break;
-      case PayPeriodStatus.open:
+      case PayPeriodStatus.ACTIVE:
         color = Colors.blue;
         displayText = 'ACTIVE';
         break;
-      case PayPeriodStatus.processing:
+      case PayPeriodStatus.PROCESSING:
         color = Colors.orange;
         displayText = 'PROCESSING';
         break;
-      case PayPeriodStatus.completed:
+      case PayPeriodStatus.COMPLETED:
         color = Colors.green;
         displayText = 'COMPLETED';
         break;
-      case PayPeriodStatus.closed:
+      case PayPeriodStatus.CLOSED:
         color = Colors.deepPurple;
         displayText = 'CLOSED';
         break;
@@ -451,39 +660,96 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
   }
 
   Widget _buildRecordsSection() {
-    // This would typically display individual worker payroll records
-    // For now, show a placeholder
+    final isDraft = _payPeriod?.status == PayPeriodStatus.DRAFT;
+    final numberFormat = NumberFormat('#,###.00');
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Payroll Records',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Payroll Records',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (isDraft)
+                  ElevatedButton.icon(
+                    onPressed: _showAddWorkersDialog,
+                    icon: const Icon(Icons.person_add, size: 18),
+                    label: const Text('Add Workers'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 16),
-            const Center(
-              child: Column(
-                children: [
-                  Icon(Icons.list_alt, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text(
-                    'Individual payroll records will be displayed here',
-                    style: TextStyle(color: Colors.grey),
+            
+            if (_payrollItems.isEmpty)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 32.0),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.people_outline, size: 48, color: Colors.grey),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'No workers added yet',
+                        style: TextStyle(color: Colors.grey, fontSize: 16),
+                      ),
+                      if (isDraft) ...[
+                        const SizedBox(height: 8),
+                        TextButton(
+                          onPressed: _showAddWorkersDialog,
+                          child: const Text('Add Workers Now'),
+                        ),
+                      ],
+                    ],
                   ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Click "View Details" to see worker-by-worker breakdown',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ],
+                ),
+              )
+            else
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _payrollItems.length,
+                separatorBuilder: (context, index) => const Divider(),
+                itemBuilder: (context, index) {
+                  final item = _payrollItems[index];
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      item.workerName,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text('Gross: KES ${numberFormat.format(item.grossSalary)}'),
+                    trailing: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          'Net: KES ${numberFormat.format(item.netPay)}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                          ),
+                        ),
+                        Text(
+                          'Tax: KES ${numberFormat.format(item.taxBreakdown.totalDeductions)}',
+                          style: const TextStyle(fontSize: 12, color: Colors.red),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
-            ),
           ],
         ),
       ),
@@ -491,7 +757,9 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
   }
 
   Widget _buildActionButtons() {
-    final numberFormat = NumberFormat('#,###.00');
+    final bool canGeneratePayslips = _payPeriod!.status == PayPeriodStatus.COMPLETED;
+    final bool canPrepareTax = _payPeriod!.status == PayPeriodStatus.COMPLETED || 
+                                _payPeriod!.status == PayPeriodStatus.CLOSED;
     
     return Card(
       child: Padding(
@@ -507,37 +775,59 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
               ),
             ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _isLoading ? null : _transitionToNextStage,
-                    icon: const Icon(Icons.skip_next),
-                    label: Text(_getNextStageButtonText()),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _getNextStageColor(),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                  ),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: (_isLoading || _payPeriod!.status == PayPeriodStatus.CLOSED) 
+                    ? null 
+                    : _transitionToNextStage,
+                icon: const Icon(Icons.skip_next),
+                label: Text(_getNextStageButtonText()),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _getNextStageColor(),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      context.push('/payroll/workflow/${widget.payPeriodId}');
-                    },
-                    icon: const Icon(Icons.timeline),
-                    label: const Text('View Workflow'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.purple,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
+            if (canGeneratePayslips)
+              const SizedBox(height: 12),
+            if (canGeneratePayslips)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _isGeneratingPayslips ? null : _generatePayslips,
+                  icon: _isGeneratingPayslips 
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.receipt_long),
+                  label: const Text('Generate Payslips'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF10B981),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                ),
+              ),
+            if (canPrepareTax)
+              const SizedBox(height: 12),
+            if (canPrepareTax)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _prepareTaxSubmission,
+                  icon: const Icon(Icons.account_balance),
+                  label: const Text('Prepare Tax Submission'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF8B5CF6),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                ),
+              ),
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
@@ -559,17 +849,96 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
     );
   }
 
+  Widget _buildTaxSummarySection() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.account_balance, color: Color(0xFF8B5CF6)),
+                const SizedBox(width: 8),
+                const Text(
+                  'Tax Summary',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (_taxSummary != null)
+              _buildTaxRow('PAYE', _taxSummary!['paye'] ?? 0.0),
+            if (_taxSummary != null)
+              const Divider(),
+            if (_taxSummary != null)
+              _buildTaxRow('NHIF', _taxSummary!['nhif'] ?? 0.0),
+            if (_taxSummary != null)
+              const Divider(),
+            if (_taxSummary != null)
+              _buildTaxRow('NSSF', _taxSummary!['nssf'] ?? 0.0),
+            if (_taxSummary != null)
+              const Divider(),
+            if (_taxSummary != null)
+              _buildTaxRow('Total Tax', _taxSummary!['total'] ?? 0.0, isBold: true),
+            if (_taxSummary == null)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Text(
+                    'Tax summary will be available after payroll completion',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTaxRow(String label, double amount, {bool isBold = false}) {
+    final numberFormat = NumberFormat('#,###.00');
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: isBold ? 16 : 14,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+          Text(
+            'KES ${numberFormat.format(amount)}',
+            style: TextStyle(
+              fontSize: isBold ? 16 : 14,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+              color: isBold ? const Color(0xFF8B5CF6) : Colors.black87,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   String _getNextStageButtonText() {
     switch (_payPeriod!.status) {
-      case PayPeriodStatus.draft:
+      case PayPeriodStatus.DRAFT:
         return 'Activate Period';
-      case PayPeriodStatus.open:
+      case PayPeriodStatus.ACTIVE:
         return 'Process Payroll';
-      case PayPeriodStatus.processing:
+      case PayPeriodStatus.PROCESSING:
         return 'Complete Period';
-      case PayPeriodStatus.completed:
-      case PayPeriodStatus.closed:
-        return 'View Workflow';
+      case PayPeriodStatus.COMPLETED:
+        return 'Close Period';
+      case PayPeriodStatus.CLOSED:
+        return 'Period Closed';
       default:
         return 'Continue';
     }
@@ -577,15 +946,15 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
 
   Color _getNextStageColor() {
     switch (_payPeriod!.status) {
-      case PayPeriodStatus.draft:
+      case PayPeriodStatus.DRAFT:
         return Colors.blue;
-      case PayPeriodStatus.open:
+      case PayPeriodStatus.ACTIVE:
         return Colors.orange;
-      case PayPeriodStatus.processing:
+      case PayPeriodStatus.PROCESSING:
         return Colors.green;
-      case PayPeriodStatus.completed:
+      case PayPeriodStatus.COMPLETED:
         return Colors.deepPurple;
-      case PayPeriodStatus.closed:
+      case PayPeriodStatus.CLOSED:
         return Colors.grey;
       default:
         return Colors.grey;

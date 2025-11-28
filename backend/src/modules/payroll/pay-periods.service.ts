@@ -29,9 +29,9 @@ export class PayPeriodsService {
     @InjectRepository(PayrollRecord)
     private payrollRecordRepository: Repository<PayrollRecord>,
     private taxPaymentsService: TaxPaymentsService,
-  ) {}
+  ) { }
 
-  async create(createPayPeriodDto: CreatePayPeriodDto): Promise<PayPeriod> {
+  async create(createPayPeriodDto: CreatePayPeriodDto, userId: string): Promise<PayPeriod> {
     // Validate that start date is before end date
     if (
       new Date(createPayPeriodDto.startDate) >=
@@ -40,10 +40,11 @@ export class PayPeriodsService {
       throw new BadRequestException('Start date must be before end date');
     }
 
-    // Check for overlapping pay periods
+    // Check for overlapping pay periods (only for this user)
     const overlapping = await this.payPeriodRepository
       .createQueryBuilder('pp')
-      .where('pp.startDate <= :endDate', {
+      .where('pp.userId = :userId', { userId })
+      .andWhere('pp.startDate <= :endDate', {
         endDate: createPayPeriodDto.endDate,
       })
       .andWhere('pp.endDate >= :startDate', {
@@ -57,6 +58,7 @@ export class PayPeriodsService {
 
     const payPeriod = this.payPeriodRepository.create({
       ...createPayPeriodDto,
+      userId,
       status: PayPeriodStatus.DRAFT,
     });
 
@@ -64,6 +66,7 @@ export class PayPeriodsService {
   }
 
   async findAll(
+    userId: string,
     page: number = 1,
     limit: number = 10,
     status?: PayPeriodStatus,
@@ -75,6 +78,9 @@ export class PayPeriodsService {
     limit: number;
   }> {
     const queryBuilder = this.payPeriodRepository.createQueryBuilder('pp');
+
+    // Filter by userId
+    queryBuilder.where('pp.userId = :userId', { userId });
 
     if (status) {
       queryBuilder.andWhere('pp.status = :status', { status });
@@ -126,10 +132,11 @@ export class PayPeriodsService {
         throw new BadRequestException('Start date must be before end date');
       }
 
-      // Check for overlapping periods (excluding current one)
+      // Check for overlapping periods (excluding current one, only for this user)
       const overlapping = await this.payPeriodRepository
         .createQueryBuilder('pp')
         .where('pp.id != :id', { id })
+        .andWhere('pp.userId = :userId', { userId: payPeriod.userId })
         .andWhere('pp.startDate <= :endDate', { endDate: newEndDate })
         .andWhere('pp.endDate >= :startDate', { startDate: newStartDate })
         .getOne();

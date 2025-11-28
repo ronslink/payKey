@@ -113,8 +113,8 @@ class TaxNotifier extends StateNotifier<AsyncValue<List<dynamic>>> {
   Future<void> loadSubmissions() async {
     state = const AsyncValue.loading();
     try {
-      // Load individual tax submissions for backward compatibility
-      final submissions = await _repository.getIndividualTaxSubmissions();
+      // Load payroll tax submissions
+      final submissions = await _repository.getPayrollTaxSubmissions();
       state = AsyncValue.data(submissions);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -163,6 +163,15 @@ Future<List<TaxSubmissionModel>> calculateTax(double grossSalary) async {
     };
   }
 
+  Future<void> generateTaxSubmission(String payPeriodId) async {
+    try {
+      await _repository.generateTaxSubmission(payPeriodId);
+      await loadSubmissions();
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
   Future<List<Map<String, dynamic>>> getTaxDeadlines() async {
     return [
       {
@@ -173,6 +182,11 @@ Future<List<TaxSubmissionModel>> calculateTax(double grossSalary) async {
     ];
   }
 }
+
+final taxNotifierProvider = StateNotifierProvider<TaxNotifier, AsyncValue<List<dynamic>>>((ref) {
+  final repository = ref.read(taxRepositoryProvider);
+  return TaxNotifier(repository);
+});
 
 // Tax calculator provider
 final taxCalculatorProvider = Provider<Future<List<TaxSubmissionModel>> Function(double, double)>((ref) {

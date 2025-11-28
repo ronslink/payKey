@@ -80,8 +80,8 @@ class _RunPayrollPageState extends ConsumerState<RunPayrollPage> {
       final repository = ref.read(payPeriodRepositoryProvider);
       final newPeriod = await repository.createPayPeriod(CreatePayPeriodRequest(
         name: _nameController.text.trim(),
-        startDate: DateTime.now(),
-        endDate: DateTime.now(),
+        startDate: DateTime.parse(_startDateController.text.trim()),
+        endDate: DateTime.parse(_endDateController.text.trim()),
         frequency: _selectedFrequency!,
       ));
 
@@ -183,6 +183,55 @@ class _RunPayrollPageState extends ConsumerState<RunPayrollPage> {
               validator: (value) {
                 if (value == null) {
                   return 'Please select a frequency';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _startDateController,
+              decoration: const InputDecoration(
+                labelText: 'Start Date (YYYY-MM-DD)',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.datetime,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Please enter a start date';
+                }
+                try {
+                  DateTime.parse(value.trim());
+                } catch (_) {
+                  return 'Invalid date format';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _endDateController,
+              decoration: const InputDecoration(
+                labelText: 'End Date (YYYY-MM-DD)',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.datetime,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Please enter an end date';
+                }
+                try {
+                  DateTime.parse(value.trim());
+                } catch (_) {
+                  return 'Invalid date format';
+                }
+                if (_startDateController.text.isNotEmpty) {
+                  try {
+                    final start = DateTime.parse(_startDateController.text.trim());
+                    final end = DateTime.parse(value.trim());
+                    if (!start.isBefore(end)) {
+                      return 'Start date must be before end date';
+                    }
+                  } catch (_) {}
                 }
                 return null;
               },

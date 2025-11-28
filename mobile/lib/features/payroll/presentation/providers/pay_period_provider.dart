@@ -16,10 +16,24 @@ class PayPeriodsNotifier extends StateNotifier<AsyncValue<List<PayPeriod>>> {
     loadPayPeriods();
   }
 
+  /// Loads all pay periods (no status filter).
+  /// Use for admin/overview screens.
   Future<void> loadPayPeriods() async {
     try {
       state = const AsyncValue.loading();
       final payPeriods = await _repository.getPayPeriods();
+      state = AsyncValue.data(payPeriods);
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
+    }
+  }
+
+  /// Loads pay periods filtered by status.
+  /// Use for dashboards or filtered views.
+  Future<void> loadPayPeriodsByStatus(PayPeriodStatus status) async {
+    try {
+      state = const AsyncValue.loading();
+      final payPeriods = await _repository.getPayPeriodsByStatus(status);
       state = AsyncValue.data(payPeriods);
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);

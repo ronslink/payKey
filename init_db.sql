@@ -12,6 +12,14 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- 3. Define Schema (Updated with new User fields)
 
+-- Enum for idtype
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'users_idtype_enum') THEN
+        CREATE TYPE users_idtype_enum AS ENUM ('NATIONAL_ID', 'ALIEN_ID', 'PASSPORT');
+    END IF;
+END$$;
+
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -29,11 +37,11 @@ CREATE TABLE IF NOT EXISTS users (
     address VARCHAR,
     city VARCHAR,
     "countryId" UUID,
-    "isResident" BOOLEAN DEFAULT true,
-    "countryOfOrigin" VARCHAR,
+    isresident BOOLEAN DEFAULT true,
+    countryoforigin VARCHAR,
     "isOnboardingCompleted" BOOLEAN DEFAULT false,
-    "idType" VARCHAR,
-    "nationalityId" VARCHAR,
+    idtype users_idtype_enum,
+    nationalityid VARCHAR,
     "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -139,19 +147,50 @@ CREATE TABLE IF NOT EXISTS payroll_records (
     "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tax submissions table
-CREATE TABLE IF NOT EXISTS tax_submissions (
+-- tax_submissions table removed for debugging
+
+-- Subscriptions table
+CREATE TABLE IF NOT EXISTS subscriptions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     "userId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    "payPeriodId" UUID NOT NULL REFERENCES pay_periods(id) ON DELETE CASCADE,
-    "totalPaye" DECIMAL(12,2) DEFAULT 0,
-    "totalNssf" DECIMAL(12,2) DEFAULT 0,
-    "totalNhif" DECIMAL(12,2) DEFAULT 0,
-    "totalHousingLevy" DECIMAL(12,2) DEFAULT 0,
-    status VARCHAR DEFAULT 'PENDING',
-    "filingDate" TIMESTAMP WITH TIME ZONE,
-    "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    tier VARCHAR NOT NULL,
+    status VARCHAR DEFAULT 'pending',
+    amount DECIMAL(12,2) NOT NULL,
+    currency VARCHAR DEFAULT 'KES',
+    "startDate" TIMESTAMP WITH TIME ZONE,
+    "endDate" TIMESTAMP WITH TIME ZONE,
+    "nextBillingDate" TIMESTAMP WITH TIME ZONE,
+    "stripeSubscriptionId" VARCHAR,
+    "stripePriceId" VARCHAR,
+    notes TEXT
+);
+
+-- Subscription Payment History table
+CREATE TABLE IF NOT EXISTS subscription_payment_history (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    "userId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    "subscriptionId" UUID NOT NULL,
+    amount DECIMAL(12,2) NOT NULL,
+    currency VARCHAR DEFAULT 'KES',
+    status VARCHAR DEFAULT 'pending',
+    "paymentDate" DATE,
+    "stripePaymentIntentId" VARCHAR,
+    "billingPeriodStart" DATE,
+    "billingPeriodEnd" DATE
+);
+-- Tax payments table
+CREATE TABLE IF NOT EXISTS tax_payments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    "userId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    "payPeriodId" UUID REFERENCES pay_periods(id) ON DELETE SET NULL,
+    -- "taxSubmissionId" UUID REFERENCES tax_submissions(id) ON DELETE SET NULL,
+    tax_type VARCHAR NOT NULL,
+    amount DECIMAL(12,2) NOT NULL,
+    currency VARCHAR DEFAULT 'KES',
+    status VARCHAR DEFAULT 'pending',
+    "dueDate" DATE,
+    "paymentDate" DATE,
+    notes TEXT
 );
 
 -- Tax tables table
@@ -193,8 +232,8 @@ CREATE INDEX IF NOT EXISTS idx_pay_periods_userId ON pay_periods("userId");
 CREATE INDEX IF NOT EXISTS idx_payroll_records_userId ON payroll_records("userId");
 CREATE INDEX IF NOT EXISTS idx_payroll_records_workerId ON payroll_records("workerId");
 CREATE INDEX IF NOT EXISTS idx_payroll_records_period ON payroll_records("periodStart", "periodEnd");
-CREATE INDEX IF NOT EXISTS idx_tax_submissions_userId ON tax_submissions("userId");
-CREATE INDEX IF NOT EXISTS idx_tax_submissions_payPeriodId ON tax_submissions("payPeriodId");
+-- CREATE INDEX IF NOT EXISTS idx_tax_submissions_userId ON tax_submissions("userId");
+-- CREATE INDEX IF NOT EXISTS idx_tax_submissions_payPeriodId ON tax_submissions("payPeriodId");
 CREATE INDEX IF NOT EXISTS idx_transactions_userId ON transactions("userId");
 CREATE INDEX IF NOT EXISTS idx_transactions_workerId ON transactions("workerId");
 CREATE INDEX IF NOT EXISTS idx_transactions_payPeriodId ON transactions("payPeriodId");
@@ -421,7 +460,7 @@ ON CONFLICT (code) DO UPDATE SET
     "isActive" = EXCLUDED."isActive";
 
 -- Demo User
-INSERT INTO users (id, email, "passwordHash", "firstName", "lastName", "isResident", "isOnboardingCompleted") 
+INSERT INTO users (id, email, "passwordHash", "firstName", "lastName", isresident, "isOnboardingCompleted")
 VALUES ('b0f45d1f-10a2-4bc8-ada3-48289edd9820', 'testuser@paykey.com', 'SecurePass123!', 'Test', 'User', true, true);
 
 -- Pay Periods for Demo User
@@ -540,7 +579,7 @@ INSERT INTO workers (
     'Security Guard', 
     3461.54, 
     5000, 
-    3000, 
+    3000,
     '+254700789012'
 ),
 (
@@ -587,31 +626,7 @@ ON CONFLICT ("userId", tier) DO UPDATE SET
     notes = EXCLUDED.notes;
 
 -- Subscription Payment History
-INSERT INTO subscription_payment_history (
-    "userId", "subscriptionId", amount, currency, status, "paymentDate", 
-    "stripePaymentIntentId", "billingPeriodStart", "billingPeriodEnd"
-)
-SELECT 
-    'b0f45d1f-10a2-4bc8-ada3-48289edd9820',
-    s.id,
-    7200.00,
-    'KES',
-    'completed',
-    date_val,
-    'pi_demo_' || TO_CHAR(date_val, 'YYYYMMDD'),
-    date_val,
-    date_val + INTERVAL '1 month'
-FROM subscriptions s,
-LATERAL (
-    VALUES 
-        ('2024-01-01'::date),
-        ('2024-02-01'::date),
-        ('2024-03-01'::date),
-        ('2024-04-01'::date),
-        ('2024-05-01'::date)
-) AS dates(date_val)
-WHERE s."userId" = 'b0f45d1f-10a2-4bc8-ada3-48289edd9820'
-ON CONFLICT DO NOTHING;
+-- Removed INSERT INTO subscription_payment_history for debugging
 
 -- Payroll Records
 INSERT INTO payroll_records ("userId", "workerId", "periodStart", "periodEnd", "grossSalary", "netSalary", "taxAmount", "paymentStatus", "paymentMethod", "paymentDate")
@@ -680,127 +695,7 @@ SET
 WHERE "userId" = 'b0f45d1f-10a2-4bc8-ada3-48289edd9820';
 
 -- Tax Payment Records
-INSERT INTO tax_payments (
-    "userId", tax_type, amount, currency, status, "dueDate", "paymentDate", notes
-) VALUES 
--- PAYE tax payments
-(
-    'b0f45d1f-10a2-4bc8-ada3-48289edd9820',
-    'PAYE',
-    30000.00,
-    'KES',
-    'completed',
-    '2024-02-15'::date,
-    '2024-02-14'::date,
-    'January 2024 PAYE tax payment'
-),
-(
-    'b0f45d1f-10a2-4bc8-ada3-48289edd9820',
-    'PAYE',
-    30000.00,
-    'KES',
-    'completed',
-    '2024-03-15'::date,
-    '2024-03-14'::date,
-    'February 2024 PAYE tax payment'
-),
-(
-    'b0f45d1f-10a2-4bc8-ada3-48289edd9820',
-    'PAYE',
-    30000.00,
-    'KES',
-    'pending',
-    '2024-06-15'::date,
-    NULL,
-    'May 2024 PAYE tax payment'
-),
--- NSSF contributions
-(
-    'b0f45d1f-10a2-4bc8-ada3-48289edd9820',
-    'NSSF',
-    2400.00,
-    'KES',
-    'completed',
-    '2024-02-15'::date,
-    '2024-02-14'::date,
-    'January 2024 NSSF contribution'
-),
-(
-    'b0f45d1f-10a2-4bc8-ada3-48289edd9820',
-    'NSSF',
-    2400.00,
-    'KES',
-    'completed',
-    '2024-03-15'::date,
-    '2024-03-14'::date,
-    'February 2024 NSSF contribution'
-),
-(
-    'b0f45d1f-10a2-4bc8-ada3-48289edd9820',
-    'NSSF',
-    2400.00,
-    'KES',
-    'pending',
-    '2024-06-15'::date,
-    NULL,
-    'May 2024 NSSF contribution'
-),
--- NHIF contributions
-(
-    'b0f45d1f-10a2-4bc8-ada3-48289edd9820',
-    'NHIF',
-    1600.00,
-    'KES',
-    'completed',
-    '2024-02-15'::date,
-    '2024-02-14'::date,
-    'January 2024 NHIF contribution'
-),
-(
-    'b0f45d1f-10a2-4bc8-ada3-48289edd9820',
-    'NHIF',
-    1600.00,
-    'KES',
-    'completed',
-    '2024-03-15'::date,
-    '2024-03-14'::date,
-    'February 2024 NHIF contribution'
-),
-(
-    'b0f45d1f-10a2-4bc8-ada3-48289edd9820',
-    'NHIF',
-    1600.00,
-    'KES',
-    'pending',
-    '2024-06-15'::date,
-    NULL,
-    'May 2024 NHIF contribution'
-)
-ON CONFLICT DO NOTHING;
+-- Removed INSERT INTO tax_payments for debugging
 
 -- Tax Submissions (linked to pay periods)
-INSERT INTO tax_submissions (
-    "userId", "payPeriodId", "totalPaye", "totalNssf", "totalNhif", "totalHousingLevy", 
-    status, "filingDate"
-)
-SELECT 
-    'b0f45d1f-10a2-4bc8-ada3-48289edd9820',
-    pp.id,
-    COALESCE(SUM(pr."taxAmount") * 0.75, 0),  -- Approximate PAYE as 75% of total tax
-    2400.00,  -- NSSF contribution
-    1600.00,  -- NHIF contribution
-    COALESCE(SUM(pr."grossSalary") * 0.015, 0),  -- Housing Levy (1.5% of gross)
-    CASE 
-        WHEN pp.status = 'CLOSED' THEN 'FILED'
-        ELSE 'PENDING'
-    END,
-    CASE 
-        WHEN pp.status = 'CLOSED' THEN pp."endDate" + INTERVAL '10 days'
-        ELSE NULL
-    END
-FROM pay_periods pp
-LEFT JOIN payroll_records pr ON pr."periodStart" = pp."startDate" 
-    AND pr."periodEnd" = pp."endDate"
-WHERE pp."userId" = 'b0f45d1f-10a2-4bc8-ada3-48289edd9820'
-GROUP BY pp.id, pp.status, pp."endDate"
-ON CONFLICT DO NOTHING;
+-- Removed INSERT INTO tax_submissions for debugging

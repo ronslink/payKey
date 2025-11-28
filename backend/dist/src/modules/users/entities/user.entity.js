@@ -47,6 +47,8 @@ let User = class User {
     address;
     city;
     countryId;
+    isResident;
+    countryOfOrigin;
     isOnboardingCompleted;
     createdAt;
     updatedAt;
@@ -134,7 +136,15 @@ __decorate([
     __metadata("design:type", String)
 ], User.prototype, "countryId", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: false, name: 'isonboardingcompleted' }),
+    (0, typeorm_1.Column)({ default: true, name: 'isresident' }),
+    __metadata("design:type", Boolean)
+], User.prototype, "isResident", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ nullable: true, name: 'countryoforigin' }),
+    __metadata("design:type", String)
+], User.prototype, "countryOfOrigin", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: false, name: 'isOnboardingCompleted' }),
     __metadata("design:type", Boolean)
 ], User.prototype, "isOnboardingCompleted", void 0);
 __decorate([

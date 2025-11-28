@@ -12,136 +12,526 @@ class PayrollPage extends ConsumerStatefulWidget {
 }
 
 class _PayrollPageState extends ConsumerState<PayrollPage> {
+  PayPeriodStatus? _selectedStatus = PayPeriodStatus.ACTIVE;
+
   @override
   Widget build(BuildContext context) {
-    final payPeriodsState = ref.watch(payPeriodsProvider);
+    final payPeriodsState = _selectedStatus == null
+        ? ref.watch(payPeriodsProvider)
+        : ref.watch(payPeriodsByStatusProvider(_selectedStatus!));
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Payroll'),
+        title: const Text('Payroll Management'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              ref.refresh(payPeriodsProvider);
+              if (_selectedStatus == null) {
+                ref.refresh(payPeriodsProvider);
+              } else {
+                ref.refresh(payPeriodsByStatusProvider(_selectedStatus!));
+              }
             },
           ),
         ],
       ),
-      body: payPeriodsState.when(
-        data: (payPeriods) {
-          if (payPeriods.isEmpty) {
-            return Center(
+      body: CustomScrollView(
+        slivers: [
+          // Hero Section with Primary Actions
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(
-                    Icons.account_balance_wallet,
-                    size: 64,
-                    color: Colors.grey,
-                  ),
-                  const SizedBox(height: 16),
                   const Text(
-                    'No pay periods found',
+                    'Quick Actions',
                     style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      ref.refresh(payPeriodsProvider);
-                    },
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Refresh'),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildActionCard(
+                          context: context,
+                          title: 'Run Payroll',
+                          subtitle: 'Process new payroll',
+                          icon: Icons.play_circle_filled,
+                          color: const Color(0xFF3B82F6),
+                          onTap: () => context.push('/payroll/run'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildActionCard(
+                          context: context,
+                          title: 'Review Payroll',
+                          subtitle: 'View active periods',
+                          icon: Icons.fact_check,
+                          color: const Color(0xFF10B981),
+                          onTap: () => _navigateToActivePayPeriod(context),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            );
-          }
+            ),
+          ),
 
-          return ListView.builder(
-            itemCount: payPeriods.length,
-            itemBuilder: (context, index) {
-              final period = payPeriods[index];
-              return Card(
-                margin: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    child: Text(
-                      period.name.substring(0, 2).toUpperCase(),
+          // Active Pay Period Summary
+          SliverToBoxAdapter(
+            child: payPeriodsState.when(
+              data: (payPeriods) {
+                final activePeriods = payPeriods.where(
+                  (p) => p.status == PayPeriodStatus.ACTIVE || 
+                         p.status == PayPeriodStatus.PROCESSING
+                ).toList();
+                
+                if (activePeriods.isNotEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Active Pay Periods',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        ...activePeriods.map((period) => _buildActivePeriodCard(context, period)),
+                      ],
                     ),
-                  ),
-                  title: Text(period.name),
-                  subtitle: Text('${period.startDate} - ${period.endDate}'),
-                  trailing: Text(
-                    period.status.name.toUpperCase(),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
+          ),
+
+          // Pay Periods List Header
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'All Pay Periods',
                     style: TextStyle(
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: period.status == PayPeriodStatus.COMPLETED
-                          ? Colors.green
-                          : period.status == PayPeriodStatus.PROCESSING
-                              ? Colors.orange
-                              : Colors.grey,
                     ),
                   ),
-                  onTap: () {
-                    context.push('/payroll/review/${period.id}');
-                  },
+                  DropdownButton<PayPeriodStatus?>(
+                    value: _selectedStatus,
+                    hint: const Text('Filter'),
+                    underline: const SizedBox(),
+                    items: [
+                      const DropdownMenuItem(
+                        value: null,
+                        child: Text('All'),
+                      ),
+                      ...PayPeriodStatus.values.map(
+                        (status) => DropdownMenuItem(
+                          value: status,
+                          child: Text(status.name.toUpperCase()),
+                        ),
+                      ),
+                    ],
+                    onChanged: (status) {
+                      setState(() {
+                        _selectedStatus = status;
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Pay Periods List
+          payPeriodsState.when(
+            data: (payPeriods) {
+              if (payPeriods.isEmpty) {
+                return SliverFillRemaining(
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.account_balance_wallet,
+                          size: 64,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'No pay periods found',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            if (_selectedStatus == null) {
+                              ref.refresh(payPeriodsProvider);
+                            } else {
+                              ref.refresh(payPeriodsByStatusProvider(_selectedStatus!));
+                            }
+                          },
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Refresh'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              return SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final period = payPeriods[index];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        elevation: 2,
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.all(12),
+                          leading: CircleAvatar(
+                            backgroundColor: _getStatusColor(period.status).withOpacity(0.2),
+                            child: Icon(
+                              _getStatusIcon(period.status),
+                              color: _getStatusColor(period.status),
+                            ),
+                          ),
+                          title: Text(
+                            period.name,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 4),
+                              Text('${period.startDate} - ${period.endDate}'),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      'Gross: KES ${period.totalGrossAmount?.toStringAsFixed(2) ?? "0.00"}',
+                                      style: const TextStyle(fontSize: 12, color: Colors.black87),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Flexible(
+                                    child: Text(
+                                      'Net: KES ${period.totalNetAmount?.toStringAsFixed(2) ?? "0.00"}',
+                                      style: const TextStyle(fontSize: 12, color: Colors.black87),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Flexible(
+                                child: Text(
+                                  'Workers: ${period.totalWorkers ?? 0} | Processed: ${period.processedWorkers ?? 0}',
+                                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          trailing: _buildStatusBadge(period.status),
+                          onTap: () {
+                            context.push('/payroll/review/${period.id}');
+                          },
+                        ),
+                      );
+                    },
+                    childCount: payPeriods.length,
+                  ),
                 ),
               );
             },
-          );
-        },
-        loading: () => const Center(
-          child: CircularProgressIndicator(),
-        ),
-        error: (error, stack) => Center(
+            loading: () => const SliverFillRemaining(
+              child: Center(
+                child: CircularProgressIndicator(),
+              ),
+            ),
+            error: (error, stack) => SliverFillRemaining(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.error,
+                        size: 64,
+                        color: Colors.red,
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Error loading pay periods',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        error.toString(),
+                        style: const TextStyle(
+                          color: Colors.red,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          if (_selectedStatus == null) {
+                            ref.refresh(payPeriodsProvider);
+                          } else {
+                            ref.refresh(payPeriodsByStatusProvider(_selectedStatus!));
+                          }
+                        },
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionCard({
+    required BuildContext context,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            gradient: LinearGradient(
+              colors: [color, color.withOpacity(0.8)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(
-                Icons.error,
-                size: 64,
-                color: Colors.red,
+              Icon(
+                icon,
+                size: 40,
+                color: Colors.white,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               Text(
-                'Error loading pay periods',
-                style: TextStyle(
+                title,
+                style: const TextStyle(
                   fontSize: 18,
-                  color: Colors.red.shade600,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
               Text(
-                error.toString(),
-                style: TextStyle(
-                  color: Colors.red.shade400,
+                subtitle,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.white70,
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () {
-                  ref.refresh(payPeriodsProvider);
-                },
-                child: const Text('Retry'),
               ),
             ],
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          context.push('/payroll/run');
-        },
-        child: const Icon(Icons.add),
+    );
+  }
+
+  Widget _buildActivePeriodCard(BuildContext context, PayPeriod period) {
+    return Card(
+      elevation: 3,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: _getStatusColor(period.status).withOpacity(0.5),
+          width: 2,
+        ),
+      ),
+      child: InkWell(
+        onTap: () => context.push('/payroll/review/${period.id}'),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      period.name,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  _buildStatusBadge(period.status),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${period.startDate} - ${period.endDate}',
+                style: const TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildMetric('Workers', '${period.processedWorkers ?? 0}/${period.totalWorkers ?? 0}'),
+                  _buildMetric('Gross', 'KES ${period.totalGrossAmount?.toStringAsFixed(0) ?? "0"}'),
+                  _buildMetric('Net', 'KES ${period.totalNetAmount?.toStringAsFixed(0) ?? "0"}'),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
+  }
+
+  Widget _buildMetric(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            color: Colors.grey,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatusBadge(PayPeriodStatus status) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: _getStatusColor(status).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _getStatusColor(status),
+          width: 1.5,
+        ),
+      ),
+      child: Text(
+        status.name.toUpperCase(),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: _getStatusColor(status),
+        ),
+      ),
+    );
+  }
+
+  Color _getStatusColor(PayPeriodStatus status) {
+    switch (status) {
+      case PayPeriodStatus.DRAFT:
+        return Colors.grey;
+      case PayPeriodStatus.ACTIVE:
+        return const Color(0xFF3B82F6);
+      case PayPeriodStatus.PROCESSING:
+        return const Color(0xFFF59E0B);
+      case PayPeriodStatus.COMPLETED:
+        return const Color(0xFF10B981);
+      case PayPeriodStatus.CLOSED:
+        return const Color(0xFF8B5CF6);
+      default:
+        return Colors.grey;
+    }
+  }
+
+  IconData _getStatusIcon(PayPeriodStatus status) {
+    switch (status) {
+      case PayPeriodStatus.DRAFT:
+        return Icons.edit_note;
+      case PayPeriodStatus.ACTIVE:
+        return Icons.play_circle;
+      case PayPeriodStatus.PROCESSING:
+        return Icons.sync;
+      case PayPeriodStatus.COMPLETED:
+        return Icons.check_circle;
+      case PayPeriodStatus.CLOSED:
+        return Icons.lock;
+      default:
+        return Icons.circle;
+    }
+  }
+
+  void _navigateToActivePayPeriod(BuildContext context) {
+    final payPeriodsState = ref.read(payPeriodsByStatusProvider(PayPeriodStatus.ACTIVE));
+    
+    payPeriodsState.whenData((periods) {
+      if (periods.isNotEmpty) {
+        context.push('/payroll/review/${periods.first.id}');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No active pay periods found'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    });
   }
 }
