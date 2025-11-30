@@ -24,6 +24,7 @@ const countries_module_1 = require("./modules/countries/countries.module");
 const payroll_module_1 = require("./modules/payroll/payroll.module");
 const tax_payments_module_1 = require("./modules/tax-payments/tax-payments.module");
 const accounting_module_1 = require("./modules/accounting/accounting.module");
+const activities_module_1 = require("./modules/activities/activities.module");
 const user_entity_1 = require("./modules/users/entities/user.entity");
 const worker_entity_1 = require("./modules/workers/entities/worker.entity");
 const pay_period_entity_1 = require("./modules/payroll/entities/pay-period.entity");
@@ -41,6 +42,7 @@ const leave_request_entity_1 = require("./modules/workers/entities/leave-request
 const termination_entity_1 = require("./modules/workers/entities/termination.entity");
 const account_mapping_entity_1 = require("./modules/accounting/entities/account-mapping.entity");
 const accounting_export_entity_1 = require("./modules/accounting/entities/accounting-export.entity");
+const activity_entity_1 = require("./modules/activities/entities/activity.entity");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -75,6 +77,7 @@ exports.AppModule = AppModule = __decorate([
                         termination_entity_1.Termination,
                         account_mapping_entity_1.AccountMapping,
                         accounting_export_entity_1.AccountingExport,
+                        activity_entity_1.Activity,
                     ],
                     synchronize: false,
                     logging: ['query', 'error'],
@@ -93,6 +96,7 @@ exports.AppModule = AppModule = __decorate([
             payroll_module_1.PayrollModule,
             tax_payments_module_1.TaxPaymentsModule,
             accounting_module_1.AccountingModule,
+            activities_module_1.ActivitiesModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],

@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../workers/presentation/providers/workers_provider.dart';
 import '../../../payroll/presentation/providers/pay_period_provider.dart';
+import '../providers/activity_provider.dart';
+import '../data/models/activity_model.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -598,7 +600,90 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
           parent: _animationController,
           curve: const Interval(0.6, 1.0, curve: Curves.easeOut),
         )),
-        child: Container(
+        child: _buildEmptyTasks(),
+      ),
+    );
+  }
+
+  Widget _buildEmptyTasks() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF10B981).withOpacity(0.1),
+                  const Color(0xFF059669).withOpacity(0.05),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(
+              Icons.check_circle_outline,
+              size: 40,
+              color: Color(0xFF10B981),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'All Caught Up!',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF111827),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'You have no pending tasks.\nWe\'ll notify you when action is needed.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: Color(0xFF6B7280),
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+
+  Widget _buildRecentActivity(BuildContext context) {
+    final activitiesAsync = ref.watch(recentActivitiesProvider);
+    final workersAsync = ref.watch(workersProvider);
+
+    return activitiesAsync.when(
+      data: (activities) {
+        if (activities.isEmpty) {
+          // Check if user is new (has no workers)
+          return workersAsync.maybeWhen(
+            data: (workers) {
+              if (workers.isEmpty) {
+                return _buildGettingStarted();
+              }
+              return _buildEmptyActivity();
+            },
+            orElse: () => _buildEmptyActivity(),
+          );
+        }
+
+        return Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: Colors.white,
@@ -619,19 +704,19 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEFF6FF),
+                      color: const Color(0xFFF3F4F6),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(
-                      Icons.task_alt,
-                      color: Color(0xFF3B82F6),
+                      Icons.history,
+                      color: Color(0xFF6B7280),
                       size: 20,
                     ),
                   ),
                   const SizedBox(width: 12),
                   const Expanded(
                     child: Text(
-                      'Upcoming Tasks',
+                      'Recent Activity',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -639,102 +724,33 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
                       ),
                     ),
                   ),
-                  TextButton(
-                    onPressed: () {},
-                    child: const Text('View All'),
-                  ),
                 ],
               ),
               const SizedBox(height: 16),
-              _buildTaskItem(
-                title: 'Process monthly payroll',
-                dueDate: 'Due in 3 days',
-                priority: 'High',
-                color: const Color(0xFFEF4444),
-              ),
-              const Divider(height: 24),
-              _buildTaskItem(
-                title: 'Submit tax returns',
-                dueDate: 'Due in 5 days',
-                priority: 'Medium',
-                color: const Color(0xFFF59E0B),
-              ),
-              const Divider(height: 24),
-              _buildTaskItem(
-                title: 'Review leave requests',
-                dueDate: 'Due in 1 week',
-                priority: 'Low',
-                color: const Color(0xFF10B981),
-              ),
+              ...activities.take(5).map((activity) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildActivityItem(
+                    icon: _getActivityIcon(activity.type),
+                    title: activity.title,
+                    subtitle: activity.description,
+                    time: _formatTime(activity.timestamp),
+                    color: _getActivityColor(activity.type),
+                  ),
+                );
+              }),
             ],
           ),
-        ),
-      ),
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, _) => Text('Error: $error'),
     );
   }
 
-  Widget _buildTaskItem({
-    required String title,
-    required String dueDate,
-    required String priority,
-    required Color color,
-  }) {
-    return Row(
-      children: [
-        Container(
-          width: 4,
-          height: 40,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF111827),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                dueDate,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF6B7280),
-                ),
-              ),
-            ],
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Text(
-            priority,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: color,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRecentActivity(BuildContext context) {
+  Widget _buildEmptyActivity() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -747,6 +763,97 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
         ],
       ),
       child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF3B82F6).withOpacity(0.1),
+                  const Color(0xFF2563EB).withOpacity(0.05),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(
+              Icons.timeline_outlined,
+              size: 48,
+              color: Color(0xFF3B82F6),
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'No Activity Yet',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF111827),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Your recent actions will appear here.\nStart by adding workers or processing payroll.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: Color(0xFF6B7280),
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => context.go('/workers/add'),
+                icon: const Icon(Icons.person_add_outlined),
+                label: const Text('Add Worker'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton.icon(
+                onPressed: () => context.go('/payroll'),
+                icon: const Icon(Icons.play_arrow),
+                label: const Text('Run Payroll'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF3B82F6),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGettingStarted() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFF3B82F6).withOpacity(0.1),
+            const Color(0xFF8B5CF6).withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFF3B82F6).withOpacity(0.2),
+        ),
+      ),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -754,59 +861,177 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF3F4F6),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                  ),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
-                  Icons.history,
-                  color: Color(0xFF6B7280),
+                  Icons.rocket_launch_outlined,
+                  color: Colors.white,
                   size: 20,
                 ),
               ),
               const SizedBox(width: 12),
-              const Expanded(
-                child: Text(
-                  'Recent Activity',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF111827),
-                  ),
+              const Text(
+                'Getting Started',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF111827),
                 ),
-              ),
-              TextButton(
-                onPressed: () => context.go('/time-tracking/history'),
-                child: const Text('View All'),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          _buildActivityItem(
-            icon: Icons.payments_outlined,
-            title: 'Payroll processed',
-            subtitle: '8 workers • KES 45,000',
-            time: '2 hours ago',
-            color: const Color(0xFF10B981),
+          const SizedBox(height: 20),
+          _buildChecklistItem(
+            'Add your first worker',
+            'Set up employee profiles',
+            false,
+            () => context.go('/workers/add'),
           ),
           const SizedBox(height: 12),
-          _buildActivityItem(
-            icon: Icons.person_add_outlined,
-            title: 'New worker added',
-            subtitle: 'Jane Doe',
-            time: 'Yesterday',
-            color: const Color(0xFF3B82F6),
+          _buildChecklistItem(
+            'Create a pay period',
+            'Define your payroll schedule',
+            false,
+            () => context.go('/payroll'),
           ),
           const SizedBox(height: 12),
-          _buildActivityItem(
-            icon: Icons.receipt_long_outlined,
-            title: 'Tax submission completed',
-            subtitle: 'November 2025',
-            time: '3 days ago',
-            color: const Color(0xFF8B5CF6),
+          _buildChecklistItem(
+            'Process payroll',
+            'Calculate and review payments',
+            false,
+            () => context.go('/payroll'),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildChecklistItem(
+    String title,
+    String description,
+    bool completed,
+    VoidCallback onTap,
+  ) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: completed ? null : onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: completed
+                  ? const Color(0xFF10B981).withOpacity(0.3)
+                  : const Color(0xFFE5E7EB),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: completed
+                      ? const Color(0xFF10B981)
+                      : const Color(0xFFF3F4F6),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  completed ? Icons.check : Icons.circle_outlined,
+                  size: 16,
+                  color: completed ? Colors.white : const Color(0xFF9CA3AF),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: completed
+                            ? const Color(0xFF6B7280)
+                            : const Color(0xFF111827),
+                        decoration: completed
+                            ? TextDecoration.lineThrough
+                            : null,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      description,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF9CA3AF),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (!completed)
+                const Icon(
+                  Icons.arrow_forward_ios,
+                  size: 14,
+                  color: Color(0xFFD1D5DB),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  IconData _getActivityIcon(String type) {
+    switch (type) {
+      case 'payroll':
+        return Icons.payments_outlined;
+      case 'worker':
+        return Icons.person_outline;
+      case 'tax':
+        return Icons.receipt_long_outlined;
+      case 'leave':
+        return Icons.event_busy_outlined;
+      default:
+        return Icons.notifications_outlined;
+    }
+  }
+
+  Color _getActivityColor(String type) {
+    switch (type) {
+      case 'payroll':
+        return const Color(0xFF10B981);
+      case 'worker':
+        return const Color(0xFF3B82F6);
+      case 'tax':
+        return const Color(0xFF8B5CF6);
+      case 'leave':
+        return const Color(0xFFF59E0B);
+      default:
+        return const Color(0xFF6B7280);
+    }
+  }
+
+  String _formatTime(DateTime timestamp) {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+
+    if (difference.inDays > 0) {
+      return '${difference.inDays}d ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}m ago';
+    } else {
+      return 'Just now';
+    }
   }
 
   Widget _buildActivityItem({

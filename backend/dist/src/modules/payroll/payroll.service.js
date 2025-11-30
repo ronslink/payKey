@@ -20,16 +20,20 @@ const worker_entity_1 = require("../workers/entities/worker.entity");
 const taxes_service_1 = require("../taxes/taxes.service");
 const payroll_record_entity_1 = require("./entities/payroll-record.entity");
 const payroll_payment_service_1 = require("../payments/payroll-payment.service");
+const activities_service_1 = require("../activities/activities.service");
+const activity_entity_1 = require("../activities/entities/activity.entity");
 let PayrollService = class PayrollService {
     workersRepository;
     payrollRepository;
     taxesService;
     payrollPaymentService;
-    constructor(workersRepository, payrollRepository, taxesService, payrollPaymentService) {
+    activitiesService;
+    constructor(workersRepository, payrollRepository, taxesService, payrollPaymentService, activitiesService) {
         this.workersRepository = workersRepository;
         this.payrollRepository = payrollRepository;
         this.taxesService = taxesService;
         this.payrollPaymentService = payrollPaymentService;
+        this.activitiesService = activitiesService;
     }
     async calculatePayrollForUser(userId) {
         const workers = await this.workersRepository.find({
@@ -195,6 +199,17 @@ let PayrollService = class PayrollService {
         catch (error) {
             console.error('Failed to generate tax submission:', error);
         }
+        const totalAmount = updatedRecords.reduce((sum, r) => sum + Number(r.netSalary), 0);
+        try {
+            await this.activitiesService.logActivity(userId, activity_entity_1.ActivityType.PAYROLL, 'Payroll Processed', `Processed payroll for ${updatedRecords.length} workers`, {
+                workerCount: updatedRecords.length,
+                totalAmount,
+                payPeriodId,
+            });
+        }
+        catch (e) {
+            console.error('Failed to log activity:', e);
+        }
         return {
             finalizedRecords: updatedRecords,
             payoutResults,
@@ -209,6 +224,7 @@ exports.PayrollService = PayrollService = __decorate([
     __metadata("design:paramtypes", [typeorm_2.Repository,
         typeorm_2.Repository,
         taxes_service_1.TaxesService,
-        payroll_payment_service_1.PayrollPaymentService])
+        payroll_payment_service_1.PayrollPaymentService,
+        activities_service_1.ActivitiesService])
 ], PayrollService);
 //# sourceMappingURL=payroll.service.js.map

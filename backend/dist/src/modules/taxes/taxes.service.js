@@ -22,18 +22,22 @@ const users_service_1 = require("../users/users.service");
 const payroll_record_entity_1 = require("../payroll/entities/payroll-record.entity");
 const tax_config_service_1 = require("../tax-config/services/tax-config.service");
 const tax_config_entity_1 = require("../tax-config/entities/tax-config.entity");
+const activities_service_1 = require("../activities/activities.service");
+const activity_entity_1 = require("../activities/entities/activity.entity");
 let TaxesService = class TaxesService {
     taxTableRepository;
     taxSubmissionRepository;
     payrollRecordRepository;
     taxConfigService;
     usersService;
-    constructor(taxTableRepository, taxSubmissionRepository, payrollRecordRepository, taxConfigService, usersService) {
+    activitiesService;
+    constructor(taxTableRepository, taxSubmissionRepository, payrollRecordRepository, taxConfigService, usersService, activitiesService) {
         this.taxTableRepository = taxTableRepository;
         this.taxSubmissionRepository = taxSubmissionRepository;
         this.payrollRecordRepository = payrollRecordRepository;
         this.taxConfigService = taxConfigService;
         this.usersService = usersService;
+        this.activitiesService = activitiesService;
     }
     async createTaxTable(data) {
         const taxTable = this.taxTableRepository.create(data);
@@ -242,7 +246,21 @@ let TaxesService = class TaxesService {
                 status: tax_submission_entity_1.TaxSubmissionStatus.PENDING,
             });
         }
-        return this.taxSubmissionRepository.save(submission);
+        const savedSubmission = await this.taxSubmissionRepository.save(submission);
+        try {
+            await this.activitiesService.logActivity(userId, activity_entity_1.ActivityType.TAX, 'Tax Submission Generated', `Generated tax submission for pay period`, {
+                submissionId: savedSubmission.id,
+                payPeriodId,
+                totalPaye,
+                totalNssf,
+                totalNhif,
+                totalHousingLevy,
+            });
+        }
+        catch (e) {
+            console.error('Failed to log activity:', e);
+        }
+        return savedSubmission;
     }
     async getTaxSubmissionByPeriod(payPeriodId, userId) {
         return this.taxSubmissionRepository.findOne({
@@ -259,7 +277,17 @@ let TaxesService = class TaxesService {
         }
         submission.status = tax_submission_entity_1.TaxSubmissionStatus.FILED;
         submission.filingDate = new Date();
-        return this.taxSubmissionRepository.save(submission);
+        const savedSubmission = await this.taxSubmissionRepository.save(submission);
+        try {
+            await this.activitiesService.logActivity(userId, activity_entity_1.ActivityType.TAX, 'Tax Returns Filed', `Marked tax submission as filed`, {
+                submissionId: savedSubmission.id,
+                filingDate: savedSubmission.filingDate,
+            });
+        }
+        catch (e) {
+            console.error('Failed to log activity:', e);
+        }
+        return savedSubmission;
     }
     async getComplianceStatus(userId) {
         const user = await this.usersService.findOneById(userId);
@@ -325,6 +353,7 @@ exports.TaxesService = TaxesService = __decorate([
         typeorm_2.Repository,
         typeorm_2.Repository,
         tax_config_service_1.TaxConfigService,
-        users_service_1.UsersService])
+        users_service_1.UsersService,
+        activities_service_1.ActivitiesService])
 ], TaxesService);
 //# sourceMappingURL=taxes.service.js.map

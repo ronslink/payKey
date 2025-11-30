@@ -3,13 +3,16 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Worker } from './entities/worker.entity';
 import { CreateWorkerDto } from './dto/create-worker.dto';
+import { ActivitiesService } from '../activities/activities.service';
+import { ActivityType } from '../activities/entities/activity.entity';
 
 @Injectable()
 export class WorkersService {
   constructor(
     @InjectRepository(Worker)
     private workersRepository: Repository<Worker>,
-  ) {}
+    private activitiesService: ActivitiesService,
+  ) { }
 
   async create(
     userId: string,
@@ -19,7 +22,24 @@ export class WorkersService {
       ...createWorkerDto,
       userId,
     });
-    return this.workersRepository.save(worker);
+    const savedWorker = await this.workersRepository.save(worker);
+
+    try {
+      await this.activitiesService.logActivity(
+        userId,
+        ActivityType.WORKER,
+        'New Worker Added',
+        `Added ${savedWorker.name} to your team`,
+        {
+          workerId: savedWorker.id,
+          workerName: savedWorker.name,
+        },
+      );
+    } catch (e) {
+      console.error('Failed to log activity:', e);
+    }
+
+    return savedWorker;
   }
 
   async findAll(userId: string): Promise<Worker[]> {
@@ -81,6 +101,23 @@ export class WorkersService {
 
     worker.isActive = false;
     worker.terminatedAt = new Date();
-    return this.workersRepository.save(worker);
+    const savedWorker = await this.workersRepository.save(worker);
+
+    try {
+      await this.activitiesService.logActivity(
+        userId,
+        ActivityType.WORKER,
+        'Worker Archived',
+        `Archived worker ${savedWorker.name}`,
+        {
+          workerId: savedWorker.id,
+          workerName: savedWorker.name,
+        },
+      );
+    } catch (e) {
+      console.error('Failed to log activity:', e);
+    }
+
+    return savedWorker;
   }
 }

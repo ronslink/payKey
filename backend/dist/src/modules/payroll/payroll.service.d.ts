@@ -3,12 +3,14 @@ import { Worker } from '../workers/entities/worker.entity';
 import { TaxesService } from '../taxes/taxes.service';
 import { PayrollRecord, PayrollStatus } from './entities/payroll-record.entity';
 import { PayrollPaymentService } from '../payments/payroll-payment.service';
+import { ActivitiesService } from '../activities/activities.service';
 export declare class PayrollService {
     private workersRepository;
     private payrollRepository;
     private taxesService;
     private payrollPaymentService;
-    constructor(workersRepository: Repository<Worker>, payrollRepository: Repository<PayrollRecord>, taxesService: TaxesService, payrollPaymentService: PayrollPaymentService);
+    private activitiesService;
+    constructor(workersRepository: Repository<Worker>, payrollRepository: Repository<PayrollRecord>, taxesService: TaxesService, payrollPaymentService: PayrollPaymentService, activitiesService: ActivitiesService);
     calculatePayrollForUser(userId: string): Promise<{
         payrollItems: {
             workerId: string;

@@ -11,6 +11,8 @@ import { UsersService } from '../users/users.service';
 import { PayrollRecord } from '../payroll/entities/payroll-record.entity';
 import { TaxConfigService } from '../tax-config/services/tax-config.service';
 import { TaxType } from '../tax-config/entities/tax-config.entity';
+import { ActivitiesService } from '../activities/activities.service';
+import { ActivityType } from '../activities/entities/activity.entity';
 
 @Injectable()
 export class TaxesService {
@@ -23,7 +25,8 @@ export class TaxesService {
     private payrollRecordRepository: Repository<PayrollRecord>,
     private taxConfigService: TaxConfigService,
     private usersService: UsersService,
-  ) {}
+    private activitiesService: ActivitiesService,
+  ) { }
 
   async createTaxTable(data: Partial<TaxTable>): Promise<TaxTable> {
     const taxTable = this.taxTableRepository.create(data);
@@ -395,7 +398,28 @@ export class TaxesService {
       });
     }
 
-    return this.taxSubmissionRepository.save(submission);
+    const savedSubmission = await this.taxSubmissionRepository.save(submission);
+
+    try {
+      await this.activitiesService.logActivity(
+        userId,
+        ActivityType.TAX,
+        'Tax Submission Generated',
+        `Generated tax submission for pay period`,
+        {
+          submissionId: savedSubmission.id,
+          payPeriodId,
+          totalPaye,
+          totalNssf,
+          totalNhif,
+          totalHousingLevy,
+        },
+      );
+    } catch (e) {
+      console.error('Failed to log activity:', e);
+    }
+
+    return savedSubmission;
   }
 
   async getTaxSubmissionByPeriod(
@@ -419,7 +443,24 @@ export class TaxesService {
 
     submission.status = TaxSubmissionStatus.FILED;
     submission.filingDate = new Date();
-    return this.taxSubmissionRepository.save(submission);
+    const savedSubmission = await this.taxSubmissionRepository.save(submission);
+
+    try {
+      await this.activitiesService.logActivity(
+        userId,
+        ActivityType.TAX,
+        'Tax Returns Filed',
+        `Marked tax submission as filed`,
+        {
+          submissionId: savedSubmission.id,
+          filingDate: savedSubmission.filingDate,
+        },
+      );
+    } catch (e) {
+      console.error('Failed to log activity:', e);
+    }
+
+    return savedSubmission;
   }
 
   async getComplianceStatus(userId: string) {

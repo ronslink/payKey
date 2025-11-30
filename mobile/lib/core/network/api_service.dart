@@ -596,4 +596,9 @@ class ApiService {
   Future<Response> getLeaveBalance(String workerId) async {
     return dio.get('/workers/$workerId/leave-balance');
   }
+
+  // Activities
+  Future<Response> getRecentActivities({int limit = 10}) async {
+    return dio.get('/activities/recent', queryParameters: {'limit': limit});
+  }
 }

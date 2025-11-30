@@ -5,6 +5,8 @@ import { Worker } from '../workers/entities/worker.entity';
 import { TaxesService } from '../taxes/taxes.service';
 import { PayrollRecord, PayrollStatus } from './entities/payroll-record.entity';
 import { PayrollPaymentService } from '../payments/payroll-payment.service';
+import { ActivitiesService } from '../activities/activities.service';
+import { ActivityType } from '../activities/entities/activity.entity';
 
 @Injectable()
 export class PayrollService {
@@ -15,7 +17,8 @@ export class PayrollService {
     private payrollRepository: Repository<PayrollRecord>,
     private taxesService: TaxesService,
     private payrollPaymentService: PayrollPaymentService,
-  ) {}
+    private activitiesService: ActivitiesService,
+  ) { }
 
   async calculatePayrollForUser(userId: string) {
     const workers = await this.workersRepository.find({
@@ -263,6 +266,24 @@ export class PayrollService {
     } catch (error) {
       // Log error but don't fail the finalization
       console.error('Failed to generate tax submission:', error);
+    }
+
+    // 4. Log Activity
+    const totalAmount = updatedRecords.reduce((sum, r) => sum + Number(r.netSalary), 0);
+    try {
+      await this.activitiesService.logActivity(
+        userId,
+        ActivityType.PAYROLL,
+        'Payroll Processed',
+        `Processed payroll for ${updatedRecords.length} workers`,
+        {
+          workerCount: updatedRecords.length,
+          totalAmount,
+          payPeriodId,
+        },
+      );
+    } catch (e) {
+      console.error('Failed to log activity:', e);
     }
 
     return {

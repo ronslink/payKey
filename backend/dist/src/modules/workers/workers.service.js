@@ -17,17 +17,31 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const worker_entity_1 = require("./entities/worker.entity");
+const activities_service_1 = require("../activities/activities.service");
+const activity_entity_1 = require("../activities/entities/activity.entity");
 let WorkersService = class WorkersService {
     workersRepository;
-    constructor(workersRepository) {
+    activitiesService;
+    constructor(workersRepository, activitiesService) {
         this.workersRepository = workersRepository;
+        this.activitiesService = activitiesService;
     }
     async create(userId, createWorkerDto) {
         const worker = this.workersRepository.create({
             ...createWorkerDto,
             userId,
         });
-        return this.workersRepository.save(worker);
+        const savedWorker = await this.workersRepository.save(worker);
+        try {
+            await this.activitiesService.logActivity(userId, activity_entity_1.ActivityType.WORKER, 'New Worker Added', `Added ${savedWorker.name} to your team`, {
+                workerId: savedWorker.id,
+                workerName: savedWorker.name,
+            });
+        }
+        catch (e) {
+            console.error('Failed to log activity:', e);
+        }
+        return savedWorker;
     }
     async findAll(userId) {
         return this.workersRepository.find({
@@ -73,13 +87,24 @@ let WorkersService = class WorkersService {
         }
         worker.isActive = false;
         worker.terminatedAt = new Date();
-        return this.workersRepository.save(worker);
+        const savedWorker = await this.workersRepository.save(worker);
+        try {
+            await this.activitiesService.logActivity(userId, activity_entity_1.ActivityType.WORKER, 'Worker Archived', `Archived worker ${savedWorker.name}`, {
+                workerId: savedWorker.id,
+                workerName: savedWorker.name,
+            });
+        }
+        catch (e) {
+            console.error('Failed to log activity:', e);
+        }
+        return savedWorker;
     }
 };
 exports.WorkersService = WorkersService;
 exports.WorkersService = WorkersService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(worker_entity_1.Worker)),
-    __metadata("design:paramtypes", [typeorm_2.Repository])
+    __metadata("design:paramtypes", [typeorm_2.Repository,
+        activities_service_1.ActivitiesService])
 ], WorkersService);
 //# sourceMappingURL=workers.service.js.map

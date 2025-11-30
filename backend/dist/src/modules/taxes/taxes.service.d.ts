@@ -5,13 +5,15 @@ import { TaxBreakdown, PayrollCalculation } from './interfaces/tax.interface';
 import { UsersService } from '../users/users.service';
 import { PayrollRecord } from '../payroll/entities/payroll-record.entity';
 import { TaxConfigService } from '../tax-config/services/tax-config.service';
+import { ActivitiesService } from '../activities/activities.service';
 export declare class TaxesService {
     private taxTableRepository;
     private taxSubmissionRepository;
     private payrollRecordRepository;
     private taxConfigService;
     private usersService;
-    constructor(taxTableRepository: Repository<TaxTable>, taxSubmissionRepository: Repository<TaxSubmission>, payrollRecordRepository: Repository<PayrollRecord>, taxConfigService: TaxConfigService, usersService: UsersService);
+    private activitiesService;
+    constructor(taxTableRepository: Repository<TaxTable>, taxSubmissionRepository: Repository<TaxSubmission>, payrollRecordRepository: Repository<PayrollRecord>, taxConfigService: TaxConfigService, usersService: UsersService, activitiesService: ActivitiesService);
     createTaxTable(data: Partial<TaxTable>): Promise<TaxTable>;
     getTaxTables(): Promise<TaxTable[]>;
     getTaxTable(date: Date): Promise<TaxTable>;
