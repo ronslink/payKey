@@ -23,6 +23,7 @@ import 'features/properties/presentation/pages/properties_page.dart';
 import 'features/properties/presentation/pages/property_form_page.dart';
 import 'features/properties/presentation/pages/property_detail_page.dart';
 import 'features/taxes/presentation/pages/comprehensive_tax_page.dart';
+import 'features/finance/presentation/pages/accounting_page.dart';
 import 'main_layout.dart';
 import 'core/network/api_service.dart';
 
@@ -200,6 +201,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/taxes',
         builder: (context, state) => const ComprehensiveTaxPage(),
+      ),
+      GoRoute(
+        path: '/accounting',
+        builder: (context, state) => const AccountingPage(),
       ),
     ],
   );
