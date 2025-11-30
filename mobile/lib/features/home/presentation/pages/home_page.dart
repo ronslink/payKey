@@ -466,6 +466,36 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
                 Expanded(
                   child: _buildActionCard(
                     context,
+                    title: 'Accounting',
+                    subtitle: 'Export payroll',
+                    icon: Icons.account_balance_outlined,
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF06B6D4), Color(0xFF0891B2)],
+                    ),
+                    onTap: () => context.go('/accounting'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildActionCard(
+                    context,
+                    title: 'Tax Filing',
+                    subtitle: 'Manage taxes',
+                    icon: Icons.receipt_long_outlined,
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+                    ),
+                    onTap: () => context.go('/taxes'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildActionCard(
+                    context,
                     title: 'Tax Filing',
                     subtitle: 'Manage taxes',
                     icon: Icons.receipt_long_outlined,

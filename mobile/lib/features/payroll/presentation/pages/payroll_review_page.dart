@@ -8,6 +8,9 @@ import '../../data/repositories/pay_period_repository.dart';
 import '../../data/repositories/payroll_repository.dart';
 import '../../../workers/presentation/providers/workers_provider.dart';
 import '../../../taxes/presentation/providers/tax_provider.dart';
+import '../../../../core/network/api_service.dart';
+import '../../../../core/network/services/accounting_service.dart';
+
 
 class PayrollReviewPage extends ConsumerStatefulWidget {
   final String payPeriodId;
@@ -251,6 +254,389 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _exportToAccounting() async {
+    if (_payPeriod == null) return;
+
+    try {
+      // Fetch journal entries
+      final apiService = ApiService();
+      final response = await apiService.dio.post(
+        '/accounting/journal-entries/${widget.payPeriodId}',
+      );
+
+      if (mounted) {
+        _showAccountingExportDialog(response.data);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load journal entries: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showAccountingExportDialog(Map<String, dynamic> journalData) {
+    final entries = journalData['entries'] as List;
+    final totalDebits = journalData['totalDebits'] as num;
+    final totalCredits = journalData['totalCredits'] as num;
+    final isBalanced = journalData['isBalanced'] as bool;
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 600, maxHeight: 700),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF06B6D4), Color(0xFF0891B2)],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.account_balance_outlined,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Export to Accounting',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Journal entries for this pay period',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Color(0xFF6B7280),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: const Color(0xFFE5E7EB)),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFF9FAFB),
+                                borderRadius: BorderRadius.only(
+                                  topLeft: Radius.circular(8),
+                                  topRight: Radius.circular(8),
+                                ),
+                              ),
+                              child: const Row(
+                                children: [
+                                  Expanded(
+                                    flex: 2,
+                                    child: Text(
+                                      'Account',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Text(
+                                      'Debit',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 12,
+                                      ),
+                                      textAlign: TextAlign.right,
+                                    ),
+                                  ),
+                                  SizedBox(width: 16),
+                                  Expanded(
+                                    child: Text(
+                                      'Credit',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 12,
+                                      ),
+                                      textAlign: TextAlign.right,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            ...entries.map((entry) => Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: const BoxDecoration(
+                                border: Border(
+                                  top: BorderSide(color: Color(0xFFE5E7EB)),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    flex: 2,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          entry['accountName'],
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w500,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        Text(
+                                          entry['account'],
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Color(0xFF6B7280),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Text(
+                                      entry['debit'] > 0
+                                          ? NumberFormat.currency(
+                                              symbol: 'KES ',
+                                              decimalDigits: 2,
+                                            ).format(entry['debit'])
+                                          : '-',
+                                      style: const TextStyle(fontSize: 14),
+                                      textAlign: TextAlign.right,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Text(
+                                      entry['credit'] > 0
+                                          ? NumberFormat.currency(
+                                              symbol: 'KES ',
+                                              decimalDigits: 2,
+                                            ).format(entry['credit'])
+                                          : '-',
+                                      style: const TextStyle(fontSize: 14),
+                                      textAlign: TextAlign.right,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFF9FAFB),
+                                border: Border(
+                                  top: BorderSide(
+                                    color: Color(0xFF111827),
+                                    width: 2,
+                                  ),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Expanded(
+                                    flex: 2,
+                                    child: Text(
+                                      'TOTALS',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Text(
+                                      NumberFormat.currency(
+                                        symbol: 'KES ',
+                                        decimalDigits: 2,
+                                      ).format(totalDebits),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                      textAlign: TextAlign.right,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Text(
+                                      NumberFormat.currency(
+                                        symbol: 'KES ',
+                                        decimalDigits: 2,
+                                      ).format(totalCredits),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                      textAlign: TextAlign.right,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isBalanced
+                              ? const Color(0xFFD1FAE5)
+                              : const Color(0xFFFEE2E2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isBalanced ? Icons.check_circle : Icons.error,
+                              color: isBalanced
+                                  ? const Color(0xFF10B981)
+                                  : const Color(0xFFEF4444),
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              isBalanced
+                                  ? 'Journal entries are balanced'
+                                  : 'Warning: Entries not balanced',
+                              style: TextStyle(
+                                color: isBalanced
+                                    ? const Color(0xFF10B981)
+                                    : const Color(0xFFEF4444),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton.icon(
+                      onPressed: isBalanced
+                          ? () => _downloadCSV()
+                          : null,
+                      icon: const Icon(Icons.download),
+                      label: const Text('Download CSV'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF06B6D4),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _downloadCSV() async {
+    try {
+      final apiService = ApiService();
+      final response = await apiService.exportPayrollToCSV(widget.payPeriodId);
+      
+      final csvData = response.data['data'] as String;
+      final filename = response.data['filename'] as String;
+
+      // In a real app, you would use a package like 'path_provider' and 'share_plus'
+      // to save and share the file. For now, we'll just show a success message.
+      
+      if (mounted) {
+        Navigator.of(context).pop(); // Close dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text('Exported successfully: $filename'),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFF10B981),
+            behavior: SnackBarBehavior.floating,
+            action: SnackBarAction(
+              label: 'View',
+              textColor: Colors.white,
+              onPressed: () {
+                // TODO: Open file or navigate to accounting page
+                context.push('/accounting');
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to export: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
@@ -823,6 +1209,22 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
                   label: const Text('Prepare Tax Submission'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF8B5CF6),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                ),
+              ),
+            if (canPrepareTax)
+              const SizedBox(height: 12),
+            if (canPrepareTax)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _exportToAccounting,
+                  icon: const Icon(Icons.file_download_outlined),
+                  label: const Text('Export to Accounting'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF06B6D4),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
