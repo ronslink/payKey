@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../../../../core/constants/api_constants.dart';
 import '../models/termination_model.dart';
 
 final terminationRepositoryProvider = Provider<TerminationRepository>((ref) {
@@ -10,7 +11,7 @@ final terminationRepositoryProvider = Provider<TerminationRepository>((ref) {
 class TerminationRepository {
   final FlutterSecureStorage _storage;
   final Dio _dio = Dio(BaseOptions(
-    baseUrl: 'http://10.0.2.2:3000',
+    baseUrl: ApiConstants.baseUrl,
     headers: {'Content-Type': 'application/json'},
   ));
 

@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../constants/api_constants.dart';
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
@@ -13,15 +14,7 @@ class ApiService {
   final Dio dio = Dio();
   final FlutterSecureStorage secureStorage = const FlutterSecureStorage();
 
-  static String get baseUrl {
-    // Use platform-appropriate base URL
-    // For Android emulator: use 10.0.2.2 to access host machine
-    // For iOS simulator: use localhost
-    // For physical devices: use actual IP address
-    
-    // Check if we're running on Android (default to Android emulator)
-    return 'http://10.0.2.2:3000';
-  }
+  static String get baseUrl => ApiConstants.baseUrl;
 
   void _initializeDio() {
     dio.options.baseUrl = baseUrl;
