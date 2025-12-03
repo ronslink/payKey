@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/pay_period_model.dart';
-import '../../data/repositories/pay_period_repository.dart';
+import '../../data/repositories/pay_period_repository.dart' as repo;
 import '../../presentation/providers/pay_period_provider.dart';
 
 class PayPeriodManagementPage extends ConsumerStatefulWidget {
@@ -81,7 +81,7 @@ class _PayPeriodManagementPageState
     switch (status) {
       case PayPeriodStatus.draft:
         return Colors.grey.shade600;
-      case PayPeriodStatus.open:
+      case PayPeriodStatus.active:
         return Colors.blue;
       case PayPeriodStatus.processing:
         return Colors.orange;
@@ -101,7 +101,7 @@ class _PayPeriodManagementPageState
           PayPeriodStatusAction.activate,
           PayPeriodStatusAction.close,
         ];
-      case PayPeriodStatus.open:
+      case PayPeriodStatus.active:
         return [
           PayPeriodStatusAction.process,
           PayPeriodStatusAction.close,
@@ -305,14 +305,14 @@ class _PayPeriodManagementPageState
                                   Expanded(
                                     child: buildStatCard(
                                       'Total Gross',
-                                      'KES ${period.totalGrossAmount.toStringAsFixed(2)}',
+                                      'KES ${(period.totalGrossAmount ?? 0.0).toStringAsFixed(2)}',
                                     ),
                                   ),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: buildStatCard(
                                       'Total Net',
-                                      'KES ${period.totalNetAmount.toStringAsFixed(2)}',
+                                      'KES ${(period.totalNetAmount ?? 0.0).toStringAsFixed(2)}',
                                     ),
                                   ),
                                   const SizedBox(width: 8),
@@ -371,7 +371,7 @@ class _PayPeriodManagementPageState
                                     onPressed: () async {
                                       try {
                                         final repository = ref.read(
-                                          payPeriodRepositoryProvider,
+                                          repo.payPeriodRepositoryProvider,
                                         );
                                         final statistics =
                                             await repository.getPayPeriodStatistics(

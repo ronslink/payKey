@@ -22,99 +22,124 @@ export class PayrollPaymentService {
     private mpesaService: MpesaService,
     @InjectRepository(PayrollRecord)
     private payrollRecordRepository: Repository<PayrollRecord>,
-  ) {}
+  ) { }
 
   /**
    * Process payouts for a list of finalized payroll records
+   * Uses parallel processing for better performance
    */
   async processPayouts(payrollRecords: PayrollRecord[]): Promise<{
     successCount: number;
     failureCount: number;
     results: any[];
   }> {
-    const results = [];
+    this.logger.log(`Processing payouts for ${payrollRecords.length} workers`);
+    const startTime = Date.now();
+
+    // Process in batches to avoid overwhelming M-Pesa API
+    const BATCH_SIZE = 10;
+    const allResults = [];
     let successCount = 0;
     let failureCount = 0;
 
-    for (const record of payrollRecords) {
-      try {
-        if (record.status !== PayrollStatus.FINALIZED) {
-          throw new Error(`Payroll record ${record.id} is not finalized`);
-        }
+    for (let i = 0; i < payrollRecords.length; i += BATCH_SIZE) {
+      const batch = payrollRecords.slice(i, i + BATCH_SIZE);
 
-        // Create transaction record
-        const transaction = this.transactionRepository.create({
-          userId: record.userId,
-          workerId: record.workerId,
-          amount: Number(record.netSalary),
-          currency: 'KES',
-          type: TransactionType.SALARY_PAYOUT,
-          status: TransactionStatus.PENDING,
-          metadata: {
-            payrollRecordId: record.id,
-            workerName: record.worker.name,
-          },
-        });
+      // Process batch in parallel
+      const batchPromises = batch.map(async (record) => {
+        try {
+          if (record.status !== PayrollStatus.FINALIZED) {
+            throw new Error(`Payroll record ${record.id} is not finalized`);
+          }
 
-        const savedTransaction =
-          await this.transactionRepository.save(transaction);
-
-        // Initiate M-Pesa B2C
-        // Note: In a real scenario, we might queue this or handle it asynchronously
-        const b2cResult = await this.mpesaService.sendB2C(
-          savedTransaction.id,
-          record.worker.phoneNumber,
-          Number(record.netSalary),
-          `Salary Payment`,
-        );
-
-        if (b2cResult.error) {
-          results.push({
+          // Create transaction record
+          const transaction = this.transactionRepository.create({
+            userId: record.userId,
             workerId: record.workerId,
-            workerName: record.worker.name,
-            success: false,
-            error: b2cResult.error,
+            amount: Number(record.netSalary),
+            currency: 'KES',
+            type: TransactionType.SALARY_PAYOUT,
+            status: TransactionStatus.PENDING,
+            metadata: {
+              payrollRecordId: record.id,
+              workerName: record.worker.name,
+            },
           });
 
-          record.paymentStatus = 'failed';
+          const savedTransaction =
+            await this.transactionRepository.save(transaction);
+
+          // Initiate M-Pesa B2C
+          const b2cResult = await this.mpesaService.sendB2C(
+            savedTransaction.id,
+            record.worker.phoneNumber,
+            Number(record.netSalary),
+            `Salary Payment`,
+          );
+
+          if (b2cResult.error) {
+            record.paymentStatus = 'failed';
+            await this.payrollRecordRepository.save(record);
+
+            return {
+              workerId: record.workerId,
+              workerName: record.worker.name,
+              success: false,
+              error: b2cResult.error,
+            };
+          }
+
+          // Update record status
+          record.paymentStatus = 'processing'; // Will be updated to 'paid' via callback
+          record.paymentDate = new Date();
           await this.payrollRecordRepository.save(record);
 
-          failureCount++;
-          continue;
+          return {
+            workerId: record.workerId,
+            workerName: record.worker.name,
+            success: true,
+            transactionId: savedTransaction.id,
+          };
+        } catch (error) {
+          this.logger.error(
+            `Failed to process payout for record ${record.id}`,
+            error,
+          );
+          return {
+            workerId: record.workerId,
+            workerName: record.worker?.name || 'Unknown',
+            success: false,
+            error: error.message || 'Processing failed',
+          };
         }
+      });
 
-        // Update record status
-        record.paymentStatus = 'processing'; // Will be updated to 'paid' via callback
-        record.paymentDate = new Date();
-        await this.payrollRecordRepository.save(record);
+      const batchResults = await Promise.all(batchPromises);
+      allResults.push(...batchResults);
 
-        results.push({
-          workerId: record.workerId,
-          workerName: record.worker.name,
-          success: true,
-          transactionId: savedTransaction.id,
-        });
+      // Count successes and failures
+      batchResults.forEach(result => {
+        if (result.success) {
+          successCount++;
+        } else {
+          failureCount++;
+        }
+      });
 
-        successCount++;
-      } catch (error) {
-        this.logger.error(
-          `Failed to process payout for record ${record.id}`,
-          error,
-        );
-        results.push({
-          workerId: record.workerId,
-          workerName: record.worker?.name || 'Unknown',
-          success: false,
-          error: error.message || 'Processing failed',
-        });
-        failureCount++;
-      }
+      this.logger.log(
+        `Processed batch ${Math.floor(i / BATCH_SIZE) + 1}: ${Math.min(i + BATCH_SIZE, payrollRecords.length)}/${payrollRecords.length} workers`,
+      );
     }
+
+    const duration = Date.now() - startTime;
+    this.logger.log(
+      `Completed payout processing in ${duration}ms: ${successCount} successful, ${failureCount} failed`,
+    );
 
     return {
       successCount,
       failureCount,
-      results,
+      results: allResults,
     };
   }
 }

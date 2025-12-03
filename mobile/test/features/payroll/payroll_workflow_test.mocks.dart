@@ -124,36 +124,61 @@ class MockPayPeriodRepository extends _i1.Mock
           as _i5.Future<void>);
 
   @override
-  _i5.Future<void> activatePayPeriod(String? payPeriodId) =>
+  _i5.Future<_i2.PayPeriod> activatePayPeriod(String? payPeriodId) =>
       (super.noSuchMethod(
             Invocation.method(#activatePayPeriod, [payPeriodId]),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
+            returnValue: _i5.Future<_i2.PayPeriod>.value(
+              _FakePayPeriod_0(
+                this,
+                Invocation.method(#activatePayPeriod, [payPeriodId]),
+              ),
+            ),
           )
-          as _i5.Future<void>);
+          as _i5.Future<_i2.PayPeriod>);
 
   @override
-  _i5.Future<void> processPayPeriod(String? payPeriodId) =>
+  _i5.Future<_i2.PayPeriod> processPayPeriod(String? payPeriodId) =>
       (super.noSuchMethod(
             Invocation.method(#processPayPeriod, [payPeriodId]),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
+            returnValue: _i5.Future<_i2.PayPeriod>.value(
+              _FakePayPeriod_0(
+                this,
+                Invocation.method(#processPayPeriod, [payPeriodId]),
+              ),
+            ),
           )
-          as _i5.Future<void>);
+          as _i5.Future<_i2.PayPeriod>);
 
   @override
-  _i5.Future<void> completePayPeriod(String? payPeriodId) =>
+  _i5.Future<_i2.PayPeriod> completePayPeriod(String? payPeriodId) =>
       (super.noSuchMethod(
             Invocation.method(#completePayPeriod, [payPeriodId]),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
+            returnValue: _i5.Future<_i2.PayPeriod>.value(
+              _FakePayPeriod_0(
+                this,
+                Invocation.method(#completePayPeriod, [payPeriodId]),
+              ),
+            ),
           )
-          as _i5.Future<void>);
+          as _i5.Future<_i2.PayPeriod>);
 
   @override
-  _i5.Future<void> closePayPeriod(String? payPeriodId) =>
+  _i5.Future<_i2.PayPeriod> closePayPeriod(String? payPeriodId) =>
       (super.noSuchMethod(
             Invocation.method(#closePayPeriod, [payPeriodId]),
+            returnValue: _i5.Future<_i2.PayPeriod>.value(
+              _FakePayPeriod_0(
+                this,
+                Invocation.method(#closePayPeriod, [payPeriodId]),
+              ),
+            ),
+          )
+          as _i5.Future<_i2.PayPeriod>);
+
+  @override
+  _i5.Future<void> updatePayPeriodStatus(String? payPeriodId, String? action) =>
+      (super.noSuchMethod(
+            Invocation.method(#updatePayPeriodStatus, [payPeriodId, action]),
             returnValue: _i5.Future<void>.value(),
             returnValueForMissingStub: _i5.Future<void>.value(),
           )

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/network/api_service.dart';
-import '../../../../core/network/services/accounting_service.dart';
 import '../../../payroll/presentation/providers/pay_period_provider.dart';
 
 class AccountingPage extends ConsumerStatefulWidget {
@@ -240,7 +239,7 @@ class _AccountingPageState extends ConsumerState<AccountingPage> with SingleTick
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 10,
               offset: const Offset(0, 2),
             ),
@@ -260,7 +259,7 @@ class _AccountingPageState extends ConsumerState<AccountingPage> with SingleTick
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF06B6D4).withOpacity(0.3),
+                        color: const Color(0xFF06B6D4).withValues(alpha: 0.3),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -341,7 +340,7 @@ class _AccountingPageState extends ConsumerState<AccountingPage> with SingleTick
                     ),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<String>(
-                      value: _selectedPayPeriodId,
+                      initialValue: _selectedPayPeriodId,
                       decoration: InputDecoration(
                         hintText: 'Choose a pay period to export',
                         border: OutlineInputBorder(
@@ -436,7 +435,7 @@ class _AccountingPageState extends ConsumerState<AccountingPage> with SingleTick
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 10,
               offset: const Offset(0, 2),
             ),
@@ -605,13 +604,13 @@ class _AccountingPageState extends ConsumerState<AccountingPage> with SingleTick
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              const Color(0xFF06B6D4).withOpacity(0.1),
-              const Color(0xFF0891B2).withOpacity(0.05),
+              const Color(0xFF06B6D4).withValues(alpha: 0.1),
+              const Color(0xFF0891B2).withValues(alpha: 0.05),
             ],
           ),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: const Color(0xFF06B6D4).withOpacity(0.2),
+            color: const Color(0xFF06B6D4).withValues(alpha: 0.2),
           ),
         ),
         child: Column(
@@ -622,7 +621,7 @@ class _AccountingPageState extends ConsumerState<AccountingPage> with SingleTick
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF06B6D4).withOpacity(0.2),
+                    color: const Color(0xFF06B6D4).withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(

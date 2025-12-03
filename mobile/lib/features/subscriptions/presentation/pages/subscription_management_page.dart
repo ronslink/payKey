@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../data/models/subscription_model.dart';
 import '../providers/subscription_provider.dart';
+import '../providers/subscription_payment_history_provider.dart';
 
 class SubscriptionManagementPage extends ConsumerStatefulWidget {
   const SubscriptionManagementPage({super.key});
@@ -16,9 +18,9 @@ class _SubscriptionManagementPageState extends ConsumerState<SubscriptionManagem
     super.initState();
     // Use ref.refresh to trigger data fetching instead of notifier
     Future.microtask(() {
-      ref.refresh(subscriptionPlansProvider);
-      ref.refresh(userSubscriptionProvider);
-      ref.refresh(subscriptionPaymentHistoryProvider);
+      ref.invalidate(subscriptionPlansProvider);
+      ref.invalidate(userSubscriptionProvider);
+      ref.invalidate(subscriptionPaymentHistoryProvider);
     });
   }
 
@@ -35,8 +37,8 @@ class _SubscriptionManagementPageState extends ConsumerState<SubscriptionManagem
         data: (plans) {
           return RefreshIndicator(
             onRefresh: () async {
-              ref.refresh(subscriptionPlansProvider);
-              ref.refresh(userSubscriptionProvider);
+              ref.invalidate(subscriptionPlansProvider);
+              ref.invalidate(userSubscriptionProvider);
             },
             child: ListView(
               children: [
@@ -224,29 +226,6 @@ class _SubscriptionManagementPageState extends ConsumerState<SubscriptionManagem
   }
 
   void _selectPlan(SubscriptionPlan plan) {
-    // Show confirmation dialog
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirm Plan Selection'),
-        content: Text('Are you sure you want to select the ${plan.name} plan?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              // Handle plan selection
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('${plan.name} plan selected!')),
-              );
-            },
-            child: const Text('Confirm'),
-          ),
-        ],
-      ),
-    );
+    context.push('/subscriptions/payment', extra: plan);
   }
 }

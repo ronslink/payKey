@@ -12,11 +12,12 @@ _$PayPeriodImpl _$$PayPeriodImplFromJson(Map<String, dynamic> json) =>
       name: json['name'] as String,
       startDate: DateTime.parse(json['startDate'] as String),
       endDate: DateTime.parse(json['endDate'] as String),
-      frequency: _frequencyFromJson(json['frequency']),
+      frequency: $enumDecode(_$PayPeriodFrequencyEnumMap, json['frequency']),
       status: $enumDecode(_$PayPeriodStatusEnumMap, json['status']),
       totalWorkers: _intFromJson(json['totalWorkers']),
       totalGrossAmount: _doubleFromJson(json['totalGrossAmount']),
       totalNetAmount: _doubleFromJson(json['totalNetAmount']),
+      totalTaxAmount: _doubleFromJson(json['totalTaxAmount']),
       processedWorkers: _intFromJson(json['processedWorkers']),
       createdAt: json['createdAt'] == null
           ? null
@@ -25,6 +26,10 @@ _$PayPeriodImpl _$$PayPeriodImplFromJson(Map<String, dynamic> json) =>
           ? null
           : DateTime.parse(json['updatedAt'] as String),
       notes: json['notes'] as String?,
+      userId: json['userId'] as String?,
+      payDate: json['payDate'] == null
+          ? null
+          : DateTime.parse(json['payDate'] as String),
     );
 
 Map<String, dynamic> _$$PayPeriodImplToJson(_$PayPeriodImpl instance) =>
@@ -35,23 +40,17 @@ Map<String, dynamic> _$$PayPeriodImplToJson(_$PayPeriodImpl instance) =>
       'endDate': instance.endDate.toIso8601String(),
       'frequency': _$PayPeriodFrequencyEnumMap[instance.frequency]!,
       'status': _$PayPeriodStatusEnumMap[instance.status]!,
-      'totalWorkers': instance.totalWorkers,
-      'totalGrossAmount': instance.totalGrossAmount,
-      'totalNetAmount': instance.totalNetAmount,
-      'processedWorkers': instance.processedWorkers,
+      'totalWorkers': _intToJson(instance.totalWorkers),
+      'totalGrossAmount': _doubleToJson(instance.totalGrossAmount),
+      'totalNetAmount': _doubleToJson(instance.totalNetAmount),
+      'totalTaxAmount': _doubleToJson(instance.totalTaxAmount),
+      'processedWorkers': _intToJson(instance.processedWorkers),
       'createdAt': instance.createdAt?.toIso8601String(),
       'updatedAt': instance.updatedAt?.toIso8601String(),
       'notes': instance.notes,
+      'userId': instance.userId,
+      'payDate': instance.payDate?.toIso8601String(),
     };
-
-const _$PayPeriodStatusEnumMap = {
-  PayPeriodStatus.DRAFT: 'DRAFT',
-  PayPeriodStatus.ACTIVE: 'ACTIVE',
-  PayPeriodStatus.PROCESSING: 'PROCESSING',
-  PayPeriodStatus.COMPLETED: 'COMPLETED',
-  PayPeriodStatus.CLOSED: 'CLOSED',
-  PayPeriodStatus.CANCELLED: 'CANCELLED',
-};
 
 const _$PayPeriodFrequencyEnumMap = {
   PayPeriodFrequency.weekly: 'WEEKLY',
@@ -59,6 +58,15 @@ const _$PayPeriodFrequencyEnumMap = {
   PayPeriodFrequency.monthly: 'MONTHLY',
   PayPeriodFrequency.quarterly: 'QUARTERLY',
   PayPeriodFrequency.yearly: 'YEARLY',
+};
+
+const _$PayPeriodStatusEnumMap = {
+  PayPeriodStatus.draft: 'DRAFT',
+  PayPeriodStatus.active: 'ACTIVE',
+  PayPeriodStatus.processing: 'PROCESSING',
+  PayPeriodStatus.completed: 'COMPLETED',
+  PayPeriodStatus.closed: 'CLOSED',
+  PayPeriodStatus.cancelled: 'CANCELLED',
 };
 
 _$CreatePayPeriodRequestImpl _$$CreatePayPeriodRequestImplFromJson(

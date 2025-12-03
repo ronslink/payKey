@@ -7,7 +7,7 @@ import '../../data/models/time_tracking_model.dart';
 
 class TimeTrackingPage extends ConsumerStatefulWidget {
   final String? selectedWorkerId;
-  
+
   const TimeTrackingPage({
     super.key,
     this.selectedWorkerId,
@@ -17,7 +17,8 @@ class TimeTrackingPage extends ConsumerStatefulWidget {
   ConsumerState<TimeTrackingPage> createState() => _TimeTrackingPageState();
 }
 
-class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage> with SingleTickerProviderStateMixin {
+class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
+    with SingleTickerProviderStateMixin {
   String? _selectedWorkerId;
   final _notesController = TextEditingController();
   late AnimationController _animationController;
@@ -31,6 +32,13 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage> with Single
       duration: const Duration(milliseconds: 800),
     );
     _animationController.forward();
+
+    // Fetch active entry if worker is pre-selected
+    if (_selectedWorkerId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(timeTrackingProvider.notifier).getActiveEntry(_selectedWorkerId!);
+      });
+    }
   }
 
   @override
@@ -89,17 +97,16 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage> with Single
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Worker Selection
+            // Worker Selection - always show if no worker selected
             if (_selectedWorkerId == null)
               FadeTransition(
                 opacity: _animationController,
                 child: _buildWorkerSelection(workersState),
               ),
-            
-            if (_selectedWorkerId == null)
-              const SizedBox(height: 24),
 
-            // Current Status
+            if (_selectedWorkerId == null) const SizedBox(height: 24),
+
+            // Current Status - show when worker is selected
             if (_selectedWorkerId != null)
               FadeTransition(
                 opacity: _animationController,
@@ -130,7 +137,7 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage> with Single
     );
   }
 
-  Widget _buildWorkerSelection(AsyncValue workersState) {
+  Widget _buildWorkerSelection(AsyncValue<dynamic> workersState) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -138,7 +145,7 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage> with Single
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -158,7 +165,7 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage> with Single
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFFF59E0B).withOpacity(0.3),
+                      color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -199,8 +206,11 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage> with Single
           const SizedBox(height: 20),
           workersState.when(
             data: (workers) {
-              final activeWorkers = workers.where((w) => w.isActive).toList();
-              
+              final workersList = workers as List<dynamic>;
+              final activeWorkers = workersList
+                  .where((w) => w.isActive == true)
+                  .toList();
+
               if (activeWorkers.isEmpty) {
                 return Container(
                   padding: const EdgeInsets.all(16),
@@ -234,10 +244,10 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage> with Single
                   fillColor: const Color(0xFFF9FAFB),
                   prefixIcon: const Icon(Icons.person),
                 ),
-                items: activeWorkers.map((worker) {
-                  return DropdownMenuItem(
-                    value: worker.id,
-                    child: Text(worker.name),
+                items: activeWorkers.map<DropdownMenuItem<String>>((worker) {
+                  return DropdownMenuItem<String>(
+                    value: worker.id as String,
+                    child: Text(worker.name as String),
                   );
                 }).toList(),
                 onChanged: (value) {
@@ -286,7 +296,7 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage> with Single
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -299,8 +309,8 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage> with Single
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  const Color(0xFF10B981).withOpacity(0.1),
-                  const Color(0xFF059669).withOpacity(0.05),
+                  const Color(0xFF10B981).withValues(alpha: 0.1),
+                  const Color(0xFF059669).withValues(alpha: 0.05),
                 ],
               ),
               borderRadius: BorderRadius.circular(16),
@@ -347,33 +357,7 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage> with Single
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () async {
-                if (_selectedWorkerId != null) {
-                  await ref.read(timeTrackingProvider.notifier).clockIn(
-                        _selectedWorkerId!,
-                        notes: _notesController.text.isEmpty
-                            ? null
-                            : _notesController.text,
-                      );
-                  _notesController.clear();
-                  
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Row(
-                          children: [
-                            Icon(Icons.check_circle, color: Colors.white),
-                            SizedBox(width: 12),
-                            Text('Clocked in successfully'),
-                          ],
-                        ),
-                        backgroundColor: Color(0xFF10B981),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  }
-                }
-              },
+              onPressed: _handleClockIn,
               icon: const Icon(Icons.login),
               label: const Text('Clock In'),
               style: ElevatedButton.styleFrom(
@@ -391,6 +375,32 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage> with Single
     );
   }
 
+  Future<void> _handleClockIn() async {
+    if (_selectedWorkerId == null) return;
+
+    await ref.read(timeTrackingProvider.notifier).clockIn(
+          _selectedWorkerId!,
+          notes: _notesController.text.isEmpty ? null : _notesController.text,
+        );
+    _notesController.clear();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.white),
+              SizedBox(width: 12),
+              Text('Clocked in successfully'),
+            ],
+          ),
+          backgroundColor: Color(0xFF10B981),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   Widget _buildClockedInCard(TimeEntry entry) {
     final clockInTime = DateTime.parse(entry.clockInTime);
     final now = DateTime.now();
@@ -405,13 +415,13 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage> with Single
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            const Color(0xFF10B981).withOpacity(0.1),
-            const Color(0xFF059669).withOpacity(0.05),
+            const Color(0xFF10B981).withValues(alpha: 0.1),
+            const Color(0xFF059669).withValues(alpha: 0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: const Color(0xFF10B981).withOpacity(0.2),
+          color: const Color(0xFF10B981).withValues(alpha: 0.2),
           width: 2,
         ),
       ),
@@ -426,7 +436,7 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage> with Single
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF10B981).withOpacity(0.3),
+                  color: const Color(0xFF10B981).withValues(alpha: 0.3),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -454,7 +464,7 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage> with Single
               const Icon(Icons.schedule, size: 16, color: Color(0xFF6B7280)),
               const SizedBox(width: 6),
               Text(
-                'Since ${clockInTime.hour}:${clockInTime.minute.toString().padLeft(2, '0')}',
+                'Since ${clockInTime.hour.toString().padLeft(2, '0')}:${clockInTime.minute.toString().padLeft(2, '0')}',
                 style: const TextStyle(
                   fontSize: 15,
                   color: Color(0xFF6B7280),
@@ -470,7 +480,7 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage> with Single
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -561,31 +571,7 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage> with Single
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () async {
-                await ref.read(timeTrackingProvider.notifier).clockOut(
-                      entry.id,
-                      notes: _notesController.text.isEmpty
-                          ? null
-                          : _notesController.text,
-                    );
-                _notesController.clear();
-                
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Row(
-                        children: [
-                          Icon(Icons.check_circle, color: Colors.white),
-                          SizedBox(width: 12),
-                          Text('Clocked out successfully'),
-                        ],
-                      ),
-                      backgroundColor: Color(0xFFEF4444),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
-              },
+              onPressed: () => _handleClockOut(entry),
               icon: const Icon(Icons.logout),
               label: const Text('Clock Out'),
               style: ElevatedButton.styleFrom(
@@ -603,6 +589,30 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage> with Single
     );
   }
 
+  Future<void> _handleClockOut(TimeEntry entry) async {
+    await ref.read(timeTrackingProvider.notifier).clockOut(
+          entry.id,
+          notes: _notesController.text.isEmpty ? null : _notesController.text,
+        );
+    _notesController.clear();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.white),
+              SizedBox(width: 12),
+              Text('Clocked out successfully'),
+            ],
+          ),
+          backgroundColor: Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   Widget _buildLoadingCard() {
     return Container(
       padding: const EdgeInsets.all(48),
@@ -611,7 +621,7 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage> with Single
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -648,7 +658,7 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage> with Single
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -689,11 +699,7 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage> with Single
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
-            onPressed: () {
-              if (_selectedWorkerId != null) {
-                ref.read(timeTrackingProvider.notifier).getActiveEntry(_selectedWorkerId!);
-              }
-            },
+            onPressed: _handleRetry,
             icon: const Icon(Icons.refresh),
             label: const Text('Try Again'),
             style: ElevatedButton.styleFrom(
@@ -708,5 +714,11 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage> with Single
         ],
       ),
     );
+  }
+
+  void _handleRetry() {
+    if (_selectedWorkerId != null) {
+      ref.read(timeTrackingProvider.notifier).getActiveEntry(_selectedWorkerId!);
+    }
   }
 }

@@ -6,7 +6,10 @@ import '../../../workers/presentation/providers/workers_provider.dart';
 import '../../../payroll/presentation/providers/pay_period_provider.dart';
 import '../providers/activity_provider.dart';
 import '../data/models/activity_model.dart';
+import '../../../workers/data/models/worker_model.dart';
+import '../../../payroll/data/models/pay_period_model.dart';
 
+/// Home page displaying dashboard with stats, quick actions, and recent activity
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
@@ -14,12 +17,17 @@ class HomePage extends ConsumerStatefulWidget {
   ConsumerState<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderStateMixin {
+class _HomePageState extends ConsumerState<HomePage>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
-  
+
   @override
   void initState() {
     super.initState();
+    _initializeAnimation();
+  }
+
+  void _initializeAnimation() {
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -37,7 +45,7 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
   Widget build(BuildContext context) {
     final workersAsync = ref.watch(workersProvider);
     final payPeriodsAsync = ref.watch(payPeriodsProvider);
-    
+
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       body: CustomScrollView(
@@ -154,57 +162,52 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
               ),
             ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Good ${_getGreeting()}!',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.9),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Welcome Back',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            height: 1.2,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          DateFormat('EEEE, MMMM d, y').format(DateTime.now()),
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.8),
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Good ${_getGreeting()}!',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(16),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Welcome Back',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        height: 1.2,
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.waving_hand,
-                      color: Colors.white,
-                      size: 32,
+                    const SizedBox(height: 8),
+                    Text(
+                      DateFormat('EEEE, MMMM d, y').format(DateTime.now()),
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.8),
+                        fontSize: 14,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.waving_hand,
+                  color: Colors.white,
+                  size: 32,
+                ),
               ),
             ],
           ),
@@ -220,7 +223,10 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
     return 'Evening';
   }
 
-  Widget _buildStatsGrid(AsyncValue workersAsync, AsyncValue payPeriodsAsync) {
+  Widget _buildStatsGrid(
+    AsyncValue<List<WorkerModel>> workersAsync,
+    AsyncValue<List<PayPeriod>> payPeriodsAsync,
+  ) {
     return FadeTransition(
       opacity: _animationController,
       child: SlideTransition(
@@ -238,11 +244,7 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
                 Expanded(
                   child: _buildStatCard(
                     title: 'Total Workers',
-                    value: workersAsync.when(
-                      data: (workers) => workers.length.toString(),
-                      loading: () => '...',
-                      error: (_, __) => '0',
-                    ),
+                    value: _getTotalWorkersValue(workersAsync),
                     icon: Icons.people_outline,
                     color: const Color(0xFF3B82F6),
                     trend: '+2 this month',
@@ -253,11 +255,7 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
                 Expanded(
                   child: _buildStatCard(
                     title: 'Active Today',
-                    value: workersAsync.when(
-                      data: (workers) => workers.where((w) => w.isActive).length.toString(),
-                      loading: () => '...',
-                      error: (_, __) => '0',
-                    ),
+                    value: _getActiveWorkersValue(workersAsync),
                     icon: Icons.check_circle_outline,
                     color: const Color(0xFF10B981),
                     trend: '100%',
@@ -272,11 +270,7 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
                 Expanded(
                   child: _buildStatCard(
                     title: 'Pay Periods',
-                    value: payPeriodsAsync.when(
-                      data: (periods) => periods.length.toString(),
-                      loading: () => '...',
-                      error: (_, __) => '0',
-                    ),
+                    value: _getPayPeriodsValue(payPeriodsAsync),
                     icon: Icons.calendar_today_outlined,
                     color: const Color(0xFF8B5CF6),
                     trend: 'This month',
@@ -299,6 +293,30 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
           ],
         ),
       ),
+    );
+  }
+
+  String _getTotalWorkersValue(AsyncValue<List<WorkerModel>> workersAsync) {
+    return workersAsync.when(
+      data: (workers) => workers.length.toString(),
+      loading: () => '...',
+      error: (_, __) => '0',
+    );
+  }
+
+  String _getActiveWorkersValue(AsyncValue<List<WorkerModel>> workersAsync) {
+    return workersAsync.when(
+      data: (workers) => workers.where((w) => w.isActive).length.toString(),
+      loading: () => '...',
+      error: (_, __) => '0',
+    );
+  }
+
+  String _getPayPeriodsValue(AsyncValue<List<PayPeriod>> payPeriodsAsync) {
+    return payPeriodsAsync.when(
+      data: (periods) => periods.length.toString(),
+      loading: () => '...',
+      error: (_, __) => '0',
     );
   }
 
@@ -347,27 +365,7 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
               ),
               const Spacer(),
               if (trend != null && trendUp != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: trendUp
-                        ? const Color(0xFFD1FAE5)
-                        : const Color(0xFFFEE2E2),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        trendUp ? Icons.trending_up : Icons.trending_down,
-                        size: 12,
-                        color: trendUp
-                            ? const Color(0xFF10B981)
-                            : const Color(0xFFEF4444),
-                      ),
-                    ],
-                  ),
-                ),
+                _buildTrendIndicator(trendUp),
             ],
           ),
           const SizedBox(height: 12),
@@ -396,11 +394,7 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
                 trend,
                 style: TextStyle(
                   fontSize: 11,
-                  color: trendUp == true
-                      ? const Color(0xFF10B981)
-                      : trendUp == false
-                          ? const Color(0xFFEF4444)
-                          : const Color(0xFF6B7280),
+                  color: _getTrendColor(trendUp),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -408,6 +402,27 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
         ],
       ),
     );
+  }
+
+  Widget _buildTrendIndicator(bool trendUp) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: trendUp ? const Color(0xFFD1FAE5) : const Color(0xFFFEE2E2),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Icon(
+        trendUp ? Icons.trending_up : Icons.trending_down,
+        size: 12,
+        color: trendUp ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+      ),
+    );
+  }
+
+  Color _getTrendColor(bool? trendUp) {
+    if (trendUp == true) return const Color(0xFF10B981);
+    if (trendUp == false) return const Color(0xFFEF4444);
+    return const Color(0xFF6B7280);
   }
 
   Widget _buildQuickActions(BuildContext context) {
@@ -433,159 +448,100 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
               ),
             ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildActionCard(
-                    context,
-                    title: 'Run Payroll',
-                    subtitle: 'Process payments',
-                    icon: Icons.play_circle_outline,
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF10B981), Color(0xFF059669)],
-                    ),
-                    onTap: () => context.go('/payroll'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildActionCard(
-                    context,
-                    title: 'Add Worker',
-                    subtitle: 'New employee',
-                    icon: Icons.person_add_outlined,
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
-                    ),
-                    onTap: () => context.go('/workers/add'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildActionCard(
-                    context,
-                    title: 'Accounting',
-                    subtitle: 'Export payroll',
-                    icon: Icons.account_balance_outlined,
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF06B6D4), Color(0xFF0891B2)],
-                    ),
-                    onTap: () => context.go('/accounting'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildActionCard(
-                    context,
-                    title: 'Tax Filing',
-                    subtitle: 'Manage taxes',
-                    icon: Icons.receipt_long_outlined,
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
-                    ),
-                    onTap: () => context.go('/taxes'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildActionCard(
-                    context,
-                    title: 'Tax Filing',
-                    subtitle: 'Manage taxes',
-                    icon: Icons.receipt_long_outlined,
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
-                    ),
-                    onTap: () => context.go('/taxes'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildActionCard(
-                    context,
-                    title: 'Time Tracking',
-                    subtitle: 'Clock in/out',
-                    icon: Icons.access_time_outlined,
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
-                    ),
-                    onTap: () => context.go('/time-tracking'),
-                  ),
-                ),
-              ],
-            ),
+            _buildQuickActionsGrid(context),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildActionCard(
-    BuildContext context, {
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Gradient gradient,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: gradient,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: gradient.colors.first.withOpacity(0.3),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
+  Widget _buildQuickActionsGrid(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _ActionCard(
+                title: 'Run Payroll',
+                subtitle: 'Process payments',
+                icon: Icons.play_circle_outline,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF10B981), Color(0xFF059669)],
                 ),
-                child: Icon(icon, color: Colors.white, size: 24),
+                onTap: () => context.go('/payroll'),
               ),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _ActionCard(
+                title: 'Add Worker',
+                subtitle: 'New employee',
+                icon: Icons.person_add_outlined,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
                 ),
+                onTap: () => context.go('/workers/add'),
               ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.white.withOpacity(0.9),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
-      ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _ActionCard(
+                title: 'Accounting',
+                subtitle: 'Export payroll',
+                icon: Icons.account_balance_outlined,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF06B6D4), Color(0xFF0891B2)],
+                ),
+                onTap: () => context.go('/accounting'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _ActionCard(
+                title: 'Tax Filing',
+                subtitle: 'Manage taxes',
+                icon: Icons.receipt_long_outlined,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+                ),
+                onTap: () => context.go('/taxes'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _ActionCard(
+                title: 'Reports',
+                subtitle: 'View analytics',
+                icon: Icons.analytics_outlined,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFEC4899), Color(0xFFDB2777)],
+                ),
+                onTap: () => context.go('/reports'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _ActionCard(
+                title: 'Time Tracking',
+                subtitle: 'Clock in/out',
+                icon: Icons.access_time_outlined,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+                ),
+                onTap: () => context.go('/time-tracking'),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -662,8 +618,6 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
     );
   }
 
-
-
   Widget _buildRecentActivity(BuildContext context) {
     final activitiesAsync = ref.watch(recentActivitiesProvider);
     final workersAsync = ref.watch(workersProvider);
@@ -671,80 +625,86 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
     return activitiesAsync.when(
       data: (activities) {
         if (activities.isEmpty) {
-          // Check if user is new (has no workers)
-          return workersAsync.maybeWhen(
-            data: (workers) {
-              if (workers.isEmpty) {
-                return _buildGettingStarted();
-              }
-              return _buildEmptyActivity();
-            },
-            orElse: () => _buildEmptyActivity(),
-          );
+          return _buildEmptyActivityState(workersAsync);
         }
-
-        return Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF3F4F6),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.history,
-                      color: Color(0xFF6B7280),
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      'Recent Activity',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF111827),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              ...activities.take(5).map((activity) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _buildActivityItem(
-                    icon: _getActivityIcon(activity.type),
-                    title: activity.title,
-                    subtitle: activity.description,
-                    time: _formatTime(activity.timestamp),
-                    color: _getActivityColor(activity.type),
-                  ),
-                );
-              }),
-            ],
-          ),
-        );
+        return _buildActivityList(activities);
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, _) => Text('Error: $error'),
+      error: (error, _) => _buildErrorState('Error: $error'),
+    );
+  }
+
+  Widget _buildEmptyActivityState(AsyncValue<List<WorkerModel>> workersAsync) {
+    return workersAsync.maybeWhen(
+      data: (workers) {
+        if (workers.isEmpty) {
+          return _buildGettingStarted();
+        }
+        return _buildEmptyActivity();
+      },
+      orElse: () => _buildEmptyActivity(),
+    );
+  }
+
+  Widget _buildActivityList(List<Activity> activities) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3F4F6),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.history,
+                  color: Color(0xFF6B7280),
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Recent Activity',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF111827),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...activities.take(5).map((activity) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _ActivityItem(
+                icon: _getActivityIcon(activity.type),
+                title: activity.title,
+                subtitle: activity.description,
+                time: _formatTime(activity.timestamp),
+                color: _getActivityColor(activity.type),
+              ),
+            );
+          }),
+        ],
+      ),
     );
   }
 
@@ -884,37 +844,186 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
             ],
           ),
           const SizedBox(height: 20),
-          _buildChecklistItem(
-            'Add your first worker',
-            'Set up employee profiles',
-            false,
-            () => context.go('/workers/add'),
+          _ChecklistItem(
+            title: 'Add your first worker',
+            description: 'Set up employee profiles',
+            completed: false,
+            onTap: () => context.go('/workers/add'),
           ),
           const SizedBox(height: 12),
-          _buildChecklistItem(
-            'Create a pay period',
-            'Define your payroll schedule',
-            false,
-            () => context.go('/payroll'),
+          _ChecklistItem(
+            title: 'Create a pay period',
+            description: 'Define your payroll schedule',
+            completed: false,
+            onTap: () => context.go('/payroll'),
           ),
           const SizedBox(height: 12),
-          _buildChecklistItem(
-            'Process payroll',
-            'Calculate and review payments',
-            false,
-            () => context.go('/payroll'),
+          _ChecklistItem(
+            title: 'Process payroll',
+            description: 'Calculate and review payments',
+            completed: false,
+            onTap: () => context.go('/payroll'),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildChecklistItem(
-    String title,
-    String description,
-    bool completed,
-    VoidCallback onTap,
-  ) {
+  Widget _buildErrorState(String message) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Text(
+        message,
+        style: const TextStyle(color: Colors.red),
+      ),
+    );
+  }
+
+  // Activity helper methods
+  IconData _getActivityIcon(String type) {
+    switch (type) {
+      case 'payroll':
+        return Icons.payments_outlined;
+      case 'worker':
+        return Icons.person_outline;
+      case 'tax':
+        return Icons.receipt_long_outlined;
+      case 'leave':
+        return Icons.event_busy_outlined;
+      default:
+        return Icons.notifications_outlined;
+    }
+  }
+
+  Color _getActivityColor(String type) {
+    switch (type) {
+      case 'payroll':
+        return const Color(0xFF10B981);
+      case 'worker':
+        return const Color(0xFF3B82F6);
+      case 'tax':
+        return const Color(0xFF8B5CF6);
+      case 'leave':
+        return const Color(0xFFF59E0B);
+      default:
+        return const Color(0xFF6B7280);
+    }
+  }
+
+  String _formatTime(DateTime timestamp) {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+
+    if (difference.inDays > 0) {
+      return '${difference.inDays}d ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}m ago';
+    } else {
+      return 'Just now';
+    }
+  }
+}
+
+// Reusable widget components
+class _ActionCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Gradient gradient;
+  final VoidCallback onTap;
+
+  const _ActionCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.gradient,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: gradient,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: gradient.colors.first.withOpacity(0.3),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: Colors.white, size: 24),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.white.withOpacity(0.9),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ChecklistItem extends StatelessWidget {
+  final String title;
+  final String description;
+  final bool completed;
+  final VoidCallback onTap;
+
+  const _ChecklistItem({
+    required this.title,
+    required this.description,
+    required this.completed,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -960,9 +1069,8 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
                         color: completed
                             ? const Color(0xFF6B7280)
                             : const Color(0xFF111827),
-                        decoration: completed
-                            ? TextDecoration.lineThrough
-                            : null,
+                        decoration:
+                            completed ? TextDecoration.lineThrough : null,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -988,59 +1096,25 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
       ),
     );
   }
+}
 
-  IconData _getActivityIcon(String type) {
-    switch (type) {
-      case 'payroll':
-        return Icons.payments_outlined;
-      case 'worker':
-        return Icons.person_outline;
-      case 'tax':
-        return Icons.receipt_long_outlined;
-      case 'leave':
-        return Icons.event_busy_outlined;
-      default:
-        return Icons.notifications_outlined;
-    }
-  }
+class _ActivityItem extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String time;
+  final Color color;
 
-  Color _getActivityColor(String type) {
-    switch (type) {
-      case 'payroll':
-        return const Color(0xFF10B981);
-      case 'worker':
-        return const Color(0xFF3B82F6);
-      case 'tax':
-        return const Color(0xFF8B5CF6);
-      case 'leave':
-        return const Color(0xFFF59E0B);
-      default:
-        return const Color(0xFF6B7280);
-    }
-  }
+  const _ActivityItem({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.time,
+    required this.color,
+  });
 
-  String _formatTime(DateTime timestamp) {
-    final now = DateTime.now();
-    final difference = now.difference(timestamp);
-
-    if (difference.inDays > 0) {
-      return '${difference.inDays}d ago';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours}h ago';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m ago';
-    } else {
-      return 'Just now';
-    }
-  }
-
-  Widget _buildActivityItem({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required String time,
-    required Color color,
-  }) {
+  @override
+  Widget build(BuildContext context) {
     return Row(
       children: [
         Container(

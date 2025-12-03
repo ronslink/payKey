@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/models/transaction_model.dart';
-// PayrollRecordModel is defined in transaction_model.dart
+import '../../data/models/payroll_record_model.dart' as payroll;
 import '../providers/transactions_provider.dart';
 import '../../data/repositories/payroll_records_repository.dart';
 
@@ -149,9 +149,10 @@ class _PaymentsPageState extends ConsumerState<PaymentsPage> {
 
   Widget _buildPayrollTab() {
     final payrollRepository = ref.read(payrollRecordsRepositoryProvider);
+    final Future<List<payroll.PayrollRecordModel>> payrollFuture = payrollRepository.getPayrollRecords();
 
-    return FutureBuilder<List<PayrollRecordModel>>(
-      future: payrollRepository.getPayrollRecords(),
+    return FutureBuilder<List<payroll.PayrollRecordModel>>(
+      future: payrollFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -394,8 +395,8 @@ class _PaymentsPageState extends ConsumerState<PaymentsPage> {
     );
   }
 
-  Widget _buildPayrollRecordCard(PayrollRecordModel record) {
-    final statusConfig = _getPayrollStatusConfig(record.paymentStatus);
+  Widget _buildPayrollRecordCard(payroll.PayrollRecordModel record) {
+    final statusConfig = _getPayrollStatusConfig(record.status);
     
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -444,7 +445,7 @@ class _PaymentsPageState extends ConsumerState<PaymentsPage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${_formatDate(record.periodStart)} - ${_formatDate(record.periodEnd)}',
+                        'Created: ${_formatDateTime(record.createdAt)}',
                         style: const TextStyle(
                           fontSize: 14,
                           color: Color(0xFF6B7280),
@@ -490,7 +491,7 @@ class _PaymentsPageState extends ConsumerState<PaymentsPage> {
             
             const SizedBox(height: 12),
             
-            // Payment Method
+            // Payment Details
             Row(
               children: [
                 const Icon(
@@ -500,25 +501,17 @@ class _PaymentsPageState extends ConsumerState<PaymentsPage> {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  'Payment Method: ',
+                  'Gross: KES ${record.grossSalary.toStringAsFixed(0)} | Tax: KES ${record.taxAmount.toStringAsFixed(0)}',
                   style: const TextStyle(
                     fontSize: 14,
                     color: Color(0xFF6B7280),
-                  ),
-                ),
-                Text(
-                  record.paymentMethod.toUpperCase().replaceAll('_', ' '),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF111827),
-                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
             ),
             
             // Actions
-            if (record.paymentStatus == 'pending') ...[
+            if (record.status == 'pending') ...[
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -555,7 +548,7 @@ class _PaymentsPageState extends ConsumerState<PaymentsPage> {
                   ),
                 ],
               ),
-            ] else if (record.paymentStatus == 'paid') ...[
+            ] else if (record.status == 'completed') ...[
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -665,6 +658,10 @@ class _PaymentsPageState extends ConsumerState<PaymentsPage> {
 
   String _formatDate(String dateString) {
     final date = DateTime.parse(dateString);
+    return '${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}/${date.year}';
+  }
+
+  String _formatDateTime(DateTime date) {
     return '${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}/${date.year}';
   }
 

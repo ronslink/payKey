@@ -26,7 +26,7 @@ class SaveMappingsDto {
 export class AccountingController {
   constructor(
     private readonly accountingExportService: AccountingExportService,
-  ) {}
+  ) { }
 
   @Post('export/:payPeriodId')
   async exportPayroll(
@@ -59,6 +59,14 @@ export class AccountingController {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+
+
+  @Get('history')
+  async getExportHistory(@Request() req: any) {
+    const userId = req.user.userId;
+    const history = await this.accountingExportService.getExportHistory(userId);
+    return { history };
   }
 
   @Get('formats')

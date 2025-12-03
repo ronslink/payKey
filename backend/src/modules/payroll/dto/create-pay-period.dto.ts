@@ -25,8 +25,7 @@ export class CreatePayPeriodDto {
   frequency: PayPeriodFrequency;
 
   @IsOptional()
-  @IsObject()
-  notes?: Record<string, any>;
+  notes?: string | Record<string, any>;
 
   @IsOptional()
   @IsString()

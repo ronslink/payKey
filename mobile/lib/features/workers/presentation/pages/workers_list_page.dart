@@ -33,7 +33,7 @@ class _WorkersListPageState extends ConsumerState<WorkersListPage> {
     if (_searchQuery.isEmpty) return workers;
     return workers.where((worker) =>
         worker.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        worker.phoneNumber.contains(_searchQuery)).toList();
+        worker.phoneNumber.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
   }
 
   @override

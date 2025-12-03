@@ -43,8 +43,8 @@ class LeaveManagementRepository {
     await _apiService.approveLeaveRequest(leaveRequestId, approved, comments: comments);
   }
 
-  Future<Map<String, int>> getLeaveBalance(String workerId) async {
+  Future<Map<String, dynamic>> getLeaveBalance(String workerId) async {
     final response = await _apiService.getLeaveBalance(workerId);
-    return response.data as Map<String, int>;
+    return response.data as Map<String, dynamic>;
   }
 }

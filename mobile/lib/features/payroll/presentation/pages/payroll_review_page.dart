@@ -7,9 +7,8 @@ import '../../data/models/payroll_model.dart';
 import '../../data/repositories/pay_period_repository.dart';
 import '../../data/repositories/payroll_repository.dart';
 import '../../../workers/presentation/providers/workers_provider.dart';
-import '../../../taxes/presentation/providers/tax_provider.dart';
+import '../../../workers/data/models/worker_model.dart';
 import '../../../../core/network/api_service.dart';
-import '../../../../core/network/services/accounting_service.dart';
 
 
 class PayrollReviewPage extends ConsumerStatefulWidget {
@@ -92,7 +91,15 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
   }
 
   Future<void> _showAddWorkersDialog() async {
-    final workers = await ref.read(workersProvider.future);
+    final workersAsync = ref.read(workersProvider);
+    
+    // Extract workers from AsyncValue
+    final workers = workersAsync.when(
+      data: (data) => data,
+      loading: () => <WorkerModel>[],
+      error: (_, __) => <WorkerModel>[],
+    );
+    
     // Filter out workers already in the payroll
     final existingWorkerIds = _payrollItems.map((item) => item.workerId).toSet();
     final availableWorkers = workers.where((w) => !existingWorkerIds.contains(w.id)).toList();
@@ -122,8 +129,8 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
                 final worker = availableWorkers[index];
                 final isSelected = selectedWorkers.contains(worker.id);
                 return CheckboxListTile(
-                  title: Text('${worker.firstName} ${worker.lastName}'),
-                  subtitle: Text(worker.role ?? 'No Role'),
+                  title: Text(worker.name),
+                  subtitle: Text(worker.jobTitle ?? 'No Job Title'),
                   value: isSelected,
                   onChanged: (bool? value) {
                     setState(() {
@@ -650,19 +657,19 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
       PayPeriod updatedPeriod;
 
       switch (_payPeriod!.status) {
-        case PayPeriodStatus.DRAFT:
+        case PayPeriodStatus.draft:
           await repository.activatePayPeriod(widget.payPeriodId);
           updatedPeriod = await repository.getPayPeriod(widget.payPeriodId);
           break;
-        case PayPeriodStatus.ACTIVE:
+        case PayPeriodStatus.active:
           await repository.processPayPeriod(widget.payPeriodId);
           updatedPeriod = await repository.getPayPeriod(widget.payPeriodId);
           break;
-        case PayPeriodStatus.PROCESSING:
+        case PayPeriodStatus.processing:
           await repository.completePayPeriod(widget.payPeriodId);
           updatedPeriod = await repository.getPayPeriod(widget.payPeriodId);
           break;
-        case PayPeriodStatus.COMPLETED:
+        case PayPeriodStatus.completed:
           await repository.closePayPeriod(widget.payPeriodId);
           updatedPeriod = await repository.getPayPeriod(widget.payPeriodId);
           break;
@@ -702,8 +709,6 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
 
   @override
   Widget build(BuildContext context) {
-    final numberFormat = NumberFormat('#,###.00');
-    final dateFormat = DateFormat('MMM dd, yyyy');
 
     if (_payPeriod == null) {
       return Scaffold(
@@ -752,12 +757,12 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
                     const SizedBox(height: 24),
 
                     // Tax Summary (if completed)
-                    if (_payPeriod!.status == PayPeriodStatus.COMPLETED || 
-                        _payPeriod!.status == PayPeriodStatus.CLOSED)
+                    if (_payPeriod!.status == PayPeriodStatus.completed || 
+                        _payPeriod!.status == PayPeriodStatus.closed)
                       _buildTaxSummarySection(),
 
-                    if (_payPeriod!.status == PayPeriodStatus.COMPLETED || 
-                        _payPeriod!.status == PayPeriodStatus.CLOSED)
+                    if (_payPeriod!.status == PayPeriodStatus.completed || 
+                        _payPeriod!.status == PayPeriodStatus.closed)
                       const SizedBox(height: 24),
 
                     // Individual Records
@@ -828,13 +833,13 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
                 Expanded(
                   child: _buildMetric(
                     'Period Gross',
-                    'KES ${_payPeriod?.totalGrossAmount.toStringAsFixed(2) ?? "0.00"}',
+                    'KES ${(_payPeriod?.totalGrossAmount ?? 0.0).toStringAsFixed(2)}',
                   ),
                 ),
                 Expanded(
                   child: _buildMetric(
                     'Period Net',
-                    'KES ${_payPeriod?.totalNetAmount.toStringAsFixed(2) ?? "0.00"}',
+                    'KES ${(_payPeriod?.totalNetAmount ?? 0.0).toStringAsFixed(2)}',
                   ),
                 ),
                 Expanded(
@@ -856,23 +861,23 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
     String displayText;
 
     switch (status) {
-      case PayPeriodStatus.DRAFT:
+      case PayPeriodStatus.draft:
         color = Colors.grey.shade600;
         displayText = 'DRAFT';
         break;
-      case PayPeriodStatus.ACTIVE:
+      case PayPeriodStatus.active:
         color = Colors.blue;
         displayText = 'ACTIVE';
         break;
-      case PayPeriodStatus.PROCESSING:
+      case PayPeriodStatus.processing:
         color = Colors.orange;
         displayText = 'PROCESSING';
         break;
-      case PayPeriodStatus.COMPLETED:
+      case PayPeriodStatus.completed:
         color = Colors.green;
         displayText = 'COMPLETED';
         break;
-      case PayPeriodStatus.CLOSED:
+      case PayPeriodStatus.closed:
         color = Colors.deepPurple;
         displayText = 'CLOSED';
         break;
@@ -884,7 +889,7 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: color, width: 2),
       ),
@@ -1015,9 +1020,9 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
@@ -1046,7 +1051,7 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
   }
 
   Widget _buildRecordsSection() {
-    final isDraft = _payPeriod?.status == PayPeriodStatus.DRAFT;
+    final isDraft = _payPeriod?.status == PayPeriodStatus.draft;
     final numberFormat = NumberFormat('#,###.00');
 
     return Card(
@@ -1143,9 +1148,9 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
   }
 
   Widget _buildActionButtons() {
-    final bool canGeneratePayslips = _payPeriod!.status == PayPeriodStatus.COMPLETED;
-    final bool canPrepareTax = _payPeriod!.status == PayPeriodStatus.COMPLETED || 
-                                _payPeriod!.status == PayPeriodStatus.CLOSED;
+    final bool canGeneratePayslips = _payPeriod!.status == PayPeriodStatus.completed;
+    final bool canPrepareTax = _payPeriod!.status == PayPeriodStatus.completed || 
+                                _payPeriod!.status == PayPeriodStatus.closed;
     
     return Card(
       child: Padding(
@@ -1164,7 +1169,7 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: (_isLoading || _payPeriod!.status == PayPeriodStatus.CLOSED) 
+                onPressed: (_isLoading || _payPeriod!.status == PayPeriodStatus.closed) 
                     ? null 
                     : _transitionToNextStage,
                 icon: const Icon(Icons.skip_next),
@@ -1331,15 +1336,15 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
 
   String _getNextStageButtonText() {
     switch (_payPeriod!.status) {
-      case PayPeriodStatus.DRAFT:
+      case PayPeriodStatus.draft:
         return 'Activate Period';
-      case PayPeriodStatus.ACTIVE:
+      case PayPeriodStatus.active:
         return 'Process Payroll';
-      case PayPeriodStatus.PROCESSING:
+      case PayPeriodStatus.processing:
         return 'Complete Period';
-      case PayPeriodStatus.COMPLETED:
+      case PayPeriodStatus.completed:
         return 'Close Period';
-      case PayPeriodStatus.CLOSED:
+      case PayPeriodStatus.closed:
         return 'Period Closed';
       default:
         return 'Continue';
@@ -1348,15 +1353,15 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
 
   Color _getNextStageColor() {
     switch (_payPeriod!.status) {
-      case PayPeriodStatus.DRAFT:
+      case PayPeriodStatus.draft:
         return Colors.blue;
-      case PayPeriodStatus.ACTIVE:
+      case PayPeriodStatus.active:
         return Colors.orange;
-      case PayPeriodStatus.PROCESSING:
+      case PayPeriodStatus.processing:
         return Colors.green;
-      case PayPeriodStatus.COMPLETED:
+      case PayPeriodStatus.completed:
         return Colors.deepPurple;
-      case PayPeriodStatus.CLOSED:
+      case PayPeriodStatus.closed:
         return Colors.grey;
       default:
         return Colors.grey;

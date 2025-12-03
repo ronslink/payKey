@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/leave_request_model.dart';
 import '../providers/leave_management_provider.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
 
 class LeaveRequestFormPage extends ConsumerStatefulWidget {
   final String workerId;
@@ -454,7 +453,7 @@ class _LeaveRequestFormPageState extends ConsumerState<LeaveRequestFormPage> {
           'emergencyPhone': _emergencyPhoneController.text.trim(),
       };
 
-      await ref.read(leaveManagementProvider(token).notifier)
+      await ref.read(leaveManagementProvider.notifier)
           .createLeaveRequest(widget.workerId, leaveRequestData);
 
       if (mounted) {

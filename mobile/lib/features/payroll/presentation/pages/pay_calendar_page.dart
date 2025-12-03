@@ -47,7 +47,7 @@ class PayCalendarPage extends ConsumerWidget {
                   ),
                   trailing: _buildStatusChip(period.status),
                   onTap: () {
-                    if (period.status == PayPeriodStatus.ACTIVE) {
+                    if (period.status == PayPeriodStatus.active) {
                       context.push('/payroll/run/${period.id}');
                     } else {
                       // TODO: Navigate to Tax Report
@@ -74,7 +74,7 @@ class PayCalendarPage extends ConsumerWidget {
   Widget _buildStatusChip(PayPeriodStatus status) {
     Color color;
     switch (status) {
-      case PayPeriodStatus.open:
+      case PayPeriodStatus.active:
         color = Colors.green;
         break;
       case PayPeriodStatus.processing:
@@ -83,6 +83,8 @@ class PayCalendarPage extends ConsumerWidget {
       case PayPeriodStatus.closed:
         color = Colors.grey;
         break;
+      default:
+        color = Colors.grey;
     }
 
     return Chip(
@@ -96,6 +98,9 @@ class PayCalendarPage extends ConsumerWidget {
 
   Future<void> _createNewPayPeriod(BuildContext context, WidgetRef ref) async {
     final now = DateTime.now();
+    final startDate = DateTime(now.year, now.month, 1);
+    final endDate = DateTime(now.year, now.month + 1, 0);
+    
     // Simple dialog to confirm creation for current month
     final confirmed = await showDialog<bool>(
       context: context,
@@ -118,9 +123,13 @@ class PayCalendarPage extends ConsumerWidget {
     );
 
     if (confirmed == true) {
-      await ref
-          .read(payPeriodsProvider.notifier)
-          .createPayPeriod(now.year, now.month);
+      final request = CreatePayPeriodRequest(
+        name: DateFormat('MMMM yyyy').format(now),
+        startDate: startDate,
+        endDate: endDate,
+        frequency: PayPeriodFrequency.monthly,
+      );
+      await ref.read(payPeriodsProvider.notifier).createPayPeriod(request);
     }
   }
 }

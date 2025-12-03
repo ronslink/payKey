@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/network/api_service.dart';
+import '../../../../core/network/api_service.dart';
 import '../data/models/activity_model.dart';
 
 final recentActivitiesProvider = FutureProvider<List<Activity>>((ref) async {

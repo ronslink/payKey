@@ -43,7 +43,7 @@ class PayPeriodRepository {
   Future<List<PayPeriod>> getPayPeriodsByStatus(PayPeriodStatus status) async {
     try {
       print('Fetching pay periods by status: $status');
-      final response = await _apiService.getPayPeriodsByStatus(status.name);
+      final response = await _apiService.getPayPeriodsByStatus(status.name.toUpperCase());
       final raw = response.data;
       final data = raw is List
           ? raw
@@ -96,20 +96,28 @@ class PayPeriodRepository {
     await _apiService.deletePayPeriod(payPeriodId);
   }
 
-  Future<void> activatePayPeriod(String payPeriodId) async {
+  Future<PayPeriod> activatePayPeriod(String payPeriodId) async {
     await _apiService.activatePayPeriod(payPeriodId);
+    return await getPayPeriodById(payPeriodId);
   }
 
-  Future<void> processPayPeriod(String payPeriodId) async {
+  Future<PayPeriod> processPayPeriod(String payPeriodId) async {
     await _apiService.processPayPeriod(payPeriodId);
+    return await getPayPeriodById(payPeriodId);
   }
 
-  Future<void> completePayPeriod(String payPeriodId) async {
+  Future<PayPeriod> completePayPeriod(String payPeriodId) async {
     await _apiService.completePayPeriod(payPeriodId);
+    return await getPayPeriodById(payPeriodId);
   }
 
-  Future<void> closePayPeriod(String payPeriodId) async {
+  Future<PayPeriod> closePayPeriod(String payPeriodId) async {
     await _apiService.closePayPeriod(payPeriodId);
+    return await getPayPeriodById(payPeriodId);
+  }
+
+  Future<void> updatePayPeriodStatus(String payPeriodId, String action) async {
+    await _apiService.updatePayPeriodStatus(payPeriodId, action);
   }
 
   Future<List<PayPeriod>> getCurrentPayPeriod() async {

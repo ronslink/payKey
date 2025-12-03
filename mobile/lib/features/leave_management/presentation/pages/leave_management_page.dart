@@ -185,7 +185,7 @@ class _LeaveManagementPageState extends ConsumerState<LeaveManagementPage>
           workerId: _selectedWorkerId!,
           onSubmitted: () {
             // Refresh leave requests when a new request is created
-            ref.read(leaveManagementProvider('').notifier).loadLeaveRequests();
+            ref.read(leaveManagementProvider.notifier).loadLeaveRequests();
           },
         ),
       ),

@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, MoreThanOrEqual, Between } from 'typeorm';
 import { Worker } from './entities/worker.entity';
 import { CreateWorkerDto } from './dto/create-worker.dto';
 import { ActivitiesService } from '../activities/activities.service';
@@ -119,5 +119,42 @@ export class WorkersService {
     }
 
     return savedWorker;
+  }
+
+  async getWorkerStats(userId: string) {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
+    const totalWorkers = await this.workersRepository.count({
+      where: { userId, isActive: true },
+    });
+
+    const newWorkersThisMonth = await this.workersRepository.count({
+      where: {
+        userId,
+        isActive: true,
+        createdAt: MoreThanOrEqual(startOfMonth),
+      },
+    });
+
+    const newWorkersLastMonth = await this.workersRepository.count({
+      where: {
+        userId,
+        isActive: true,
+        createdAt: Between(startOfLastMonth, endOfLastMonth),
+      },
+    });
+
+    const trend = newWorkersThisMonth - newWorkersLastMonth;
+    const trendDescription = trend >= 0 ? `+${trend} this month` : `${trend} this month`;
+
+    return {
+      totalWorkers,
+      newWorkersThisMonth,
+      trend: trendDescription,
+      trendUp: trend >= 0,
+    };
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/payroll_tax_submission.dart';
+import '../../data/models/tax_submission_model.dart';
 import '../../data/repositories/tax_repository.dart';
 
 final taxRepositoryProvider = Provider((ref) => TaxRepository());

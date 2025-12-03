@@ -32,7 +32,7 @@ export class WorkersController {
     private readonly workersService: WorkersService,
     private readonly terminationService: TerminationService,
     private readonly leaveManagementService: LeaveManagementService,
-  ) {}
+  ) { }
 
   @Post()
   @UseGuards(SubscriptionGuard)
@@ -69,6 +69,11 @@ export class WorkersController {
     res.setHeader('Last-Modified', new Date().toUTCString());
 
     return res.json(workers);
+  }
+
+  @Get('stats')
+  getStats(@Request() req: AuthenticatedRequest) {
+    return this.workersService.getWorkerStats(req.user.userId);
   }
 
   @Get(':id')

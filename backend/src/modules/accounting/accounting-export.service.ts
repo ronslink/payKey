@@ -9,7 +9,10 @@ import {
 import {
   AccountingExport,
   ExportFormat,
+  ExportStatus,
 } from './entities/accounting-export.entity';
+import { ActivitiesService } from '../activities/activities.service';
+import { ActivityType } from '../activities/entities/activity.entity';
 
 export interface JournalEntry {
   date: Date;
@@ -36,7 +39,8 @@ export class AccountingExportService {
     private accountMappingRepository: Repository<AccountMapping>,
     @InjectRepository(AccountingExport)
     private accountingExportRepository: Repository<AccountingExport>,
-  ) {}
+    private activitiesService: ActivitiesService,
+  ) { }
 
   async generateJournalEntries(
     payPeriodId: string,
@@ -190,7 +194,34 @@ export class AccountingExportService {
       .map((row) => row.map((cell) => `"${cell}"`).join(','))
       .join('\n');
 
+    // Save export record
+    const exportRecord = this.accountingExportRepository.create({
+      userId,
+      payPeriodId,
+      format: ExportFormat.CSV,
+      status: ExportStatus.COMPLETED,
+      createdAt: new Date(),
+    });
+    await this.accountingExportRepository.save(exportRecord);
+
+    // Log activity
+    await this.activitiesService.logActivity(
+      userId,
+      ActivityType.ACCOUNTING,
+      'Payroll Exported',
+      `Exported payroll for ${journalEntries.entries[0].date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`,
+      { payPeriodId, format: ExportFormat.CSV },
+    );
+
     return csv;
+  }
+
+  async getExportHistory(userId: string): Promise<AccountingExport[]> {
+    return this.accountingExportRepository.find({
+      where: { userId },
+      relations: ['payPeriod'],
+      order: { createdAt: 'DESC' },
+    });
   }
 
   async getAccountMappings(

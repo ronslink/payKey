@@ -16,6 +16,7 @@ import { PayrollModule } from './modules/payroll/payroll.module';
 import { TaxPaymentsModule } from './modules/tax-payments/tax-payments.module';
 import { AccountingModule } from './modules/accounting/accounting.module';
 import { ActivitiesModule } from './modules/activities/activities.module';
+import { TasksModule } from './modules/tasks/tasks.module';
 
 // Explicit Entity Imports
 // Explicit Entity Imports
@@ -87,6 +88,7 @@ import { Activity } from './modules/activities/entities/activity.entity';
     TaxPaymentsModule,
     AccountingModule,
     ActivitiesModule,
+    TasksModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -23,6 +23,13 @@ class TimeTrackingNotifier extends StateNotifier<AsyncValue<TimeEntry?>> {
     try {
       final entry = await _repository.getActiveEntry(workerId);
       state = AsyncValue.data(entry);
+    } on TimeTrackingException catch (e, st) {
+      // Handle network errors gracefully - show no active entry
+      if (e.isNetworkError) {
+        state = const AsyncValue.data(null);
+      } else {
+        state = AsyncValue.error(e, st);
+      }
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
@@ -31,9 +38,8 @@ class TimeTrackingNotifier extends StateNotifier<AsyncValue<TimeEntry?>> {
   Future<void> clockIn(String workerId, {String? notes}) async {
     state = const AsyncValue.loading();
     try {
-      // Get current location
       final position = await _getCurrentLocation();
-      
+
       final request = ClockInRequest(
         workerId: workerId,
         latitude: position.latitude,
@@ -43,6 +49,10 @@ class TimeTrackingNotifier extends StateNotifier<AsyncValue<TimeEntry?>> {
 
       final entry = await _repository.clockIn(request);
       state = AsyncValue.data(entry);
+    } on TimeTrackingException catch (e, st) {
+      state = AsyncValue.error(e, st);
+    } on LocationException catch (e, st) {
+      state = AsyncValue.error(e, st);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
@@ -51,9 +61,8 @@ class TimeTrackingNotifier extends StateNotifier<AsyncValue<TimeEntry?>> {
   Future<void> clockOut(String timeEntryId, {String? notes}) async {
     state = const AsyncValue.loading();
     try {
-      // Get current location
       final position = await _getCurrentLocation();
-      
+
       final request = ClockOutRequest(
         timeEntryId: timeEntryId,
         latitude: position.latitude,
@@ -63,6 +72,10 @@ class TimeTrackingNotifier extends StateNotifier<AsyncValue<TimeEntry?>> {
 
       final entry = await _repository.clockOut(request);
       state = AsyncValue.data(entry);
+    } on TimeTrackingException catch (e, st) {
+      state = AsyncValue.error(e, st);
+    } on LocationException catch (e, st) {
+      state = AsyncValue.error(e, st);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
@@ -70,22 +83,22 @@ class TimeTrackingNotifier extends StateNotifier<AsyncValue<TimeEntry?>> {
 
   Future<Position> _getCurrentLocation() async {
     // Check if location services are enabled
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      throw Exception('Location services are disabled. Please enable them.');
+      throw LocationException('Location services are disabled. Please enable them.');
     }
 
     // Check location permissions
-    LocationPermission permission = await Geolocator.checkPermission();
+    var permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        throw Exception('Location permissions are denied');
+        throw LocationException('Location permissions are denied.');
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
-      throw Exception(
+      throw LocationException(
         'Location permissions are permanently denied. Please enable them in settings.',
       );
     }
@@ -119,8 +132,29 @@ class TimeEntriesNotifier extends StateNotifier<AsyncValue<List<TimeEntry>>> {
         endDate: endDate,
       );
       state = AsyncValue.data(entries);
+    } on TimeTrackingException catch (e, st) {
+      // Handle network errors gracefully - show empty list
+      if (e.isNetworkError) {
+        state = const AsyncValue.data([]);
+      } else {
+        state = AsyncValue.error(e, st);
+      }
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
   }
+
+  void reset() {
+    state = const AsyncValue.data([]);
+  }
+}
+
+/// Custom exception for location-related errors
+class LocationException implements Exception {
+  final String message;
+
+  LocationException(this.message);
+
+  @override
+  String toString() => message;
 }

@@ -12,8 +12,8 @@ class PayrollPage extends ConsumerStatefulWidget {
 }
 
 class _PayrollPageState extends ConsumerState<PayrollPage> {
-  PayPeriodStatus? _selectedStatus = PayPeriodStatus.ACTIVE;
-
+  PayPeriodStatus? _selectedStatus = PayPeriodStatus.active;
+  
   @override
   Widget build(BuildContext context) {
     final payPeriodsState = _selectedStatus == null
@@ -88,8 +88,8 @@ class _PayrollPageState extends ConsumerState<PayrollPage> {
             child: payPeriodsState.when(
               data: (payPeriods) {
                 final activePeriods = payPeriods.where(
-                  (p) => p.status == PayPeriodStatus.ACTIVE || 
-                         p.status == PayPeriodStatus.PROCESSING
+                  (p) => p.status == PayPeriodStatus.active || 
+                         p.status == PayPeriodStatus.processing
                 ).toList();
                 
                 if (activePeriods.isNotEmpty) {
@@ -212,7 +212,7 @@ class _PayrollPageState extends ConsumerState<PayrollPage> {
                         child: ListTile(
                           contentPadding: const EdgeInsets.all(12),
                           leading: CircleAvatar(
-                            backgroundColor: _getStatusColor(period.status).withOpacity(0.2),
+                            backgroundColor: _getStatusColor(period.status).withValues(alpha: 0.2),
                             child: Icon(
                               _getStatusIcon(period.status),
                               color: _getStatusColor(period.status),
@@ -232,14 +232,14 @@ class _PayrollPageState extends ConsumerState<PayrollPage> {
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      'Gross: KES ${period.totalGrossAmount?.toStringAsFixed(2) ?? "0.00"}',
+                                      'Gross: KES ${(period.totalGrossAmount ?? 0.0).toStringAsFixed(0)}',
                                       style: const TextStyle(fontSize: 12, color: Colors.black87),
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-                                  Flexible(
+                                  Expanded(
                                     child: Text(
-                                      'Net: KES ${period.totalNetAmount?.toStringAsFixed(2) ?? "0.00"}',
+                                      'Net: KES ${(period.totalNetAmount ?? 0.0).toStringAsFixed(0)}',
                                       style: const TextStyle(fontSize: 12, color: Colors.black87),
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -247,12 +247,10 @@ class _PayrollPageState extends ConsumerState<PayrollPage> {
                                 ],
                               ),
                               const SizedBox(height: 4),
-                              Flexible(
-                                child: Text(
-                                  'Workers: ${period.totalWorkers ?? 0} | Processed: ${period.processedWorkers ?? 0}',
-                                  style: const TextStyle(fontSize: 12, color: Colors.black54),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                              Text(
+                                'Workers: ${period.totalWorkers ?? 0} | Processed: ${period.processedWorkers ?? 0}',
+                                style: const TextStyle(fontSize: 12, color: Colors.black54),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
@@ -347,7 +345,7 @@ class _PayrollPageState extends ConsumerState<PayrollPage> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             gradient: LinearGradient(
-              colors: [color, color.withOpacity(0.8)],
+              colors: [color, color.withValues(alpha: 0.8)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -391,7 +389,7 @@ class _PayrollPageState extends ConsumerState<PayrollPage> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: _getStatusColor(period.status).withOpacity(0.5),
+          color: _getStatusColor(period.status).withValues(alpha: 0.5),
           width: 2,
         ),
       ),
@@ -428,8 +426,8 @@ class _PayrollPageState extends ConsumerState<PayrollPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   _buildMetric('Workers', '${period.processedWorkers ?? 0}/${period.totalWorkers ?? 0}'),
-                  _buildMetric('Gross', 'KES ${period.totalGrossAmount?.toStringAsFixed(0) ?? "0"}'),
-                  _buildMetric('Net', 'KES ${period.totalNetAmount?.toStringAsFixed(0) ?? "0"}'),
+                  _buildMetric('Gross', 'KES ${(period.totalGrossAmount ?? 0.0).toStringAsFixed(0)}'),
+                  _buildMetric('Net', 'KES ${(period.totalNetAmount ?? 0.0).toStringAsFixed(0)}'),
                 ],
               ),
             ],
@@ -466,7 +464,7 @@ class _PayrollPageState extends ConsumerState<PayrollPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: _getStatusColor(status).withOpacity(0.1),
+        color: _getStatusColor(status).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: _getStatusColor(status),
@@ -486,15 +484,15 @@ class _PayrollPageState extends ConsumerState<PayrollPage> {
 
   Color _getStatusColor(PayPeriodStatus status) {
     switch (status) {
-      case PayPeriodStatus.DRAFT:
+      case PayPeriodStatus.draft:
         return Colors.grey;
-      case PayPeriodStatus.ACTIVE:
+      case PayPeriodStatus.active:
         return const Color(0xFF3B82F6);
-      case PayPeriodStatus.PROCESSING:
+      case PayPeriodStatus.processing:
         return const Color(0xFFF59E0B);
-      case PayPeriodStatus.COMPLETED:
+      case PayPeriodStatus.completed:
         return const Color(0xFF10B981);
-      case PayPeriodStatus.CLOSED:
+      case PayPeriodStatus.closed:
         return const Color(0xFF8B5CF6);
       default:
         return Colors.grey;
@@ -503,15 +501,15 @@ class _PayrollPageState extends ConsumerState<PayrollPage> {
 
   IconData _getStatusIcon(PayPeriodStatus status) {
     switch (status) {
-      case PayPeriodStatus.DRAFT:
+      case PayPeriodStatus.draft:
         return Icons.edit_note;
-      case PayPeriodStatus.ACTIVE:
+      case PayPeriodStatus.active:
         return Icons.play_circle;
-      case PayPeriodStatus.PROCESSING:
+      case PayPeriodStatus.processing:
         return Icons.sync;
-      case PayPeriodStatus.COMPLETED:
+      case PayPeriodStatus.completed:
         return Icons.check_circle;
-      case PayPeriodStatus.CLOSED:
+      case PayPeriodStatus.closed:
         return Icons.lock;
       default:
         return Icons.circle;
@@ -519,7 +517,7 @@ class _PayrollPageState extends ConsumerState<PayrollPage> {
   }
 
   void _navigateToActivePayPeriod(BuildContext context) {
-    final payPeriodsState = ref.read(payPeriodsByStatusProvider(PayPeriodStatus.ACTIVE));
+    final payPeriodsState = ref.read(payPeriodsByStatusProvider(PayPeriodStatus.active));
     
     payPeriodsState.whenData((periods) {
       if (periods.isNotEmpty) {

@@ -37,6 +37,9 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
       case 5:
         context.go('/payroll');
         break;
+      case 6:
+        context.go('/finance');
+        break;
     }
   }
 
@@ -55,7 +58,7 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, -2),
             ),
@@ -73,6 +76,7 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
                 _buildTabItem(3, Icons.card_membership, 'Subscriptions'),
                 _buildTabItem(4, Icons.receipt, 'Tax Management'),
                 _buildTabItem(5, Icons.account_balance, 'Payroll'),
+                _buildTabItem(6, Icons.attach_money, 'Finance'),
               ],
             ),
           ),
@@ -112,12 +116,14 @@ class _MainLayoutState extends ConsumerState<MainLayout> {
             Text(
               label,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 10, // Reduced font size to fit more tabs
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 color: isSelected 
                     ? const Color(0xFF3B82F6)
                     : const Color(0xFF9CA3AF),
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

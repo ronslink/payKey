@@ -25,20 +25,23 @@ mixin _$PayPeriod {
   String get name => throw _privateConstructorUsedError;
   DateTime get startDate => throw _privateConstructorUsedError;
   DateTime get endDate => throw _privateConstructorUsedError;
-  @JsonKey(fromJson: _frequencyFromJson)
   PayPeriodFrequency get frequency => throw _privateConstructorUsedError;
   PayPeriodStatus get status => throw _privateConstructorUsedError;
-  @JsonKey(fromJson: _intFromJson)
-  int get totalWorkers => throw _privateConstructorUsedError;
-  @JsonKey(fromJson: _doubleFromJson)
-  double get totalGrossAmount => throw _privateConstructorUsedError;
-  @JsonKey(fromJson: _doubleFromJson)
-  double get totalNetAmount => throw _privateConstructorUsedError;
-  @JsonKey(fromJson: _intFromJson)
-  int get processedWorkers => throw _privateConstructorUsedError;
+  @JsonKey(fromJson: _intFromJson, toJson: _intToJson)
+  int? get totalWorkers => throw _privateConstructorUsedError;
+  @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
+  double? get totalGrossAmount => throw _privateConstructorUsedError;
+  @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
+  double? get totalNetAmount => throw _privateConstructorUsedError;
+  @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
+  double? get totalTaxAmount => throw _privateConstructorUsedError;
+  @JsonKey(fromJson: _intFromJson, toJson: _intToJson)
+  int? get processedWorkers => throw _privateConstructorUsedError;
   DateTime? get createdAt => throw _privateConstructorUsedError;
   DateTime? get updatedAt => throw _privateConstructorUsedError;
   String? get notes => throw _privateConstructorUsedError;
+  String? get userId => throw _privateConstructorUsedError;
+  DateTime? get payDate => throw _privateConstructorUsedError;
 
   /// Serializes this PayPeriod to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -60,15 +63,21 @@ abstract class $PayPeriodCopyWith<$Res> {
     String name,
     DateTime startDate,
     DateTime endDate,
-    @JsonKey(fromJson: _frequencyFromJson) PayPeriodFrequency frequency,
+    PayPeriodFrequency frequency,
     PayPeriodStatus status,
-    @JsonKey(fromJson: _intFromJson) int totalWorkers,
-    @JsonKey(fromJson: _doubleFromJson) double totalGrossAmount,
-    @JsonKey(fromJson: _doubleFromJson) double totalNetAmount,
-    @JsonKey(fromJson: _intFromJson) int processedWorkers,
+    @JsonKey(fromJson: _intFromJson, toJson: _intToJson) int? totalWorkers,
+    @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
+    double? totalGrossAmount,
+    @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
+    double? totalNetAmount,
+    @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
+    double? totalTaxAmount,
+    @JsonKey(fromJson: _intFromJson, toJson: _intToJson) int? processedWorkers,
     DateTime? createdAt,
     DateTime? updatedAt,
     String? notes,
+    String? userId,
+    DateTime? payDate,
   });
 }
 
@@ -93,13 +102,16 @@ class _$PayPeriodCopyWithImpl<$Res, $Val extends PayPeriod>
     Object? endDate = null,
     Object? frequency = null,
     Object? status = null,
-    Object? totalWorkers = null,
-    Object? totalGrossAmount = null,
-    Object? totalNetAmount = null,
-    Object? processedWorkers = null,
+    Object? totalWorkers = freezed,
+    Object? totalGrossAmount = freezed,
+    Object? totalNetAmount = freezed,
+    Object? totalTaxAmount = freezed,
+    Object? processedWorkers = freezed,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
     Object? notes = freezed,
+    Object? userId = freezed,
+    Object? payDate = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -127,22 +139,26 @@ class _$PayPeriodCopyWithImpl<$Res, $Val extends PayPeriod>
                 ? _value.status
                 : status // ignore: cast_nullable_to_non_nullable
                       as PayPeriodStatus,
-            totalWorkers: null == totalWorkers
+            totalWorkers: freezed == totalWorkers
                 ? _value.totalWorkers
                 : totalWorkers // ignore: cast_nullable_to_non_nullable
-                      as int,
-            totalGrossAmount: null == totalGrossAmount
+                      as int?,
+            totalGrossAmount: freezed == totalGrossAmount
                 ? _value.totalGrossAmount
                 : totalGrossAmount // ignore: cast_nullable_to_non_nullable
-                      as double,
-            totalNetAmount: null == totalNetAmount
+                      as double?,
+            totalNetAmount: freezed == totalNetAmount
                 ? _value.totalNetAmount
                 : totalNetAmount // ignore: cast_nullable_to_non_nullable
-                      as double,
-            processedWorkers: null == processedWorkers
+                      as double?,
+            totalTaxAmount: freezed == totalTaxAmount
+                ? _value.totalTaxAmount
+                : totalTaxAmount // ignore: cast_nullable_to_non_nullable
+                      as double?,
+            processedWorkers: freezed == processedWorkers
                 ? _value.processedWorkers
                 : processedWorkers // ignore: cast_nullable_to_non_nullable
-                      as int,
+                      as int?,
             createdAt: freezed == createdAt
                 ? _value.createdAt
                 : createdAt // ignore: cast_nullable_to_non_nullable
@@ -155,6 +171,14 @@ class _$PayPeriodCopyWithImpl<$Res, $Val extends PayPeriod>
                 ? _value.notes
                 : notes // ignore: cast_nullable_to_non_nullable
                       as String?,
+            userId: freezed == userId
+                ? _value.userId
+                : userId // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            payDate: freezed == payDate
+                ? _value.payDate
+                : payDate // ignore: cast_nullable_to_non_nullable
+                      as DateTime?,
           )
           as $Val,
     );
@@ -175,15 +199,21 @@ abstract class _$$PayPeriodImplCopyWith<$Res>
     String name,
     DateTime startDate,
     DateTime endDate,
-    @JsonKey(fromJson: _frequencyFromJson) PayPeriodFrequency frequency,
+    PayPeriodFrequency frequency,
     PayPeriodStatus status,
-    @JsonKey(fromJson: _intFromJson) int totalWorkers,
-    @JsonKey(fromJson: _doubleFromJson) double totalGrossAmount,
-    @JsonKey(fromJson: _doubleFromJson) double totalNetAmount,
-    @JsonKey(fromJson: _intFromJson) int processedWorkers,
+    @JsonKey(fromJson: _intFromJson, toJson: _intToJson) int? totalWorkers,
+    @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
+    double? totalGrossAmount,
+    @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
+    double? totalNetAmount,
+    @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
+    double? totalTaxAmount,
+    @JsonKey(fromJson: _intFromJson, toJson: _intToJson) int? processedWorkers,
     DateTime? createdAt,
     DateTime? updatedAt,
     String? notes,
+    String? userId,
+    DateTime? payDate,
   });
 }
 
@@ -207,13 +237,16 @@ class __$$PayPeriodImplCopyWithImpl<$Res>
     Object? endDate = null,
     Object? frequency = null,
     Object? status = null,
-    Object? totalWorkers = null,
-    Object? totalGrossAmount = null,
-    Object? totalNetAmount = null,
-    Object? processedWorkers = null,
+    Object? totalWorkers = freezed,
+    Object? totalGrossAmount = freezed,
+    Object? totalNetAmount = freezed,
+    Object? totalTaxAmount = freezed,
+    Object? processedWorkers = freezed,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
     Object? notes = freezed,
+    Object? userId = freezed,
+    Object? payDate = freezed,
   }) {
     return _then(
       _$PayPeriodImpl(
@@ -241,22 +274,26 @@ class __$$PayPeriodImplCopyWithImpl<$Res>
             ? _value.status
             : status // ignore: cast_nullable_to_non_nullable
                   as PayPeriodStatus,
-        totalWorkers: null == totalWorkers
+        totalWorkers: freezed == totalWorkers
             ? _value.totalWorkers
             : totalWorkers // ignore: cast_nullable_to_non_nullable
-                  as int,
-        totalGrossAmount: null == totalGrossAmount
+                  as int?,
+        totalGrossAmount: freezed == totalGrossAmount
             ? _value.totalGrossAmount
             : totalGrossAmount // ignore: cast_nullable_to_non_nullable
-                  as double,
-        totalNetAmount: null == totalNetAmount
+                  as double?,
+        totalNetAmount: freezed == totalNetAmount
             ? _value.totalNetAmount
             : totalNetAmount // ignore: cast_nullable_to_non_nullable
-                  as double,
-        processedWorkers: null == processedWorkers
+                  as double?,
+        totalTaxAmount: freezed == totalTaxAmount
+            ? _value.totalTaxAmount
+            : totalTaxAmount // ignore: cast_nullable_to_non_nullable
+                  as double?,
+        processedWorkers: freezed == processedWorkers
             ? _value.processedWorkers
             : processedWorkers // ignore: cast_nullable_to_non_nullable
-                  as int,
+                  as int?,
         createdAt: freezed == createdAt
             ? _value.createdAt
             : createdAt // ignore: cast_nullable_to_non_nullable
@@ -269,6 +306,14 @@ class __$$PayPeriodImplCopyWithImpl<$Res>
             ? _value.notes
             : notes // ignore: cast_nullable_to_non_nullable
                   as String?,
+        userId: freezed == userId
+            ? _value.userId
+            : userId // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        payDate: freezed == payDate
+            ? _value.payDate
+            : payDate // ignore: cast_nullable_to_non_nullable
+                  as DateTime?,
       ),
     );
   }
@@ -276,21 +321,28 @@ class __$$PayPeriodImplCopyWithImpl<$Res>
 
 /// @nodoc
 @JsonSerializable()
+@JsonKey(fromJson: _intFromJson, toJson: _intToJson)
 class _$PayPeriodImpl implements _PayPeriod {
   const _$PayPeriodImpl({
     required this.id,
     required this.name,
     required this.startDate,
     required this.endDate,
-    @JsonKey(fromJson: _frequencyFromJson) required this.frequency,
+    required this.frequency,
     required this.status,
-    @JsonKey(fromJson: _intFromJson) required this.totalWorkers,
-    @JsonKey(fromJson: _doubleFromJson) required this.totalGrossAmount,
-    @JsonKey(fromJson: _doubleFromJson) required this.totalNetAmount,
-    @JsonKey(fromJson: _intFromJson) required this.processedWorkers,
+    @JsonKey(fromJson: _intFromJson, toJson: _intToJson) this.totalWorkers,
+    @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
+    this.totalGrossAmount,
+    @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
+    this.totalNetAmount,
+    @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
+    this.totalTaxAmount,
+    @JsonKey(fromJson: _intFromJson, toJson: _intToJson) this.processedWorkers,
     this.createdAt,
     this.updatedAt,
     this.notes,
+    this.userId,
+    this.payDate,
   });
 
   factory _$PayPeriodImpl.fromJson(Map<String, dynamic> json) =>
@@ -305,32 +357,38 @@ class _$PayPeriodImpl implements _PayPeriod {
   @override
   final DateTime endDate;
   @override
-  @JsonKey(fromJson: _frequencyFromJson)
   final PayPeriodFrequency frequency;
   @override
   final PayPeriodStatus status;
   @override
-  @JsonKey(fromJson: _intFromJson)
-  final int totalWorkers;
+  @JsonKey(fromJson: _intFromJson, toJson: _intToJson)
+  final int? totalWorkers;
   @override
-  @JsonKey(fromJson: _doubleFromJson)
-  final double totalGrossAmount;
+  @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
+  final double? totalGrossAmount;
   @override
-  @JsonKey(fromJson: _doubleFromJson)
-  final double totalNetAmount;
+  @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
+  final double? totalNetAmount;
   @override
-  @JsonKey(fromJson: _intFromJson)
-  final int processedWorkers;
+  @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
+  final double? totalTaxAmount;
+  @override
+  @JsonKey(fromJson: _intFromJson, toJson: _intToJson)
+  final int? processedWorkers;
   @override
   final DateTime? createdAt;
   @override
   final DateTime? updatedAt;
   @override
   final String? notes;
+  @override
+  final String? userId;
+  @override
+  final DateTime? payDate;
 
   @override
   String toString() {
-    return 'PayPeriod(id: $id, name: $name, startDate: $startDate, endDate: $endDate, frequency: $frequency, status: $status, totalWorkers: $totalWorkers, totalGrossAmount: $totalGrossAmount, totalNetAmount: $totalNetAmount, processedWorkers: $processedWorkers, createdAt: $createdAt, updatedAt: $updatedAt, notes: $notes)';
+    return 'PayPeriod(id: $id, name: $name, startDate: $startDate, endDate: $endDate, frequency: $frequency, status: $status, totalWorkers: $totalWorkers, totalGrossAmount: $totalGrossAmount, totalNetAmount: $totalNetAmount, totalTaxAmount: $totalTaxAmount, processedWorkers: $processedWorkers, createdAt: $createdAt, updatedAt: $updatedAt, notes: $notes, userId: $userId, payDate: $payDate)';
   }
 
   @override
@@ -352,13 +410,17 @@ class _$PayPeriodImpl implements _PayPeriod {
                 other.totalGrossAmount == totalGrossAmount) &&
             (identical(other.totalNetAmount, totalNetAmount) ||
                 other.totalNetAmount == totalNetAmount) &&
+            (identical(other.totalTaxAmount, totalTaxAmount) ||
+                other.totalTaxAmount == totalTaxAmount) &&
             (identical(other.processedWorkers, processedWorkers) ||
                 other.processedWorkers == processedWorkers) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.updatedAt, updatedAt) ||
                 other.updatedAt == updatedAt) &&
-            (identical(other.notes, notes) || other.notes == notes));
+            (identical(other.notes, notes) || other.notes == notes) &&
+            (identical(other.userId, userId) || other.userId == userId) &&
+            (identical(other.payDate, payDate) || other.payDate == payDate));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -374,10 +436,13 @@ class _$PayPeriodImpl implements _PayPeriod {
     totalWorkers,
     totalGrossAmount,
     totalNetAmount,
+    totalTaxAmount,
     processedWorkers,
     createdAt,
     updatedAt,
     notes,
+    userId,
+    payDate,
   );
 
   /// Create a copy of PayPeriod
@@ -400,16 +465,23 @@ abstract class _PayPeriod implements PayPeriod {
     required final String name,
     required final DateTime startDate,
     required final DateTime endDate,
-    @JsonKey(fromJson: _frequencyFromJson)
     required final PayPeriodFrequency frequency,
     required final PayPeriodStatus status,
-    @JsonKey(fromJson: _intFromJson) required final int totalWorkers,
-    @JsonKey(fromJson: _doubleFromJson) required final double totalGrossAmount,
-    @JsonKey(fromJson: _doubleFromJson) required final double totalNetAmount,
-    @JsonKey(fromJson: _intFromJson) required final int processedWorkers,
+    @JsonKey(fromJson: _intFromJson, toJson: _intToJson)
+    final int? totalWorkers,
+    @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
+    final double? totalGrossAmount,
+    @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
+    final double? totalNetAmount,
+    @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
+    final double? totalTaxAmount,
+    @JsonKey(fromJson: _intFromJson, toJson: _intToJson)
+    final int? processedWorkers,
     final DateTime? createdAt,
     final DateTime? updatedAt,
     final String? notes,
+    final String? userId,
+    final DateTime? payDate,
   }) = _$PayPeriodImpl;
 
   factory _PayPeriod.fromJson(Map<String, dynamic> json) =
@@ -424,28 +496,34 @@ abstract class _PayPeriod implements PayPeriod {
   @override
   DateTime get endDate;
   @override
-  @JsonKey(fromJson: _frequencyFromJson)
   PayPeriodFrequency get frequency;
   @override
   PayPeriodStatus get status;
   @override
-  @JsonKey(fromJson: _intFromJson)
-  int get totalWorkers;
+  @JsonKey(fromJson: _intFromJson, toJson: _intToJson)
+  int? get totalWorkers;
   @override
-  @JsonKey(fromJson: _doubleFromJson)
-  double get totalGrossAmount;
+  @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
+  double? get totalGrossAmount;
   @override
-  @JsonKey(fromJson: _doubleFromJson)
-  double get totalNetAmount;
+  @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
+  double? get totalNetAmount;
   @override
-  @JsonKey(fromJson: _intFromJson)
-  int get processedWorkers;
+  @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
+  double? get totalTaxAmount;
+  @override
+  @JsonKey(fromJson: _intFromJson, toJson: _intToJson)
+  int? get processedWorkers;
   @override
   DateTime? get createdAt;
   @override
   DateTime? get updatedAt;
   @override
   String? get notes;
+  @override
+  String? get userId;
+  @override
+  DateTime? get payDate;
 
   /// Create a copy of PayPeriod
   /// with the given fields replaced by the non-null parameter values.

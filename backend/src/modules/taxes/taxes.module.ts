@@ -8,12 +8,14 @@ import { TaxSubmission } from './entities/tax-submission.entity';
 import { UsersModule } from '../users/users.module';
 import { TaxConfigModule } from '../tax-config/tax-config.module';
 import { PayrollRecord } from '../payroll/entities/payroll-record.entity';
+import { ActivitiesModule } from '../activities/activities.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([TaxTable, TaxSubmission, PayrollRecord]),
     UsersModule,
-    TaxConfigModule
+    TaxConfigModule,
+    ActivitiesModule,
   ],
   controllers: [TaxesController, TaxSubmissionController],
   providers: [TaxesService],

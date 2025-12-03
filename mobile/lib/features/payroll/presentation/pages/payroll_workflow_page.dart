@@ -84,6 +84,14 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
         case PayPeriodStatusAction.close:
           updatedPeriod = await repository.closePayPeriod(widget.payPeriodId);
           break;
+        case PayPeriodStatusAction.cancel:
+          await repository.updatePayPeriodStatus(widget.payPeriodId, 'cancel');
+          updatedPeriod = await repository.getPayPeriodById(widget.payPeriodId);
+          break;
+        case PayPeriodStatusAction.reopen:
+          await repository.updatePayPeriodStatus(widget.payPeriodId, 'reopen');
+          updatedPeriod = await repository.getPayPeriodById(widget.payPeriodId);
+          break;
       }
 
       if (mounted) {
@@ -119,7 +127,7 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
     switch (status) {
       case PayPeriodStatus.draft:
         return Colors.grey.shade600;
-      case PayPeriodStatus.open:
+      case PayPeriodStatus.active:
         return Colors.blue;
       case PayPeriodStatus.processing:
         return Colors.orange;
@@ -139,7 +147,7 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
           PayPeriodStatusAction.activate,
           PayPeriodStatusAction.close,
         ];
-      case PayPeriodStatus.open:
+      case PayPeriodStatus.active:
         return [
           PayPeriodStatusAction.process,
           PayPeriodStatusAction.close,
@@ -218,7 +226,7 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                '${dateFormat.format(DateTime.parse(_payPeriod!.startDate))} - ${dateFormat.format(DateTime.parse(_payPeriod!.endDate))}',
+                                '${dateFormat.format(_payPeriod!.startDate)} - ${dateFormat.format(_payPeriod!.endDate)}',
                                 style: const TextStyle(
                                   fontSize: 16,
                                   color: Colors.grey,
@@ -329,7 +337,7 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
                       color: isCompleted
                           ? Colors.green
                           : isCurrent
-                              ? _getStatusColor(PayPeriodStatus.open)
+                              ? _getStatusColor(PayPeriodStatus.active)
                               : Colors.grey.shade300,
                     ),
                     child: isCompleted
@@ -363,13 +371,13 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: _getStatusColor(PayPeriodStatus.open).withOpacity(0.1),
+                        color: _getStatusColor(PayPeriodStatus.active).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         'Current',
                         style: TextStyle(
-                          color: _getStatusColor(PayPeriodStatus.open),
+                          color: _getStatusColor(PayPeriodStatus.active),
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),
@@ -401,7 +409,16 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
   }
 
   Widget _buildStatisticsSection() {
-    final stats = _statistics!;
+    final stats = _statistics;
+    if (stats == null || !stats.containsKey('statistics')) {
+      return const SizedBox.shrink();
+    }
+    
+    final statsData = stats['statistics'];
+    if (statsData == null) {
+      return const SizedBox.shrink();
+    }
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -421,7 +438,7 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
                 Expanded(
                   child: _buildStatCard(
                     'Total Workers',
-                    '${stats['statistics']['totalWorkers']}',
+                    '${statsData['totalWorkers'] ?? 0}',
                     Icons.people,
                     Colors.blue,
                   ),
@@ -430,7 +447,7 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
                 Expanded(
                   child: _buildStatCard(
                     'Processed',
-                    '${stats['statistics']['processedPayments']}',
+                    '${statsData['processedPayments'] ?? 0}',
                     Icons.check_circle,
                     Colors.green,
                   ),
@@ -439,7 +456,7 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
                 Expanded(
                   child: _buildStatCard(
                     'Pending',
-                    '${stats['statistics']['pendingPayments']}',
+                    '${statsData['pendingPayments'] ?? 0}',
                     Icons.pending,
                     Colors.orange,
                   ),
@@ -452,7 +469,7 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
                 Expanded(
                   child: _buildStatCard(
                     'Gross Total',
-                    'KES ${stats['statistics']['totalGrossAmount'].toStringAsFixed(2)}',
+                    'KES ${(statsData['totalGrossAmount'] ?? 0).toStringAsFixed(2)}',
                     Icons.monetization_on,
                     Colors.purple,
                   ),
@@ -461,7 +478,7 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
                 Expanded(
                   child: _buildStatCard(
                     'Net Total',
-                    'KES ${stats['statistics']['totalNetAmount'].toStringAsFixed(2)}',
+                    'KES ${(statsData['totalNetAmount'] ?? 0).toStringAsFixed(2)}',
                     Icons.account_balance_wallet,
                     Colors.teal,
                   ),
@@ -624,6 +641,10 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
         return Colors.green;
       case PayPeriodStatusAction.close:
         return Colors.red;
+      case PayPeriodStatusAction.cancel:
+        return Colors.red;
+      case PayPeriodStatusAction.reopen:
+        return Colors.blue;
       default:
         return Colors.grey;
     }
@@ -639,6 +660,10 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
         return 'Complete Period';
       case PayPeriodStatusAction.close:
         return 'Close Period';
+      case PayPeriodStatusAction.cancel:
+        return 'Cancel Period';
+      case PayPeriodStatusAction.reopen:
+        return 'Reopen Period';
     }
   }
 }

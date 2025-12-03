@@ -107,10 +107,17 @@ final leaveBalanceProvider = FutureProvider.family<LeaveBalanceModel, String>((r
     workerId: workerId,
     workerName: 'Worker Name', // This should come from actual data
     year: DateTime.now().year,
-    totalAnnualLeaves: balanceMap['totalAnnualLeaves'] ?? 0,
-    usedAnnualLeaves: balanceMap['usedAnnualLeaves'] ?? 0,
-    remainingAnnualLeaves: balanceMap['remainingAnnualLeaves'] ?? 0,
-    sickLeaves: balanceMap['sickLeaves'] ?? 0,
-    pendingLeaves: balanceMap['pendingLeaves'] ?? 0,
+    totalAnnualLeaves: _parseInt(balanceMap['totalAnnualLeaves']),
+    usedAnnualLeaves: _parseInt(balanceMap['usedAnnualLeaves']),
+    remainingAnnualLeaves: _parseInt(balanceMap['remainingAnnualLeaves']),
+    sickLeaves: _parseInt(balanceMap['sickLeaves']),
+    pendingLeaves: _parseInt(balanceMap['pendingLeaves']),
   );
 });
+
+int _parseInt(dynamic value) {
+  if (value is int) return value;
+  if (value is double) return value.toInt();
+  if (value is String) return int.tryParse(value) ?? 0;
+  return 0;
+}

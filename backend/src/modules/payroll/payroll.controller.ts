@@ -26,11 +26,16 @@ export class PayrollController {
     private readonly payslipService: PayslipService,
     @InjectRepository(PayrollRecord)
     private payrollRepository: Repository<PayrollRecord>,
-  ) {}
+  ) { }
 
   @Get('calculate')
   async calculatePayroll(@Request() req: AuthenticatedRequest) {
     return this.payrollService.calculatePayrollForUser(req.user.userId);
+  }
+
+  @Get('stats')
+  async getStats(@Request() req: AuthenticatedRequest) {
+    return this.payrollService.getPayrollStats(req.user.userId);
   }
 
   @Post('calculate')
@@ -190,5 +195,67 @@ export class PayrollController {
     });
 
     res.end(buffer);
+  }
+
+  @Get('payslips/batch/:payPeriodId')
+  async downloadPayslipsBatch(
+    @Request() req: AuthenticatedRequest,
+    @Param('payPeriodId') payPeriodId: string,
+    @Res() res: Response,
+  ) {
+    // Fetch all finalized payroll records for the pay period
+    const records = await this.payrollRepository.find({
+      where: {
+        payPeriodId,
+        userId: req.user.userId,
+        status: 'finalized' as any,
+      },
+      relations: ['worker'],
+    });
+
+    if (records.length === 0) {
+      throw new Error('No payroll records found for this pay period');
+    }
+
+    // Generate ZIP file with all payslips
+    const { stream, filename } = await this.payslipService.generatePayslipsZip(records);
+
+    res.set({
+      'Content-Type': 'application/zip',
+      'Content-Disposition': `attachment; filename=${filename}`,
+    });
+
+    stream.pipe(res);
+  }
+
+  @Post('payslips/batch')
+  async downloadSelectedPayslips(
+    @Request() req: AuthenticatedRequest,
+    @Body() body: { payrollRecordIds: string[] },
+    @Res() res: Response,
+  ) {
+    // Fetch selected payroll records
+    const records = await this.payrollRepository.find({
+      where: {
+        userId: req.user.userId,
+      },
+      relations: ['worker'],
+    });
+
+    const selectedRecords = records.filter(r => body.payrollRecordIds.includes(r.id));
+
+    if (selectedRecords.length === 0) {
+      throw new Error('No payroll records found');
+    }
+
+    // Generate ZIP file with selected payslips
+    const { stream, filename } = await this.payslipService.generatePayslipsZip(selectedRecords);
+
+    res.set({
+      'Content-Type': 'application/zip',
+      'Content-Disposition': `attachment; filename=${filename}`,
+    });
+
+    stream.pipe(res);
   }
 }

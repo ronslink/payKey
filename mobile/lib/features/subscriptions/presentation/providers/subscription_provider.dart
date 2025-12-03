@@ -35,10 +35,3 @@ final hasActiveSubscriptionProvider = Provider<bool>((ref) {
   final userSubState = ref.watch(userSubscriptionProvider);
   return userSubState.value?.status == 'active';
 });
-
-// Provider for subscription payment history
-final subscriptionPaymentHistoryProvider =
-    FutureProvider<List<SubscriptionPayment>>((ref) async {
-  final repository = ref.read(subscriptionRepositoryProvider);
-  return repository.getSubscriptionPayments();
-});

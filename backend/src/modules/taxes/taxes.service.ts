@@ -330,11 +330,20 @@ export class TaxesService {
   }
 
   async getSubmissions(userId: string): Promise<TaxSubmission[]> {
-    return this.taxSubmissionRepository.find({
-      where: { userId },
-      order: { createdAt: 'DESC' },
-      relations: ['payPeriod'],
-    });
+    try {
+      return await this.taxSubmissionRepository.find({
+        where: { userId },
+        order: { createdAt: 'DESC' },
+        relations: ['payPeriod'],
+      });
+    } catch (error) {
+      // If relation fails, return without it
+      console.warn('Failed to load payPeriod relation:', error.message);
+      return await this.taxSubmissionRepository.find({
+        where: { userId },
+        order: { createdAt: 'DESC' },
+      });
+    }
   }
 
   async generateTaxSubmission(

@@ -17,12 +17,18 @@ enum PayPeriodFrequency {
 }
 
 enum PayPeriodStatus {
-  DRAFT,
-  ACTIVE,
-  PROCESSING,
-  COMPLETED,
-  CLOSED,
-  CANCELLED,
+  @JsonValue('DRAFT')
+  draft,
+  @JsonValue('ACTIVE')
+  active,
+  @JsonValue('PROCESSING')
+  processing,
+  @JsonValue('COMPLETED')
+  completed,
+  @JsonValue('CLOSED')
+  closed,
+  @JsonValue('CANCELLED')
+  cancelled,
 }
 
 enum PayPeriodStatusAction {
@@ -36,40 +42,53 @@ enum PayPeriodStatusAction {
 
 @freezed
 class PayPeriod with _$PayPeriod {
+  @JsonKey(fromJson: _intFromJson, toJson: _intToJson)
   const factory PayPeriod({
     required String id,
     required String name,
     required DateTime startDate,
     required DateTime endDate,
-    @JsonKey(fromJson: _frequencyFromJson) required PayPeriodFrequency frequency,
+    required PayPeriodFrequency frequency,
     required PayPeriodStatus status,
-    @JsonKey(fromJson: _intFromJson) required int totalWorkers,
-    @JsonKey(fromJson: _doubleFromJson) required double totalGrossAmount,
-    @JsonKey(fromJson: _doubleFromJson) required double totalNetAmount,
-    @JsonKey(fromJson: _intFromJson) required int processedWorkers,
+    @JsonKey(fromJson: _intFromJson, toJson: _intToJson) int? totalWorkers,
+    @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson) double? totalGrossAmount,
+    @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson) double? totalNetAmount,
+    @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson) double? totalTaxAmount,
+    @JsonKey(fromJson: _intFromJson, toJson: _intToJson) int? processedWorkers,
     DateTime? createdAt,
     DateTime? updatedAt,
     String? notes,
+    String? userId,
+    DateTime? payDate,
   }) = _PayPeriod;
 
   factory PayPeriod.fromJson(Map<String, dynamic> json) =>
       _$PayPeriodFromJson(json);
 }
 
-// Helper functions to convert string/num to int
-int _intFromJson(dynamic value) {
+int? _intFromJson(dynamic value) {
+  if (value == null) return null;
   if (value is int) return value;
   if (value is String) return int.parse(value);
   if (value is double) return value.toInt();
-  return 0;
+  return null;
 }
 
-// Helper functions to convert string/num to double
-double _doubleFromJson(dynamic value) {
+double? _doubleFromJson(dynamic value) {
+  if (value == null) return null;
   if (value is double) return value;
   if (value is String) return double.parse(value);
   if (value is int) return value.toDouble();
-  return 0.0;
+  return null;
+}
+
+// Helper functions for toJson
+dynamic _intToJson(int? value) {
+  return value;
+}
+
+dynamic _doubleToJson(double? value) {
+  return value;
 }
 
 // Helper function to convert string to PayPeriodFrequency (case-insensitive)
@@ -93,7 +112,7 @@ PayPeriodFrequency _frequencyFromJson(dynamic value) {
           if (e == PayPeriodFrequency.biWeekly && upper == 'BIWEEKLY') return true;
           if (e == PayPeriodFrequency.monthly && upper == 'MONTHLY') return true;
           if (e == PayPeriodFrequency.quarterly && upper == 'QUARTERLY') return true;
-          if (e == PayPeriodFrequency.yearly && upper == 'YEARLY') return true;
+          // yearly is now properly defined in the enum
           
           // Fallback to name check
           return e.name.toUpperCase() == upper;

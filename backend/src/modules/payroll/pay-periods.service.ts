@@ -56,8 +56,19 @@ export class PayPeriodsService {
       throw new BadRequestException('Pay period overlaps with existing period');
     }
 
+    // Convert notes to proper format if it's a string
+    const notes = typeof createPayPeriodDto.notes === 'string'
+      ? { note: createPayPeriodDto.notes }
+      : createPayPeriodDto.notes;
+
     const payPeriod = this.payPeriodRepository.create({
-      ...createPayPeriodDto,
+      name: createPayPeriodDto.name,
+      startDate: createPayPeriodDto.startDate,
+      endDate: createPayPeriodDto.endDate,
+      payDate: createPayPeriodDto.payDate,
+      frequency: createPayPeriodDto.frequency,
+      notes,
+      createdBy: createPayPeriodDto.createdBy,
       userId,
       status: PayPeriodStatus.DRAFT,
     });

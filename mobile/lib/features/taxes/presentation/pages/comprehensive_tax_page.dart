@@ -500,12 +500,16 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
 
     try {
       // Use backend API for proper tax calculations (PAYE, NSSF, SHIF, Housing Levy)
-      // TODO: Fix tax provider reference - temporarily disabled for compilation
-      // final taxCalculation = await ref.read(taxNotifierProvider.notifier).calculateTax(income);
-      final taxCalculation = []; // Placeholder for compilation
+      final taxCalculation = await ref.read(taxSubmissionProvider.notifier).calculateTax(income, 0);
       
       if (taxCalculation.isNotEmpty) {
         final submission = taxCalculation.first;
+        
+        // Calculate additional deductions using Kenyan tax rates
+        final nssf = income * 0.06; // 6% NSSF
+        final shif = income * 0.0275; // 2.75% SHIF
+        final housingLevy = income * 0.015; // 1.5% Housing Levy
+        final totalDeductions = submission.deductions + nssf + shif + housingLevy;
         
         showDialog(
           context: context,
@@ -516,14 +520,88 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Annual Income: KES ${NumberFormat('#,##0').format(income)}'),
-                Text('Total Deductions: KES ${NumberFormat('#,##0').format(submission.deductions)}'),
-                Text('PAYE: KES ${NumberFormat('#,##0').format(submission.taxDue)}'),
-                Text('NSSF: KES ${NumberFormat('#,##0').format(income * 0.06)}'), // Approximate
-                Text('SHIF: KES ${NumberFormat('#,##0').format(income * 0.0275)}'), // Approximate
-                Text('Housing Levy: KES ${NumberFormat('#,##0').format(income * 0.015)}'), // Approximate
+                const SizedBox(height: 8),
+                const Text(
+                  'Deductions:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text('Personal Deductions: KES ${NumberFormat('#,##0').format(submission.deductions)}'),
+                Text('NSSF: KES ${NumberFormat('#,##0').format(nssf)}'),
+                Text('SHIF: KES ${NumberFormat('#,##0').format(shif)}'),
+                Text('Housing Levy: KES ${NumberFormat('#,##0').format(housingLevy)}'),
+                Text(
+                  'Total Deductions: KES ${NumberFormat('#,##0').format(totalDeductions)}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Taxable Income: KES ${NumberFormat('#,##0').format(income - totalDeductions)}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
                 Text(
                   'Tax Due (PAYE): KES ${NumberFormat('#,##0').format(submission.taxDue)}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Close'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        // Fallback simple calculation if API fails
+        final simpleTax = income * 0.3; // 30% simplified rate
+        final nssf = income * 0.06;
+        final shif = income * 0.0275;
+        final housingLevy = income * 0.015;
+        final totalDeductions = nssf + shif + housingLevy;
+        
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Tax Calculation Result (Simplified)'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Annual Income: KES ${NumberFormat('#,##0').format(income)}'),
+                const SizedBox(height: 8),
+                const Text(
+                  'Standard Deductions:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text('NSSF: KES ${NumberFormat('#,##0').format(nssf)}'),
+                Text('SHIF: KES ${NumberFormat('#,##0').format(shif)}'),
+                Text('Housing Levy: KES ${NumberFormat('#,##0').format(housingLevy)}'),
+                Text(
+                  'Total Deductions: KES ${NumberFormat('#,##0').format(totalDeductions)}',
                   style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Taxable Income: KES ${NumberFormat('#,##0').format(income - totalDeductions)}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Tax Due (Est.): KES ${NumberFormat('#,##0').format(simpleTax)}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Note: This is a simplified calculation. Actual tax rates may vary.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
             ),

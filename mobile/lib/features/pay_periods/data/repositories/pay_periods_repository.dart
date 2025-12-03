@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_service.dart';
 import '../models/pay_period_model.dart';
 
-final payPeriodsRepositoryProvider = Provider((ref) => PayPeriodsRepositoryImpl());
+final payPeriodsRepositoryProvider = Provider((ref) => PayPeriodsRepositoryImpl(ApiService()));
 
 class PayPeriodsRepositoryImpl {
   final ApiService _apiService;

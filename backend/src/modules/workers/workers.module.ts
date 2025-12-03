@@ -9,15 +9,17 @@ import { TerminationService } from './services/termination.service';
 import { LeaveManagementService } from './services/leave-management.service';
 import { TaxesModule } from '../taxes/taxes.module';
 import { UsersModule } from '../users/users.module';
+import { ActivitiesModule } from '../activities/activities.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Worker, Termination, LeaveRequest]),
     TaxesModule,
     UsersModule,
+    ActivitiesModule,
   ],
   controllers: [WorkersController],
   providers: [WorkersService, TerminationService, LeaveManagementService],
   exports: [WorkersService],
 })
-export class WorkersModule {}
+export class WorkersModule { }

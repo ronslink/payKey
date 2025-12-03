@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/leave_request_model.dart';
 import '../providers/leave_management_provider.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
 
 class LeaveRequestsListPage extends ConsumerWidget {
   final String? selectedWorkerId;
@@ -13,7 +12,6 @@ class LeaveRequestsListPage extends ConsumerWidget {
     this.selectedWorkerId,
   });
 
-  @override
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final leaveRequestsState = ref.watch(leaveManagementProvider);
@@ -36,7 +34,7 @@ class LeaveRequestsListPage extends ConsumerWidget {
 
               return RefreshIndicator(
                 onRefresh: () async {
-                  await ref.read(leaveManagementProvider(token).notifier).loadLeaveRequests();
+                  await ref.read(leaveManagementProvider.notifier).loadLeaveRequests();
                 },
                 child: ListView.builder(
                   padding: const EdgeInsets.all(16),
@@ -68,7 +66,7 @@ class LeaveRequestsListPage extends ConsumerWidget {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () {
-                      ref.read(leaveManagementProvider(token).notifier).loadLeaveRequests();
+                      ref.read(leaveManagementProvider.notifier).loadLeaveRequests();
                     },
                     child: const Text('Retry'),
                   ),
@@ -97,7 +95,7 @@ class LeaveRequestsListPage extends ConsumerWidget {
             ),
           ),
           IconButton(
-            onPressed: () => ref.refresh(leaveManagementProvider),
+            onPressed: () => ref.invalidate(leaveManagementProvider),
             icon: const Icon(Icons.refresh),
             tooltip: 'Refresh',
           ),
@@ -167,7 +165,7 @@ class LeaveRequestsListPage extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
+                      color: statusColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: statusColor),
                     ),
@@ -368,7 +366,7 @@ class LeaveRequestsListPage extends ConsumerWidget {
           ElevatedButton(
             onPressed: () async {
               await ref.read(leaveManagementProvider.notifier)
-                  .approveLeaveRequest(request.id, false, controller.text.trim().isEmpty ? null : controller.text.trim());
+                  .approveLeaveRequest(request.id, false, comments: controller.text.trim().isEmpty ? null : controller.text.trim());
               
               if (context.mounted) {
                 Navigator.of(context).pop();
@@ -391,7 +389,7 @@ class LeaveRequestsListPage extends ConsumerWidget {
   Future<void> _approveRequest(BuildContext context, WidgetRef ref, LeaveRequestModel request) async {
     try {
       await ref.read(leaveManagementProvider.notifier)
-          .approveLeaveRequest(request.id, true, null);
+          .approveLeaveRequest(request.id, true, comments: null);
       
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

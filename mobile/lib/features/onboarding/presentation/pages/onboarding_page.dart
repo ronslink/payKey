@@ -945,7 +945,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTick
     required ValueChanged<String?> onChanged,
   }) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,

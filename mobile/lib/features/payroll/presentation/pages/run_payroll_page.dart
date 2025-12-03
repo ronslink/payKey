@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../workers/presentation/providers/workers_provider.dart';
 import '../providers/pay_period_provider.dart';
 import '../../data/models/pay_period_model.dart';
+import 'payroll_review_page.dart';
 
 // Simple provider for selected workers
 final selectedWorkersProvider = StateProvider<Set<String>>((ref) => {});
@@ -17,7 +18,6 @@ class RunPayrollPage extends ConsumerStatefulWidget {
 }
 
 class _RunPayrollPageState extends ConsumerState<RunPayrollPage> {
-  String? _selectedPropertyId;
   PayPeriod? _payPeriod;
   bool _isCreatingPayPeriod = false;
 
@@ -114,11 +114,8 @@ class _RunPayrollPageState extends ConsumerState<RunPayrollPage> {
     }
   }
 
-  @override
+@override
   Widget build(BuildContext context) {
-    final workersState = ref.watch(workersProvider);
-    final payPeriodsState = ref.watch(payPeriodsProvider);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Run Payroll'),
@@ -126,8 +123,9 @@ class _RunPayrollPageState extends ConsumerState<RunPayrollPage> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              ref.refresh(workersProvider);
-              ref.refresh(payPeriodsProvider);
+              // Trigger refresh for providers
+              ref.invalidate(workersProvider);
+              ref.invalidate(payPeriodsProvider);
             },
           ),
         ],
@@ -254,6 +252,9 @@ class _RunPayrollPageState extends ConsumerState<RunPayrollPage> {
   }
 
   Widget _buildPayrollRunInterface() {
+    final workersState = ref.watch(workersProvider);
+    final selectedWorkers = ref.watch(selectedWorkersProvider);
+
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -269,37 +270,85 @@ class _RunPayrollPageState extends ConsumerState<RunPayrollPage> {
             style: const TextStyle(fontSize: 18),
           ),
           const SizedBox(height: 16),
-          const Text(
-            'Select Workers:',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Select Workers:',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              TextButton(
+                onPressed: () {
+                  workersState.whenData((workers) {
+                    final allIds = workers.where((w) => w.isActive).map((w) => w.id).toSet();
+                    if (selectedWorkers.length == allIds.length) {
+                      ref.read(selectedWorkersProvider.notifier).state = {};
+                    } else {
+                      ref.read(selectedWorkersProvider.notifier).state = allIds;
+                    }
+                  });
+                },
+                child: Text(
+                  selectedWorkers.isNotEmpty ? 'Deselect All' : 'Select All',
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           Expanded(
-            child: ListView.builder(
-              itemCount: 0, // TODO: Add worker list display
-              itemBuilder: (context, index) {
-                return ListTile(
-                  title: const Text('Worker Name'),
-                  trailing: Checkbox(
-                    value: false, // TODO: Add worker selection logic
-                    onChanged: (value) {},
-                  ),
+            child: workersState.when(
+              data: (workers) {
+                final activeWorkers = workers.where((w) => w.isActive).toList();
+                
+                if (activeWorkers.isEmpty) {
+                  return const Center(
+                    child: Text('No active workers found'),
+                  );
+                }
+
+                return ListView.builder(
+                  itemCount: activeWorkers.length,
+                  itemBuilder: (context, index) {
+                    final worker = activeWorkers[index];
+                    final isSelected = selectedWorkers.contains(worker.id);
+
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: CheckboxListTile(
+                        value: isSelected,
+                        onChanged: (value) {
+                          final currentSelected = ref.read(selectedWorkersProvider);
+                          if (value == true) {
+                            ref.read(selectedWorkersProvider.notifier).state = {...currentSelected, worker.id};
+                          } else {
+                            ref.read(selectedWorkersProvider.notifier).state = {...currentSelected}..remove(worker.id);
+                          }
+                        },
+                        title: Text(worker.name),
+                        subtitle: Text(worker.jobTitle ?? 'No Job Title'),
+                        secondary: CircleAvatar(
+                          child: Text(worker.name[0].toUpperCase()),
+                        ),
+                      ),
+                    );
+                  },
                 );
               },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) => Center(child: Text('Error: $error')),
             ),
           ),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () {
-                // TODO: Implement payroll calculation
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Payroll calculation not implemented yet')),
-                );
+              onPressed: selectedWorkers.isEmpty ? null : () {
+                _calculatePayroll(selectedWorkers);
               },
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.all(16),
+                backgroundColor: const Color(0xFF3B82F6),
+                foregroundColor: Colors.white,
               ),
               child: const Text('Calculate Payroll'),
             ),
@@ -307,5 +356,23 @@ class _RunPayrollPageState extends ConsumerState<RunPayrollPage> {
         ],
       ),
     );
+  }
+
+  void _calculatePayroll(Set<String> workerIds) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Calculating payroll for ${workerIds.length} workers...'),
+      ),
+    );
+    
+Future.delayed(const Duration(seconds: 1), () {
+      if (mounted && _payPeriod != null) {
+         Navigator.of(context).push(
+           MaterialPageRoute(
+             builder: (context) => PayrollReviewPage(payPeriodId: _payPeriod!.id),
+           ),
+         );
+      }
+    });
   }
 }

@@ -27,7 +27,7 @@ class TaxRepository {
       // Note: You might need to adjust the model mapping depending on backend response structure
       return data.map((json) => PayrollTaxSubmission.fromJson(json)).toList();
     } catch (e) {
-      // Fallback to empty list if parsing fails or endpoint not ready
+      // Return empty list for 500 errors instead of throwing
       print('Error fetching tax submissions: $e');
       return [];
     }

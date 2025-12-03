@@ -24,7 +24,7 @@ class TaxSubmissionNotifier extends StateNotifier<AsyncValue<List<TaxSubmissionM
 
   Future<void> submitTaxReturn(TaxSubmissionModel submission) async {
     try {
-      final result = await _repository.submitTaxReturn(submission);
+      await _repository.submitTaxReturn(submission);
       await loadSubmissions();
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);

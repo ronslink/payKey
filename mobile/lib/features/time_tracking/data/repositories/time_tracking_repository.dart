@@ -1,64 +1,90 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../../../../core/network/api_client.dart';
+import '../../../../core/network/api_service.dart';
 import '../models/time_tracking_model.dart';
 
 final timeTrackingRepositoryProvider = Provider<TimeTrackingRepository>((ref) {
-  return TimeTrackingRepository(
-    ref.read(apiClientProvider),
-    const FlutterSecureStorage(),
-  );
+  return TimeTrackingRepository(ApiService());
 });
 
 class TimeTrackingRepository {
-  final Dio _dio;
-  final FlutterSecureStorage _storage;
+  final ApiService _apiService;
 
-  TimeTrackingRepository(this._dio, this._storage);
+  TimeTrackingRepository(this._apiService);
 
   Future<TimeEntry> clockIn(ClockInRequest request) async {
     try {
-      final token = await _storage.read(key: 'access_token');
-      final response = await _dio.post(
+      final response = await _apiService.post(
         '/time-tracking/clock-in',
         data: request.toJson(),
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
-      return TimeEntry.fromJson(response.data);
+
+      final data = response.data;
+      if (data == null) {
+        throw TimeTrackingException('No data received from clock-in request');
+      }
+
+      return TimeEntry.fromJson(data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _handleDioError(e);
     } catch (e) {
-      throw _handleError(e);
+      if (e is TimeTrackingException) rethrow;
+      throw TimeTrackingException('Failed to clock in: ${e.toString()}');
     }
   }
 
   Future<TimeEntry> clockOut(ClockOutRequest request) async {
     try {
-      final token = await _storage.read(key: 'access_token');
-      final response = await _dio.post(
+      final response = await _apiService.post(
         '/time-tracking/clock-out',
         data: request.toJson(),
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
-      return TimeEntry.fromJson(response.data);
+
+      final data = response.data;
+      if (data == null) {
+        throw TimeTrackingException('No data received from clock-out request');
+      }
+
+      return TimeEntry.fromJson(data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _handleDioError(e);
     } catch (e) {
-      throw _handleError(e);
+      if (e is TimeTrackingException) rethrow;
+      throw TimeTrackingException('Failed to clock out: ${e.toString()}');
     }
   }
 
   Future<TimeEntry?> getActiveEntry(String workerId) async {
     try {
-      final token = await _storage.read(key: 'access_token');
-      final response = await _dio.get(
+      final response = await _apiService.get(
         '/time-tracking/active',
-        queryParameters: {'workerId': workerId},
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
+        queryParams: {'workerId': workerId},
       );
-      return response.data != null ? TimeEntry.fromJson(response.data) : null;
-    } catch (e) {
-      if (e is DioException && e.response?.statusCode == 404) {
+
+      final data = response.data;
+      if (data == null) {
         return null;
       }
-      throw _handleError(e);
+
+      return TimeEntry.fromJson(data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      // 404 means no active entry exists - this is expected
+      if (e.response?.statusCode == 404) {
+        return null;
+      }
+
+      // For timeout/connection errors, throw with network flag
+      if (_isNetworkError(e)) {
+        throw TimeTrackingException(
+          'Unable to check active entry. Please check your connection.',
+          isNetworkError: true,
+        );
+      }
+
+      throw _handleDioError(e);
+    } catch (e) {
+      if (e is TimeTrackingException) rethrow;
+      throw TimeTrackingException('Failed to get active entry: ${e.toString()}');
     }
   }
 
@@ -68,32 +94,83 @@ class TimeTrackingRepository {
     DateTime? endDate,
   }) async {
     try {
-      final token = await _storage.read(key: 'access_token');
       final queryParams = <String, dynamic>{};
       if (workerId != null) queryParams['workerId'] = workerId;
       if (startDate != null) queryParams['startDate'] = startDate.toIso8601String();
       if (endDate != null) queryParams['endDate'] = endDate.toIso8601String();
 
-      final response = await _dio.get(
+      final response = await _apiService.get(
         '/time-tracking/entries',
-        queryParameters: queryParams,
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
+        queryParams: queryParams,
       );
-      return (response.data as List)
-          .map((json) => TimeEntry.fromJson(json))
+
+      final data = response.data;
+      if (data == null) {
+        return [];
+      }
+
+      if (data is! List) {
+        throw TimeTrackingException('Invalid response format: expected list');
+      }
+
+      return data
+          .map((json) => TimeEntry.fromJson(json as Map<String, dynamic>))
           .toList();
+    } on DioException catch (e) {
+      throw _handleDioError(e);
     } catch (e) {
-      throw _handleError(e);
+      if (e is TimeTrackingException) rethrow;
+      throw TimeTrackingException('Failed to get time entries: ${e.toString()}');
     }
   }
 
-  Exception _handleError(dynamic error) {
-    if (error is DioException) {
-      if (error.response != null) {
-        return Exception(error.response?.data['message'] ?? 'An error occurred');
-      }
-      return Exception(error.message);
-    }
-    return Exception(error.toString());
+  bool _isNetworkError(DioException e) {
+    return e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.receiveTimeout ||
+        e.type == DioExceptionType.sendTimeout ||
+        e.type == DioExceptionType.connectionError;
   }
+
+  TimeTrackingException _handleDioError(DioException error) {
+    if (error.response != null) {
+      final data = error.response?.data;
+      String message = 'An error occurred';
+
+      if (data is Map<String, dynamic>) {
+        message = data['message'] as String? ?? message;
+      }
+
+      return TimeTrackingException(
+        message,
+        statusCode: error.response?.statusCode,
+      );
+    }
+
+    if (_isNetworkError(error)) {
+      return TimeTrackingException(
+        'Network error. Please check your connection.',
+        isNetworkError: true,
+      );
+    }
+
+    return TimeTrackingException(
+      error.message ?? 'An unexpected error occurred',
+    );
+  }
+}
+
+/// Custom exception for time tracking operations
+class TimeTrackingException implements Exception {
+  final String message;
+  final int? statusCode;
+  final bool isNetworkError;
+
+  TimeTrackingException(
+    this.message, {
+    this.statusCode,
+    this.isNetworkError = false,
+  });
+
+  @override
+  String toString() => message;
 }

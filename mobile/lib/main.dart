@@ -13,6 +13,8 @@ import 'features/payroll/presentation/pages/payslip_page.dart';
 import 'features/finance/presentation/pages/finance_page.dart';
 import 'features/onboarding/presentation/pages/onboarding_page.dart';
 import 'features/subscriptions/presentation/pages/subscription_management_page.dart';
+import 'features/subscriptions/presentation/pages/payment_page.dart';
+import 'features/subscriptions/data/models/subscription_model.dart';
 import 'features/payroll/presentation/pages/payroll_page.dart';
 import 'features/time_tracking/presentation/pages/time_tracking_page.dart';
 import 'features/time_tracking/presentation/pages/time_tracking_history_page.dart';
@@ -100,6 +102,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(
+        path: '/subscriptions/payment',
+        builder: (context, state) {
+          final plan = state.extra as SubscriptionPlan;
+          return PaymentPage(plan: plan);
+        },
+      ),
+      GoRoute(
         path: '/payroll',
         builder: (context, state) => const MainLayout(
           currentIndex: 5,
@@ -134,7 +143,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/finance',
-        builder: (context, state) => const FinancePage(),
+        builder: (context, state) => const MainLayout(
+          currentIndex: 6,
+          child: FinancePage(),
+        ),
       ),
       GoRoute(
         path: '/onboarding',

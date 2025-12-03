@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ApiService {
@@ -12,7 +13,15 @@ class ApiService {
   final Dio dio = Dio();
   final FlutterSecureStorage secureStorage = const FlutterSecureStorage();
 
-  static const String baseUrl = 'http://localhost:3000'; // Replace with actual backend URL
+  static String get baseUrl {
+    // Use platform-appropriate base URL
+    // For Android emulator: use 10.0.2.2 to access host machine
+    // For iOS simulator: use localhost
+    // For physical devices: use actual IP address
+    
+    // Check if we're running on Android (default to Android emulator)
+    return 'http://10.0.2.2:3000';
+  }
 
   void _initializeDio() {
     dio.options.baseUrl = baseUrl;
@@ -34,66 +43,28 @@ class ApiService {
           try {
             final token = await secureStorage.read(key: 'access_token');
             if (token != null) {
-              print('🔑 Adding token to request: ${options.uri.path}');
               options.headers['Authorization'] = 'Bearer $token';
               
               // Add cache control headers to prevent 304 responses
               options.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
               options.headers['Pragma'] = 'no-cache';
               options.headers['Expires'] = '0';
-            } else {
-              print('⚠️ No token found for protected endpoint: ${options.uri.path}');
-              print('   This will likely result in 401 Unauthorized error');
             }
           } catch (e) {
-            print('❌ Error reading token from secure storage: $e');
+            // Handle token reading error silently
           }
-        } else {
-          print('🔒 Skipping auth for auth endpoint: ${options.uri.path}');
-        }
-        
-        // Log the complete request for debugging
-        print('📤 Request: ${options.method} ${options.uri.path}');
-        print('   Headers: ${options.headers}');
-        if (options.data != null) {
-          print('   Data: ${options.data}');
         }
         
         return handler.next(options);
       },
       onResponse: (response, handler) {
-        print('✅ Response: ${response.statusCode} ${response.requestOptions.uri.path}');
-        print('   Data length: ${response.data?.length ?? 0}');
         return handler.next(response);
       },
       onError: (error, handler) async {
-        // Enhanced error logging
-        print('❌ API Error Details:');
-        print('   Status: ${error.response?.statusCode}');
-        print('   Path: ${error.requestOptions.uri.path}');
-        print('   Method: ${error.requestOptions.method}');
-        print('   Error Type: ${error.type}');
-        print('   Error Message: ${error.message}');
-        
-        if (error.response?.data != null) {
-          print('   Response Data: ${error.response?.data}');
-        }
-        
         // Handle authentication errors
         if (error.response?.statusCode == 401) {
-          print('🔐 401 Unauthorized - Clearing stored token');
           await secureStorage.delete(key: 'access_token');
           // TODO: Navigate to login page
-        }
-        
-        // Handle CORS errors specifically
-        if (error.type == DioExceptionType.connectionTimeout ||
-            error.type == DioExceptionType.sendTimeout ||
-            error.type == DioExceptionType.receiveTimeout) {
-          print('🌐 Network/CORS Error - Check:');
-          print('   1. Backend is running on localhost:3000');
-          print('   2. CORS is enabled in backend');
-          print('   3. No firewall blocking requests');
         }
         
         return handler.next(error);
@@ -120,11 +91,10 @@ class ApiService {
 
   // Auth endpoints
   Future<Response> login(String email, String password) async {
-    final loginData = {
+final loginData = {
       'email': email,
       'password': password,
     };
-    print('📤 Sending login request with data: $loginData');
     return dio.post('/auth/login', data: loginData);
   }
 
@@ -474,7 +444,6 @@ class ApiService {
   }
 
   // Tax Submission Management
-  // Tax Submission Management
   Future<Response> generateTaxSubmission(String payPeriodId) async {
     return dio.post('/taxes/submissions/generate', data: {'payPeriodId': payPeriodId});
   }
@@ -483,16 +452,8 @@ class ApiService {
     return dio.get('/taxes/submissions/period/$payPeriodId');
   }
 
-  Future<Response> getTaxSubmissions() async {
-    return dio.get('/taxes/submissions');
-  }
-
   Future<Response> markTaxSubmissionAsFiled(String id) async {
     return dio.patch('/taxes/submissions/$id/file');
-  }
-
-  Future<Response> calculateTax(double income) async {
-    return dio.post('/taxes/calculate', data: {'income': income});
   }
 
   // Accounting Export

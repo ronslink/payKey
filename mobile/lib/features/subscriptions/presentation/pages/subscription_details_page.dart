@@ -4,7 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../providers/subscription_provider.dart';
 import '../providers/subscription_payment_history_provider.dart';
-import '../data/models/subscription_plan_model.dart';
+import '../../data/models/subscription_model.dart';
+import '../../data/models/subscription_payment_record.dart';
 
 class SubscriptionDetailsPage extends ConsumerStatefulWidget {
   const SubscriptionDetailsPage({super.key});
@@ -140,7 +141,7 @@ class _SubscriptionDetailsPageState extends ConsumerState<SubscriptionDetailsPag
     );
   }
 
-  Widget _buildSubscriptionCard(BuildContext context, UserSubscriptionModel subscription) {
+  Widget _buildSubscriptionCard(BuildContext context, Subscription subscription) {
     final statusColor = subscription.status == 'ACTIVE' ? Colors.green : Colors.red;
     
     return Card(
@@ -163,7 +164,7 @@ class _SubscriptionDetailsPageState extends ConsumerState<SubscriptionDetailsPag
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      subscription.tier.toUpperCase(),
+                      subscription.plan.tier.toUpperCase(),
                       style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                     ),
                   ],
@@ -182,16 +183,13 @@ class _SubscriptionDetailsPageState extends ConsumerState<SubscriptionDetailsPag
               ],
             ),
             const Divider(height: 32),
-            _buildInfoRow('Plan Name', subscription.planName),
+            _buildInfoRow('Plan Name', subscription.plan.name),
             const SizedBox(height: 12),
-            _buildInfoRow('Amount', '${subscription.currency} ${subscription.amount}'),
+            _buildInfoRow('Amount', '${subscription.currency} ${subscription.amountPaid}'),
             const SizedBox(height: 12),
-            _buildInfoRow('Start Date', DateFormat('MMM d, yyyy').format(DateTime.parse(subscription.startDate))),
+            _buildInfoRow('Start Date', DateFormat('MMM d, yyyy').format(subscription.startDate)),
             const SizedBox(height: 12),
-            if (subscription.endDate != null)
-              _buildInfoRow('Renews On', DateFormat('MMM d, yyyy').format(DateTime.parse(subscription.endDate!))),
-            if (subscription.nextBillingDate != null)
-              _buildInfoRow('Next Billing', DateFormat('MMM d, yyyy').format(DateTime.parse(subscription.nextBillingDate!))),
+            _buildInfoRow('Renews On', DateFormat('MMM d, yyyy').format(subscription.endDate)),
             
             const SizedBox(height: 24),
             SizedBox(
@@ -219,21 +217,16 @@ class _SubscriptionDetailsPageState extends ConsumerState<SubscriptionDetailsPag
           ),
         ),
         title: Text(
-          DateFormat('MMM d, yyyy').format(DateTime.parse(payment.createdAt)),
+          DateFormat('MMM d, yyyy').format(payment.createdAt),
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(payment.invoiceNumber),
-            if (payment.notes != null)
+            Text(payment.providerTransactionId),
+            if (payment.processedAt != null)
               Text(
-                payment.notes!,
-                style: TextStyle(color: Colors.grey[600], fontSize: 12),
-              ),
-            if (payment.paidDate != null)
-              Text(
-                'Paid: ${DateFormat('MMM d, yyyy').format(DateTime.parse(payment.paidDate!))}',
+                'Paid: ${DateFormat('MMM d, yyyy').format(payment.processedAt!)}',
                 style: TextStyle(color: Colors.green[600], fontSize: 12),
               ),
           ],

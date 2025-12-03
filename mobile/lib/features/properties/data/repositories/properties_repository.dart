@@ -1,10 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/network/dio_provider.dart';
+import '../../../../core/network/api_service.dart';
 import '../models/property_model.dart';
 
 final propertiesRepositoryProvider = Provider<PropertiesRepository>((ref) {
-  return PropertiesRepository(ref.read(dioProvider));
+  return PropertiesRepository(ApiService().dio);
 });
 
 class PropertiesRepository {

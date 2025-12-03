@@ -4,11 +4,11 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/termination_model.dart';
 
 final terminationRepositoryProvider = Provider<TerminationRepository>((ref) {
-  return TerminationRepository();
+  return TerminationRepository(const FlutterSecureStorage());
 });
 
 class TerminationRepository {
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final FlutterSecureStorage _storage;
   final Dio _dio = Dio(BaseOptions(
     baseUrl: 'http://10.0.2.2:3000',
     headers: {'Content-Type': 'application/json'},

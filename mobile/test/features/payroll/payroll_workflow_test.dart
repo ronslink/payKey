@@ -30,7 +30,7 @@ void main() {
         startDate: startDate,
         endDate: endDate,
         frequency: PayPeriodFrequency.monthly,
-        status: PayPeriodStatus.DRAFT,
+        status: PayPeriodStatus.draft,
         totalWorkers: 0,
         totalGrossAmount: 0,
         totalNetAmount: 0,
@@ -50,7 +50,7 @@ void main() {
       );
 
       expect(createdPeriod.id, 'pp-123');
-      expect(createdPeriod.status, PayPeriodStatus.DRAFT);
+      expect(createdPeriod.status, PayPeriodStatus.draft);
       verify(mockPayPeriodRepository.createPayPeriod(any)).called(1);
 
       // 2. Add Workers (Calculate & Save Draft)
@@ -86,17 +86,20 @@ void main() {
       verify(mockPayrollRepository.saveDraftPayroll(createdPeriod.id, any)).called(1);
 
       // 3. Activate Pay Period
-      when(mockPayPeriodRepository.activatePayPeriod(any)).thenAnswer((_) async {});
+      final activatedPeriod = newPayPeriod.copyWith(status: PayPeriodStatus.active);
+      when(mockPayPeriodRepository.activatePayPeriod(any)).thenAnswer((_) async => activatedPeriod);
       await mockPayPeriodRepository.activatePayPeriod(createdPeriod.id);
       verify(mockPayPeriodRepository.activatePayPeriod(createdPeriod.id)).called(1);
 
       // 4. Process Payroll
-      when(mockPayPeriodRepository.processPayPeriod(any)).thenAnswer((_) async {});
+      final processingPeriod = activatedPeriod.copyWith(status: PayPeriodStatus.processing);
+      when(mockPayPeriodRepository.processPayPeriod(any)).thenAnswer((_) async => processingPeriod);
       await mockPayPeriodRepository.processPayPeriod(createdPeriod.id);
       verify(mockPayPeriodRepository.processPayPeriod(createdPeriod.id)).called(1);
 
       // 5. Complete Payroll
-      when(mockPayPeriodRepository.completePayPeriod(any)).thenAnswer((_) async {});
+      final completedPeriod = processingPeriod.copyWith(status: PayPeriodStatus.completed);
+      when(mockPayPeriodRepository.completePayPeriod(any)).thenAnswer((_) async => completedPeriod);
       await mockPayPeriodRepository.completePayPeriod(createdPeriod.id);
       verify(mockPayPeriodRepository.completePayPeriod(createdPeriod.id)).called(1);
     });
