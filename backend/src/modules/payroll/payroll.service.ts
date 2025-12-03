@@ -32,32 +32,80 @@ export class PayrollService {
 
     const payrollItems = await Promise.all(
       workers.map(async (worker) => {
-        const taxBreakdown = await this.taxesService.calculateTaxes(
-          worker.salaryGross,
-        );
-        const netPay = worker.salaryGross - taxBreakdown.totalDeductions;
+        try {
+          // Convert salaryGross to number (handle string values from database)
+          const grossSalary = Number(worker.salaryGross);
+          
+          // Validate salary value
+          if (isNaN(grossSalary) || grossSalary <= 0) {
+            this.logger.warn(
+              `Invalid salary for worker ${worker.id}: ${worker.salaryGross}`,
+            );
+            return {
+              workerId: worker.id,
+              workerName: worker.name,
+              grossSalary: 0,
+              taxBreakdown: {
+                nssf: 0,
+                nhif: 0,
+                housingLevy: 0,
+                paye: 0,
+                totalDeductions: 0,
+              },
+              netPay: 0,
+              phoneNumber: worker.phoneNumber,
+              error: 'Invalid salary amount',
+            };
+          }
 
-        return {
-          workerId: worker.id,
-          workerName: worker.name,
-          grossSalary: worker.salaryGross,
-          taxBreakdown,
-          netPay: Math.round(netPay * 100) / 100,
-          phoneNumber: worker.phoneNumber,
-        };
+          const taxBreakdown = await this.taxesService.calculateTaxes(
+            grossSalary,
+          );
+          const netPay = grossSalary - taxBreakdown.totalDeductions;
+
+          return {
+            workerId: worker.id,
+            workerName: worker.name,
+            grossSalary,
+            taxBreakdown,
+            netPay: Math.round(netPay * 100) / 100,
+            phoneNumber: worker.phoneNumber,
+          };
+        } catch (error) {
+          // Log error but continue with other workers
+          this.logger.error(
+            `Error calculating payroll for worker ${worker.id}:`,
+            error,
+          );
+          return {
+            workerId: worker.id,
+            workerName: worker.name,
+            grossSalary: Number(worker.salaryGross) || 0,
+            taxBreakdown: {
+              nssf: 0,
+              nhif: 0,
+              housingLevy: 0,
+              paye: 0,
+              totalDeductions: 0,
+            },
+            netPay: 0,
+            phoneNumber: worker.phoneNumber,
+            error: error.message || 'Failed to calculate taxes',
+          };
+        }
       }),
     );
 
     const totalGross = payrollItems.reduce(
-      (sum, item) => sum + item.grossSalary,
+      (sum, item) => sum + (item.grossSalary || 0),
       0,
     );
     const totalDeductions = payrollItems.reduce(
-      (sum, item) => sum + item.taxBreakdown.totalDeductions,
+      (sum, item) => sum + (item.taxBreakdown?.totalDeductions || 0),
       0,
     );
     const totalNetPay = payrollItems.reduce(
-      (sum, item) => sum + item.netPay,
+      (sum, item) => sum + (item.netPay || 0),
       0,
     );
 
@@ -107,34 +155,82 @@ export class PayrollService {
       const chunk = selectedWorkers.slice(i, i + CHUNK_SIZE);
       const chunkResults = await Promise.all(
         chunk.map(async (worker) => {
-          const taxBreakdown = await this.taxesService.calculateTaxes(
-            worker.salaryGross,
-          );
-          const netPay = worker.salaryGross - taxBreakdown.totalDeductions;
+          try {
+            // Convert salaryGross to number (handle string values from database)
+            const grossSalary = Number(worker.salaryGross);
+            
+            // Validate salary value
+            if (isNaN(grossSalary) || grossSalary <= 0) {
+              this.logger.warn(
+                `Invalid salary for worker ${worker.id}: ${worker.salaryGross}`,
+              );
+              return {
+                workerId: worker.id,
+                workerName: worker.name,
+                grossSalary: 0,
+                taxBreakdown: {
+                  nssf: 0,
+                  nhif: 0,
+                  housingLevy: 0,
+                  paye: 0,
+                  totalDeductions: 0,
+                },
+                netPay: 0,
+                phoneNumber: worker.phoneNumber,
+                error: 'Invalid salary amount',
+              };
+            }
 
-          return {
-            workerId: worker.id,
-            workerName: worker.name,
-            grossSalary: worker.salaryGross,
-            taxBreakdown,
-            netPay: Math.round(netPay * 100) / 100,
-            phoneNumber: worker.phoneNumber,
-          };
+            const taxBreakdown = await this.taxesService.calculateTaxes(
+              grossSalary,
+            );
+            const netPay = grossSalary - taxBreakdown.totalDeductions;
+
+            return {
+              workerId: worker.id,
+              workerName: worker.name,
+              grossSalary,
+              taxBreakdown,
+              netPay: Math.round(netPay * 100) / 100,
+              phoneNumber: worker.phoneNumber,
+            };
+          } catch (error) {
+            // Log error but continue with other workers
+            this.logger.error(
+              `Error calculating payroll for worker ${worker.id}:`,
+              error,
+            );
+            return {
+              workerId: worker.id,
+              workerName: worker.name,
+              grossSalary: Number(worker.salaryGross) || 0,
+              taxBreakdown: {
+                nssf: 0,
+                nhif: 0,
+                housingLevy: 0,
+                paye: 0,
+                totalDeductions: 0,
+              },
+              netPay: 0,
+              phoneNumber: worker.phoneNumber,
+              error: error.message || 'Failed to calculate taxes',
+            };
+          }
         }),
       );
       payrollItems.push(...chunkResults);
     }
 
     const totalGross = payrollItems.reduce(
-      (sum, item) => sum + item.grossSalary,
+      (sum, item) => sum + (item.grossSalary || 0),
       0,
     );
     const totalDeductions = payrollItems.reduce(
-      (sum, item) => sum + item.taxBreakdown.totalDeductions,
+      (sum, item) => sum + (item.taxBreakdown?.totalDeductions || 0),
       0,
     );
     const totalNetPay = payrollItems.reduce(
-      (sum, item) => sum + item.netPay,
+      (sum, item) => sum + (item.netPay || 0),
       0,
     );
 
@@ -163,15 +259,23 @@ export class PayrollService {
       throw new Error('Worker not found');
     }
 
+    // Convert salaryGross to number (handle string values from database)
+    const grossSalary = Number(worker.salaryGross);
+    
+    // Validate salary value
+    if (isNaN(grossSalary) || grossSalary <= 0) {
+      throw new Error(`Invalid salary amount for worker: ${worker.salaryGross}`);
+    }
+
     const taxBreakdown = await this.taxesService.calculateTaxes(
-      worker.salaryGross,
+      grossSalary,
     );
-    const netPay = worker.salaryGross - taxBreakdown.totalDeductions;
+    const netPay = grossSalary - taxBreakdown.totalDeductions;
 
     return {
       worker,
       payrollCalculation: {
-        grossSalary: worker.salaryGross,
+        grossSalary,
         taxBreakdown,
         netPay: Math.round(netPay * 100) / 100,
       },

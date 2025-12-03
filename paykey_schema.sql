@@ -112,6 +112,7 @@ CREATE TABLE IF NOT EXISTS payroll_records (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     "userId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     "workerId" UUID NOT NULL REFERENCES workers(id) ON DELETE CASCADE,
+    "payPeriodId" UUID REFERENCES pay_periods(id) ON DELETE SET NULL,
     "periodStart" DATE NOT NULL,
     "periodEnd" DATE NOT NULL,
     "grossSalary" DECIMAL(10,2) NOT NULL,
@@ -179,6 +180,7 @@ CREATE INDEX IF NOT EXISTS idx_workers_propertyId ON workers("propertyId");
 CREATE INDEX IF NOT EXISTS idx_pay_periods_userId ON pay_periods("userId");
 CREATE INDEX IF NOT EXISTS idx_payroll_records_userId ON payroll_records("userId");
 CREATE INDEX IF NOT EXISTS idx_payroll_records_workerId ON payroll_records("workerId");
+CREATE INDEX IF NOT EXISTS idx_payroll_records_payPeriodId ON payroll_records("payPeriodId");
 CREATE INDEX IF NOT EXISTS idx_payroll_records_period ON payroll_records("periodStart", "periodEnd");
 CREATE INDEX IF NOT EXISTS idx_tax_submissions_userId ON tax_submissions("userId");
 CREATE INDEX IF NOT EXISTS idx_tax_submissions_payPeriodId ON tax_submissions("payPeriodId");
