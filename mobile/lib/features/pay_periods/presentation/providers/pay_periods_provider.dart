@@ -183,7 +183,5 @@ final payPeriodProvider = Provider.family<AsyncValue<PayPeriodModel>, String>((r
 
 // Statistics provider
 final payPeriodStatisticsProvider = Provider.family<AsyncValue<Map<String, dynamic>>, String>((ref, id) {
-  final repository = ref.watch(payPeriodsRepositoryProvider);
-  
   return const AsyncValue.loading(); // You would implement loading logic here
 });

@@ -233,8 +233,8 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
                 );
               }
 
-              return DropdownButtonFormField<String>(
-                value: _selectedWorkerId,
+return DropdownButtonFormField<String>(
+                initialValue: _selectedWorkerId,
                 decoration: InputDecoration(
                   hintText: 'Choose a worker',
                   border: OutlineInputBorder(

@@ -35,7 +35,6 @@ class _LeaveManagementPageState extends ConsumerState<LeaveManagementPage>
   @override
   Widget build(BuildContext context) {
     final workersState = ref.watch(workersProvider);
-    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(

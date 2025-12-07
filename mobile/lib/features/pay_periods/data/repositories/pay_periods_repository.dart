@@ -2,12 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_service.dart';
 import '../models/pay_period_model.dart';
 
-final payPeriodsRepositoryProvider = Provider((ref) => PayPeriodsRepositoryImpl(ApiService()));
+final payPeriodsRepositoryProvider = Provider((ref) => PayPeriodsRepositoryImpl());
 
 class PayPeriodsRepositoryImpl {
-  final ApiService _apiService;
-
-  PayPeriodsRepositoryImpl(this._apiService);
+  PayPeriodsRepositoryImpl();
 
   Future<List<PayPeriodModel>> getPayPeriods({
     int page = 1,

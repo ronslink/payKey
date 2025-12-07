@@ -151,7 +151,17 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
       }
 
       if (mounted) {
-        context.pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(widget.worker == null ? 'Worker added successfully' : 'Worker updated successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/workers');
+        }
       }
     } catch (error) {
       if (mounted) {
@@ -179,7 +189,13 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/workers');
+            }
+          },
         ),
       ),
       body: SingleChildScrollView(
@@ -321,7 +337,7 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black .withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),

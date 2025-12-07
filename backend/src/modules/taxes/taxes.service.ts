@@ -177,7 +177,8 @@ export class TaxesService {
     );
 
     if (shifConfig && shifConfig.configuration.percentage !== undefined) {
-      const shifAmount = grossSalary * shifConfig.configuration.percentage;
+      // Percentage is stored as whole number (e.g., 2.75 for 2.75%), so divide by 100
+      const shifAmount = grossSalary * (shifConfig.configuration.percentage / 100);
       const minAmount = shifConfig.configuration.minAmount || 0;
       return Math.round(Math.max(shifAmount, minAmount) * 100) / 100;
     }
@@ -201,8 +202,9 @@ export class TaxesService {
     );
 
     if (housingConfig && housingConfig.configuration.percentage !== undefined) {
+      // Percentage is stored as whole number (e.g., 1.5 for 1.5%), so divide by 100
       return (
-        Math.round(grossSalary * housingConfig.configuration.percentage * 100) /
+        Math.round(grossSalary * (housingConfig.configuration.percentage / 100) * 100) /
         100
       );
     }
@@ -339,10 +341,15 @@ export class TaxesService {
     } catch (error) {
       // If relation fails, return without it
       console.warn('Failed to load payPeriod relation:', error.message);
-      return await this.taxSubmissionRepository.find({
-        where: { userId },
-        order: { createdAt: 'DESC' },
-      });
+      try {
+        return await this.taxSubmissionRepository.find({
+          where: { userId },
+          order: { createdAt: 'DESC' },
+        });
+      } catch (fallbackError) {
+        console.error('Failed to load tax submissions:', fallbackError.message);
+        return [];
+      }
     }
   }
 

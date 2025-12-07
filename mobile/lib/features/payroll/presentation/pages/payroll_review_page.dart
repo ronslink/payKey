@@ -25,8 +25,8 @@ class PayrollReviewPage extends ConsumerStatefulWidget {
 
 class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
   PayPeriod? _payPeriod;
-  bool _isLoading = false;
-  bool _isGeneratingPayslips = false;
+  bool isLoading = false;
+  bool isGeneratingPayslips = false;
   Map<String, dynamic>? _statistics;
   Map<String, dynamic>? _taxSummary;
   List<PayrollCalculation> _payrollItems = [];
@@ -65,7 +65,13 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
       final payrollRepo = ref.read(payrollRepositoryProvider);
       
       // Load statistics
-      final stats = await repository.getPayPeriodStatistics(widget.payPeriodId);
+      Map<String, dynamic>? stats;
+      try {
+        stats = await repository.getPayPeriodStatistics(widget.payPeriodId);
+      } catch (e) {
+        print('Failed to load statistics: $e');
+        // Continue without statistics
+      }
       
       // Load draft items
       List<PayrollCalculation> items = [];
@@ -80,13 +86,22 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
           _statistics = stats;
           _payrollItems = items;
           // Extract tax summary if available
-          if (stats.containsKey('taxSummary')) {
+          if (stats != null && stats.containsKey('taxSummary')) {
             _taxSummary = stats['taxSummary'] as Map<String, dynamic>?;
           }
         });
       }
     } catch (e) {
       print('Failed to load payroll data: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load payroll data: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
     }
   }
 
@@ -166,12 +181,16 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
   }
 
   Future<void> _addWorkersToPayroll(List<String> workerIds) async {
-    setState(() => _isLoading = true);
+    setState(() => isLoading = true);
     try {
       final payrollRepo = ref.read(payrollRepositoryProvider);
       
       // 1. Calculate initial payroll for selected workers
-      final calculations = await payrollRepo.calculatePayroll(workerIds);
+      final calculations = await payrollRepo.calculatePayroll(
+        workerIds,
+        startDate: _payPeriod!.startDate,
+        endDate: _payPeriod!.endDate,
+      );
       
       // 2. Prepare items for saving
       final itemsToSave = calculations.map((calc) => {
@@ -202,7 +221,7 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
       }
     } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() => isLoading = false);
       }
     }
   }
@@ -210,7 +229,7 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
   Future<void> _generatePayslips() async {
     if (_payPeriod == null) return;
 
-    setState(() => _isGeneratingPayslips = true);
+    setState(() => isGeneratingPayslips = true);
     try {
       final repository = ref.read(payPeriodRepositoryProvider);
       await repository.generatePayslips(widget.payPeriodId);
@@ -235,7 +254,7 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
       }
     } finally {
       if (mounted) {
-        setState(() => _isGeneratingPayslips = false);
+        setState(() => isGeneratingPayslips = false);
       }
     }
   }
@@ -243,7 +262,7 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
   Future<void> _prepareTaxSubmission() async {
     if (_payPeriod == null) return;
 
-    setState(() => _isLoading = true);
+    setState(() => isLoading = true);
     try {
       // Navigate to tax page with pre-filled data
       if (mounted) {
@@ -260,7 +279,7 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
       }
     } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() => isLoading = false);
       }
     }
   }
@@ -651,7 +670,7 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
   Future<void> _transitionToNextStage() async {
     if (_payPeriod == null) return;
 
-    setState(() => _isLoading = true);
+    setState(() => isLoading = true);
     try {
       final repository = ref.read(payPeriodRepositoryProvider);
       PayPeriod updatedPeriod;
@@ -702,7 +721,7 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
       }
     } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() => isLoading = false);
       }
     }
   }
@@ -738,43 +757,36 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
         builder: (context, constraints) {
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: constraints.maxHeight,
-              ),
-              child: IntrinsicHeight(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header with Status
-                    _buildHeader(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header with Status
+                _buildHeader(),
 
-                    const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-                    // Summary Statistics
-                    if (_statistics != null) _buildSummarySection(),
+                // Summary Statistics
+                if (_statistics != null) _buildSummarySection(),
 
-                    const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-                    // Tax Summary (if completed)
-                    if (_payPeriod!.status == PayPeriodStatus.completed || 
-                        _payPeriod!.status == PayPeriodStatus.closed)
-                      _buildTaxSummarySection(),
+                // Tax Summary (if completed)
+                if (_payPeriod!.status == PayPeriodStatus.completed || 
+                    _payPeriod!.status == PayPeriodStatus.closed)
+                  _buildTaxSummarySection(),
 
-                    if (_payPeriod!.status == PayPeriodStatus.completed || 
-                        _payPeriod!.status == PayPeriodStatus.closed)
-                      const SizedBox(height: 24),
+                if (_payPeriod!.status == PayPeriodStatus.completed || 
+                    _payPeriod!.status == PayPeriodStatus.closed)
+                  const SizedBox(height: 24),
 
-                    // Individual Records
-                    _buildRecordsSection(),
+                // Individual Records
+                _buildRecordsSection(),
 
-                    const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-                    // Action Buttons
-                    _buildActionButtons(),
-                  ],
-                ),
-              ),
+                // Action Buttons
+                _buildActionButtons(),
+              ],
             ),
           );
         },
@@ -825,29 +837,6 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
                   ),
                 ),
                 _buildStatusBadge(_payPeriod!.status),
-              ],
-            ),
-            const Divider(),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildMetric(
-                    'Period Gross',
-                    'KES ${(_payPeriod?.totalGrossAmount ?? 0.0).toStringAsFixed(2)}',
-                  ),
-                ),
-                Expanded(
-                  child: _buildMetric(
-                    'Period Net',
-                    'KES ${(_payPeriod?.totalNetAmount ?? 0.0).toStringAsFixed(2)}',
-                  ),
-                ),
-                Expanded(
-                  child: _buildMetric(
-                    'Workers',
-                    '${_payPeriod?.processedWorkers ?? 0}',
-                  ),
-                ),
               ],
             ),
           ],
@@ -904,32 +893,24 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
     );
   }
 
-  Widget _buildMetric(String label, String value) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.grey,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
-  }
+
 
   Widget _buildSummarySection() {
-    final stats = _statistics!;
+    final stats = _statistics;
+    if (stats == null) return const SizedBox.shrink();
+    
+    final statsData = stats['statistics'] as Map<String, dynamic>?;
+    if (statsData == null) return const SizedBox.shrink();
+    
     final numberFormat = NumberFormat('#,###.00');
+
+    // Helper to safely get numeric value
+    num getNumValue(dynamic value) {
+      if (value == null) return 0;
+      if (value is num) return value;
+      if (value is String) return num.tryParse(value) ?? 0;
+      return 0;
+    }
 
     return Card(
       child: Padding(
@@ -950,7 +931,7 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
                 Expanded(
                   child: _buildSummaryCard(
                     'Total Workers',
-                    '${stats['statistics']['totalWorkers']}',
+                    '${statsData['totalWorkers'] ?? 0}',
                     Icons.people,
                     Colors.blue,
                   ),
@@ -959,7 +940,7 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
                 Expanded(
                   child: _buildSummaryCard(
                     'Processed',
-                    '${stats['statistics']['processedPayments']}',
+                    '${statsData['processedPayments'] ?? 0}',
                     Icons.check_circle,
                     Colors.green,
                   ),
@@ -968,7 +949,7 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
                 Expanded(
                   child: _buildSummaryCard(
                     'Pending',
-                    '${stats['statistics']['pendingPayments']}',
+                    '${statsData['pendingPayments'] ?? 0}',
                     Icons.pending,
                     Colors.orange,
                   ),
@@ -985,7 +966,7 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
                     children: [
                       const Text('Total Gross Amount'),
                       Text(
-                        'KES ${numberFormat.format(stats['statistics']['totalGrossAmount'])}',
+                        'KES ${numberFormat.format(getNumValue(statsData['totalGrossAmount']))}',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -999,7 +980,7 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
                     children: [
                       const Text('Total Net Amount'),
                       Text(
-                        'KES ${numberFormat.format(stats['statistics']['totalNetAmount'])}',
+                        'KES ${numberFormat.format(getNumValue(statsData['totalNetAmount']))}',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -1169,8 +1150,8 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: (_isLoading || _payPeriod!.status == PayPeriodStatus.closed) 
-                    ? null 
+                onPressed: (isLoading || _payPeriod!.status == PayPeriodStatus.closed)
+                    ? null
                     : _transitionToNextStage,
                 icon: const Icon(Icons.skip_next),
                 label: Text(_getNextStageButtonText()),
@@ -1187,8 +1168,8 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: _isGeneratingPayslips ? null : _generatePayslips,
-                  icon: _isGeneratingPayslips 
+                  onPressed: isGeneratingPayslips ? null : _generatePayslips,
+                  icon: isGeneratingPayslips
                       ? const SizedBox(
                           width: 20,
                           height: 20,
@@ -1307,8 +1288,17 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
     );
   }
 
-  Widget _buildTaxRow(String label, double amount, {bool isBold = false}) {
+  Widget _buildTaxRow(String label, dynamic amount, {bool isBold = false}) {
     final numberFormat = NumberFormat('#,###.00');
+    
+    // Safe conversion from any type (int, double, String)
+    double value = 0.0;
+    if (amount is num) {
+      value = amount.toDouble();
+    } else if (amount is String) {
+      value = double.tryParse(amount) ?? 0.0;
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -1322,7 +1312,7 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
             ),
           ),
           Text(
-            'KES ${numberFormat.format(amount)}',
+            'KES ${numberFormat.format(value)}',
             style: TextStyle(
               fontSize: isBold ? 16 : 14,
               fontWeight: isBold ? FontWeight.bold : FontWeight.w600,

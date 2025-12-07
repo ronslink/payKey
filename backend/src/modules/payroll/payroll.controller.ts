@@ -258,4 +258,37 @@ export class PayrollController {
 
     stream.pipe(res);
   }
+
+  @Post('payslips/generate/:payPeriodId')
+  async generatePayslipsForPeriod(
+    @Request() req: AuthenticatedRequest,
+    @Param('payPeriodId') payPeriodId: string,
+  ) {
+    // Fetch all finalized payroll records for the pay period
+    const records = await this.payrollRepository.find({
+      where: {
+        payPeriodId,
+        userId: req.user.userId,
+        status: 'finalized' as any,
+      },
+      relations: ['worker'],
+    });
+
+    if (records.length === 0) {
+      throw new Error('No finalized payroll records found for this pay period');
+    }
+
+    // Generate payslips for all records
+    await this.payslipService.generatePayslipsBatch(records);
+
+    return {
+      message: 'Payslips generated successfully',
+      count: records.length,
+      records: records.map(r => ({
+        id: r.id,
+        workerId: r.workerId,
+        workerName: r.worker.name,
+      })),
+    };
+  }
 }

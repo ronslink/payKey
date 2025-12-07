@@ -42,7 +42,6 @@ enum PayPeriodStatusAction {
 
 @freezed
 class PayPeriod with _$PayPeriod {
-  @JsonKey(fromJson: _intFromJson, toJson: _intToJson)
   const factory PayPeriod({
     required String id,
     required String name,
@@ -50,11 +49,11 @@ class PayPeriod with _$PayPeriod {
     required DateTime endDate,
     required PayPeriodFrequency frequency,
     required PayPeriodStatus status,
-    @JsonKey(fromJson: _intFromJson, toJson: _intToJson) int? totalWorkers,
-    @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson) double? totalGrossAmount,
-    @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson) double? totalNetAmount,
-    @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson) double? totalTaxAmount,
-    @JsonKey(fromJson: _intFromJson, toJson: _intToJson) int? processedWorkers,
+    int? totalWorkers,
+    double? totalGrossAmount,
+    double? totalNetAmount,
+    double? totalTaxAmount,
+    int? processedWorkers,
     DateTime? createdAt,
     DateTime? updatedAt,
     String? notes,
@@ -89,40 +88,6 @@ dynamic _intToJson(int? value) {
 
 dynamic _doubleToJson(double? value) {
   return value;
-}
-
-// Helper function to convert string to PayPeriodFrequency (case-insensitive)
-PayPeriodFrequency _frequencyFromJson(dynamic value) {
-  if (value is String) {
-    final upper = value.toUpperCase();
-    // Handle special mapping if needed, otherwise match by name
-    try {
-      return PayPeriodFrequency.values.firstWhere(
-        (e) {
-          // Handle biWeekly specifically if needed, but BIWEEKLY matches biWeekly.toUpperCase()
-          // weekly -> WEEKLY
-          // biWeekly -> BIWEEKLY
-          // monthly -> MONTHLY
-          // quarterly -> QUARTERLY
-          // yearly -> YEARLY
-          
-          // Check against the JsonValue annotation if possible? No, can't access it easily at runtime.
-          // Just check against the expected backend values.
-          if (e == PayPeriodFrequency.weekly && upper == 'WEEKLY') return true;
-          if (e == PayPeriodFrequency.biWeekly && upper == 'BIWEEKLY') return true;
-          if (e == PayPeriodFrequency.monthly && upper == 'MONTHLY') return true;
-          if (e == PayPeriodFrequency.quarterly && upper == 'QUARTERLY') return true;
-          // yearly is now properly defined in the enum
-          
-          // Fallback to name check
-          return e.name.toUpperCase() == upper;
-        },
-      );
-    } catch (_) {
-      return PayPeriodFrequency.monthly; // Default fallback
-    }
-  }
-  return PayPeriodFrequency.monthly;
 }
 
 @freezed

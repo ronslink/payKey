@@ -19,13 +19,20 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
 
   Future<void> login(String email, String password, {BuildContext? context}) async {
     try {
+      print('🔐 AuthProvider: Starting login for $email');
       state = const AsyncValue.loading();
+      
+      print('📡 AuthProvider: Calling loginApi...');
       final response = await _authRepository.loginApi(email, password);
+      
+      print('📥 AuthProvider: Response received - Status: ${response.statusCode}');
+      print('📦 AuthProvider: Response data: ${response.data}');
       
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = response.data;
         final token = data['access_token'];
         if (token != null) {
+          print('✅ AuthProvider: Token received, saving...');
           await _authRepository.saveToken(token);
           state = const AsyncValue.data(null);
           
@@ -33,21 +40,29 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
           final user = data['user'];
           final isOnboardingCompleted = user?['isOnboardingCompleted'] ?? false;
           
+          print('👤 AuthProvider: User onboarding status: $isOnboardingCompleted');
+          
           // Navigate based on onboarding status
           if (context != null && context.mounted) {
             if (isOnboardingCompleted) {
+              print('🏠 AuthProvider: Navigating to home');
               context.go('/home');
             } else {
+              print('📝 AuthProvider: Navigating to onboarding');
               context.go('/onboarding');
             }
           }
         } else {
+          print('❌ AuthProvider: No token in response');
           state = AsyncValue.error('Invalid response from server', StackTrace.current);
         }
       } else {
+        print('❌ AuthProvider: Login failed with status ${response.statusCode}');
         state = AsyncValue.error('Login failed: ${response.data?['message'] ?? 'Unknown error'}', StackTrace.current);
       }
     } catch (error, stackTrace) {
+      print('❌ AuthProvider: Exception caught: $error');
+      print('Stack trace: $stackTrace');
       state = AsyncValue.error(error.toString(), stackTrace);
     }
   }

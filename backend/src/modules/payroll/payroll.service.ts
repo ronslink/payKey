@@ -8,6 +8,7 @@ import { PayrollPaymentService } from '../payments/payroll-payment.service';
 import { ActivitiesService } from '../activities/activities.service';
 import { ActivityType } from '../activities/entities/activity.entity';
 import { PayslipService } from './payslip.service';
+import { PayPeriod } from './entities/pay-period.entity';
 
 @Injectable()
 export class PayrollService {
@@ -18,6 +19,8 @@ export class PayrollService {
     private workersRepository: Repository<Worker>,
     @InjectRepository(PayrollRecord)
     private payrollRepository: Repository<PayrollRecord>,
+    @InjectRepository(PayPeriod)
+    private payPeriodRepository: Repository<PayPeriod>,
     private taxesService: TaxesService,
     private payrollPaymentService: PayrollPaymentService,
     private activitiesService: ActivitiesService,
@@ -35,7 +38,7 @@ export class PayrollService {
         try {
           // Convert salaryGross to number (handle string values from database)
           const grossSalary = Number(worker.salaryGross);
-          
+
           // Validate salary value
           if (isNaN(grossSalary) || grossSalary <= 0) {
             this.logger.warn(
@@ -158,7 +161,7 @@ export class PayrollService {
           try {
             // Convert salaryGross to number (handle string values from database)
             const grossSalary = Number(worker.salaryGross);
-            
+
             // Validate salary value
             if (isNaN(grossSalary) || grossSalary <= 0) {
               this.logger.warn(
@@ -261,7 +264,7 @@ export class PayrollService {
 
     // Convert salaryGross to number (handle string values from database)
     const grossSalary = Number(worker.salaryGross);
-    
+
     // Validate salary value
     if (isNaN(grossSalary) || grossSalary <= 0) {
       throw new Error(`Invalid salary amount for worker: ${worker.salaryGross}`);
@@ -300,9 +303,17 @@ export class PayrollService {
     const startTime = Date.now();
     this.logger.log(`Saving ${items.length} draft payroll records`);
 
-    // Get pay period dates (mocking for now, ideally fetch from PayPeriod entity)
-    const periodStart = new Date();
-    const periodEnd = new Date();
+    // Fetch the pay period to get actual dates
+    const payPeriod = await this.payPeriodRepository.findOne({
+      where: { id: payPeriodId },
+    });
+
+    if (!payPeriod) {
+      throw new Error(`Pay period with ID ${payPeriodId} not found`);
+    }
+
+    const periodStart = new Date(payPeriod.startDate);
+    const periodEnd = new Date(payPeriod.endDate);
 
     // Use transaction for data integrity
     const savedRecords = await this.dataSource.transaction(async (manager) => {

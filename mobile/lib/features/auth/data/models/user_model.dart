@@ -20,7 +20,7 @@ class User with _$User {
 @freezed
 class AuthResponse with _$AuthResponse {
   const factory AuthResponse({
-    @JsonKey(name: 'access_token') required String accessToken,
+    required String accessToken,
     User? user,
   }) = _AuthResponse;
 

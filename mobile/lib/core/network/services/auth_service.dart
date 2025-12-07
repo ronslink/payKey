@@ -7,8 +7,18 @@ extension AuthService on ApiService {
       'email': email,
       'password': password,
     };
-    print('📤 Sending login request with data: $loginData');
-    return dio.post('/auth/login', data: loginData);
+    print('📤 Sending login request');
+    print('📍 URL: ${dio.options.baseUrl}/auth/login');
+    print('📧 Email: $email');
+    print('📦 Data: $loginData');
+    try {
+      final response = await dio.post('/auth/login', data: loginData);
+      print('✅ Login response received: ${response.statusCode}');
+      return response;
+    } catch (e) {
+      print('❌ Login error: $e');
+      rethrow;
+    }
   }
 
   Future<Response> register(String email, String password, {String? firstName, String? lastName}) async {

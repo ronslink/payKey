@@ -118,7 +118,7 @@ class _PaymentDetailPageState extends ConsumerState<PaymentDetailPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black .withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -197,7 +197,7 @@ class _PaymentDetailPageState extends ConsumerState<PaymentDetailPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black .withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -234,7 +234,7 @@ class _PaymentDetailPageState extends ConsumerState<PaymentDetailPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black .withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -272,7 +272,7 @@ class _PaymentDetailPageState extends ConsumerState<PaymentDetailPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black .withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -294,10 +294,10 @@ class _PaymentDetailPageState extends ConsumerState<PaymentDetailPage> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: _getStatusColor(transaction.status).withOpacity(0.1),
+              color: _getStatusColor(transaction.status) .withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: _getStatusColor(transaction.status).withOpacity(0.3),
+                color: _getStatusColor(transaction.status) .withValues(alpha: 0.3),
                 width: 1,
               ),
             ),
@@ -348,7 +348,7 @@ class _PaymentDetailPageState extends ConsumerState<PaymentDetailPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black .withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),

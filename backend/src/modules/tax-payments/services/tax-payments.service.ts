@@ -18,7 +18,7 @@ export class TaxPaymentsService {
     private taxPaymentRepository: Repository<TaxPayment>,
     private taxConfigService: TaxConfigService,
     private taxesService: TaxesService,
-  ) {}
+  ) { }
 
   /**
    * Generate monthly tax summary for a user
@@ -165,6 +165,37 @@ export class TaxPaymentsService {
         paymentMonth: 'ASC',
       },
     });
+  }
+
+  /**
+   * Ensure a tax obligation exists (create if not, update if pending)
+   */
+  async ensureObligation(
+    userId: string,
+    dto: CreateTaxPaymentDto,
+  ): Promise<TaxPayment> {
+    let payment = await this.taxPaymentRepository.findOne({
+      where: {
+        userId,
+        taxType: dto.taxType,
+        paymentYear: dto.paymentYear,
+        paymentMonth: dto.paymentMonth,
+      },
+    });
+
+    if (!payment) {
+      payment = this.taxPaymentRepository.create({
+        userId,
+        ...dto,
+        status: PaymentStatus.PENDING,
+      });
+    } else if (payment.status === PaymentStatus.PENDING) {
+      // Update amount if still pending (e.g. recalculation)
+      payment.amount = dto.amount;
+      // Update other fields if necessary
+    }
+
+    return this.taxPaymentRepository.save(payment);
   }
 
   /**

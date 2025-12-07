@@ -12,13 +12,13 @@ class PayrollPage extends ConsumerStatefulWidget {
 }
 
 class _PayrollPageState extends ConsumerState<PayrollPage> {
-  PayPeriodStatus? _selectedStatus = PayPeriodStatus.active;
+  PayPeriodStatus? selectedStatus = PayPeriodStatus.active;
   
   @override
   Widget build(BuildContext context) {
-    final payPeriodsState = _selectedStatus == null
+    final payPeriodsState = selectedStatus == null
         ? ref.watch(payPeriodsProvider)
-        : ref.watch(payPeriodsByStatusProvider(_selectedStatus!));
+        : ref.watch(payPeriodsByStatusProvider(selectedStatus!));
 
     return Scaffold(
       appBar: AppBar(
@@ -27,10 +27,12 @@ class _PayrollPageState extends ConsumerState<PayrollPage> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              if (_selectedStatus == null) {
+              if (selectedStatus == null) {
+                // ignore: unused_result
                 ref.refresh(payPeriodsProvider);
               } else {
-                ref.refresh(payPeriodsByStatusProvider(_selectedStatus!));
+                // ignore: unused_result
+                ref.refresh(payPeriodsByStatusProvider(selectedStatus!));
               }
             },
           ),
@@ -134,7 +136,7 @@ class _PayrollPageState extends ConsumerState<PayrollPage> {
                     ),
                   ),
                   DropdownButton<PayPeriodStatus?>(
-                    value: _selectedStatus,
+                    value: selectedStatus,
                     hint: const Text('Filter'),
                     underline: const SizedBox(),
                     items: [
@@ -151,7 +153,7 @@ class _PayrollPageState extends ConsumerState<PayrollPage> {
                     ],
                     onChanged: (status) {
                       setState(() {
-                        _selectedStatus = status;
+                        selectedStatus = status;
                       });
                     },
                   ),
@@ -185,10 +187,12 @@ class _PayrollPageState extends ConsumerState<PayrollPage> {
                         const SizedBox(height: 16),
                         ElevatedButton.icon(
                           onPressed: () {
-                            if (_selectedStatus == null) {
+                            if (selectedStatus == null) {
+                              // ignore: unused_result
                               ref.refresh(payPeriodsProvider);
                             } else {
-                              ref.refresh(payPeriodsByStatusProvider(_selectedStatus!));
+                              // ignore: unused_result
+                              ref.refresh(payPeriodsByStatusProvider(selectedStatus!));
                             }
                           },
                           icon: const Icon(Icons.refresh),
@@ -304,10 +308,12 @@ class _PayrollPageState extends ConsumerState<PayrollPage> {
                       const SizedBox(height: 16),
                       ElevatedButton.icon(
                         onPressed: () {
-                          if (_selectedStatus == null) {
+                          if (selectedStatus == null) {
+                            // ignore: unused_result
                             ref.refresh(payPeriodsProvider);
                           } else {
-                            ref.refresh(payPeriodsByStatusProvider(_selectedStatus!));
+                            // ignore: unused_result
+                            ref.refresh(payPeriodsByStatusProvider(selectedStatus!));
                           }
                         },
                         icon: const Icon(Icons.refresh),

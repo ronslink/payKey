@@ -81,6 +81,12 @@ export class PayPeriodsController {
     return this.payPeriodsService.close(id);
   }
 
+  @Post(':id/generate-taxes')
+  async generateTaxes(@Param('id') id: string) {
+    await this.payPeriodsService.generateTaxSubmissionData(id);
+    return { message: 'Tax submission data generated successfully' };
+  }
+
   @Get(':id/statistics')
   getStatistics(@Param('id') id: string) {
     return this.payPeriodsService.getPayPeriodStatistics(id);

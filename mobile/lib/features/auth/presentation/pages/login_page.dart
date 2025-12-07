@@ -175,7 +175,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black .withValues(alpha: 0.1),
                         blurRadius: 10,
                         offset: const Offset(0, 2),
                       ),
@@ -290,7 +290,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        'Email: testuser@paykey.com\nPassword: SecurePass123!',
+                        'Email: testuser@paykey.com\nPassword: testuser123',
                         style: TextStyle(
                           color: Color(0xFF92400E),
                           fontSize: 12,

@@ -156,7 +156,7 @@ class _HomePageState extends ConsumerState<HomePage>
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF3B82F6).withOpacity(0.4),
+                color: const Color(0xFF3B82F6) .withValues(alpha: 0.4),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),
@@ -171,7 +171,7 @@ class _HomePageState extends ConsumerState<HomePage>
                     Text(
                       'Good ${_getGreeting()}!',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
+                        color: Colors.white .withValues(alpha: 0.9),
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
                       ),
@@ -190,7 +190,7 @@ class _HomePageState extends ConsumerState<HomePage>
                     Text(
                       DateFormat('EEEE, MMMM d, y').format(DateTime.now()),
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white .withValues(alpha: 0.8),
                         fontSize: 14,
                       ),
                     ),
@@ -200,7 +200,7 @@ class _HomePageState extends ConsumerState<HomePage>
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
+                  color: Colors.white .withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: const Icon(
@@ -300,7 +300,7 @@ class _HomePageState extends ConsumerState<HomePage>
     return workersAsync.when(
       data: (workers) => workers.length.toString(),
       loading: () => '...',
-      error: (_, __) => '0',
+      error: (_, ___) => '0',
     );
   }
 
@@ -308,7 +308,7 @@ class _HomePageState extends ConsumerState<HomePage>
     return workersAsync.when(
       data: (workers) => workers.where((w) => w.isActive).length.toString(),
       loading: () => '...',
-      error: (_, __) => '0',
+      error: (_, ___) => '0',
     );
   }
 
@@ -316,7 +316,7 @@ class _HomePageState extends ConsumerState<HomePage>
     return payPeriodsAsync.when(
       data: (periods) => periods.length.toString(),
       loading: () => '...',
-      error: (_, __) => '0',
+      error: (_, ___) => '0',
     );
   }
 
@@ -335,7 +335,7 @@ class _HomePageState extends ConsumerState<HomePage>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black .withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -350,12 +350,12 @@ class _HomePageState extends ConsumerState<HomePage>
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [color, color.withOpacity(0.7)],
+                    colors: [color, color .withValues(alpha: 0.7)],
                   ),
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: color.withOpacity(0.3),
+                      color: color .withValues(alpha: 0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -569,7 +569,7 @@ class _HomePageState extends ConsumerState<HomePage>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black .withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -582,8 +582,8 @@ class _HomePageState extends ConsumerState<HomePage>
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  const Color(0xFF10B981).withOpacity(0.1),
-                  const Color(0xFF059669).withOpacity(0.05),
+                  const Color(0xFF10B981) .withValues(alpha: 0.1),
+                  const Color(0xFF059669) .withValues(alpha: 0.05),
                 ],
               ),
               borderRadius: BorderRadius.circular(16),
@@ -654,7 +654,7 @@ class _HomePageState extends ConsumerState<HomePage>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black .withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -716,7 +716,7 @@ class _HomePageState extends ConsumerState<HomePage>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black .withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -729,8 +729,8 @@ class _HomePageState extends ConsumerState<HomePage>
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  const Color(0xFF3B82F6).withOpacity(0.1),
-                  const Color(0xFF2563EB).withOpacity(0.05),
+                  const Color(0xFF3B82F6) .withValues(alpha: 0.1),
+                  const Color(0xFF2563EB) .withValues(alpha: 0.05),
                 ],
               ),
               borderRadius: BorderRadius.circular(16),
@@ -804,13 +804,13 @@ class _HomePageState extends ConsumerState<HomePage>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            const Color(0xFF3B82F6).withOpacity(0.1),
-            const Color(0xFF8B5CF6).withOpacity(0.05),
+            const Color(0xFF3B82F6) .withValues(alpha: 0.1),
+            const Color(0xFF8B5CF6) .withValues(alpha: 0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: const Color(0xFF3B82F6).withOpacity(0.2),
+          color: const Color(0xFF3B82F6) .withValues(alpha: 0.2),
         ),
       ),
       child: Column(
@@ -877,7 +877,7 @@ class _HomePageState extends ConsumerState<HomePage>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black .withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -967,7 +967,7 @@ class _ActionCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: gradient.colors.first.withOpacity(0.3),
+                color: gradient.colors.first .withValues(alpha: 0.3),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -979,7 +979,7 @@ class _ActionCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white .withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(icon, color: Colors.white, size: 24),
@@ -998,7 +998,7 @@ class _ActionCard extends StatelessWidget {
                 subtitle,
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.white.withOpacity(0.9),
+                  color: Colors.white .withValues(alpha: 0.9),
                 ),
               ),
             ],
@@ -1036,7 +1036,7 @@ class _ChecklistItem extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: completed
-                  ? const Color(0xFF10B981).withOpacity(0.3)
+                  ? const Color(0xFF10B981) .withValues(alpha: 0.3)
                   : const Color(0xFFE5E7EB),
             ),
           ),
@@ -1120,7 +1120,7 @@ class _ActivityItem extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color .withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, color: color, size: 20),

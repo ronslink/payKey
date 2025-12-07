@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../workers/presentation/providers/workers_provider.dart';
 import '../providers/pay_period_provider.dart';
 import '../../data/models/pay_period_model.dart';
+import '../../data/repositories/payroll_repository.dart';
 import 'payroll_review_page.dart';
 
 // Simple provider for selected workers
@@ -358,21 +359,70 @@ class _RunPayrollPageState extends ConsumerState<RunPayrollPage> {
     );
   }
 
-  void _calculatePayroll(Set<String> workerIds) {
+
+  Future<void> _calculatePayroll(Set<String> workerIds) async {
+    if (_payPeriod == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No pay period selected'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Calculating payroll for ${workerIds.length} workers...'),
       ),
     );
     
-Future.delayed(const Duration(seconds: 1), () {
-      if (mounted && _payPeriod != null) {
-         Navigator.of(context).push(
-           MaterialPageRoute(
-             builder: (context) => PayrollReviewPage(payPeriodId: _payPeriod!.id),
-           ),
-         );
+    try {
+      final payrollRepo = ref.read(payrollRepositoryProvider);
+      
+      // 1. Calculate payroll for selected workers
+      final calculations = await payrollRepo.calculatePayroll(
+        workerIds.toList(),
+        startDate: _payPeriod!.startDate,
+        endDate: _payPeriod!.endDate,
+      );
+      
+      // 2. Prepare items for saving as draft
+      final itemsToSave = calculations.map((calc) => {
+        'workerId': calc.workerId,
+        'grossSalary': calc.grossSalary,
+        'bonuses': calc.bonuses,
+        'otherEarnings': calc.otherEarnings,
+        'otherDeductions': calc.otherDeductions,
+      }).toList();
+
+      // 3. Save to draft
+      await payrollRepo.saveDraftPayroll(_payPeriod!.id, itemsToSave);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Payroll calculated for ${workerIds.length} workers'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        // 4. Navigate to review page
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => PayrollReviewPage(payPeriodId: _payPeriod!.id),
+          ),
+        );
       }
-    });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to calculate payroll: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

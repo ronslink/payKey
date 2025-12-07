@@ -51,7 +51,7 @@ class PropertiesPage extends ConsumerWidget {
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
+                    backgroundColor: Theme.of(context).primaryColor .withValues(alpha: 0.1),
                     child: Icon(
                       Icons.home,
                       color: Theme.of(context).primaryColor,

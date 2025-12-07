@@ -46,14 +46,14 @@ export class PayPeriod {
   payDate: string;
 
   @Column({
-    type: 'enum',
+    type: 'simple-enum',
     enum: PayPeriodFrequency,
     default: PayPeriodFrequency.MONTHLY,
   })
   frequency: PayPeriodFrequency;
 
   @Column({
-    type: 'enum',
+    type: 'simple-enum',
     enum: PayPeriodStatus,
     default: PayPeriodStatus.DRAFT,
   })

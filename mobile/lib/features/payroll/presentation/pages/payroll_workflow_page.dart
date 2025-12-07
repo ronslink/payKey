@@ -98,7 +98,9 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
         setState(() {
           _payPeriod = updatedPeriod;
         });
-        await _loadStatistics(); // Refresh statistics
+        
+        // Reload statistics to get updated totals
+        await _loadStatistics();
         
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -169,7 +171,6 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('MMM dd, yyyy');
-    final numberFormat = NumberFormat('#,###.00');
 
     if (_payPeriod == null) {
       return Scaffold(
@@ -241,7 +242,7 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
                             vertical: 8,
                           ),
                           decoration: BoxDecoration(
-                            color: _getStatusColor(_payPeriod!.status).withOpacity(0.1),
+                            color: _getStatusColor(_payPeriod!.status) .withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
                               color: _getStatusColor(_payPeriod!.status),
@@ -300,7 +301,7 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
   Widget _buildWorkflowSteps(int currentStatusIndex) {
     const steps = [
       'Draft',
-      'Active', 
+      'Active',
       'Processing',
       'Completed',
       'Closed'
@@ -371,7 +372,7 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: _getStatusColor(PayPeriodStatus.active).withOpacity(0.1),
+                        color: _getStatusColor(PayPeriodStatus.active) .withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -387,7 +388,7 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
+                        color: Colors.green .withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Text(
@@ -417,6 +418,14 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
     final statsData = stats['statistics'];
     if (statsData == null) {
       return const SizedBox.shrink();
+    }
+
+    // Helper to safely get numeric value
+    num getNumValue(dynamic value) {
+      if (value == null) return 0;
+      if (value is num) return value;
+      if (value is String) return num.tryParse(value) ?? 0;
+      return 0;
     }
 
     return Card(
@@ -469,7 +478,7 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
                 Expanded(
                   child: _buildStatCard(
                     'Gross Total',
-                    'KES ${(statsData['totalGrossAmount'] ?? 0).toStringAsFixed(2)}',
+                    'KES ${getNumValue(statsData['totalGrossAmount']).toStringAsFixed(2)}',
                     Icons.monetization_on,
                     Colors.purple,
                   ),
@@ -478,7 +487,7 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
                 Expanded(
                   child: _buildStatCard(
                     'Net Total',
-                    'KES ${(statsData['totalNetAmount'] ?? 0).toStringAsFixed(2)}',
+                    'KES ${getNumValue(statsData['totalNetAmount']).toStringAsFixed(2)}',
                     Icons.account_balance_wallet,
                     Colors.teal,
                   ),
@@ -495,9 +504,9 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color .withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3), width: 1),
+        border: Border.all(color: color .withValues(alpha: 0.3), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -645,8 +654,6 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
         return Colors.red;
       case PayPeriodStatusAction.reopen:
         return Colors.blue;
-      default:
-        return Colors.grey;
     }
   }
 

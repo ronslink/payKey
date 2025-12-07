@@ -20,6 +20,7 @@ import {
   TaxPayment,
   PaymentStatus,
 } from '../tax-payments/entities/tax-payment.entity';
+import { TaxSubmission, TaxSubmissionStatus } from '../taxes/entities/tax-submission.entity';
 
 @Injectable()
 export class PayPeriodsService {
@@ -28,6 +29,8 @@ export class PayPeriodsService {
     private payPeriodRepository: Repository<PayPeriod>,
     @InjectRepository(PayrollRecord)
     private payrollRecordRepository: Repository<PayrollRecord>,
+    @InjectRepository(TaxSubmission)
+    private taxSubmissionRepository: Repository<TaxSubmission>,
     private taxPaymentsService: TaxPaymentsService,
   ) { }
 
@@ -190,8 +193,7 @@ export class PayPeriodsService {
     // Check if there are payroll records for this period
     const payrollRecords = await this.payrollRecordRepository.count({
       where: {
-        periodStart: payPeriod.startDate,
-        periodEnd: payPeriod.endDate,
+        payPeriodId: id,
       },
     });
 
@@ -223,8 +225,7 @@ export class PayPeriodsService {
     // Calculate totals from payroll records
     const payrollRecords = await this.payrollRecordRepository.find({
       where: {
-        periodStart: payPeriod.startDate,
-        periodEnd: payPeriod.endDate,
+        payPeriodId: id,
       },
     });
 
@@ -260,6 +261,15 @@ export class PayPeriodsService {
       );
     }
 
+    // Finalize all payroll records for this period
+    await this.payrollRecordRepository.update(
+      { payPeriodId: id },
+      {
+        status: 'finalized' as any,
+        finalizedAt: new Date(),
+      }
+    );
+
     // Generate tax submission data automatically
     await this.generateTaxSubmissionData(id);
 
@@ -271,14 +281,13 @@ export class PayPeriodsService {
    * Generate tax submission data for completed pay period
    * Automatically creates TaxPayment entries for all tax types
    */
-  private async generateTaxSubmissionData(payPeriodId: string): Promise<void> {
+  async generateTaxSubmissionData(payPeriodId: string): Promise<void> {
     const payPeriod = await this.findOne(payPeriodId);
 
     // Get all payroll records for this pay period
     const payrollRecords = await this.payrollRecordRepository.find({
       where: {
-        periodStart: payPeriod.startDate,
-        periodEnd: payPeriod.endDate,
+        payPeriodId: payPeriodId,
       },
     });
 
@@ -286,38 +295,69 @@ export class PayPeriodsService {
       return; // No payroll records, nothing to generate
     }
 
-    // Get unique user IDs from payroll records
-    const uniqueUserIds = [...new Set(payrollRecords.map((r) => r.userId))];
+    // Get unique user IDs (Employers)
+    // Note: In this system, payroll records belong to the employer (User).
+    // So all records for this payPeriod have the same userId (the employer).
+    const userId = payPeriod.userId;
 
     // Get pay period date components
     const startDate = new Date(payPeriod.startDate);
     const paymentYear = startDate.getFullYear();
     const paymentMonth = startDate.getMonth() + 1;
 
-    // For each user, generate tax submission data using existing TaxPaymentsService
-    for (const userId of uniqueUserIds) {
-      try {
-        // Use existing TaxPaymentsService to generate monthly summary
-        const monthlySummary =
-          await this.taxPaymentsService.generateMonthlySummary(
-            userId,
-            paymentYear,
-            paymentMonth,
-          );
+    // Calculate totals from records
+    const totals = {
+      [TaxType.PAYE]: 0,
+      [TaxType.SHIF]: 0,
+      [TaxType.HOUSING_LEVY]: 0,
+      [TaxType.NSSF_TIER1]: 0,
+      [TaxType.NSSF_TIER2]: 0,
+    };
 
-        // The generateMonthlySummary method will create the tax payment entries
-        // as part of its implementation
-        console.log(
-          `Tax submission data generated for user ${userId}: ${monthlySummary.totalDue} total due`,
-        );
-      } catch (error) {
-        console.error(
-          `Failed to generate tax submission for user ${userId}:`,
-          error,
-        );
-        // Continue with other users even if one fails
+    for (const record of payrollRecords) {
+      const tb: any = record.taxBreakdown || {};
+      totals[TaxType.PAYE] += Number(tb.paye || 0);
+      totals[TaxType.SHIF] += Number(tb.nhif || 0); // NHIF maps to SHIF
+      totals[TaxType.HOUSING_LEVY] += Number(tb.housingLevy || 0);
+      totals[TaxType.NSSF_TIER1] += Number(tb.nssf || 0); // Total NSSF
+    }
+
+    // Save obligations for the employer
+    for (const [taxType, amount] of Object.entries(totals)) {
+      if (amount > 0) {
+        await this.taxPaymentsService.ensureObligation(userId, {
+          taxType: taxType as TaxType,
+          amount: amount,
+          paymentYear,
+          paymentMonth,
+        });
       }
     }
+
+    // Create or update TaxSubmission record for the PayPeriod
+    let submission = await this.taxSubmissionRepository.findOne({
+      where: { payPeriodId: payPeriodId },
+    });
+
+    if (!submission) {
+      submission = this.taxSubmissionRepository.create({
+        userId,
+        payPeriodId,
+        status: TaxSubmissionStatus.PENDING,
+      });
+    }
+
+    // Update totals
+    submission.totalPaye = totals[TaxType.PAYE];
+    // Map SHIF to nhif column (Entity uses totalNhif)
+    submission.totalNhif = totals[TaxType.SHIF];
+    // Map NSSF (Entity uses totalNssf). Currently we put all in TIER1 in totals calculation.
+    submission.totalNssf = totals[TaxType.NSSF_TIER1] + (totals[TaxType.NSSF_TIER2] || 0);
+    submission.totalHousingLevy = totals[TaxType.HOUSING_LEVY];
+
+    await this.taxSubmissionRepository.save(submission);
+
+    console.log(`Tax submission data generated for payPeriod ${payPeriodId}`);
   }
 
   async close(id: string): Promise<PayPeriod> {
@@ -354,8 +394,7 @@ export class PayPeriodsService {
 
     const payrollRecords = await this.payrollRecordRepository.find({
       where: {
-        periodStart: payPeriod.startDate,
-        periodEnd: payPeriod.endDate,
+        payPeriodId: id,
       },
     });
 

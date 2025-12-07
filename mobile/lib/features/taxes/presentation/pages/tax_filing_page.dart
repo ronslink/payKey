@@ -80,8 +80,8 @@ class TaxFilingPage extends ConsumerWidget {
                               ),
                               decoration: BoxDecoration(
                                 color: isFiled
-                                    ? Colors.green.withOpacity(0.1)
-                                    : Colors.orange.withOpacity(0.1),
+                                    ? Colors.green .withValues(alpha: 0.1)
+                                    : Colors.orange .withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(

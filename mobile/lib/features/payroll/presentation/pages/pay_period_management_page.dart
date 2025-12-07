@@ -278,7 +278,7 @@ class _PayPeriodManagementPageState
                                     ),
                                     decoration: BoxDecoration(
                                       color: _getStatusColor(period.status)
-                                          .withOpacity(0.1),
+                                           .withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(16),
                                       border: Border.all(
                                         color: _getStatusColor(period.status),

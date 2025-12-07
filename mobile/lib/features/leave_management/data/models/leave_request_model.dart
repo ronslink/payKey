@@ -49,12 +49,12 @@ class LeaveBalanceModel with _$LeaveBalanceModel {
 }
 
 enum LeaveType {
-  ANNUAL,
-  SICK,
-  MATERNITY,
-  PATERNITY,
-  EMERGENCY,
-  UNPAID,
+  annual,
+  sick,
+  maternity,
+  paternity,
+  emergency,
+  unpaid,
 }
 
 enum LeaveRequestStatus {

@@ -29,16 +29,14 @@ final taxPaymentSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) asy
 });
 
 final paymentsProvider = StateNotifierProvider<PaymentsNotifier, AsyncValue<void>>((ref) {
-  final repository = ref.read(transactionsRepositoryProvider);
   final apiService = ref.read(apiServiceProvider);
-  return PaymentsNotifier(repository, apiService);
+  return PaymentsNotifier(apiService);
 });
 
 class PaymentsNotifier extends StateNotifier<AsyncValue<void>> {
-  final TransactionsRepository _repository;
   final ApiService _apiService;
 
-  PaymentsNotifier(this._repository, this._apiService) : super(const AsyncValue.data(null));
+  PaymentsNotifier(this._apiService) : super(const AsyncValue.data(null));
 
   Future<Map<String, dynamic>> initiatePayment(String phoneNumber, double amount) async {
     try {

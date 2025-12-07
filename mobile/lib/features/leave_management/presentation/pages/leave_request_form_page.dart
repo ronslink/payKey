@@ -24,7 +24,7 @@ class _LeaveRequestFormPageState extends ConsumerState<LeaveRequestFormPage> {
   final _emergencyContactController = TextEditingController();
   final _emergencyPhoneController = TextEditingController();
   
-  LeaveType _selectedLeaveType = LeaveType.ANNUAL;
+LeaveType _selectedLeaveType = LeaveType.annual;
   DateTime? _startDate;
   DateTime? _endDate;
   bool _isPaidLeave = true;
@@ -40,8 +40,6 @@ class _LeaveRequestFormPageState extends ConsumerState<LeaveRequestFormPage> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Request Leave'),
@@ -86,7 +84,7 @@ class _LeaveRequestFormPageState extends ConsumerState<LeaveRequestFormPage> {
                           setState(() {
                             _selectedLeaveType = value!;
                             // Auto-adjust paid leave based on type
-                            _isPaidLeave = _selectedLeaveType != LeaveType.UNPAID;
+                            _isPaidLeave = _selectedLeaveType != LeaveType.unpaid;
                           });
                         },
                       ),
@@ -344,19 +342,19 @@ class _LeaveRequestFormPageState extends ConsumerState<LeaveRequestFormPage> {
     );
   }
 
-  String _getLeaveTypeDisplayName(LeaveType type) {
+String _getLeaveTypeDisplayName(LeaveType type) {
     switch (type) {
-      case LeaveType.ANNUAL:
+      case LeaveType.annual:
         return 'Annual Leave';
-      case LeaveType.SICK:
+      case LeaveType.sick:
         return 'Sick Leave';
-      case LeaveType.MATERNITY:
+      case LeaveType.maternity:
         return 'Maternity Leave';
-      case LeaveType.PATERNITY:
+      case LeaveType.paternity:
         return 'Paternity Leave';
-      case LeaveType.EMERGENCY:
+      case LeaveType.emergency:
         return 'Emergency Leave';
-      case LeaveType.UNPAID:
+      case LeaveType.unpaid:
         return 'Unpaid Leave';
     }
   }
