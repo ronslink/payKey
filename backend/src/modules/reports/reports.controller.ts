@@ -5,7 +5,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @Controller('reports')
 @UseGuards(JwtAuthGuard)
 export class ReportsController {
-  constructor(private readonly reportsService: ReportsService) {}
+  constructor(private readonly reportsService: ReportsService) { }
 
   @Get('payroll')
   async getMonthlyPayrollReport(
@@ -33,6 +33,39 @@ export class ReportsController {
   @Get('tax')
   async getTaxSummary(@Request() req: any, @Query('year') year: string) {
     return this.reportsService.getTaxSummary(req.user.userId, parseInt(year));
+  }
+
+  @Get('payroll-summary')
+  async getPayrollSummary(
+    @Request() req: any,
+    @Query('payPeriodId') payPeriodId: string,
+  ) {
+    return this.reportsService.getPayrollSummaryByPeriod(
+      req.user.userId,
+      payPeriodId,
+    );
+  }
+
+  @Get('statutory')
+  async getStatutoryReport(
+    @Request() req: any,
+    @Query('payPeriodId') payPeriodId: string,
+  ) {
+    return this.reportsService.getStatutoryReport(
+      req.user.userId,
+      payPeriodId,
+    );
+  }
+
+  @Get('muster-roll')
+  async getMasterRoll(
+    @Request() req: any,
+    @Query('payPeriodId') payPeriodId: string,
+  ) {
+    return this.reportsService.getMasterRoll(
+      req.user.userId,
+      payPeriodId,
+    );
   }
 
   @Get('dashboard')

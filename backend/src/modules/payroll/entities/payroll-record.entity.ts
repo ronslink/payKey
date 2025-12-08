@@ -8,6 +8,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { Worker } from '../../workers/entities/worker.entity';
+import { PayPeriod } from './pay-period.entity';
 
 export enum PayrollStatus {
   DRAFT = 'draft',
@@ -28,6 +29,10 @@ export class PayrollRecord {
 
   @Column({ nullable: true })
   payPeriodId: string;
+
+  @ManyToOne(() => PayPeriod, (payPeriod) => payPeriod.payrollRecords)
+  @JoinColumn({ name: 'payPeriodId' })
+  payPeriod: PayPeriod;
 
   @ManyToOne(() => Worker, { eager: true })
   @JoinColumn({ name: 'workerId' })

@@ -40,11 +40,11 @@ Map<String, dynamic> _$$PayPeriodImplToJson(_$PayPeriodImpl instance) =>
       'endDate': instance.endDate.toIso8601String(),
       'frequency': _$PayPeriodFrequencyEnumMap[instance.frequency]!,
       'status': _$PayPeriodStatusEnumMap[instance.status]!,
-      'totalWorkers': _intToJson(instance.totalWorkers),
-      'totalGrossAmount': _doubleToJson(instance.totalGrossAmount),
-      'totalNetAmount': _doubleToJson(instance.totalNetAmount),
-      'totalTaxAmount': _doubleToJson(instance.totalTaxAmount),
-      'processedWorkers': _intToJson(instance.processedWorkers),
+      'totalWorkers': instance.totalWorkers,
+      'totalGrossAmount': instance.totalGrossAmount,
+      'totalNetAmount': instance.totalNetAmount,
+      'totalTaxAmount': instance.totalTaxAmount,
+      'processedWorkers': instance.processedWorkers,
       'createdAt': instance.createdAt?.toIso8601String(),
       'updatedAt': instance.updatedAt?.toIso8601String(),
       'notes': instance.notes,
@@ -53,11 +53,11 @@ Map<String, dynamic> _$$PayPeriodImplToJson(_$PayPeriodImpl instance) =>
     };
 
 const _$PayPeriodFrequencyEnumMap = {
-  PayPeriodFrequency.weekly: 'WEEKLY',
-  PayPeriodFrequency.biWeekly: 'BIWEEKLY',
-  PayPeriodFrequency.monthly: 'MONTHLY',
-  PayPeriodFrequency.quarterly: 'QUARTERLY',
-  PayPeriodFrequency.yearly: 'YEARLY',
+  PayPeriodFrequency.weekly: 'weekly',
+  PayPeriodFrequency.biWeekly: 'biweekly',
+  PayPeriodFrequency.monthly: 'monthly',
+  PayPeriodFrequency.quarterly: 'quarterly',
+  PayPeriodFrequency.yearly: 'yearly',
 };
 
 const _$PayPeriodStatusEnumMap = {

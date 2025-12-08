@@ -75,7 +75,6 @@ class SubscriptionRepository {
             );
           }
         } catch (e) {
-          print('Error parsing subscription plan: $e, Data: $json');
           return SubscriptionPlan(
             id: 'unknown',
             tier: 'unknown',
@@ -311,7 +310,6 @@ class SubscriptionRepository {
             );
           }
         } catch (e) {
-          print('Error parsing subscription payment: $e, Data: $json');
           return SubscriptionPayment(
             id: 'unknown',
             subscriptionId: '',
@@ -333,13 +331,11 @@ class SubscriptionRepository {
     } on DioException catch (e) {
       // Handle 404 errors gracefully (endpoint might not exist)
       if (e.response?.statusCode == 404) {
-        print('Subscription payment history endpoint not available (404) - returning empty list');
         return [];
       }
       throw Exception(_apiService.getErrorMessage(e));
     } catch (e) {
       // If endpoint doesn't exist or other errors, return empty list
-      print('Failed to fetch subscription payment history: $e - returning empty list');
       return [];
     }
   }

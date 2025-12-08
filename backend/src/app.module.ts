@@ -17,6 +17,9 @@ import { TaxPaymentsModule } from './modules/tax-payments/tax-payments.module';
 import { AccountingModule } from './modules/accounting/accounting.module';
 import { ActivitiesModule } from './modules/activities/activities.module';
 import { TasksModule } from './modules/tasks/tasks.module';
+import { TestingModule } from './modules/testing/testing.module';
+import { ReportsModule } from './modules/reports/reports.module';
+import { TimeTrackingModule } from './modules/time-tracking/time-tracking.module';
 
 // Explicit Entity Imports
 // Explicit Entity Imports
@@ -38,41 +41,49 @@ import { Termination } from './modules/workers/entities/termination.entity';
 import { AccountMapping } from './modules/accounting/entities/account-mapping.entity';
 import { AccountingExport } from './modules/accounting/entities/accounting-export.entity';
 import { Activity } from './modules/activities/entities/activity.entity';
+import { TimeEntry } from './modules/time-tracking/entities/time-entry.entity';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get('DB_HOST', 'localhost'),
-        port: parseInt(configService.get('DB_PORT', '5432')),
-        username: configService.get('DB_USERNAME', 'postgres'),
-        password: configService.get('DB_PASSWORD', 'admin'),
-        database: configService.get('DB_NAME', 'paykey'),
-        entities: [
-          User,
-          Worker,
-          PayPeriod,
-          PayrollRecord,
-          Transaction,
-          TaxTable,
-          TaxSubmission,
-          TaxPayment,
-          TaxConfig,
-          Subscription,
-          SubscriptionPayment,
-          Property,
-          Country,
-          LeaveRequest,
-          Termination,
-          AccountMapping,
-          AccountingExport,
-          Activity,
-        ],
-        synchronize: false,
-        logging: ['query', 'error'],
-      }),
+      useFactory: (configService: ConfigService) => {
+        const dbHost = configService.get('DB_HOST', 'db');
+        const dbPort = configService.get('DB_PORT', '5432');
+        const dbUser = configService.get('DB_USER') || configService.get('DB_USERNAME') || 'postgres';
+        return {
+          type: 'postgres',
+          host: dbHost,
+          port: parseInt(configService.get('DB_PORT', '5432')),
+          username: configService.get('DB_USER', configService.get('DB_USERNAME', 'postgres')),
+          password: configService.get('DB_PASSWORD', 'admin'),
+          database: configService.get('DB_NAME', 'paykey'),
+          entities: [
+            User,
+            Worker,
+            PayPeriod,
+            PayrollRecord,
+            Transaction,
+            TaxTable,
+            TaxSubmission,
+            TaxPayment,
+            TaxConfig,
+            Subscription,
+            SubscriptionPayment,
+            Property,
+            Country,
+            LeaveRequest,
+            Termination,
+            AccountMapping,
+            AccountingExport,
+            Activity,
+            TimeEntry,
+          ],
+
+          synchronize: false,
+          logging: ['query', 'error'],
+        };
+      },
       inject: [ConfigService],
     }),
     AuthModule,
@@ -89,6 +100,9 @@ import { Activity } from './modules/activities/entities/activity.entity';
     AccountingModule,
     ActivitiesModule,
     TasksModule,
+    TestingModule,
+    ReportsModule,
+    TimeTrackingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

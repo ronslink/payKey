@@ -3,21 +3,181 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_service.dart';
 import '../models/worker_model.dart';
 
-final workersRepositoryProvider = Provider((ref) => WorkersRepository());
+// =============================================================================
+// PROVIDER
+// =============================================================================
 
+final workersRepositoryProvider = Provider<WorkersRepository>((ref) {
+  return WorkersRepository(ApiService());
+});
+
+// =============================================================================
+// REPOSITORY
+// =============================================================================
+
+/// Repository for managing worker data.
+///
+/// Handles CRUD operations for workers, including mapping between
+/// API responses and domain models.
 class WorkersRepository {
-  final ApiService _apiService = ApiService();
+  final ApiService _apiService;
 
-  // Map backend JSON to Flutter WorkerModel
-  WorkerModel _mapWorkerJson(Map<String, dynamic> json) {
+  WorkersRepository(this._apiService);
+
+  // ---------------------------------------------------------------------------
+  // Public Methods: Read Operations
+  // ---------------------------------------------------------------------------
+
+  /// Fetches all workers for the current user.
+  ///
+  /// Returns a list of [WorkerModel] sorted by creation date (newest first).
+  /// Throws [WorkerRepositoryException] on failure.
+  Future<List<WorkerModel>> getWorkers() async {
+    return _executeRequest(
+      operation: 'fetch workers',
+      request: () async {
+        final response = await _apiService.workers.getAll();
+        final data = response.data as List;
+        return data.map((item) => _mapJsonToWorker(item as Map<String, dynamic>)).toList();
+      },
+    );
+  }
+
+  /// Fetches a single worker by ID.
+  ///
+  /// Throws [WorkerRepositoryException] if not found or on failure.
+  Future<WorkerModel> getWorkerById(String workerId) async {
+    return _executeRequest(
+      operation: 'fetch worker',
+      request: () async {
+        final response = await _apiService.workers.getById(workerId);
+        return _mapJsonToWorker(response.data);
+      },
+    );
+  }
+
+  /// Returns the total count of workers.
+  Future<int> getWorkerCount() async {
+    final workers = await getWorkers();
+    return workers.length;
+  }
+
+  /// Returns only active workers.
+  Future<List<WorkerModel>> getActiveWorkers() async {
+    final workers = await getWorkers();
+    return workers.where((w) => w.isActive).toList();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Public Methods: Write Operations
+  // ---------------------------------------------------------------------------
+
+  /// Creates a new worker.
+  ///
+  /// Returns the created [WorkerModel] with server-generated fields (id, timestamps).
+  /// Throws [WorkerRepositoryException] on failure.
+  Future<WorkerModel> createWorker(CreateWorkerRequest request) async {
+    return _executeRequest(
+      operation: 'create worker',
+      request: () async {
+        final response = await _apiService.workers.create(
+          _mapCreateRequestToJson(request),
+        );
+        return _mapJsonToWorker(response.data);
+      },
+    );
+  }
+
+  /// Updates an existing worker.
+  ///
+  /// Only fields present in [request] will be updated.
+  /// Returns the updated [WorkerModel].
+  /// Throws [WorkerRepositoryException] on failure.
+  Future<WorkerModel> updateWorker(
+    String workerId,
+    UpdateWorkerRequest request,
+  ) async {
+    return _executeRequest(
+      operation: 'update worker',
+      request: () async {
+        final response = await _apiService.workers.update(
+          workerId,
+          _mapUpdateRequestToJson(request),
+        );
+        return _mapJsonToWorker(response.data);
+      },
+    );
+  }
+
+  /// Deletes a worker by ID.
+  ///
+  /// Throws [WorkerRepositoryException] on failure.
+  Future<void> deleteWorker(String workerId) async {
+    return _executeRequest(
+      operation: 'delete worker',
+      request: () => _apiService.workers.delete(workerId),
+    );
+  }
+
+  /// Terminates a worker (soft delete).
+  ///
+  /// Sets the worker's [isActive] to false and records termination date.
+  Future<WorkerModel> terminateWorker(String workerId) async {
+    return updateWorker(
+      workerId,
+      UpdateWorkerRequest(isActive: false),
+    );
+  }
+
+  /// Reactivates a previously terminated worker.
+  Future<WorkerModel> reactivateWorker(String workerId) async {
+    return updateWorker(
+      workerId,
+      UpdateWorkerRequest(isActive: true),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Private Methods: Request Execution
+  // ---------------------------------------------------------------------------
+
+  /// Executes an API request with standardized error handling.
+  Future<T> _executeRequest<T>({
+    required String operation,
+    required Future<T> Function() request,
+  }) async {
+    try {
+      return await request();
+    } on DioException catch (e) {
+      throw WorkerRepositoryException(
+        operation: operation,
+        message: _apiService.getErrorMessage(e),
+        originalError: e,
+      );
+    } catch (e) {
+      if (e is WorkerRepositoryException) rethrow;
+      throw WorkerRepositoryException(
+        operation: operation,
+        message: e.toString(),
+        originalError: e,
+      );
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Private Methods: JSON Mapping
+  // ---------------------------------------------------------------------------
+
+  /// Maps API JSON response to [WorkerModel].
+  WorkerModel _mapJsonToWorker(Map<String, dynamic> json) {
     return WorkerModel.fromJson({
       'id': json['id'],
       'name': json['name'],
       'phoneNumber': json['phoneNumber'],
-      'salaryGross': (json['salaryGross'] ?? 0.0).toDouble(),
+      'salaryGross': _toDouble(json['salaryGross']),
       'startDate': json['startDate'],
-      'employmentType': json['employmentType'] ?? 'FIXED',
-      'hourlyRate': json['hourlyRate']?.toDouble(),
+      'employmentType': json['employmentType'] ?? _Defaults.employmentType,
+      'hourlyRate': _toNullableDouble(json['hourlyRate']),
       'propertyId': json['propertyId'],
       'email': json['email'],
       'idNumber': json['idNumber'],
@@ -25,10 +185,10 @@ class WorkersRepository {
       'nssfNumber': json['nssfNumber'],
       'nhifNumber': json['nhifNumber'],
       'jobTitle': json['jobTitle'],
-      'housingAllowance': (json['housingAllowance'] ?? 0.0).toDouble(),
-      'transportAllowance': (json['transportAllowance'] ?? 0.0).toDouble(),
-      'paymentFrequency': json['paymentFrequency'] ?? 'MONTHLY',
-      'paymentMethod': json['paymentMethod'] ?? 'MPESA',
+      'housingAllowance': _toDouble(json['housingAllowance']),
+      'transportAllowance': _toDouble(json['transportAllowance']),
+      'paymentFrequency': json['paymentFrequency'] ?? _Defaults.paymentFrequency,
+      'paymentMethod': json['paymentMethod'] ?? _Defaults.paymentMethod,
       'mpesaNumber': json['mpesaNumber'],
       'bankName': json['bankName'],
       'bankAccount': json['bankAccount'],
@@ -36,108 +196,201 @@ class WorkersRepository {
       'terminatedAt': json['terminatedAt'],
       'createdAt': json['createdAt'],
       'updatedAt': json['updatedAt'],
-      'isActive': json['isActive'] ?? true,
+      'isActive': json['isActive'] ?? _Defaults.isActive,
     });
   }
 
-  Future<List<WorkerModel>> getWorkers() async {
-    try {
-      final response = await _apiService.getWorkers();
-      final data = response.data as List;
-      
-      return data.map((json) => _mapWorkerJson(json)).toList();
-    } on DioException catch (e) {
-      throw Exception(_apiService.getErrorMessage(e));
-    } catch (e) {
-      throw Exception('Failed to fetch workers: $e');
-    }
+  /// Maps [CreateWorkerRequest] to API JSON payload.
+  Map<String, dynamic> _mapCreateRequestToJson(CreateWorkerRequest request) {
+    return {
+      'name': request.name,
+      'phoneNumber': request.phoneNumber,
+      'salaryGross': request.salaryGross,
+      'startDate': request.startDate.toIso8601String(),
+      'employmentType': request.employmentType,
+      'hourlyRate': request.hourlyRate,
+      'propertyId': request.propertyId,
+      'email': request.email,
+      'idNumber': request.idNumber,
+      'kraPin': request.kraPin,
+      'nssfNumber': request.nssfNumber,
+      'nhifNumber': request.nhifNumber,
+      'jobTitle': request.jobTitle,
+      'housingAllowance': request.housingAllowance,
+      'transportAllowance': request.transportAllowance,
+      'paymentFrequency': request.paymentFrequency,
+      'paymentMethod': request.paymentMethod,
+      'mpesaNumber': request.mpesaNumber,
+      'bankName': request.bankName,
+      'bankAccount': request.bankAccount,
+      'notes': request.notes,
+    };
   }
 
-  Future<WorkerModel> createWorker(CreateWorkerRequest request) async {
-    try {
-      final response = await _apiService.createWorker({
-        'name': request.name,
-        'phoneNumber': request.phoneNumber,
-        'salaryGross': request.salaryGross,
-        'startDate': request.startDate.toIso8601String(),
+  /// Maps [UpdateWorkerRequest] to API JSON payload.
+  ///
+  /// Only includes non-null fields to support partial updates.
+  Map<String, dynamic> _mapUpdateRequestToJson(UpdateWorkerRequest request) {
+    return <String, dynamic>{
+      if (request.name != null) 'name': request.name,
+      if (request.phoneNumber != null) 'phoneNumber': request.phoneNumber,
+      if (request.salaryGross != null) 'salaryGross': request.salaryGross,
+      if (request.startDate != null)
+        'startDate': request.startDate!.toIso8601String(),
+      if (request.employmentType != null)
         'employmentType': request.employmentType,
-        'hourlyRate': request.hourlyRate,
-        'propertyId': request.propertyId,
-        'email': request.email,
-        'idNumber': request.idNumber,
-        'kraPin': request.kraPin,
-        'nssfNumber': request.nssfNumber,
-        'nhifNumber': request.nhifNumber,
-        'jobTitle': request.jobTitle,
+      if (request.hourlyRate != null) 'hourlyRate': request.hourlyRate,
+      if (request.propertyId != null) 'propertyId': request.propertyId,
+      if (request.isActive != null) 'isActive': request.isActive,
+      if (request.email != null) 'email': request.email,
+      if (request.idNumber != null) 'idNumber': request.idNumber,
+      if (request.kraPin != null) 'kraPin': request.kraPin,
+      if (request.nssfNumber != null) 'nssfNumber': request.nssfNumber,
+      if (request.nhifNumber != null) 'nhifNumber': request.nhifNumber,
+      if (request.jobTitle != null) 'jobTitle': request.jobTitle,
+      if (request.housingAllowance != null)
         'housingAllowance': request.housingAllowance,
+      if (request.transportAllowance != null)
         'transportAllowance': request.transportAllowance,
+      if (request.paymentFrequency != null)
         'paymentFrequency': request.paymentFrequency,
-        'paymentMethod': request.paymentMethod,
-        'mpesaNumber': request.mpesaNumber,
-        'bankName': request.bankName,
-        'bankAccount': request.bankAccount,
-        'notes': request.notes,
-      });
-      
-      return _mapWorkerJson(response.data);
-    } on DioException catch (e) {
-      throw Exception(_apiService.getErrorMessage(e));
-    } catch (e) {
-      throw Exception('Failed to create worker: $e');
-    }
+      if (request.paymentMethod != null) 'paymentMethod': request.paymentMethod,
+      if (request.mpesaNumber != null) 'mpesaNumber': request.mpesaNumber,
+      if (request.bankName != null) 'bankName': request.bankName,
+      if (request.bankAccount != null) 'bankAccount': request.bankAccount,
+      if (request.notes != null) 'notes': request.notes,
+    };
   }
 
-  Future<WorkerModel> updateWorker(String workerId, UpdateWorkerRequest request) async {
-    try {
-      final response = await _apiService.updateWorker(workerId, {
-        if (request.name != null) 'name': request.name,
-        if (request.phoneNumber != null) 'phoneNumber': request.phoneNumber,
-        if (request.salaryGross != null) 'salaryGross': request.salaryGross,
-        if (request.startDate != null) 'startDate': request.startDate!.toIso8601String(),
-        if (request.employmentType != null) 'employmentType': request.employmentType,
-        if (request.hourlyRate != null) 'hourlyRate': request.hourlyRate,
-        if (request.propertyId != null) 'propertyId': request.propertyId,
-        if (request.isActive != null) 'isActive': request.isActive,
-        if (request.email != null) 'email': request.email,
-        if (request.idNumber != null) 'idNumber': request.idNumber,
-        if (request.kraPin != null) 'kraPin': request.kraPin,
-        if (request.nssfNumber != null) 'nssfNumber': request.nssfNumber,
-        if (request.nhifNumber != null) 'nhifNumber': request.nhifNumber,
-        if (request.jobTitle != null) 'jobTitle': request.jobTitle,
-        if (request.housingAllowance != null) 'housingAllowance': request.housingAllowance,
-        if (request.transportAllowance != null) 'transportAllowance': request.transportAllowance,
-        if (request.paymentFrequency != null) 'paymentFrequency': request.paymentFrequency,
-        if (request.paymentMethod != null) 'paymentMethod': request.paymentMethod,
-        if (request.mpesaNumber != null) 'mpesaNumber': request.mpesaNumber,
-        if (request.bankName != null) 'bankName': request.bankName,
-        if (request.bankAccount != null) 'bankAccount': request.bankAccount,
-        if (request.notes != null) 'notes': request.notes,
-      });
-      
-      return _mapWorkerJson(response.data);
-    } on DioException catch (e) {
-      throw Exception(_apiService.getErrorMessage(e));
-    } catch (e) {
-      throw Exception('Failed to update worker: $e');
-    }
+  // ---------------------------------------------------------------------------
+  // Private Methods: Type Conversion Helpers
+  // ---------------------------------------------------------------------------
+
+  /// Converts a dynamic value to double, defaulting to 0.0.
+  double _toDouble(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) return double.tryParse(value) ?? 0.0;
+    return 0.0;
   }
 
-  Future<void> deleteWorker(String workerId) async {
-    try {
-      await _apiService.deleteWorker(workerId);
-    } on DioException catch (e) {
-      throw Exception(_apiService.getErrorMessage(e));
-    } catch (e) {
-      throw Exception('Failed to delete worker: $e');
+  /// Converts a dynamic value to nullable double.
+  double? _toNullableDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) return double.tryParse(value);
+    return null;
+  }
+}
+
+// =============================================================================
+// DEFAULTS
+// =============================================================================
+
+/// Default values for optional worker fields.
+abstract class _Defaults {
+  static const String employmentType = 'FIXED';
+  static const String paymentFrequency = 'MONTHLY';
+  static const String paymentMethod = 'MPESA';
+  static const bool isActive = true;
+}
+
+// =============================================================================
+// EXCEPTIONS
+// =============================================================================
+
+/// Exception thrown by [WorkersRepository] operations.
+class WorkerRepositoryException implements Exception {
+  /// The operation that failed (e.g., 'create worker', 'fetch workers').
+  final String operation;
+
+  /// Human-readable error message.
+  final String message;
+
+  /// The original error that caused this exception.
+  final Object? originalError;
+
+  const WorkerRepositoryException({
+    required this.operation,
+    required this.message,
+    this.originalError,
+  });
+
+  @override
+  String toString() => 'Failed to $operation: $message';
+
+  /// Whether this exception was caused by a network error.
+  bool get isNetworkError => originalError is DioException;
+
+  /// Whether this exception was caused by a server error (5xx).
+  bool get isServerError {
+    if (originalError is DioException) {
+      final statusCode = (originalError as DioException).response?.statusCode;
+      return statusCode != null && statusCode >= 500;
     }
+    return false;
   }
 
-  Future<int> getWorkerCount() async {
-    try {
-      final workers = await getWorkers();
-      return workers.length;
-    } catch (e) {
-      throw Exception('Failed to get worker count: $e');
+  /// Whether this exception was caused by a client error (4xx).
+  bool get isClientError {
+    if (originalError is DioException) {
+      final statusCode = (originalError as DioException).response?.statusCode;
+      return statusCode != null && statusCode >= 400 && statusCode < 500;
     }
+    return false;
+  }
+
+  /// Whether this exception was caused by a not found error (404).
+  bool get isNotFound {
+    if (originalError is DioException) {
+      return (originalError as DioException).response?.statusCode == 404;
+    }
+    return false;
+  }
+}
+
+// =============================================================================
+// EXTENSIONS
+// =============================================================================
+
+/// Extension methods for [List<WorkerModel>].
+extension WorkerListExtensions on List<WorkerModel> {
+  /// Returns only active workers.
+  List<WorkerModel> get active => where((w) => w.isActive).toList();
+
+  /// Returns only terminated workers.
+  List<WorkerModel> get terminated => where((w) => !w.isActive).toList();
+
+  /// Returns workers sorted by name alphabetically.
+  List<WorkerModel> get sortedByName {
+    final copy = List<WorkerModel>.from(this);
+    copy.sort((a, b) => a.name.compareTo(b.name));
+    return copy;
+  }
+
+  /// Returns workers sorted by salary (highest first).
+  List<WorkerModel> get sortedBySalaryDesc {
+    final copy = List<WorkerModel>.from(this);
+    copy.sort((a, b) => b.salaryGross.compareTo(a.salaryGross));
+    return copy;
+  }
+
+  /// Returns workers filtered by payment method.
+  List<WorkerModel> byPaymentMethod(String method) {
+    return where((w) => w.paymentMethod == method).toList();
+  }
+
+  /// Returns total gross salary for all workers in the list.
+  double get totalGrossSalary {
+    return fold(0.0, (sum, w) => sum + w.salaryGross);
+  }
+
+  /// Returns total monthly payroll cost (salary + allowances).
+  double get totalMonthlyCost {
+    return fold(0.0, (sum, w) {
+      return sum + w.salaryGross + w.housingAllowance + w.transportAllowance;
+    });
   }
 }

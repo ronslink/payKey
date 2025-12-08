@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/pay_period_model.dart';
 import '../../data/repositories/pay_period_repository.dart' as repo;
+import '../../data/repositories/pay_period_repository.dart' show PayPeriodStatistics;
 import '../../presentation/providers/pay_period_provider.dart';
 
 class PayPeriodManagementPage extends ConsumerStatefulWidget {
@@ -497,7 +498,7 @@ class _PayPeriodManagementPageState
   void showStatisticsDialog(
     BuildContext context,
     String periodName,
-    Map<String, dynamic> statistics,
+    PayPeriodStatistics statistics,
   ) {
     final numberFormat = NumberFormat('#,###.00');
 
@@ -510,27 +511,27 @@ class _PayPeriodManagementPageState
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              buildStatRow('Total Workers', '${statistics['totalWorkers']}'),
+              buildStatRow('Total Workers', '${statistics.totalWorkers}'),
               buildStatRow(
                 'Pending Payments',
-                '${statistics['pendingPayments']}',
+                '${statistics.pendingPayments}',
               ),
               buildStatRow(
                 'Processed Payments',
-                '${statistics['processedPayments']}',
+                '${statistics.processedPayments}',
               ),
               const Divider(),
               buildStatRow(
                 'Total Gross Amount',
-                'KES ${numberFormat.format(statistics['totalGrossAmount'])}',
+                'KES ${numberFormat.format(statistics.totalGrossAmount)}',
               ),
               buildStatRow(
                 'Total Net Amount',
-                'KES ${numberFormat.format(statistics['totalNetAmount'])}',
+                'KES ${numberFormat.format(statistics.totalNetAmount)}',
               ),
               buildStatRow(
                 'Total Tax Amount',
-                'KES ${numberFormat.format(statistics['totalTaxAmount'])}',
+                'KES ${numberFormat.format(statistics.totalTaxAmount)}',
               ),
             ],
           ),

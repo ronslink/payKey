@@ -1,10 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Worker } from '../workers/entities/worker.entity';
 import { Transaction } from '../payments/entities/transaction.entity';
 import { LeaveRequest } from '../workers/entities/leave-request.entity';
 import { User } from '../users/entities/user.entity';
+import { PayrollRecord } from '../payroll/entities/payroll-record.entity';
+import { PayPeriod } from '../payroll/entities/pay-period.entity';
 
 @Injectable()
 export class ReportsService {
@@ -17,7 +19,11 @@ export class ReportsService {
     private leaveRequestRepository: Repository<LeaveRequest>,
     @InjectRepository(User)
     private usersRepository: Repository<User>,
-  ) {}
+    @InjectRepository(PayrollRecord)
+    private payrollRecordRepository: Repository<PayrollRecord>,
+    @InjectRepository(PayPeriod)
+    private payPeriodRepository: Repository<PayPeriod>,
+  ) { }
 
   async getMonthlyPayrollReport(userId: string, year: number, month: number) {
     const startDate = new Date(year, month - 1, 1);
@@ -131,6 +137,109 @@ export class ReportsService {
       totalHousingLevy: 0,
       note: 'Tax summary integration pending',
     };
+  }
+
+  async getPayrollSummaryByPeriod(userId: string, payPeriodId: string) {
+    const payPeriod = await this.payPeriodRepository.findOne({
+      where: { id: payPeriodId, userId },
+    });
+
+    if (!payPeriod) {
+      throw new NotFoundException('Pay period not found');
+    }
+
+    const records = await this.payrollRecordRepository.find({
+      where: { payPeriodId, userId, status: 'finalized' as any },
+      relations: ['worker'],
+    });
+
+    const summary = {
+      payPeriod: {
+        id: payPeriod.id,
+        startDate: payPeriod.startDate,
+        endDate: payPeriod.endDate,
+      },
+      totals: {
+        grossPay: 0,
+        netPay: 0,
+        paye: 0,
+        nssf: 0,
+        nhif: 0,
+        housingLevy: 0,
+        totalDeductions: 0,
+        workerCount: records.length,
+      },
+      records: records.map(record => {
+        const gross = Number(record.grossSalary);
+        const net = Number(record.netSalary);
+        const paye = Number(record.taxBreakdown?.paye || 0);
+        const nssf = Number(record.taxBreakdown?.nssf || 0);
+        const nhif = Number(record.taxBreakdown?.nhif || 0);
+        const housingLevy = Number(record.taxBreakdown?.housingLevy || 0);
+        const totalDeductions = Number(record.taxBreakdown?.totalDeductions || 0);
+
+        summary.totals.grossPay += gross;
+        summary.totals.netPay += net;
+        summary.totals.paye += paye;
+        summary.totals.nssf += nssf;
+        summary.totals.nhif += nhif;
+        summary.totals.housingLevy += housingLevy;
+        summary.totals.totalDeductions += totalDeductions;
+
+        return {
+          workerName: record.worker?.name || 'Unknown',
+          workerId: record.workerId,
+          grossPay: gross,
+          netPay: net,
+          taxBreakdown: {
+            paye,
+            nssf,
+            nhif,
+            housingLevy,
+            total: totalDeductions
+          }
+        };
+      }),
+    };
+
+    // Round totals
+    summary.totals.grossPay = Math.round(summary.totals.grossPay * 100) / 100;
+    summary.totals.netPay = Math.round(summary.totals.netPay * 100) / 100;
+    summary.totals.paye = Math.round(summary.totals.paye * 100) / 100;
+    summary.totals.nssf = Math.round(summary.totals.nssf * 100) / 100;
+    summary.totals.nhif = Math.round(summary.totals.nhif * 100) / 100;
+    summary.totals.housingLevy = Math.round(summary.totals.housingLevy * 100) / 100;
+    summary.totals.totalDeductions = Math.round(summary.totals.totalDeductions * 100) / 100;
+
+    return summary;
+  }
+
+  async getStatutoryReport(userId: string, payPeriodId: string) {
+    const summary = await this.getPayrollSummaryByPeriod(userId, payPeriodId);
+
+    // Transform summary into Statutory format (P10 style)
+    return {
+      payPeriod: summary.payPeriod,
+      totals: {
+        paye: summary.totals.paye,
+        nssf: summary.totals.nssf, // In reality, this should be Employer + Employee
+        nhif: summary.totals.nhif,
+        housingLevy: summary.totals.housingLevy, // Employer + Employee (1.5% * 2) usually
+      },
+      employees: summary.records.map(r => ({
+        name: r.workerName,
+        grossPay: r.grossPay,
+        nssf: r.taxBreakdown.nssf,
+        nhif: r.taxBreakdown.nhif,
+        housingLevy: r.taxBreakdown.housingLevy,
+        paye: r.taxBreakdown.paye,
+      })),
+    };
+  }
+
+  async getMasterRoll(userId: string, payPeriodId: string) {
+    // Alias for Payroll Summary but could contain more attendance data later
+    return this.getPayrollSummaryByPeriod(userId, payPeriodId);
   }
 
   async getDashboardMetrics(userId: string) {

@@ -2,370 +2,198 @@ import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../constants/api_constants.dart';
 
+// =============================================================================
+// API SERVICE - CORE
+// =============================================================================
+
+/// Main API service singleton that handles HTTP requests and authentication.
+/// 
+/// Usage:
+/// ```dart
+/// final api = ApiService();
+/// final response = await api.workers.getAll();
+/// ```
 class ApiService {
   static final ApiService _instance = ApiService._internal();
   factory ApiService() => _instance;
+
   ApiService._internal() {
     _initializeDio();
+    _initializeEndpoints();
   }
 
-  // Public fields for extension methods to access
+  // ---------------------------------------------------------------------------
+  // Public Properties
+  // ---------------------------------------------------------------------------
+
   final Dio dio = Dio();
   final FlutterSecureStorage secureStorage = const FlutterSecureStorage();
 
   static String get baseUrl => ApiConstants.baseUrl;
 
+  // Endpoint accessors
+  late final AuthEndpoints auth;
+
+  late final PayrollEndpoints payroll;
+  late final PayPeriodEndpoints payPeriods;
+  late final TaxEndpoints taxes;
+  late final PaymentEndpoints payments;
+  late final SubscriptionEndpoints subscriptions;
+  late final AccountingEndpoints accounting;
+  late final LeaveEndpoints leave;
+  late final WorkerEndpoints workers;
+  late final ReportEndpoints reports;
+  late final EmployeePortalEndpoints employeePortal;
+  late final TimeTrackingEndpoints timeTracking;
+
+  // ---------------------------------------------------------------------------
+  // Initialization
+  // ---------------------------------------------------------------------------
+
   void _initializeDio() {
-    dio.options.baseUrl = baseUrl;
-    dio.options.connectTimeout = const Duration(seconds: 30);
-    dio.options.receiveTimeout = const Duration(seconds: 30);
-    dio.options.headers.addAll({
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    });
-    
-    // Add interceptors for auth and error handling
-    dio.interceptors.add(InterceptorsWrapper(
+    dio.options
+      ..baseUrl = baseUrl
+      ..connectTimeout = const Duration(seconds: 30)
+      ..receiveTimeout = const Duration(seconds: 30)
+      ..headers.addAll({
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      });
+
+    dio.interceptors.add(_createAuthInterceptor());
+  }
+
+  void _initializeEndpoints() {
+    auth = AuthEndpoints(this);
+
+    payroll = PayrollEndpoints(this);
+    payPeriods = PayPeriodEndpoints(this);
+    taxes = TaxEndpoints(this);
+    payments = PaymentEndpoints(this);
+    subscriptions = SubscriptionEndpoints(this);
+    accounting = AccountingEndpoints(this);
+    leave = LeaveEndpoints(this);
+    workers = WorkerEndpoints(this);
+    reports = ReportEndpoints(this);
+    employeePortal = EmployeePortalEndpoints(this);
+    timeTracking = TimeTrackingEndpoints(this);
+  }
+
+  InterceptorsWrapper _createAuthInterceptor() {
+    return InterceptorsWrapper(
       onRequest: (options, handler) async {
-        // Add auth token to requests (but not for login/register requests)
-        final isAuthEndpoint = options.uri.path.contains('/auth/login') ||
-                               options.uri.path.contains('/auth/register');
-        
-        if (!isAuthEndpoint) {
-          try {
-            final token = await secureStorage.read(key: 'access_token');
-            if (token != null) {
-              options.headers['Authorization'] = 'Bearer $token';
-              
-              // Add cache control headers to prevent 304 responses
-              options.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
-              options.headers['Pragma'] = 'no-cache';
-              options.headers['Expires'] = '0';
-            }
-          } catch (e) {
-            // Handle token reading error silently
+        if (!_isAuthEndpoint(options.uri.path)) {
+          final token = await _getStoredToken();
+          if (token != null) {
+            options.headers['Authorization'] = 'Bearer $token';
+            _addNoCacheHeaders(options.headers);
           }
         }
-        
         return handler.next(options);
       },
-      onResponse: (response, handler) {
-        return handler.next(response);
-      },
       onError: (error, handler) async {
-        // Handle authentication errors
         if (error.response?.statusCode == 401) {
-          await secureStorage.delete(key: 'access_token');
-          // TODO: Navigate to login page
+          await clearToken();
+          // TODO: Navigate to login page or emit auth state change
         }
-        
         return handler.next(error);
       },
-    ));
+    );
   }
 
-  // Generic HTTP methods
-  Future<Response> get(String path, {Map<String, dynamic>? queryParams, Options? options}) async {
-    return dio.get(path, queryParameters: queryParams, options: options);
+  bool _isAuthEndpoint(String path) {
+    return path.contains('/auth/login') || path.contains('/auth/register');
   }
 
-  Future<Response> post(String path, {dynamic data, Map<String, dynamic>? queryParams, Options? options}) async {
-    return dio.post(path, data: data, queryParameters: queryParams, options: options);
+  Future<String?> _getStoredToken() async {
+    try {
+      return await secureStorage.read(key: 'access_token');
+    } catch (_) {
+      return null;
+    }
   }
 
-  Future<Response> patch(String path, {dynamic data, Map<String, dynamic>? queryParams, Options? options}) async {
-    return dio.patch(path, data: data, queryParameters: queryParams, options: options);
+  void _addNoCacheHeaders(Map<String, dynamic> headers) {
+    headers.addAll({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+    });
   }
 
-  Future<Response> delete(String path, {dynamic data, Map<String, dynamic>? queryParams, Options? options}) async {
+  // ---------------------------------------------------------------------------
+  // Generic HTTP Methods
+  // ---------------------------------------------------------------------------
+
+  Future<Response> get(
+    String path, {
+    Map<String, dynamic>? queryParams,
+    Options? options,
+    bool noCache = false,
+  }) async {
+    return dio.get(
+      path,
+      queryParameters: queryParams,
+      options: noCache ? _withNoCache(options) : options,
+    );
+  }
+
+  Future<Response> post(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParams,
+    Options? options,
+    bool noCache = false,
+  }) async {
+    return dio.post(
+      path,
+      data: data,
+      queryParameters: queryParams,
+      options: noCache ? _withNoCache(options) : options,
+    );
+  }
+
+  Future<Response> patch(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParams,
+    Options? options,
+    bool noCache = false,
+  }) async {
+    return dio.patch(
+      path,
+      data: data,
+      queryParameters: queryParams,
+      options: noCache ? _withNoCache(options) : options,
+    );
+  }
+
+  Future<Response> delete(
+    String path, {
+    dynamic data,
+    Map<String, dynamic>? queryParams,
+    Options? options,
+  }) async {
     return dio.delete(path, data: data, queryParameters: queryParams, options: options);
   }
 
-  // Auth endpoints
-  Future<Response> login(String email, String password) async {
-final loginData = {
-      'email': email,
-      'password': password,
+  Options _withNoCache(Options? base) {
+    final headers = <String, dynamic>{
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
     };
-    return dio.post('/auth/login', data: loginData);
+
+    if (base != null) {
+      return base.copyWith(headers: {...?base.headers, ...headers});
+    }
+    return Options(headers: headers);
   }
 
-  Future<Response> register(String email, String password, {String? firstName, String? lastName}) async {
-    return dio.post('/auth/register', data: {
-      'email': email,
-      'password': password,
-      'firstName': firstName,
-      'lastName': lastName,
-    });
-  }
+  // ---------------------------------------------------------------------------
+  // Token Management
+  // ---------------------------------------------------------------------------
 
-  // Worker endpoints
-  Future<Response> getWorkers() async {
-    return dio.get(
-      '/workers',
-      options: Options(
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
-      )
-    );
-  }
-
-  Future<Response> createWorker(Map<String, dynamic> workerData) async {
-    return dio.post(
-      '/workers',
-      data: workerData,
-      options: Options(
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
-      )
-    );
-  }
-
-  Future<Response> updateWorker(String workerId, Map<String, dynamic> workerData) async {
-    return dio.patch(
-      '/workers/$workerId',
-      data: workerData,
-      options: Options(
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
-      )
-    );
-  }
-
-  Future<Response> deleteWorker(String workerId) async {
-    return dio.delete('/workers/$workerId');
-  }
-
-  // Unified Payment Dashboard endpoints
-  Future<Response> getPaymentDashboard() async {
-    return dio.get('/payments/unified/dashboard');
-  }
-
-  Future<Response> getPaymentMethods() async {
-    return dio.get('/payments/unified/methods');
-  }
-
-  // M-Pesa Payment endpoints
-  Future<Response> initiateMpesaTopup(String phoneNumber, double amount) async {
-    return dio.post('/payments/unified/mpesa/topup', data: {
-      'phoneNumber': phoneNumber,
-      'amount': amount,
-    });
-  }
-
-  // Tax Payment endpoints
-  Future<Response> getTaxPaymentSummary() async {
-    return dio.get('/payments/unified/tax-payments/summary');
-  }
-
-  Future<Response> recordTaxPayment({
-    required String taxType,
-    required double amount,
-    String? paymentDate,
-    required String reference,
-  }) async {
-    return dio.post('/payments/unified/tax-payments/record', data: {
-      'taxType': taxType,
-      'amount': amount,
-      'paymentDate': paymentDate,
-      'reference': reference,
-    });
-  }
-
-  // Legacy payment endpoints (for backward compatibility)
-  Future<Response> initiateStkPush(String phoneNumber, double amount) async {
-    return initiateMpesaTopup(phoneNumber, amount);
-  }
-
-  Future<Response> sendB2CPayment(String transactionId, String phoneNumber, double amount, String remarks) async {
-    return dio.post('/payments/send-b2c', data: {
-      'transactionId': transactionId,
-      'phoneNumber': phoneNumber,
-      'amount': amount,
-      'remarks': remarks,
-    });
-  }
-
-  // Tax calculation methods
-  Future<Response> calculateTax(double grossSalary) async {
-    return dio.post('/taxes/calculate', data: {
-      'grossSalary': grossSalary,
-    });
-  }
-
-  // Transaction endpoints
-  Future<Response> getTransactions() async {
-    return dio.get('/transactions');
-  }
-
-  Future<Response> getTransactionById(String transactionId) async {
-    return dio.get('/transactions/$transactionId');
-  }
-
-  // Payroll record endpoints
-  Future<Response> getPayrollRecords() async {
-    return dio.get('/payroll-records');
-  }
-
-  Future<Response> updatePayrollStatus(String recordId, String status, String? paymentDate) async {
-    return dio.patch('/payroll-records/$recordId/status', data: {
-      'status': status,
-      if (paymentDate != null) 'paymentDate': paymentDate,
-    });
-  }
-
-  Future<Response> deletePayrollRecord(String recordId) async {
-    return dio.delete('/payroll-records/$recordId');
-  }
-
-  // Subscription endpoints
-  Future<Response> getSubscriptionPlans() async {
-    return dio.get(
-      '/subscriptions/plans',
-      options: Options(
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
-      )
-    );
-  }
-
-  Future<Response> subscribeToPlan(String planId) async {
-    return dio.post('/subscriptions/subscribe', data: {
-      'planId': planId,
-    });
-  }
-
-  Future<Response> getUserSubscription() async {
-    return dio.get(
-      '/subscriptions/current',
-      options: Options(
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
-      )
-    );
-  }
-
-  Future<Response> getSubscriptionPaymentHistory({
-    int? page,
-    int? limit,
-    String? status,
-    String? startDate,
-    String? endDate,
-  }) async {
-    final queryParams = <String, dynamic>{};
-    
-    if (page != null) queryParams['page'] = page.toString();
-    if (limit != null) queryParams['limit'] = limit.toString();
-    if (status != null) queryParams['status'] = status;
-    if (startDate != null) queryParams['startDate'] = startDate;
-    if (endDate != null) queryParams['endDate'] = endDate;
-    
-    return dio.get(
-      '/subscriptions/subscription-payment-history',
-      queryParameters: queryParams,
-      options: Options(
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
-      )
-    );
-  }
-
-  Future<Response> getSubscriptionUsage() async {
-    return dio.get(
-      '/subscriptions/usage',
-      options: Options(
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
-      )
-    );
-  }
-
-  Future<Response> cancelSubscription(String subscriptionId) async {
-    return dio.post('/subscriptions/$subscriptionId/cancel');
-  }
-
-  Future<Response> updateSubscription(String subscriptionId, Map<String, dynamic> updates) async {
-    return dio.patch('/subscriptions/$subscriptionId', data: updates);
-  }
-
-  Future<Response> resumeSubscription(String subscriptionId) async {
-    return dio.post('/subscriptions/$subscriptionId/resume');
-  }
-
-  Future<Response> upgradeSubscription(String subscriptionId, String newPlanId) async {
-    return dio.post('/subscriptions/$subscriptionId/upgrade', data: {
-      'newPlanId': newPlanId,
-    });
-  }
-
-  // Tax endpoints
-  Future<Response> getTaxSubmissions() async {
-    return dio.get('/taxes/submissions');
-  }
-
-  Future<Response> markTaxAsFiled(String id) async {
-    return dio.patch('/taxes/submissions/$id/file');
-  }
-
-  Future<Response> getCurrentTaxTable() async {
-    return dio.get('/taxes/current');
-  }
-
-  Future<Response> getComplianceStatus() async {
-    return dio.get('/taxes/compliance');
-  }
-
-  Future<Response> getTaxDeadlines() async {
-    return dio.get('/taxes/deadlines');
-  }
-
-  // Tax Payments API Endpoints
-  Future<Response> getMonthlyTaxSummary(int year, int month) async {
-    return dio.get('/tax-payments/summary/$year/$month');
-  }
-
-  Future<Response> getTaxPaymentHistory() async {
-    return dio.get('/tax-payments/history');
-  }
-
-  Future<Response> getPendingTaxPayments() async {
-    return dio.get('/tax-payments/pending');
-  }
-
-  Future<Response> updateTaxPaymentStatus(String id, String status) async {
-    return dio.patch('/tax-payments/$id/status', data: {'status': status});
-  }
-
-  Future<Response> getTaxPaymentInstructions() async {
-    return dio.get('/tax-payments/instructions');
-  }
-
-  Future<Response> updateUserProfile(Map<String, dynamic> data) async {
-    return dio.patch('/users/profile', data: data);
-  }
-
-  // Token management
   Future<void> saveToken(String token) async {
     await secureStorage.write(key: 'access_token', value: token);
   }
@@ -375,17 +203,21 @@ final loginData = {
   }
 
   Future<String?> getToken() async {
-    return await secureStorage.read(key: 'access_token');
+    return secureStorage.read(key: 'access_token');
   }
 
-  // Error handling helper
+  // ---------------------------------------------------------------------------
+  // Error Handling
+  // ---------------------------------------------------------------------------
+
+  /// Extracts a human-readable error message from an error.
   String getErrorMessage(dynamic error) {
     if (error is DioException) {
-      if (error.response?.data != null) {
-        final data = error.response!.data;
-        if (data is Map && data.containsKey('message')) {
-          return data['message'];
-        }
+      final data = error.response?.data;
+      if (data is Map && data.containsKey('message')) {
+        return data['message'] as String;
+      }
+      if (data != null) {
         return data.toString();
       }
       return error.message ?? 'Network error occurred';
@@ -393,165 +225,784 @@ final loginData = {
     return error.toString();
   }
 
+  /// Wraps an error in an Exception with a readable message.
   Exception handleError(dynamic error) {
-    if (error is DioException) {
-      if (error.response != null) {
-        return Exception(error.response?.data['message'] ?? 'An error occurred');
-      }
-      return Exception(error.message);
-    }
-    return Exception(error.toString());
+    return Exception(getErrorMessage(error));
   }
 
-  // Payroll Draft Management
-  Future<Response> saveDraftPayroll(String payPeriodId, List<Map<String, dynamic>> items) async {
-    return dio.post('/payroll/draft', data: {
+  // ---------------------------------------------------------------------------
+  // Legacy Methods (for backward compatibility)
+  // ---------------------------------------------------------------------------
+
+  // These delegate to the new endpoint classes for backward compatibility.
+  // Consider deprecating these in favor of the endpoint accessors.
+
+  Future<Response> login(String email, String password) =>
+      auth.login(email, password);
+
+  Future<Response> register(String email, String password,
+          {String? firstName, String? lastName}) =>
+      auth.register(email, password, firstName: firstName, lastName: lastName);
+
+  Future<Response> getWorkers() => workers.getAll();
+  Future<Response> createWorker(Map<String, dynamic> data) => workers.create(data);
+  Future<Response> updateWorker(String id, Map<String, dynamic> data) =>
+      workers.update(id, data);
+  Future<Response> deleteWorker(String id) => workers.delete(id);
+
+  Future<Response> getPayPeriods() => payPeriods.getAll();
+  Future<Response> getPayPeriodById(String id) => payPeriods.getById(id);
+  Future<Response> createPayPeriod(Map<String, dynamic> data) => payPeriods.create(data);
+  Future<Response> updatePayPeriod(String id, Map<String, dynamic> data) =>
+      payPeriods.update(id, data);
+  Future<Response> deletePayPeriod(String id) => payPeriods.delete(id);
+  Future<Response> activatePayPeriod(String id) => payPeriods.activate(id);
+  Future<Response> processPayPeriod(String id) => payPeriods.process(id);
+  Future<Response> completePayPeriod(String id) => payPeriods.complete(id);
+  Future<Response> closePayPeriod(String id) => payPeriods.close(id);
+  Future<Response> getPayPeriodStatistics(String id) => payPeriods.getStatistics(id);
+  Future<Response> getCurrentPayPeriod() => payPeriods.getCurrent();
+
+  Future<Response> saveDraftPayroll(String payPeriodId, List<Map<String, dynamic>> items) =>
+      payroll.saveDraft(payPeriodId, items);
+  Future<Response> updatePayrollItem(String id, Map<String, dynamic> updates) =>
+      payroll.updateItem(id, updates);
+  Future<Response> getDraftPayroll(String payPeriodId) => payroll.getDraft(payPeriodId);
+  Future<Response> finalizePayroll(String payPeriodId) => payroll.finalize(payPeriodId);
+  Future<List<int>> downloadPayslip(String payrollRecordId) =>
+      payroll.downloadPayslip(payrollRecordId);
+
+  Future<Response> calculateTax(double grossSalary) => taxes.calculate(grossSalary);
+  Future<Response> getTaxSubmissions() => taxes.getSubmissions();
+  Future<Response> markTaxAsFiled(String id) => taxes.markAsFiled(id);
+  Future<Response> getCurrentTaxTable() => taxes.getCurrentTable();
+  Future<Response> getComplianceStatus() => taxes.getComplianceStatus();
+  Future<Response> getTaxDeadlines() => taxes.getDeadlines();
+
+  Future<Response> exportPayrollToCSV(String payPeriodId) =>
+      accounting.exportToCSV(payPeriodId);
+
+  Future<Response> getRecentActivities({int limit = 10}) =>
+      get('/activities/recent', queryParams: {'limit': limit});
+
+  // ---------------------------------------------------------------------------
+  // Account Mappings (Accounting)
+  // ---------------------------------------------------------------------------
+
+  Future<Response> getAccountMappings() => accounting.getMappings();
+
+  Future<Response> saveAccountMappings(Map<String, dynamic> mappings) =>
+      accounting.saveMappings(mappings);
+
+  // ---------------------------------------------------------------------------
+  // Leave Management
+  // ---------------------------------------------------------------------------
+
+  Future<Response> getLeaveRequests() => leave.getAll();
+
+  Future<Response> getWorkerLeaveRequests(String workerId) => leave.getByWorker(workerId);
+
+  Future<Response> createLeaveRequest(String workerId, Map<String, dynamic> data) =>
+      leave.create(workerId, data);
+
+  Future<Response> updateLeaveRequest(String leaveRequestId, Map<String, dynamic> data) =>
+      leave.update(leaveRequestId, data);
+
+  Future<Response> deleteLeaveRequest(String leaveRequestId) => leave.delete(leaveRequestId);
+
+  Future<Response> approveLeaveRequest(String leaveRequestId, bool approved, {String? comments}) =>
+      leave.approve(leaveRequestId, approved, comments: comments);
+
+  Future<Response> getLeaveBalance(String workerId) => leave.getBalance(workerId);
+
+  // ---------------------------------------------------------------------------
+  // Payroll Records
+  // ---------------------------------------------------------------------------
+
+  Future<Response> getPayrollRecords() => payroll.getRecords();
+
+  Future<Response> updatePayrollStatus(String id, String status, {String? paymentDate}) =>
+      payroll.updateStatus(id, status, paymentDate: paymentDate);
+
+  Future<Response> deletePayrollRecord(String id) => payroll.deleteRecord(id);
+
+  // ---------------------------------------------------------------------------
+  // Transactions
+  // ---------------------------------------------------------------------------
+
+  Future<Response> getTransactions() => payments.getTransactions();
+
+  Future<Response> getTransactionById(String id) => payments.getTransactionById(id);
+
+  // ---------------------------------------------------------------------------
+  // Payments Dashboard
+  // ---------------------------------------------------------------------------
+
+  Future<Response> getPaymentDashboard() => payments.getDashboard();
+
+  Future<Response> getPaymentMethods() => payments.getMethods();
+
+  Future<Response> getTaxPaymentSummary() => payments.getTaxPaymentSummary();
+
+  Future<Response> initiateMpesaTopup(String phoneNumber, double amount) =>
+      payments.initiateMpesaTopup(phoneNumber, amount);
+
+  Future<Response> recordTaxPayment({
+    required String taxType,
+    required double amount,
+    required String reference,
+    String? paymentDate,
+  }) =>
+      payments.recordTaxPayment(
+        taxType: taxType,
+        amount: amount,
+        reference: reference,
+        paymentDate: paymentDate,
+      );
+
+  // ---------------------------------------------------------------------------
+  // Subscriptions
+  // ---------------------------------------------------------------------------
+
+  Future<Response> getSubscriptionPlans() => subscriptions.getPlans();
+
+  Future<Response> getUserSubscription() => subscriptions.getCurrent();
+
+  Future<Response> getSubscriptionPaymentHistory({
+    int? page,
+    int? limit,
+    String? status,
+    String? startDate,
+    String? endDate,
+  }) =>
+      subscriptions.getPaymentHistory(
+        page: page,
+        limit: limit,
+        status: status,
+        startDate: startDate,
+        endDate: endDate,
+      );
+
+  // ---------------------------------------------------------------------------
+  // Tax Submissions
+  // ---------------------------------------------------------------------------
+
+  Future<Response> markTaxSubmissionAsFiled(String id) => taxes.markAsFiled(id);
+
+  Future<Response> generateTaxSubmission(String payPeriodId) => taxes.generateSubmission(payPeriodId);
+
+  Future<Response> getMonthlyTaxSummary(int year, int month) => taxes.getMonthlySummary(year, month);
+
+  Future<Response> recordTaxPaymentTax(String id) => taxes.updatePaymentStatus(id, 'paid');
+
+  Future<Response> getTaxPaymentHistory() => taxes.getPaymentHistory();
+
+  Future<Response> getPendingTaxPayments() => taxes.getPendingPayments();
+
+  Future<Response> updateTaxPaymentStatus(String id, String status) => taxes.updatePaymentStatus(id, status);
+
+  Future<Response> getTaxPaymentInstructions() => taxes.getPaymentInstructions();
+
+  // ---------------------------------------------------------------------------
+  // Workers (delegates to workers property)
+  // ---------------------------------------------------------------------------
+
+  Future<Response> updateUserProfile(Map<String, dynamic> data) => auth.updateProfile(data);
+}
+
+// =============================================================================
+// ENDPOINT CLASSES
+// =============================================================================
+
+/// Base class for endpoint groups.
+abstract class BaseEndpoints {
+  final ApiService _api;
+  const BaseEndpoints(this._api);
+}
+
+// -----------------------------------------------------------------------------
+// Auth Endpoints
+// -----------------------------------------------------------------------------
+
+class AuthEndpoints extends BaseEndpoints {
+  const AuthEndpoints(super.api);
+
+  Future<Response> login(String email, String password) {
+    return _api.post('/auth/login', data: {
+      'email': email,
+      'password': password,
+    });
+  }
+
+  Future<Response> register(
+    String email,
+    String password, {
+    String? firstName,
+    String? lastName,
+  }) {
+    return _api.post('/auth/register', data: {
+      'email': email,
+      'password': password,
+      if (firstName != null) 'firstName': firstName,
+      if (lastName != null) 'lastName': lastName,
+    });
+  }
+
+  Future<Response> updateProfile(Map<String, dynamic> data) {
+    return _api.patch('/users/profile', data: data);
+  }
+}
+// -----------------------------------------------------------------------------
+// Worker Endpoints
+// -----------------------------------------------------------------------------
+
+class WorkerEndpoints extends BaseEndpoints {
+  const WorkerEndpoints(super.api);
+
+  Future<Response> getAll() => _api.get('/workers');
+
+  Future<Response> getById(String id) => _api.get('/workers/$id');
+
+  Future<Response> create(Map<String, dynamic> data) => _api.post('/workers', data: data);
+
+  Future<Response> update(String id, Map<String, dynamic> data) => _api.patch('/workers/$id', data: data);
+
+  Future<Response> delete(String id) => _api.delete('/workers/$id');
+
+  Future<Response> terminate(String id, Map<String, dynamic> data) => _api.post('/workers/$id/terminate', data: data);
+
+  Future<Response> getTerminationHistory() => _api.get('/workers/terminated/history');
+
+  Future<Response> getArchived() => _api.get('/workers/archived');
+
+  Future<Response> restore(String id) => _api.post('/workers/$id/restore');
+}
+
+
+
+// -----------------------------------------------------------------------------
+// Payroll Endpoints
+// -----------------------------------------------------------------------------
+
+class PayrollEndpoints extends BaseEndpoints {
+  const PayrollEndpoints(super.api);
+
+  Future<Response> saveDraft(String payPeriodId, List<Map<String, dynamic>> items) {
+    return _api.post('/payroll/draft', data: {
       'payPeriodId': payPeriodId,
       'payrollItems': items,
     });
   }
 
-  Future<Response> updatePayrollItem(String payrollRecordId, Map<String, dynamic> updates) async {
-    return dio.patch('/payroll/draft/$payrollRecordId', data: updates);
+  Future<Response> getDraft(String payPeriodId) {
+    return _api.get('/payroll/draft/$payPeriodId');
   }
 
-  Future<Response> getDraftPayroll(String payPeriodId) async {
-    return dio.get('/payroll/draft/$payPeriodId');
+  Future<Response> updateItem(String id, Map<String, dynamic> updates) {
+    return _api.patch('/payroll/draft/$id', data: updates);
   }
 
-  Future<Response> finalizePayroll(String payPeriodId) async {
-    return dio.post('/payroll/finalize/$payPeriodId');
+  Future<Response> finalize(String payPeriodId) {
+    return _api.post('/payroll/finalize/$payPeriodId');
   }
+
+  Future<Response> getRecords() => _api.get('/payroll-records');
+
+  Future<Response> updateStatus(String id, String status, {String? paymentDate}) {
+    return _api.patch('/payroll-records/$id/status', data: {
+      'status': status,
+      if (paymentDate != null) 'paymentDate': paymentDate,
+    });
+  }
+
+  Future<Response> deleteRecord(String id) => _api.delete('/payroll-records/$id');
 
   Future<List<int>> downloadPayslip(String payrollRecordId) async {
     try {
-      final response = await dio.get<List<int>>(
+      final response = await _api.dio.get<List<int>>(
         '/payroll/payslip/$payrollRecordId',
         options: Options(responseType: ResponseType.bytes),
       );
       return response.data ?? [];
     } catch (e) {
-      throw handleError(e);
+      throw _api.handleError(e);
     }
   }
+}
 
-  // Tax Submission Management
-  Future<Response> generateTaxSubmission(String payPeriodId) async {
-    return dio.post('/taxes/submissions/generate', data: {'payPeriodId': payPeriodId});
+// -----------------------------------------------------------------------------
+// Pay Period Endpoints
+// -----------------------------------------------------------------------------
+
+class PayPeriodEndpoints extends BaseEndpoints {
+  const PayPeriodEndpoints(super.api);
+
+  Future<Response> getAll() => _api.get('/pay-periods');
+
+  Future<Response> getById(String id) => _api.get('/pay-periods/$id');
+
+  Future<Response> getByStatus(String status) {
+    return _api.get('/pay-periods', queryParams: {'status': status});
   }
 
-  Future<Response> getTaxSubmissionByPeriod(String payPeriodId) async {
-    return dio.get('/taxes/submissions/period/$payPeriodId');
+  Future<Response> getCurrent() => _api.get('/pay-periods/current');
+
+  Future<Response> getStatistics(String id) => _api.get('/pay-periods/$id/statistics');
+
+  Future<Response> create(Map<String, dynamic> data) {
+    return _api.post('/pay-periods', data: data);
   }
 
-  Future<Response> markTaxSubmissionAsFiled(String id) async {
-    return dio.patch('/taxes/submissions/$id/file');
+  Future<Response> update(String id, Map<String, dynamic> data) {
+    return _api.patch('/pay-periods/$id', data: data);
   }
 
-  // Accounting Export
-  Future<Response> exportPayrollToCSV(String payPeriodId) async {
-    return dio.post('/accounting/export/$payPeriodId', data: {'format': 'CSV'});
+  Future<Response> delete(String id) => _api.delete('/pay-periods/$id');
+
+  Future<Response> updateStatus(String id, String action) {
+    return _api.patch('/pay-periods/$id/status', data: {'action': action});
   }
 
-  Future<Response> getAccountingFormats() async {
-    return dio.get('/accounting/formats');
+  // Status transitions
+  Future<Response> activate(String id) => _api.post('/pay-periods/$id/activate');
+  Future<Response> process(String id) => _api.post('/pay-periods/$id/process');
+  Future<Response> complete(String id) => _api.post('/pay-periods/$id/complete');
+  Future<Response> close(String id) => _api.post('/pay-periods/$id/close');
+
+  Future<Response> generatePayslips(String id) {
+    return _api.post('/pay-periods/$id/payslips');
   }
 
-  Future<Response> getAccountMappings() async {
-    return dio.get('/accounting/mappings');
+  Future<Response> generate({
+    required String frequency,
+    required String startDate,
+    required String endDate,
+  }) {
+    return _api.post('/pay-periods/generate', data: {
+      'frequency': frequency,
+      'startDate': startDate,
+      'endDate': endDate,
+    });
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Tax Endpoints
+// -----------------------------------------------------------------------------
+
+class TaxEndpoints extends BaseEndpoints {
+  const TaxEndpoints(super.api);
+
+  Future<Response> calculate(double grossSalary) {
+    return _api.post('/taxes/calculate', data: {'grossSalary': grossSalary});
   }
 
-  Future<Response> saveAccountMappings(Map<String, dynamic> mappings) async {
-    return dio.post('/accounting/mappings', data: mappings);
+  Future<Response> getCurrentTable() => _api.get('/taxes/current');
+
+  Future<Response> getComplianceStatus() => _api.get('/taxes/compliance');
+
+  Future<Response> getDeadlines() => _api.get('/taxes/deadlines');
+
+  // Submissions
+  Future<Response> getSubmissions() => _api.get('/taxes/submissions');
+
+  Future<Response> getSubmissionByPeriod(String payPeriodId) {
+    return _api.get('/taxes/submissions/period/$payPeriodId');
   }
 
-  // Pay Period Management
-  Future<Response> getPayPeriods() async {
-    return dio.get('/pay-periods');
+  Future<Response> generateSubmission(String payPeriodId) {
+    return _api.post('/taxes/submissions/generate', data: {'payPeriodId': payPeriodId});
   }
 
-  Future<Response> getPayPeriodById(String id) async {
-    return dio.get('/pay-periods/$id');
+  Future<Response> markAsFiled(String id) {
+    return _api.patch('/taxes/submissions/$id/file');
   }
 
-  Future<Response> createPayPeriod(Map<String, dynamic> data) async {
-    return dio.post('/pay-periods', data: data);
+  // Tax Payments
+  Future<Response> getMonthlySummary(int year, int month) {
+    return _api.get('/tax-payments/summary/$year/$month');
   }
 
-  Future<Response> updatePayPeriod(String id, Map<String, dynamic> data) async {
-    return dio.patch('/pay-periods/$id', data: data);
+  Future<Response> getPaymentHistory() => _api.get('/tax-payments/history');
+
+  Future<Response> getPendingPayments() => _api.get('/tax-payments/pending');
+
+  Future<Response> updatePaymentStatus(String id, String status) {
+    return _api.patch('/tax-payments/$id/status', data: {'status': status});
   }
 
-  Future<Response> deletePayPeriod(String id) async {
-    return dio.delete('/pay-periods/$id');
+  Future<Response> getPaymentInstructions() => _api.get('/tax-payments/instructions');
+}
+
+// -----------------------------------------------------------------------------
+// Payment Endpoints
+// -----------------------------------------------------------------------------
+
+class PaymentEndpoints extends BaseEndpoints {
+  const PaymentEndpoints(super.api);
+
+  // Dashboard
+  Future<Response> getDashboard() => _api.get('/payments/unified/dashboard');
+
+  Future<Response> getMethods() => _api.get('/payments/unified/methods');
+
+  // M-Pesa
+  Future<Response> initiateMpesaTopup(String phoneNumber, double amount) {
+    return _api.post('/payments/unified/mpesa/topup', data: {
+      'phoneNumber': phoneNumber,
+      'amount': amount,
+    });
   }
 
-  Future<Response> activatePayPeriod(String id) async {
-    return dio.post('/pay-periods/$id/activate');
+  /// Alias for [initiateMpesaTopup] (legacy support).
+  Future<Response> initiateStkPush(String phoneNumber, double amount) {
+    return initiateMpesaTopup(phoneNumber, amount);
   }
 
-  Future<Response> processPayPeriod(String id) async {
-    return dio.post('/pay-periods/$id/process');
+  Future<Response> sendB2C({
+    required String transactionId,
+    required String phoneNumber,
+    required double amount,
+    required String remarks,
+  }) {
+    return _api.post('/payments/send-b2c', data: {
+      'transactionId': transactionId,
+      'phoneNumber': phoneNumber,
+      'amount': amount,
+      'remarks': remarks,
+    });
   }
 
-  Future<Response> completePayPeriod(String id) async {
-    return dio.post('/pay-periods/$id/complete');
+  // Tax Payments
+  Future<Response> getTaxPaymentSummary() {
+    return _api.get('/payments/unified/tax-payments/summary');
   }
 
-  Future<Response> closePayPeriod(String id) async {
-    return dio.post('/pay-periods/$id/close');
+  Future<Response> recordTaxPayment({
+    required String taxType,
+    required double amount,
+    required String reference,
+    String? paymentDate,
+  }) {
+    return _api.post('/payments/unified/tax-payments/record', data: {
+      'taxType': taxType,
+      'amount': amount,
+      'reference': reference,
+      if (paymentDate != null) 'paymentDate': paymentDate,
+    });
   }
 
-  Future<Response> updatePayPeriodStatus(String id, String action) async {
-    return dio.patch('/pay-periods/$id/status', data: {'action': action});
+  // Transactions
+  Future<Response> getTransactions() => _api.get('/transactions');
+
+  Future<Response> getTransactionById(String id) => _api.get('/transactions/$id');
+}
+
+// -----------------------------------------------------------------------------
+// Subscription Endpoints
+// -----------------------------------------------------------------------------
+
+class SubscriptionEndpoints extends BaseEndpoints {
+  const SubscriptionEndpoints(super.api);
+
+  Future<Response> getPlans() => _api.get('/subscriptions/plans', noCache: true);
+
+  Future<Response> getCurrent() => _api.get('/subscriptions/current', noCache: true);
+
+  Future<Response> getUsage() => _api.get('/subscriptions/usage', noCache: true);
+
+  Future<Response> subscribe(String planId) {
+    return _api.post('/subscriptions/subscribe', data: {'planId': planId});
   }
 
-  Future<Response> getPayPeriodStatistics(String id) async {
-    return dio.get('/pay-periods/$id/statistics');
+  Future<Response> cancel(String subscriptionId) {
+    return _api.post('/subscriptions/$subscriptionId/cancel');
   }
 
-  Future<Response> getCurrentPayPeriod() async {
-    return dio.get('/pay-periods/current');
+  Future<Response> resume(String subscriptionId) {
+    return _api.post('/subscriptions/$subscriptionId/resume');
   }
 
-  Future<Response> getPayPeriodsByStatus(String status) async {
-    return dio.get('/pay-periods', queryParameters: {'status': status});
+  Future<Response> upgrade(String subscriptionId, String newPlanId) {
+    return _api.post('/subscriptions/$subscriptionId/upgrade', data: {
+      'newPlanId': newPlanId,
+    });
   }
 
-  // Leave Management API Endpoints
-  Future<Response> getLeaveRequests() async {
-    return dio.get('/workers/leave-requests');
+  Future<Response> update(String subscriptionId, Map<String, dynamic> updates) {
+    return _api.patch('/subscriptions/$subscriptionId', data: updates);
   }
 
-  Future<Response> getWorkerLeaveRequests(String workerId) async {
-    return dio.get('/workers/$workerId/leave-requests');
+  Future<Response> getPaymentHistory({
+    int? page,
+    int? limit,
+    String? status,
+    String? startDate,
+    String? endDate,
+  }) {
+    final queryParams = <String, dynamic>{
+      if (page != null) 'page': page.toString(),
+      if (limit != null) 'limit': limit.toString(),
+      if (status != null) 'status': status,
+      if (startDate != null) 'startDate': startDate,
+      if (endDate != null) 'endDate': endDate,
+    };
+
+    return _api.get(
+      '/subscriptions/subscription-payment-history',
+      queryParams: queryParams.isEmpty ? null : queryParams,
+      noCache: true,
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Accounting Endpoints
+// -----------------------------------------------------------------------------
+
+class AccountingEndpoints extends BaseEndpoints {
+  const AccountingEndpoints(super.api);
+
+  Future<Response> exportToCSV(String payPeriodId) {
+    return _api.post('/accounting/export/$payPeriodId', data: {'format': 'CSV'});
   }
 
-  Future<Response> createLeaveRequest(String workerId, Map<String, dynamic> leaveData) async {
-    return dio.post('/workers/$workerId/leave-requests', data: leaveData);
+  Future<Response> getJournalEntries(String payPeriodId) {
+    return _api.post('/accounting/journal-entries/$payPeriodId');
   }
 
-  Future<Response> updateLeaveRequest(String leaveRequestId, Map<String, dynamic> updateData) async {
-    return dio.patch('/workers/leave-requests/$leaveRequestId', data: updateData);
+  Future<Response> getFormats() => _api.get('/accounting/formats');
+
+  Future<Response> getMappings() => _api.get('/accounting/mappings');
+
+  Future<Response> saveMappings(Map<String, dynamic> mappings) {
+    return _api.post('/accounting/mappings', data: mappings);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Leave Endpoints
+// -----------------------------------------------------------------------------
+
+class LeaveEndpoints extends BaseEndpoints {
+  const LeaveEndpoints(super.api);
+
+  Future<Response> getAll() => _api.get('/workers/leave-requests');
+
+  Future<Response> getByWorker(String workerId) {
+    return _api.get('/workers/$workerId/leave-requests');
   }
 
-  Future<Response> deleteLeaveRequest(String leaveRequestId) async {
-    return dio.delete('/workers/leave-requests/$leaveRequestId');
+  Future<Response> getBalance(String workerId) {
+    return _api.get('/workers/$workerId/leave-balance');
   }
 
-  Future<Response> approveLeaveRequest(String leaveRequestId, bool approved, {String? comments}) async {
-    return dio.patch('/workers/leave-requests/$leaveRequestId/approve', data: {
+  Future<Response> create(String workerId, Map<String, dynamic> data) {
+    return _api.post('/workers/$workerId/leave-requests', data: data);
+  }
+
+  Future<Response> update(String leaveRequestId, Map<String, dynamic> data) {
+    return _api.patch('/workers/leave-requests/$leaveRequestId', data: data);
+  }
+
+  Future<Response> delete(String leaveRequestId) {
+    return _api.delete('/workers/leave-requests/$leaveRequestId');
+  }
+
+  Future<Response> approve(String leaveRequestId, bool approved, {String? comments}) {
+    return _api.patch('/workers/leave-requests/$leaveRequestId/approve', data: {
       'approved': approved,
       if (comments != null) 'comments': comments,
     });
   }
-
-  Future<Response> getLeaveBalance(String workerId) async {
-    return dio.get('/workers/$workerId/leave-balance');
   }
 
-  // Activities
-  Future<Response> getRecentActivities({int limit = 10}) async {
-    return dio.get('/activities/recent', queryParameters: {'limit': limit});
+
+// -----------------------------------------------------------------------------
+// Report Endpoints
+// -----------------------------------------------------------------------------
+
+class ReportEndpoints extends BaseEndpoints {
+  const ReportEndpoints(super.api);
+
+  Future<Response> getPayrollSummary(String payPeriodId) {
+    return _api.get('/reports/payroll-summary', queryParams: {'payPeriodId': payPeriodId});
+  }
+
+  Future<Response> getStatutoryReport(String payPeriodId) {
+    return _api.get('/reports/statutory', queryParams: {'payPeriodId': payPeriodId});
+  }
+
+  Future<Response> getMusterRoll(String payPeriodId) {
+    return _api.get('/reports/muster-roll', queryParams: {'payPeriodId': payPeriodId});
+  }
+
+  Future<Response> getTaxSummary(int year) {
+    return _api.get('/reports/tax', queryParams: {'year': year.toString()});
+  }
+
+  Future<Response> getDashboardMetrics() => _api.get('/reports/dashboard');
+}
+
+// -----------------------------------------------------------------------------
+// Employee Portal Endpoints
+// -----------------------------------------------------------------------------
+
+class EmployeePortalEndpoints extends BaseEndpoints {
+  const EmployeePortalEndpoints(super.api);
+
+  /// Employee claims their account using phone + invite code + PIN (public)
+  Future<Response> claimAccount({
+    required String phoneNumber,
+    required String inviteCode,
+    required String pin,
+  }) {
+    return _api.post('/employee-portal/claim-account', data: {
+      'phoneNumber': phoneNumber,
+      'inviteCode': inviteCode,
+      'pin': pin,
+    });
+  }
+
+  /// Employee login with phone + PIN (public)
+  Future<Response> employeeLogin({
+    required String phoneNumber,
+    required String pin,
+  }) {
+    return _api.post('/employee-portal/login', data: {
+      'phoneNumber': phoneNumber,
+      'pin': pin,
+    });
+  }
+
+  /// Employer generates invite code for a worker
+  Future<Response> generateInvite(String workerId) {
+    return _api.post('/employee-portal/invite/$workerId');
+  }
+
+  /// Check if worker has been invited or has account
+  Future<Response> checkInviteStatus(String workerId) {
+    return _api.get('/employee-portal/invite-status/$workerId');
+  }
+
+  /// Employee: Get own profile
+  Future<Response> getMyProfile() => _api.get('/employee-portal/my-profile');
+
+  /// Employee: Get own leave balance
+  Future<Response> getMyLeaveBalance() => _api.get('/employee-portal/my-leave-balance');
+
+  /// Employee: Get own leave requests
+  Future<Response> getMyLeaveRequests() => _api.get('/employee-portal/my-leave-requests');
+
+  /// Employee: Request leave
+  Future<Response> requestLeave({
+    required String leaveType,
+    required String startDate,
+    required String endDate,
+    String? reason,
+  }) {
+    return _api.post('/employee-portal/request-leave', data: {
+      'leaveType': leaveType,
+      'startDate': startDate,
+      'endDate': endDate,
+      if (reason != null) 'reason': reason,
+    });
+  }
+
+  /// Employee: Cancel leave request
+  Future<Response> cancelLeaveRequest(String requestId) {
+    return _api.post('/employee-portal/cancel-leave/$requestId');
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Time Tracking Endpoints
+// -----------------------------------------------------------------------------
+
+class TimeTrackingEndpoints extends BaseEndpoints {
+  const TimeTrackingEndpoints(super.api);
+
+  /// Clock in a worker
+  Future<Response> clockIn(String workerId, {double? lat, double? lng}) {
+    return _api.post('/time-tracking/clock-in/$workerId', data: {
+      if (lat != null) 'lat': lat,
+      if (lng != null) 'lng': lng,
+    });
+  }
+
+  /// Clock out a worker
+  Future<Response> clockOut(
+    String workerId, {
+    int? breakMinutes,
+    String? notes,
+    double? lat,
+    double? lng,
+  }) {
+    return _api.post('/time-tracking/clock-out/$workerId', data: {
+      if (breakMinutes != null) 'breakMinutes': breakMinutes,
+      if (notes != null) 'notes': notes,
+      if (lat != null) 'lat': lat,
+      if (lng != null) 'lng': lng,
+    });
+  }
+
+  /// Get clock-in status for a worker
+  Future<Response> getStatus(String workerId) {
+    return _api.get('/time-tracking/status/$workerId');
+  }
+
+  /// Get live clock-in status of all workers
+  Future<Response> getLiveStatus() {
+    return _api.get('/time-tracking/live-status');
+  }
+
+  /// Get time entries for a worker
+  Future<Response> getEntriesForWorker(
+    String workerId, {
+    required String startDate,
+    required String endDate,
+  }) {
+    return _api.get('/time-tracking/entries/$workerId', queryParams: {
+      'startDate': startDate,
+      'endDate': endDate,
+    });
+  }
+
+  /// Get all time entries for employer
+  Future<Response> getAllEntries({
+    required String startDate,
+    required String endDate,
+  }) {
+    return _api.get('/time-tracking/entries', queryParams: {
+      'startDate': startDate,
+      'endDate': endDate,
+    });
+  }
+
+  /// Get attendance summary
+  Future<Response> getAttendanceSummary({
+    required String startDate,
+    required String endDate,
+  }) {
+    return _api.get('/time-tracking/summary', queryParams: {
+      'startDate': startDate,
+      'endDate': endDate,
+    });
+  }
+
+  /// Adjust a time entry (employer only)
+  Future<Response> adjustEntry(
+    String entryId, {
+    String? clockIn,
+    String? clockOut,
+    int? breakMinutes,
+    required String reason,
+  }) {
+    return _api.patch('/time-tracking/adjust/$entryId', data: {
+      if (clockIn != null) 'clockIn': clockIn,
+      if (clockOut != null) 'clockOut': clockOut,
+      if (breakMinutes != null) 'breakMinutes': breakMinutes,
+      'reason': reason,
+    });
   }
 }

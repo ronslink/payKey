@@ -23,7 +23,7 @@ class PayrollRecordsRepository {
 
   Future<void> updatePayrollStatus(String recordId, String status, {String? paymentDate}) async {
     try {
-      await _apiService.updatePayrollStatus(recordId, status, paymentDate);
+      await _apiService.updatePayrollStatus(recordId, status, paymentDate: paymentDate);
     } on DioException catch (e) {
       throw Exception(_apiService.getErrorMessage(e));
     } catch (e) {

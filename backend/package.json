@@ -24,6 +24,8 @@
     "test:compliance": "jest --testPathPatterns=test/compliance/ --coverage",
     "test:performance": "jest --testPathPattern=test/performance/ --timeout=30000",
     "test:coverage-report": "npm run test:cov && node scripts/check-coverage.js",
+    "knip": "knip",
+    "knip:fix": "knip --fix",
     "typeorm:migration:generate": "typeorm-ts-node-commonjs migration:generate -d ormconfig.ts",
     "typeorm:migration:run": "typeorm-ts-node-commonjs migration:run -d ormconfig.ts",
     "typeorm:migration:revert": "typeorm-ts-node-commonjs migration:revert -d ormconfig.ts"
@@ -36,6 +38,7 @@
     "@nestjs/jwt": "^11.0.1",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/swagger": "^11.2.3",
     "@nestjs/typeorm": "^11.0.0",
     "@types/archiver": "^7.0.0",
     "archiver": "^7.0.1",
@@ -50,6 +53,7 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "stripe": "^16.0.0",
+    "swagger-ui-express": "^5.0.1",
     "typeorm": "^0.3.20"
   },
   "devDependencies": {
@@ -70,6 +74,7 @@
     "eslint-plugin-prettier": "^5.2.2",
     "globals": "^16.0.0",
     "jest": "^30.0.0",
+    "knip": "^5.72.0",
     "nock": "^14.0.10",
     "prettier": "^3.4.2",
     "source-map-support": "^0.5.21",

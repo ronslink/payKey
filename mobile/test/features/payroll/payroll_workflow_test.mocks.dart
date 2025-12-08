@@ -3,15 +3,15 @@
 // Do not manually edit this file.
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'dart:async' as _i5;
+import 'dart:async' as _i6;
 
 import 'package:mobile/features/payroll/data/models/pay_period_model.dart'
     as _i2;
-import 'package:mobile/features/payroll/data/models/payroll_model.dart' as _i3;
+import 'package:mobile/features/payroll/data/models/payroll_model.dart' as _i5;
 import 'package:mobile/features/payroll/data/repositories/pay_period_repository.dart'
-    as _i4;
+    as _i3;
 import 'package:mobile/features/payroll/data/repositories/payroll_repository.dart'
-    as _i6;
+    as _i4;
 import 'package:mockito/mockito.dart' as _i1;
 
 // ignore_for_file: type=lint
@@ -33,9 +33,33 @@ class _FakePayPeriod_0 extends _i1.SmartFake implements _i2.PayPeriod {
     : super(parent, parentInvocation);
 }
 
-class _FakePayrollCalculation_1 extends _i1.SmartFake
-    implements _i3.PayrollCalculation {
-  _FakePayrollCalculation_1(Object parent, Invocation parentInvocation)
+class _FakePayPeriodStatistics_1 extends _i1.SmartFake
+    implements _i3.PayPeriodStatistics {
+  _FakePayPeriodStatistics_1(Object parent, Invocation parentInvocation)
+    : super(parent, parentInvocation);
+}
+
+class _FakePayrollProcessingResult_2 extends _i1.SmartFake
+    implements _i4.PayrollProcessingResult {
+  _FakePayrollProcessingResult_2(Object parent, Invocation parentInvocation)
+    : super(parent, parentInvocation);
+}
+
+class _FakePayrollCalculation_3 extends _i1.SmartFake
+    implements _i5.PayrollCalculation {
+  _FakePayrollCalculation_3(Object parent, Invocation parentInvocation)
+    : super(parent, parentInvocation);
+}
+
+class _FakePayslipPreview_4 extends _i1.SmartFake
+    implements _i4.PayslipPreview {
+  _FakePayslipPreview_4(Object parent, Invocation parentInvocation)
+    : super(parent, parentInvocation);
+}
+
+class _FakePayrollSummary_5 extends _i1.SmartFake
+    implements _i5.PayrollSummary {
+  _FakePayrollSummary_5(Object parent, Invocation parentInvocation)
     : super(parent, parentInvocation);
 }
 
@@ -43,202 +67,233 @@ class _FakePayrollCalculation_1 extends _i1.SmartFake
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockPayPeriodRepository extends _i1.Mock
-    implements _i4.PayPeriodRepository {
+    implements _i3.PayPeriodRepository {
   MockPayPeriodRepository() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  _i5.Future<List<_i2.PayPeriod>> getPayPeriods() =>
+  _i6.Future<List<_i2.PayPeriod>> getPayPeriods() =>
       (super.noSuchMethod(
             Invocation.method(#getPayPeriods, []),
-            returnValue: _i5.Future<List<_i2.PayPeriod>>.value(
+            returnValue: _i6.Future<List<_i2.PayPeriod>>.value(
               <_i2.PayPeriod>[],
             ),
           )
-          as _i5.Future<List<_i2.PayPeriod>>);
+          as _i6.Future<List<_i2.PayPeriod>>);
 
   @override
-  _i5.Future<List<_i2.PayPeriod>> getPayPeriodsByStatus(
+  _i6.Future<List<_i2.PayPeriod>> getPayPeriodsByStatus(
     _i2.PayPeriodStatus? status,
   ) =>
       (super.noSuchMethod(
             Invocation.method(#getPayPeriodsByStatus, [status]),
-            returnValue: _i5.Future<List<_i2.PayPeriod>>.value(
+            returnValue: _i6.Future<List<_i2.PayPeriod>>.value(
               <_i2.PayPeriod>[],
             ),
           )
-          as _i5.Future<List<_i2.PayPeriod>>);
+          as _i6.Future<List<_i2.PayPeriod>>);
 
   @override
-  _i5.Future<_i2.PayPeriod> getPayPeriodById(String? payPeriodId) =>
-      (super.noSuchMethod(
-            Invocation.method(#getPayPeriodById, [payPeriodId]),
-            returnValue: _i5.Future<_i2.PayPeriod>.value(
-              _FakePayPeriod_0(
-                this,
-                Invocation.method(#getPayPeriodById, [payPeriodId]),
-              ),
-            ),
-          )
-          as _i5.Future<_i2.PayPeriod>);
-
-  @override
-  _i5.Future<_i2.PayPeriod> createPayPeriod(
-    _i2.CreatePayPeriodRequest? request,
-  ) =>
-      (super.noSuchMethod(
-            Invocation.method(#createPayPeriod, [request]),
-            returnValue: _i5.Future<_i2.PayPeriod>.value(
-              _FakePayPeriod_0(
-                this,
-                Invocation.method(#createPayPeriod, [request]),
-              ),
-            ),
-          )
-          as _i5.Future<_i2.PayPeriod>);
-
-  @override
-  _i5.Future<_i2.PayPeriod> updatePayPeriod(
-    String? payPeriodId,
-    _i2.UpdatePayPeriodRequest? request,
-  ) =>
-      (super.noSuchMethod(
-            Invocation.method(#updatePayPeriod, [payPeriodId, request]),
-            returnValue: _i5.Future<_i2.PayPeriod>.value(
-              _FakePayPeriod_0(
-                this,
-                Invocation.method(#updatePayPeriod, [payPeriodId, request]),
-              ),
-            ),
-          )
-          as _i5.Future<_i2.PayPeriod>);
-
-  @override
-  _i5.Future<void> deletePayPeriod(String? payPeriodId) =>
-      (super.noSuchMethod(
-            Invocation.method(#deletePayPeriod, [payPeriodId]),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
-          )
-          as _i5.Future<void>);
-
-  @override
-  _i5.Future<_i2.PayPeriod> activatePayPeriod(String? payPeriodId) =>
-      (super.noSuchMethod(
-            Invocation.method(#activatePayPeriod, [payPeriodId]),
-            returnValue: _i5.Future<_i2.PayPeriod>.value(
-              _FakePayPeriod_0(
-                this,
-                Invocation.method(#activatePayPeriod, [payPeriodId]),
-              ),
-            ),
-          )
-          as _i5.Future<_i2.PayPeriod>);
-
-  @override
-  _i5.Future<_i2.PayPeriod> processPayPeriod(String? payPeriodId) =>
-      (super.noSuchMethod(
-            Invocation.method(#processPayPeriod, [payPeriodId]),
-            returnValue: _i5.Future<_i2.PayPeriod>.value(
-              _FakePayPeriod_0(
-                this,
-                Invocation.method(#processPayPeriod, [payPeriodId]),
-              ),
-            ),
-          )
-          as _i5.Future<_i2.PayPeriod>);
-
-  @override
-  _i5.Future<_i2.PayPeriod> completePayPeriod(String? payPeriodId) =>
-      (super.noSuchMethod(
-            Invocation.method(#completePayPeriod, [payPeriodId]),
-            returnValue: _i5.Future<_i2.PayPeriod>.value(
-              _FakePayPeriod_0(
-                this,
-                Invocation.method(#completePayPeriod, [payPeriodId]),
-              ),
-            ),
-          )
-          as _i5.Future<_i2.PayPeriod>);
-
-  @override
-  _i5.Future<_i2.PayPeriod> closePayPeriod(String? payPeriodId) =>
-      (super.noSuchMethod(
-            Invocation.method(#closePayPeriod, [payPeriodId]),
-            returnValue: _i5.Future<_i2.PayPeriod>.value(
-              _FakePayPeriod_0(
-                this,
-                Invocation.method(#closePayPeriod, [payPeriodId]),
-              ),
-            ),
-          )
-          as _i5.Future<_i2.PayPeriod>);
-
-  @override
-  _i5.Future<void> updatePayPeriodStatus(String? payPeriodId, String? action) =>
-      (super.noSuchMethod(
-            Invocation.method(#updatePayPeriodStatus, [payPeriodId, action]),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
-          )
-          as _i5.Future<void>);
-
-  @override
-  _i5.Future<List<_i2.PayPeriod>> getCurrentPayPeriod() =>
-      (super.noSuchMethod(
-            Invocation.method(#getCurrentPayPeriod, []),
-            returnValue: _i5.Future<List<_i2.PayPeriod>>.value(
-              <_i2.PayPeriod>[],
-            ),
-          )
-          as _i5.Future<List<_i2.PayPeriod>>);
-
-  @override
-  _i5.Future<_i2.PayPeriod> getPayPeriod(String? payPeriodId) =>
+  _i6.Future<_i2.PayPeriod> getPayPeriod(String? payPeriodId) =>
       (super.noSuchMethod(
             Invocation.method(#getPayPeriod, [payPeriodId]),
-            returnValue: _i5.Future<_i2.PayPeriod>.value(
+            returnValue: _i6.Future<_i2.PayPeriod>.value(
               _FakePayPeriod_0(
                 this,
                 Invocation.method(#getPayPeriod, [payPeriodId]),
               ),
             ),
           )
-          as _i5.Future<_i2.PayPeriod>);
+          as _i6.Future<_i2.PayPeriod>);
 
   @override
-  _i5.Future<void> generatePayslips(String? payPeriodId) =>
+  _i6.Future<_i2.PayPeriod> getPayPeriodById(String? payPeriodId) =>
       (super.noSuchMethod(
-            Invocation.method(#generatePayslips, [payPeriodId]),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
+            Invocation.method(#getPayPeriodById, [payPeriodId]),
+            returnValue: _i6.Future<_i2.PayPeriod>.value(
+              _FakePayPeriod_0(
+                this,
+                Invocation.method(#getPayPeriodById, [payPeriodId]),
+              ),
+            ),
           )
-          as _i5.Future<void>);
+          as _i6.Future<_i2.PayPeriod>);
 
   @override
-  _i5.Future<Map<String, dynamic>> getPayPeriodStatistics(
+  _i6.Future<List<_i2.PayPeriod>> getCurrentPayPeriods() =>
+      (super.noSuchMethod(
+            Invocation.method(#getCurrentPayPeriods, []),
+            returnValue: _i6.Future<List<_i2.PayPeriod>>.value(
+              <_i2.PayPeriod>[],
+            ),
+          )
+          as _i6.Future<List<_i2.PayPeriod>>);
+
+  @override
+  _i6.Future<List<_i2.PayPeriod>> getCurrentPayPeriod() =>
+      (super.noSuchMethod(
+            Invocation.method(#getCurrentPayPeriod, []),
+            returnValue: _i6.Future<List<_i2.PayPeriod>>.value(
+              <_i2.PayPeriod>[],
+            ),
+          )
+          as _i6.Future<List<_i2.PayPeriod>>);
+
+  @override
+  _i6.Future<_i3.PayPeriodStatistics> getPayPeriodStatistics(
     String? payPeriodId,
   ) =>
       (super.noSuchMethod(
             Invocation.method(#getPayPeriodStatistics, [payPeriodId]),
-            returnValue: _i5.Future<Map<String, dynamic>>.value(
-              <String, dynamic>{},
+            returnValue: _i6.Future<_i3.PayPeriodStatistics>.value(
+              _FakePayPeriodStatistics_1(
+                this,
+                Invocation.method(#getPayPeriodStatistics, [payPeriodId]),
+              ),
             ),
           )
-          as _i5.Future<Map<String, dynamic>>);
+          as _i6.Future<_i3.PayPeriodStatistics>);
+
+  @override
+  _i6.Future<_i2.PayPeriod> createPayPeriod(
+    _i2.CreatePayPeriodRequest? request,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#createPayPeriod, [request]),
+            returnValue: _i6.Future<_i2.PayPeriod>.value(
+              _FakePayPeriod_0(
+                this,
+                Invocation.method(#createPayPeriod, [request]),
+              ),
+            ),
+          )
+          as _i6.Future<_i2.PayPeriod>);
+
+  @override
+  _i6.Future<_i2.PayPeriod> updatePayPeriod(
+    String? payPeriodId,
+    _i2.UpdatePayPeriodRequest? request,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#updatePayPeriod, [payPeriodId, request]),
+            returnValue: _i6.Future<_i2.PayPeriod>.value(
+              _FakePayPeriod_0(
+                this,
+                Invocation.method(#updatePayPeriod, [payPeriodId, request]),
+              ),
+            ),
+          )
+          as _i6.Future<_i2.PayPeriod>);
+
+  @override
+  _i6.Future<List<_i2.PayPeriod>> generatePayPeriods({
+    required String? frequency,
+    required DateTime? startDate,
+    required DateTime? endDate,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#generatePayPeriods, [], {
+              #frequency: frequency,
+              #startDate: startDate,
+              #endDate: endDate,
+            }),
+            returnValue: _i6.Future<List<_i2.PayPeriod>>.value(
+              <_i2.PayPeriod>[],
+            ),
+          )
+          as _i6.Future<List<_i2.PayPeriod>>);
+
+  @override
+  _i6.Future<void> deletePayPeriod(String? payPeriodId) =>
+      (super.noSuchMethod(
+            Invocation.method(#deletePayPeriod, [payPeriodId]),
+            returnValue: _i6.Future<void>.value(),
+            returnValueForMissingStub: _i6.Future<void>.value(),
+          )
+          as _i6.Future<void>);
+
+  @override
+  _i6.Future<_i2.PayPeriod> activatePayPeriod(String? payPeriodId) =>
+      (super.noSuchMethod(
+            Invocation.method(#activatePayPeriod, [payPeriodId]),
+            returnValue: _i6.Future<_i2.PayPeriod>.value(
+              _FakePayPeriod_0(
+                this,
+                Invocation.method(#activatePayPeriod, [payPeriodId]),
+              ),
+            ),
+          )
+          as _i6.Future<_i2.PayPeriod>);
+
+  @override
+  _i6.Future<_i2.PayPeriod> processPayPeriod(String? payPeriodId) =>
+      (super.noSuchMethod(
+            Invocation.method(#processPayPeriod, [payPeriodId]),
+            returnValue: _i6.Future<_i2.PayPeriod>.value(
+              _FakePayPeriod_0(
+                this,
+                Invocation.method(#processPayPeriod, [payPeriodId]),
+              ),
+            ),
+          )
+          as _i6.Future<_i2.PayPeriod>);
+
+  @override
+  _i6.Future<_i2.PayPeriod> completePayPeriod(String? payPeriodId) =>
+      (super.noSuchMethod(
+            Invocation.method(#completePayPeriod, [payPeriodId]),
+            returnValue: _i6.Future<_i2.PayPeriod>.value(
+              _FakePayPeriod_0(
+                this,
+                Invocation.method(#completePayPeriod, [payPeriodId]),
+              ),
+            ),
+          )
+          as _i6.Future<_i2.PayPeriod>);
+
+  @override
+  _i6.Future<_i2.PayPeriod> closePayPeriod(String? payPeriodId) =>
+      (super.noSuchMethod(
+            Invocation.method(#closePayPeriod, [payPeriodId]),
+            returnValue: _i6.Future<_i2.PayPeriod>.value(
+              _FakePayPeriod_0(
+                this,
+                Invocation.method(#closePayPeriod, [payPeriodId]),
+              ),
+            ),
+          )
+          as _i6.Future<_i2.PayPeriod>);
+
+  @override
+  _i6.Future<void> updatePayPeriodStatus(String? payPeriodId, String? action) =>
+      (super.noSuchMethod(
+            Invocation.method(#updatePayPeriodStatus, [payPeriodId, action]),
+            returnValue: _i6.Future<void>.value(),
+            returnValueForMissingStub: _i6.Future<void>.value(),
+          )
+          as _i6.Future<void>);
+
+  @override
+  _i6.Future<void> generatePayslips(String? payPeriodId) =>
+      (super.noSuchMethod(
+            Invocation.method(#generatePayslips, [payPeriodId]),
+            returnValue: _i6.Future<void>.value(),
+            returnValueForMissingStub: _i6.Future<void>.value(),
+          )
+          as _i6.Future<void>);
 }
 
 /// A class which mocks [PayrollRepository].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockPayrollRepository extends _i1.Mock implements _i6.PayrollRepository {
+class MockPayrollRepository extends _i1.Mock implements _i4.PayrollRepository {
   MockPayrollRepository() {
     _i1.throwOnMissingStub(this);
   }
 
   @override
-  _i5.Future<List<_i3.PayrollCalculation>> calculatePayroll(
+  _i6.Future<List<_i5.PayrollCalculation>> calculatePayroll(
     List<String>? workerIds, {
     DateTime? startDate,
     DateTime? endDate,
@@ -249,47 +304,62 @@ class MockPayrollRepository extends _i1.Mock implements _i6.PayrollRepository {
               [workerIds],
               {#startDate: startDate, #endDate: endDate},
             ),
-            returnValue: _i5.Future<List<_i3.PayrollCalculation>>.value(
-              <_i3.PayrollCalculation>[],
+            returnValue: _i6.Future<List<_i5.PayrollCalculation>>.value(
+              <_i5.PayrollCalculation>[],
             ),
           )
-          as _i5.Future<List<_i3.PayrollCalculation>>);
+          as _i6.Future<List<_i5.PayrollCalculation>>);
 
   @override
-  _i5.Future<Map<String, dynamic>> processPayroll(
+  _i6.Future<_i4.PayrollProcessingResult> processPayroll(
     List<String>? workerIds,
     String? payPeriodId,
   ) =>
       (super.noSuchMethod(
             Invocation.method(#processPayroll, [workerIds, payPeriodId]),
-            returnValue: _i5.Future<Map<String, dynamic>>.value(
-              <String, dynamic>{},
+            returnValue: _i6.Future<_i4.PayrollProcessingResult>.value(
+              _FakePayrollProcessingResult_2(
+                this,
+                Invocation.method(#processPayroll, [workerIds, payPeriodId]),
+              ),
             ),
           )
-          as _i5.Future<Map<String, dynamic>>);
+          as _i6.Future<_i4.PayrollProcessingResult>);
 
   @override
-  _i5.Future<List<_i3.PayrollCalculation>> saveDraftPayroll(
+  _i6.Future<List<_i5.PayrollCalculation>> saveDraftPayroll(
     String? payPeriodId,
     List<Map<String, dynamic>>? items,
   ) =>
       (super.noSuchMethod(
             Invocation.method(#saveDraftPayroll, [payPeriodId, items]),
-            returnValue: _i5.Future<List<_i3.PayrollCalculation>>.value(
-              <_i3.PayrollCalculation>[],
+            returnValue: _i6.Future<List<_i5.PayrollCalculation>>.value(
+              <_i5.PayrollCalculation>[],
             ),
           )
-          as _i5.Future<List<_i3.PayrollCalculation>>);
+          as _i6.Future<List<_i5.PayrollCalculation>>);
 
   @override
-  _i5.Future<_i3.PayrollCalculation> updatePayrollItem(
+  _i6.Future<List<_i5.PayrollCalculation>> getDraftPayroll(
+    String? payPeriodId,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#getDraftPayroll, [payPeriodId]),
+            returnValue: _i6.Future<List<_i5.PayrollCalculation>>.value(
+              <_i5.PayrollCalculation>[],
+            ),
+          )
+          as _i6.Future<List<_i5.PayrollCalculation>>);
+
+  @override
+  _i6.Future<_i5.PayrollCalculation> updatePayrollItem(
     String? payrollRecordId,
     Map<String, dynamic>? updates,
   ) =>
       (super.noSuchMethod(
             Invocation.method(#updatePayrollItem, [payrollRecordId, updates]),
-            returnValue: _i5.Future<_i3.PayrollCalculation>.value(
-              _FakePayrollCalculation_1(
+            returnValue: _i6.Future<_i5.PayrollCalculation>.value(
+              _FakePayrollCalculation_3(
                 this,
                 Invocation.method(#updatePayrollItem, [
                   payrollRecordId,
@@ -298,34 +368,57 @@ class MockPayrollRepository extends _i1.Mock implements _i6.PayrollRepository {
               ),
             ),
           )
-          as _i5.Future<_i3.PayrollCalculation>);
+          as _i6.Future<_i5.PayrollCalculation>);
 
   @override
-  _i5.Future<List<_i3.PayrollCalculation>> getDraftPayroll(
-    String? payPeriodId,
-  ) =>
+  _i6.Future<void> deletePayrollItem(String? payrollRecordId) =>
       (super.noSuchMethod(
-            Invocation.method(#getDraftPayroll, [payPeriodId]),
-            returnValue: _i5.Future<List<_i3.PayrollCalculation>>.value(
-              <_i3.PayrollCalculation>[],
-            ),
+            Invocation.method(#deletePayrollItem, [payrollRecordId]),
+            returnValue: _i6.Future<void>.value(),
+            returnValueForMissingStub: _i6.Future<void>.value(),
           )
-          as _i5.Future<List<_i3.PayrollCalculation>>);
+          as _i6.Future<void>);
 
   @override
-  _i5.Future<void> finalizePayroll(String? payPeriodId) =>
+  _i6.Future<void> finalizePayroll(String? payPeriodId) =>
       (super.noSuchMethod(
             Invocation.method(#finalizePayroll, [payPeriodId]),
-            returnValue: _i5.Future<void>.value(),
-            returnValueForMissingStub: _i5.Future<void>.value(),
+            returnValue: _i6.Future<void>.value(),
+            returnValueForMissingStub: _i6.Future<void>.value(),
           )
-          as _i5.Future<void>);
+          as _i6.Future<void>);
 
   @override
-  _i5.Future<List<int>> downloadPayslip(String? payrollRecordId) =>
+  _i6.Future<List<int>> downloadPayslip(String? payrollRecordId) =>
       (super.noSuchMethod(
             Invocation.method(#downloadPayslip, [payrollRecordId]),
-            returnValue: _i5.Future<List<int>>.value(<int>[]),
+            returnValue: _i6.Future<List<int>>.value(<int>[]),
           )
-          as _i5.Future<List<int>>);
+          as _i6.Future<List<int>>);
+
+  @override
+  _i6.Future<_i4.PayslipPreview> getPayslipPreview(String? payrollRecordId) =>
+      (super.noSuchMethod(
+            Invocation.method(#getPayslipPreview, [payrollRecordId]),
+            returnValue: _i6.Future<_i4.PayslipPreview>.value(
+              _FakePayslipPreview_4(
+                this,
+                Invocation.method(#getPayslipPreview, [payrollRecordId]),
+              ),
+            ),
+          )
+          as _i6.Future<_i4.PayslipPreview>);
+
+  @override
+  _i6.Future<_i5.PayrollSummary> getPayrollSummary(String? payPeriodId) =>
+      (super.noSuchMethod(
+            Invocation.method(#getPayrollSummary, [payPeriodId]),
+            returnValue: _i6.Future<_i5.PayrollSummary>.value(
+              _FakePayrollSummary_5(
+                this,
+                Invocation.method(#getPayrollSummary, [payPeriodId]),
+              ),
+            ),
+          )
+          as _i6.Future<_i5.PayrollSummary>);
 }

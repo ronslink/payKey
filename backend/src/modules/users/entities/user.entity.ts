@@ -15,7 +15,9 @@ export enum UserTier {
 
 export enum UserRole {
   ADMIN = 'ADMIN',
-  USER = 'USER',
+  USER = 'USER', // Legacy, treat as EMPLOYER
+  EMPLOYER = 'EMPLOYER',
+  WORKER = 'WORKER',
 }
 
 export enum IdType {
@@ -99,6 +101,19 @@ export class User {
 
   @Column({ default: false, name: 'isOnboardingCompleted' })
   isOnboardingCompleted: boolean;
+
+  // Employee Portal Fields
+  @Column({ nullable: true })
+  employerId: string; // For EMPLOYEE role: links to employer's user ID
+
+  @Column({ nullable: true })
+  linkedWorkerId: string; // For EMPLOYEE role: links to their worker record
+
+  @Column({ nullable: true })
+  phoneNumber: string; // For employee login via phone
+
+  @Column({ nullable: true })
+  pin: string; // Hashed PIN for employee login
 
   @CreateDateColumn()
   createdAt: Date;

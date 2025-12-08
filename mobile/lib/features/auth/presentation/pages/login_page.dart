@@ -258,6 +258,18 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 16),
+                // Employee Login Link
+                TextButton(
+                  onPressed: () => context.go('/employee/login'),
+                  child: const Text(
+                    'Worker? Sign in here',
+                    style: TextStyle(
+                      color: Color(0xFF6366F1),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 32),
                 // Demo Credentials Card
                 Container(

@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/pay_period_provider.dart';
 import '../../data/models/pay_period_model.dart';
+import '../../../../core/constants/app_colors.dart';
+
+
 
 class PayrollPage extends ConsumerStatefulWidget {
   const PayrollPage({super.key});
@@ -13,9 +16,11 @@ class PayrollPage extends ConsumerStatefulWidget {
 
 class _PayrollPageState extends ConsumerState<PayrollPage> {
   PayPeriodStatus? selectedStatus = PayPeriodStatus.active;
+  bool _isInitializing = false;
   
   @override
   Widget build(BuildContext context) {
+
     final payPeriodsState = selectedStatus == null
         ? ref.watch(payPeriodsProvider)
         : ref.watch(payPeriodsByStatusProvider(selectedStatus!));
@@ -63,7 +68,7 @@ class _PayrollPageState extends ConsumerState<PayrollPage> {
                           title: 'Run Payroll',
                           subtitle: 'Process new payroll',
                           icon: Icons.play_circle_filled,
-                          color: const Color(0xFF3B82F6),
+                          color: AppColors.info,
                           onTap: () => context.push('/payroll/run'),
                         ),
                       ),
@@ -74,7 +79,7 @@ class _PayrollPageState extends ConsumerState<PayrollPage> {
                           title: 'Review Payroll',
                           subtitle: 'View active periods',
                           icon: Icons.fact_check,
-                          color: const Color(0xFF10B981),
+                          color: AppColors.success,
                           onTap: () => _navigateToActivePayPeriod(context),
                         ),
                       ),
@@ -117,7 +122,7 @@ class _PayrollPageState extends ConsumerState<PayrollPage> {
                 return const SizedBox.shrink();
               },
               loading: () => const SizedBox.shrink(),
-              error: (_, __) => const SizedBox.shrink(),
+              error: (_, _) => const SizedBox.shrink(),
             ),
           ),
 
@@ -172,32 +177,31 @@ class _PayrollPageState extends ConsumerState<PayrollPage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const Icon(
-                          Icons.account_balance_wallet,
+                          Icons.calendar_month,
                           size: 64,
                           color: Colors.grey,
                         ),
                         const SizedBox(height: 16),
                         const Text(
-                          'No pay periods found',
+                          'No pay periods found for this year',
                           style: TextStyle(
                             fontSize: 18,
                             color: Colors.grey,
                           ),
                         ),
                         const SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            if (selectedStatus == null) {
-                              // ignore: unused_result
-                              ref.refresh(payPeriodsProvider);
-                            } else {
-                              // ignore: unused_result
-                              ref.refresh(payPeriodsByStatusProvider(selectedStatus!));
-                            }
-                          },
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Refresh'),
-                        ),
+                        _isInitializing
+                            ? const CircularProgressIndicator()
+                            : ElevatedButton.icon(
+                                onPressed: _initializeYear,
+                                icon: const Icon(Icons.play_circle),
+                                label: Text('Initialize ${DateTime.now().year} Payroll'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF3B82F6),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                ),
+                              ),
                       ],
                     ),
                   ),
@@ -491,17 +495,17 @@ class _PayrollPageState extends ConsumerState<PayrollPage> {
   Color _getStatusColor(PayPeriodStatus status) {
     switch (status) {
       case PayPeriodStatus.draft:
-        return Colors.grey;
+        return AppColors.textSecondary;
       case PayPeriodStatus.active:
-        return const Color(0xFF3B82F6);
+        return AppColors.info;
       case PayPeriodStatus.processing:
-        return const Color(0xFFF59E0B);
+        return AppColors.warning;
       case PayPeriodStatus.completed:
-        return const Color(0xFF10B981);
+        return AppColors.success;
       case PayPeriodStatus.closed:
-        return const Color(0xFF8B5CF6);
+        return AppColors.accent;
       default:
-        return Colors.grey;
+        return AppColors.textSecondary;
     }
   }
 
@@ -537,5 +541,49 @@ class _PayrollPageState extends ConsumerState<PayrollPage> {
         );
       }
     });
+  }
+
+  Future<void> _initializeYear() async {
+    setState(() {
+      _isInitializing = true;
+    });
+
+    try {
+      final now = DateTime.now();
+      final startOfYear = DateTime(now.year, 1, 1);
+      final endOfYear = DateTime(now.year, 12, 31);
+      
+      final repo = ref.read(payPeriodRepositoryProvider);
+      
+      await repo.generatePayPeriods(
+        frequency: 'monthly',
+        startDate: startOfYear,
+        endDate: endOfYear,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Generated payroll periods for ${now.year}')),
+        );
+        // Refresh the list
+        // ignore: unused_result
+        ref.refresh(payPeriodsProvider);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to generate periods: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isInitializing = false;
+        });
+      }
+    }
   }
 }

@@ -1,8 +1,82 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../providers/workers_provider.dart';
 import '../../data/models/worker_model.dart';
+import '../../../employee_portal/presentation/widgets/invite_worker_dialog.dart';
+
+// =============================================================================
+// CONSTANTS
+// =============================================================================
+
+abstract class _AppColors {
+  static const background = Color(0xFFF9FAFB);
+  static const surface = Colors.white;
+  static const textPrimary = Color(0xFF111827);
+  static const textSecondary = Color(0xFF6B7280);
+  static const textBody = Color(0xFF374151);
+  static const primary = Color(0xFF3B82F6);
+  static const primaryDark = Color(0xFF1E40AF);
+  static const success = Color(0xFF10B981);
+  static const successLight = Color(0xFFD1FAE5);
+  static const error = Color(0xFFEF4444);
+  static const errorLight = Color(0xFFFEF2F2);
+  static const border = Color(0xFFE5E7EB);
+}
+
+abstract class _Spacing {
+  static const double xs = 4;
+  static const double sm = 6;
+  static const double md = 12;
+  static const double lg = 16;
+  static const double xl = 20;
+  static const double xxl = 24;
+}
+
+// =============================================================================
+// FORMATTERS
+// =============================================================================
+
+/// Utility class for formatting worker-related data.
+abstract class WorkerFormatters {
+  static final _currencyFormat = NumberFormat('#,##0', 'en_US');
+  static final _dateFormat = DateFormat('dd/MM/yyyy');
+
+  static String currency(double amount) => 'KES ${_currencyFormat.format(amount)}';
+
+  static String date(DateTime date) => _dateFormat.format(date);
+
+  static String employmentType(String type) {
+    return switch (type) {
+      'FIXED' => 'Fixed Salary',
+      'HOURLY' => 'Hourly Rate',
+      _ => type,
+    };
+  }
+
+  static String paymentFrequency(String frequency) {
+    return switch (frequency) {
+      'MONTHLY' => 'Monthly',
+      'WEEKLY' => 'Weekly',
+      'BIWEEKLY' => 'Bi-Weekly',
+      _ => frequency,
+    };
+  }
+
+  static String paymentMethod(String method) {
+    return switch (method) {
+      'MPESA' => 'M-Pesa',
+      'BANK' => 'Bank Transfer',
+      'CASH' => 'Cash',
+      _ => method,
+    };
+  }
+}
+
+// =============================================================================
+// MAIN PAGE
+// =============================================================================
 
 class WorkerDetailPage extends ConsumerStatefulWidget {
   final String workerId;
@@ -17,452 +91,789 @@ class WorkerDetailPage extends ConsumerStatefulWidget {
 }
 
 class _WorkerDetailPageState extends ConsumerState<WorkerDetailPage> {
+  // ---------------------------------------------------------------------------
+  // Lifecycle
+  // ---------------------------------------------------------------------------
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Load worker details by refreshing the workers list and finding the specific worker
       ref.read(workersProvider.notifier).loadWorkers();
     });
   }
 
+  // ---------------------------------------------------------------------------
+  // Data Access
+  // ---------------------------------------------------------------------------
+
+  WorkerModel? _findWorker(List<WorkerModel> workers) {
+    try {
+      return workers.firstWhere((w) => w.id == widget.workerId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Actions
+  // ---------------------------------------------------------------------------
+
+  void _navigateBack() => context.go('/workers');
+
+  void _navigateToEdit(WorkerModel worker) {
+    context.push('/workers/${widget.workerId}/edit', extra: worker);
+  }
+
+  void _navigateToTerminate() {
+    context.push('/workers/${widget.workerId}/terminate');
+  }
+
+  Future<void> _refreshWorker() async {
+    await ref.read(workersProvider.notifier).loadWorkers();
+  }
+
+  void _handleMenuAction(String action, WorkerModel? worker) {
+    switch (action) {
+      case 'edit':
+        if (worker != null) _navigateToEdit(worker);
+        break;
+      case 'terminate':
+        _navigateToTerminate();
+        break;
+      case 'invite':
+        if (worker != null) {
+          showInviteWorkerDialog(
+            context,
+            workerId: worker.id,
+            workerName: worker.name,
+            workerPhone: worker.phoneNumber,
+            workerEmail: worker.email,
+          );
+        }
+        break;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------------
+
   @override
   Widget build(BuildContext context) {
     final workersState = ref.watch(workersProvider);
-    final worker = workersState.when(
-      data: (workers) => workers.firstWhere(
-        (w) => w.id == widget.workerId,
-        orElse: () => throw Exception('Worker not found'),
-      ),
-      loading: () => null,
-      error: (_, __) => null,
+
+    // Get worker for app bar actions
+    final worker = workersState.whenOrNull(
+      data: (workers) => _findWorker(workers),
     );
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF111827),
-        elevation: 0,
-        title: const Text(
-          'Worker Details',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF6B7280)),
-          onPressed: () => context.go('/workers'),
-        ),
-        actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, color: Color(0xFF6B7280)),
-            onSelected: (value) {
-              switch (value) {
-                case 'edit':
-                  context.push('/workers/${widget.workerId}/edit', extra: worker);
-                  break;
-                case 'terminate':
-                  context.push('/workers/${widget.workerId}/terminate');
-                  break;
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'edit',
-                child: Row(
-                  children: [
-                    Icon(Icons.edit, size: 20, color: Color(0xFF3B82F6)),
-                    SizedBox(width: 8),
-                    Text('Edit Worker'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'terminate',
-                child: Row(
-                  children: [
-                    Icon(Icons.cancel, size: 20, color: Color(0xFFEF4444)),
-                    SizedBox(width: 8),
-                    Text('Terminate Worker'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+      backgroundColor: _AppColors.background,
+      appBar: _buildAppBar(worker),
       body: workersState.when(
         data: (workers) {
-          try {
-            final workerData = workers.firstWhere((w) => w.id == widget.workerId);
-            return _buildWorkerDetailContent(workerData, context);
-          } catch (e) {
-            return _buildNotFoundState();
+          final workerData = _findWorker(workers);
+          if (workerData == null) {
+            return _NotFoundState(onBack: _navigateBack);
           }
+          return _WorkerDetailContent(
+            worker: workerData,
+            onEdit: () => _navigateToEdit(workerData),
+            onTerminate: _navigateToTerminate,
+          );
         },
-        loading: () => const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SizedBox(
-                height: 40,
-                width: 40,
-                child: CircularProgressIndicator(
-                  strokeWidth: 3,
-                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF3B82F6)),
-                ),
-              ),
-              SizedBox(height: 16),
-              Text(
-                'Loading worker details...',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Color(0xFF6B7280),
-                ),
-              ),
-            ],
-          ),
-        ),
-        error: (error, stack) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEF2F2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Icon(
-                    Icons.error_outline,
-                    size: 40,
-                    color: Color(0xFFEF4444),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Failed to load worker details',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF111827),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  error.toString(),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Color(0xFF6B7280),
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () => ref.read(workersProvider.notifier).loadWorkers(),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF3B82F6),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: const Text('Try Again'),
-                ),
-              ],
-            ),
-          ),
+        loading: () => const _LoadingState(),
+        error: (error, _) => _ErrorState(
+          error: error,
+          onRetry: _refreshWorker,
         ),
       ),
     );
   }
 
-  Widget _buildWorkerDetailContent(WorkerModel worker, BuildContext context) {
+  PreferredSizeWidget _buildAppBar(WorkerModel? worker) {
+    return AppBar(
+      backgroundColor: _AppColors.surface,
+      foregroundColor: _AppColors.textPrimary,
+      elevation: 0,
+      title: const Text(
+        'Worker Details',
+        style: TextStyle(fontWeight: FontWeight.bold),
+      ),
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back, color: _AppColors.textSecondary),
+        onPressed: _navigateBack,
+      ),
+      actions: [
+        PopupMenuButton<String>(
+          icon: const Icon(Icons.more_vert, color: _AppColors.textSecondary),
+          onSelected: (action) => _handleMenuAction(action, worker),
+          itemBuilder: (_) => const [
+            PopupMenuItem(
+              value: 'invite',
+              child: _MenuItemRow(
+                icon: Icons.person_add,
+                label: 'Invite to App',
+                color: Color(0xFF6366F1),
+              ),
+            ),
+            PopupMenuItem(
+              value: 'edit',
+              child: _MenuItemRow(
+                icon: Icons.edit,
+                label: 'Edit Worker',
+                color: _AppColors.primary,
+              ),
+            ),
+            PopupMenuItem(
+              value: 'terminate',
+              child: _MenuItemRow(
+                icon: Icons.cancel,
+                label: 'Terminate Worker',
+                color: _AppColors.error,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// =============================================================================
+// CONTENT
+// =============================================================================
+
+class _WorkerDetailContent extends StatelessWidget {
+  final WorkerModel worker;
+  final VoidCallback onEdit;
+  final VoidCallback onTerminate;
+
+  const _WorkerDetailContent({
+    required this.worker,
+    required this.onEdit,
+    required this.onTerminate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(_Spacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Worker Header Card
-          Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black .withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            padding: const EdgeInsets.all(24),
-            child: Row(
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF3B82F6), Color(0xFF1E40AF)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Center(
-                    child: Text(
-                      worker.name.substring(0, 1).toUpperCase(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        worker.name,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF111827),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      if (worker.jobTitle?.isNotEmpty == true)
-                        Text(
-                          worker.jobTitle!,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Color(0xFF6B7280),
-                          ),
-                        ),
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: worker.isActive
-                              ? const Color(0xFFD1FAE5)
-                              : const Color(0xFFFEF2F2),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              worker.isActive ? Icons.check_circle : Icons.cancel,
-                              size: 16,
-                              color: worker.isActive ? const Color(0xFF10B981) : const Color(0xFFEF4444),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              worker.isActive ? 'Active' : 'Inactive',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: worker.isActive ? const Color(0xFF10B981) : const Color(0xFFEF4444),
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Contact Information
-          _buildDetailSection(
-            'Contact Information',
-            [
-              _buildDetailRow('Phone Number', worker.phoneNumber, Icons.phone),
-              if (worker.email?.isNotEmpty == true)
-                _buildDetailRow('Email', worker.email!, Icons.email),
-              if (worker.idNumber?.isNotEmpty == true)
-                _buildDetailRow('ID Number', worker.idNumber!, Icons.credit_card),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // Employment Details
-          _buildDetailSection(
-            'Employment Details',
-            [
-              _buildDetailRow('Employment Type', _formatEmploymentType(worker.employmentType), Icons.work),
-              if (worker.jobTitle?.isNotEmpty == true)
-                _buildDetailRow('Job Title', worker.jobTitle!, Icons.badge),
-              _buildDetailRow('Payment Frequency', _formatPaymentFrequency(worker.paymentFrequency), Icons.schedule),
-              _buildDetailRow('Payment Method', _formatPaymentMethod(worker.paymentMethod), Icons.payment),
-              _buildDetailRow('Start Date', _formatDate(worker.startDate), Icons.calendar_today),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // Salary Information
-          _buildDetailSection(
-            'Salary Information',
-            [
-              _buildDetailRow('Gross Salary', 'KES ${worker.salaryGross.toStringAsFixed(0)}', Icons.attach_money),
-              if (worker.housingAllowance > 0)
-                _buildDetailRow('Housing Allowance', 'KES ${worker.housingAllowance.toStringAsFixed(0)}', Icons.home),
-              if (worker.transportAllowance > 0)
-                _buildDetailRow('Transport Allowance', 'KES ${worker.transportAllowance.toStringAsFixed(0)}', Icons.directions_car),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // Tax Information
-          if (worker.kraPin?.isNotEmpty == true ||
-              worker.nssfNumber?.isNotEmpty == true ||
-              worker.nhifNumber?.isNotEmpty == true)
-            _buildDetailSection(
-              'Tax Information',
-              [
-                if (worker.kraPin?.isNotEmpty == true)
-                  _buildDetailRow('KRA PIN', worker.kraPin!, Icons.account_balance),
-                if (worker.nssfNumber?.isNotEmpty == true)
-                  _buildDetailRow('NSSF Number', worker.nssfNumber!, Icons.security),
-                if (worker.nhifNumber?.isNotEmpty == true)
-                  _buildDetailRow('NHIF Number', worker.nhifNumber!, Icons.health_and_safety),
-              ],
-            ),
-          const SizedBox(height: 20),
-
-          // Additional Information
-          if (worker.notes?.isNotEmpty == true)
-            _buildDetailSection(
-              'Notes',
-              [
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF9FAFB),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFFE5E7EB)),
-                  ),
-                  child: Text(
-                    worker.notes!,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF374151),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-          const SizedBox(height: 20),
-
-          // Action Buttons
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => context.push('/workers/${worker.id}/edit', extra: worker),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF3B82F6),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  icon: const Icon(Icons.edit),
-                  label: const Text('Edit Worker'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: worker.isActive
-                      ? () => context.push('/workers/${worker.id}/terminate')
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFEF4444),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  icon: const Icon(Icons.cancel),
-                  label: const Text('Terminate'),
-                ),
-              ),
-            ],
+          _WorkerHeader(worker: worker),
+          const SizedBox(height: _Spacing.xl),
+          _ContactSection(worker: worker),
+          const SizedBox(height: _Spacing.xl),
+          _EmploymentSection(worker: worker),
+          const SizedBox(height: _Spacing.xl),
+          _SalarySection(worker: worker),
+          const SizedBox(height: _Spacing.xl),
+          if (_hasTaxInfo) ...[
+            _TaxSection(worker: worker),
+            const SizedBox(height: _Spacing.xl),
+          ],
+          if (worker.notes?.isNotEmpty == true) ...[
+            _NotesSection(notes: worker.notes!),
+            const SizedBox(height: _Spacing.xl),
+          ],
+          _ActionButtons(
+            isActive: worker.isActive,
+            onEdit: onEdit,
+            onTerminate: onTerminate,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDetailSection(String title, List<Widget> children) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black .withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+  bool get _hasTaxInfo =>
+      worker.kraPin?.isNotEmpty == true ||
+      worker.nssfNumber?.isNotEmpty == true ||
+      worker.nhifNumber?.isNotEmpty == true;
+}
+
+// =============================================================================
+// HEADER
+// =============================================================================
+
+class _WorkerHeader extends StatelessWidget {
+  final WorkerModel worker;
+
+  const _WorkerHeader({required this.worker});
+
+  @override
+  Widget build(BuildContext context) {
+    return _Card(
+      padding: const EdgeInsets.all(_Spacing.xxl),
+      child: Row(
+        children: [
+          _Avatar(name: worker.name, size: 80),
+          const SizedBox(width: _Spacing.xl),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  worker.name,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: _AppColors.textPrimary,
+                  ),
+                ),
+                if (worker.jobTitle?.isNotEmpty == true) ...[
+                  const SizedBox(height: _Spacing.xs),
+                  Text(
+                    worker.jobTitle!,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: _AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: _Spacing.md),
+                _StatusBadge(isActive: worker.isActive),
+              ],
+            ),
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
+    );
+  }
+}
+
+// =============================================================================
+// DETAIL SECTIONS
+// =============================================================================
+
+class _ContactSection extends StatelessWidget {
+  final WorkerModel worker;
+
+  const _ContactSection({required this.worker});
+
+  @override
+  Widget build(BuildContext context) {
+    return _DetailSection(
+      title: 'Contact Information',
+      rows: [
+        _DetailRowData('Phone Number', worker.phoneNumber, Icons.phone),
+        if (worker.email?.isNotEmpty == true)
+          _DetailRowData('Email', worker.email!, Icons.email),
+        if (worker.idNumber?.isNotEmpty == true)
+          _DetailRowData('ID Number', worker.idNumber!, Icons.credit_card),
+      ],
+    );
+  }
+}
+
+class _EmploymentSection extends StatelessWidget {
+  final WorkerModel worker;
+
+  const _EmploymentSection({required this.worker});
+
+  @override
+  Widget build(BuildContext context) {
+    return _DetailSection(
+      title: 'Employment Details',
+      rows: [
+        _DetailRowData(
+          'Employment Type',
+          WorkerFormatters.employmentType(worker.employmentType),
+          Icons.work,
+        ),
+        if (worker.jobTitle?.isNotEmpty == true)
+          _DetailRowData('Job Title', worker.jobTitle!, Icons.badge),
+        _DetailRowData(
+          'Payment Frequency',
+          WorkerFormatters.paymentFrequency(worker.paymentFrequency),
+          Icons.schedule,
+        ),
+        _DetailRowData(
+          'Payment Method',
+          WorkerFormatters.paymentMethod(worker.paymentMethod),
+          Icons.payment,
+        ),
+        _DetailRowData(
+          'Start Date',
+          WorkerFormatters.date(worker.startDate),
+          Icons.calendar_today,
+        ),
+      ],
+    );
+  }
+}
+
+class _SalarySection extends StatelessWidget {
+  final WorkerModel worker;
+
+  const _SalarySection({required this.worker});
+
+  @override
+  Widget build(BuildContext context) {
+    return _DetailSection(
+      title: 'Salary Information',
+      rows: [
+        _DetailRowData(
+          'Gross Salary',
+          WorkerFormatters.currency(worker.salaryGross),
+          Icons.attach_money,
+        ),
+        if (worker.housingAllowance > 0)
+          _DetailRowData(
+            'Housing Allowance',
+            WorkerFormatters.currency(worker.housingAllowance),
+            Icons.home,
+          ),
+        if (worker.transportAllowance > 0)
+          _DetailRowData(
+            'Transport Allowance',
+            WorkerFormatters.currency(worker.transportAllowance),
+            Icons.directions_car,
+          ),
+      ],
+    );
+  }
+}
+
+class _TaxSection extends StatelessWidget {
+  final WorkerModel worker;
+
+  const _TaxSection({required this.worker});
+
+  @override
+  Widget build(BuildContext context) {
+    return _DetailSection(
+      title: 'Tax Information',
+      rows: [
+        if (worker.kraPin?.isNotEmpty == true)
+          _DetailRowData('KRA PIN', worker.kraPin!, Icons.account_balance),
+        if (worker.nssfNumber?.isNotEmpty == true)
+          _DetailRowData('NSSF Number', worker.nssfNumber!, Icons.security),
+        if (worker.nhifNumber?.isNotEmpty == true)
+          _DetailRowData('NHIF Number', worker.nhifNumber!, Icons.health_and_safety),
+      ],
+    );
+  }
+}
+
+class _NotesSection extends StatelessWidget {
+  final String notes;
+
+  const _NotesSection({required this.notes});
+
+  @override
+  Widget build(BuildContext context) {
+    return _Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Notes',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: _AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: _Spacing.lg),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(_Spacing.lg),
+            decoration: BoxDecoration(
+              color: _AppColors.background,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: _AppColors.border),
+            ),
+            child: Text(
+              notes,
               style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF111827),
+                fontSize: 14,
+                color: _AppColors.textBody,
               ),
             ),
-            const SizedBox(height: 16),
-            ...children,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// ACTION BUTTONS
+// =============================================================================
+
+class _ActionButtons extends StatelessWidget {
+  final bool isActive;
+  final VoidCallback onEdit;
+  final VoidCallback onTerminate;
+
+  const _ActionButtons({
+    required this.isActive,
+    required this.onEdit,
+    required this.onTerminate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _ActionButton(
+            label: 'Edit Worker',
+            icon: Icons.edit,
+            color: _AppColors.primary,
+            onPressed: onEdit,
+          ),
+        ),
+        const SizedBox(width: _Spacing.md),
+        Expanded(
+          child: _ActionButton(
+            label: 'Terminate',
+            icon: Icons.cancel,
+            color: _AppColors.error,
+            onPressed: isActive ? onTerminate : null,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// =============================================================================
+// STATE WIDGETS
+// =============================================================================
+
+class _LoadingState extends StatelessWidget {
+  const _LoadingState();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            height: 40,
+            width: 40,
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              valueColor: AlwaysStoppedAnimation<Color>(_AppColors.primary),
+            ),
+          ),
+          SizedBox(height: _Spacing.lg),
+          Text(
+            'Loading worker details...',
+            style: TextStyle(
+              fontSize: 16,
+              color: _AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  final Object error;
+  final VoidCallback onRetry;
+
+  const _ErrorState({
+    required this.error,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(_Spacing.xxl),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const _StateIcon(
+              icon: Icons.error_outline,
+              backgroundColor: _AppColors.errorLight,
+              iconColor: _AppColors.error,
+            ),
+            const SizedBox(height: _Spacing.lg),
+            const Text(
+              'Failed to load worker details',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: _AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: _Spacing.sm),
+            Text(
+              error.toString(),
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: _AppColors.textSecondary,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: _Spacing.xxl),
+            _ActionButton(
+              label: 'Try Again',
+              color: _AppColors.primary,
+              onPressed: onRetry,
+            ),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildDetailRow(String label, String value, IconData icon) {
+class _NotFoundState extends StatelessWidget {
+  final VoidCallback onBack;
+
+  const _NotFoundState({required this.onBack});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(_Spacing.xxl),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const _StateIcon(
+              icon: Icons.person_off,
+              backgroundColor: _AppColors.errorLight,
+              iconColor: _AppColors.error,
+            ),
+            const SizedBox(height: _Spacing.lg),
+            const Text(
+              'Worker Not Found',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: _AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: _Spacing.sm),
+            const Text(
+              'This worker may have been deleted or you may not\nhave permission to view their details.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: _AppColors.textSecondary,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: _Spacing.xxl),
+            _ActionButton(
+              label: 'Back to Workers',
+              color: _AppColors.primary,
+              onPressed: onBack,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// REUSABLE WIDGETS
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// Card Container
+// -----------------------------------------------------------------------------
+
+class _Card extends StatelessWidget {
+  final Widget child;
+  final EdgeInsets padding;
+
+  const _Card({
+    required this.child,
+    this.padding = const EdgeInsets.all(_Spacing.xl),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: padding,
+      decoration: BoxDecoration(
+        color: _AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Avatar
+// -----------------------------------------------------------------------------
+
+class _Avatar extends StatelessWidget {
+  final String name;
+  final double size;
+
+  const _Avatar({
+    required this.name,
+    this.size = 56,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [_AppColors.primary, _AppColors.primaryDark],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(size * 0.25),
+      ),
+      child: Center(
+        child: Text(
+          name.isNotEmpty ? name[0].toUpperCase() : '?',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: size * 0.4,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Status Badge
+// -----------------------------------------------------------------------------
+
+class _StatusBadge extends StatelessWidget {
+  final bool isActive;
+
+  const _StatusBadge({required this.isActive});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isActive ? _AppColors.success : _AppColors.error;
+    final bgColor = isActive ? _AppColors.successLight : _AppColors.errorLight;
+    final label = isActive ? 'Active' : 'Inactive';
+    final icon = isActive ? Icons.check_circle : Icons.cancel;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: _Spacing.md,
+        vertical: _Spacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: _Spacing.sm),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Detail Section
+// -----------------------------------------------------------------------------
+
+class _DetailRowData {
+  final String label;
+  final String value;
+  final IconData icon;
+
+  const _DetailRowData(this.label, this.value, this.icon);
+}
+
+class _DetailSection extends StatelessWidget {
+  final String title;
+  final List<_DetailRowData> rows;
+
+  const _DetailSection({
+    required this.title,
+    required this.rows,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: _AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: _Spacing.lg),
+          ...rows.map((row) => _DetailRow(
+                label: row.label,
+                value: row.value,
+                icon: row.icon,
+              )),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+
+  const _DetailRow({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: _Spacing.md),
       child: Row(
         children: [
-          Icon(
-            icon,
-            size: 20,
-            color: const Color(0xFF6B7280),
-          ),
-          const SizedBox(width: 12),
+          Icon(icon, size: 20, color: _AppColors.textSecondary),
+          const SizedBox(width: _Spacing.md),
           Expanded(
             flex: 1,
             child: Text(
               label,
               style: const TextStyle(
                 fontSize: 14,
-                color: Color(0xFF6B7280),
+                color: _AppColors.textSecondary,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -473,7 +884,7 @@ class _WorkerDetailPageState extends ConsumerState<WorkerDetailPage> {
               value,
               style: const TextStyle(
                 fontSize: 14,
-                color: Color(0xFF111827),
+                color: _AppColors.textPrimary,
                 fontWeight: FontWeight.w600,
               ),
               textAlign: TextAlign.right,
@@ -483,100 +894,108 @@ class _WorkerDetailPageState extends ConsumerState<WorkerDetailPage> {
       ),
     );
   }
+}
 
-  Widget _buildNotFoundState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFEF2F2),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Icon(
-                Icons.person_off,
-                size: 40,
-                color: Color(0xFFEF4444),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Worker Not Found',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF111827),
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'This worker may have been deleted or you may not have permission to view their details.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Color(0xFF6B7280),
-                fontSize: 16,
-              ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () => context.go('/workers'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF3B82F6),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text('Back to Workers'),
-            ),
-          ],
-        ),
+// -----------------------------------------------------------------------------
+// State Icon
+// -----------------------------------------------------------------------------
+
+class _StateIcon extends StatelessWidget {
+  final IconData icon;
+  final Color backgroundColor;
+  final Color iconColor;
+
+  const _StateIcon({
+    required this.icon,
+    required this.backgroundColor,
+    required this.iconColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 80,
+      height: 80,
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(20),
       ),
+      child: Icon(icon, size: 40, color: iconColor),
     );
   }
+}
 
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
-  }
+// -----------------------------------------------------------------------------
+// Action Button
+// -----------------------------------------------------------------------------
 
-  String _formatEmploymentType(String employmentType) {
-    switch (employmentType) {
-      case 'FIXED':
-        return 'Fixed Salary';
-      case 'HOURLY':
-        return 'Hourly Rate';
-      default:
-        return employmentType;
+class _ActionButton extends StatelessWidget {
+  final String label;
+  final IconData? icon;
+  final Color color;
+  final VoidCallback? onPressed;
+
+  const _ActionButton({
+    required this.label,
+    required this.color,
+    this.icon,
+    this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final style = ElevatedButton.styleFrom(
+      backgroundColor: color,
+      foregroundColor: Colors.white,
+      padding: const EdgeInsets.symmetric(
+        horizontal: _Spacing.xxl,
+        vertical: _Spacing.md,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+    );
+
+    if (icon != null) {
+      return ElevatedButton.icon(
+        onPressed: onPressed,
+        style: style,
+        icon: Icon(icon),
+        label: Text(label),
+      );
     }
-  }
 
-  String _formatPaymentFrequency(String paymentFrequency) {
-    switch (paymentFrequency) {
-      case 'MONTHLY':
-        return 'Monthly';
-      case 'WEEKLY':
-        return 'Weekly';
-      default:
-        return paymentFrequency;
-    }
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: style,
+      child: Text(label),
+    );
   }
+}
 
-  String _formatPaymentMethod(String paymentMethod) {
-    switch (paymentMethod) {
-      case 'MPESA':
-        return 'M-Pesa';
-      case 'BANK':
-        return 'Bank Transfer';
-      case 'CASH':
-        return 'Cash';
-      default:
-        return paymentMethod;
-    }
+// -----------------------------------------------------------------------------
+// Menu Item Row
+// -----------------------------------------------------------------------------
+
+class _MenuItemRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _MenuItemRow({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: color),
+        const SizedBox(width: _Spacing.sm),
+        Text(label),
+      ],
+    );
   }
 }

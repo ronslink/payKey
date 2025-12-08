@@ -181,7 +181,8 @@ async function seedDemoData() {
         name: periodName,
         startDate: currentPeriodStart,
         endDate: periodEnd,
-        payDate: payDate.toISOString().split('T')[0],
+        // payDate: payDate.toISOString().split('T')[0], // The entity expects Date, not string
+        payDate: payDate,
         frequency: PayPeriodFrequency.BIWEEKLY,
         status: PayPeriodStatus.COMPLETED, // Most periods will be completed
         createdBy: demoUser.id,
@@ -261,7 +262,7 @@ async function seedDemoData() {
           paymentStatus,
           paymentMethod: 'mpesa',
           paymentDate:
-            paymentStatus === 'paid' ? new Date(payPeriod.payDate) : undefined,
+            paymentStatus === 'paid' && payPeriod.payDate ? new Date(payPeriod.payDate) : undefined,
           taxBreakdown: {
             incomeTax: taxAmount,
             nhif: Math.min(grossSalary * 0.015, 300), // 1.5% up to 300

@@ -1,254 +1,598 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+// Features
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/auth/presentation/pages/register_page.dart';
 import 'features/home/presentation/pages/home_page.dart';
 import 'features/workers/presentation/pages/workers_list_page.dart';
 import 'features/workers/presentation/pages/worker_form_page.dart';
+import 'features/workers/presentation/pages/worker_detail_page.dart';
+import 'features/workers/presentation/pages/terminate_worker_page.dart';
+import 'features/workers/presentation/pages/archived_workers_page.dart';
 import 'features/workers/data/models/worker_model.dart';
+import 'features/payroll/presentation/pages/payroll_page.dart';
 import 'features/payroll/presentation/pages/run_payroll_page.dart';
 import 'features/payroll/presentation/pages/payroll_review_page.dart';
 import 'features/payroll/presentation/pages/payslip_page.dart';
 import 'features/finance/presentation/pages/finance_page.dart';
+import 'features/finance/presentation/pages/accounting_page.dart';
 import 'features/onboarding/presentation/pages/onboarding_page.dart';
 import 'features/subscriptions/presentation/pages/subscription_management_page.dart';
 import 'features/subscriptions/presentation/pages/payment_page.dart';
 import 'features/subscriptions/data/models/subscription_model.dart';
-import 'features/payroll/presentation/pages/payroll_page.dart';
 import 'features/time_tracking/presentation/pages/time_tracking_page.dart';
 import 'features/time_tracking/presentation/pages/time_tracking_history_page.dart';
-import 'features/workers/presentation/pages/terminate_worker_page.dart';
-import 'features/workers/presentation/pages/archived_workers_page.dart';
-import 'features/workers/presentation/pages/worker_detail_page.dart';
 import 'features/properties/presentation/pages/properties_page.dart';
 import 'features/properties/presentation/pages/property_form_page.dart';
 import 'features/properties/presentation/pages/property_detail_page.dart';
+import 'features/properties/presentation/pages/property_detail_page.dart';
 import 'features/taxes/presentation/pages/comprehensive_tax_page.dart';
-import 'features/finance/presentation/pages/accounting_page.dart';
-import 'main_layout.dart';
+import 'features/reports/presentation/pages/reports_page.dart';
+import 'features/employee_portal/presentation/pages/employee_login_page.dart';
+import 'features/employee_portal/presentation/pages/employee_dashboard_page.dart';
+import 'features/employee_portal/presentation/pages/request_leave_page.dart';
+import 'features/time_tracking/presentation/pages/attendance_dashboard_page.dart';
+import 'features/leave_management/presentation/pages/leave_dashboard_page.dart';
+
+// Core
 import 'core/network/api_service.dart';
+import 'main_layout.dart';
+
+// =============================================================================
+// MAIN
+// =============================================================================
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  runApp(const ProviderScope(child: MyApp()));
+  runApp(const ProviderScope(child: PayKeyApp()));
 }
 
-final routerProvider = Provider<GoRouter>((ref) {
-  return GoRouter(
-    initialLocation: '/login',
-    redirect: (context, state) async {
-      final currentPath = state.matchedLocation;
-      final isAuthPage = currentPath == '/login' || currentPath == '/register';
-      
-      // Check if user is authenticated by looking for token
-      // This helps prevent authenticated users from staying on login page
-      final apiService = ApiService();
-      final token = await apiService.getToken();
-      
-      // If user is authenticated and trying to access auth pages, redirect to home
-      if (token != null && isAuthPage) {
-        return '/home';
-      }
-      
-      // Let the authentication be handled by providers
-      return null; // Let authentication be handled by providers
-    },
-    routes: [
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginPage(),
-      ),
-      GoRoute(
-        path: '/register',
-        builder: (context, state) => const RegisterPage(),
-      ),
-      
-      // Main app routes with tabbed layout
-      GoRoute(
-        path: '/home',
-        builder: (context, state) => const MainLayout(
-          currentIndex: 0,
-          child: HomePage(),
-        ),
-      ),
-      GoRoute(
-        path: '/workers',
-        builder: (context, state) => const MainLayout(
-          currentIndex: 1,
-          child: WorkersListPage(),
-        ),
-      ),
-      GoRoute(
-        path: '/time-tracking',
-        builder: (context, state) => const MainLayout(
-          currentIndex: 2,
-          child: TimeTrackingPage(),
-        ),
-      ),
-      GoRoute(
-        path: '/tax',
-        builder: (context, state) => const MainLayout(
-          currentIndex: 4,
-          child: TaxPage(),
-        ),
-      ),
-      GoRoute(
-        path: '/subscriptions',
-        builder: (context, state) => const MainLayout(
-          currentIndex: 3,
-          child: SubscriptionManagementPage(),
-        ),
-      ),
-      GoRoute(
-        path: '/subscriptions/payment',
-        builder: (context, state) {
-          final plan = state.extra as SubscriptionPlan;
-          return PaymentPage(plan: plan);
-        },
-      ),
-      GoRoute(
-        path: '/payroll',
-        builder: (context, state) => const MainLayout(
-          currentIndex: 5,
-          child: PayrollPage(),
-        ),
-      ),
-      // Payroll Routes (sub-routes for payroll management)
-      GoRoute(
-        path: '/payroll/run',
-        builder: (context, state) => const RunPayrollPage(),
-      ),
-      GoRoute(
-        path: '/payroll/run/:id',
-        builder: (context, state) {
-          final id = state.pathParameters['id']!;
-          return RunPayrollPage(payPeriodId: id);
-        },
-      ),
-      GoRoute(
-        path: '/payroll/review/:id',
-        builder: (context, state) {
-          final id = state.pathParameters['id']!;
-          return PayrollReviewPage(payPeriodId: id);
-        },
-      ),
-      GoRoute(
-        path: '/payroll/payslip/:id',
-        builder: (context, state) {
-          final id = state.pathParameters['id']!;
-          return PayslipPage(payslipId: id);
-        },
-      ),
-      GoRoute(
-        path: '/finance',
-        builder: (context, state) => const MainLayout(
-          currentIndex: 6,
-          child: FinancePage(),
-        ),
-      ),
-      GoRoute(
-        path: '/onboarding',
-        builder: (context, state) => const OnboardingPage(),
-      ),
-      
-      // Workers sub-routes
-      GoRoute(
-        path: '/workers/add',
-        builder: (context, state) => const WorkerFormPage(),
-      ),
-      GoRoute(
-        path: '/workers/:id',
-        builder: (context, state) {
-          final workerId = state.pathParameters['id']!;
-          return WorkerDetailPage(workerId: workerId);
-        },
-      ),
-      GoRoute(
-        path: '/workers/:id/edit',
-        builder: (context, state) {
-          final worker = state.extra as WorkerModel?;
-          return WorkerFormPage(worker: worker);
-        },
-      ),
-      GoRoute(
-        path: '/workers/:id/terminate',
-        builder: (context, state) {
-          final workerId = state.pathParameters['id']!;
-          return TerminateWorkerPage(workerId: workerId);
-        },
-      ),
-      GoRoute(
-        path: '/workers/archived',
-        builder: (context, state) => const ArchivedWorkersPage(),
-      ),
-      GoRoute(
-        path: '/time-tracking/history',
-        builder: (context, state) => const TimeTrackingHistoryPage(),
-      ),
-      // Properties Routes
-      GoRoute(
-        path: '/properties',
-        builder: (context, state) => const PropertiesPage(),
-      ),
-      GoRoute(
-        path: '/properties/add',
-        builder: (context, state) => const PropertyFormPage(),
-      ),
-      GoRoute(
-        path: '/properties/edit/:id',
-        builder: (context, state) {
-          final id = state.pathParameters['id'];
-          return PropertyFormPage(propertyId: id);
-        },
-      ),
-      GoRoute(
-        path: '/properties/:id',
-        builder: (context, state) {
-          final id = state.pathParameters['id']!;
-          return PropertyDetailPage(propertyId: id);
-        },
-      ),
-      GoRoute(
-        path: '/taxes',
-        builder: (context, state) => const ComprehensiveTaxPage(),
-      ),
-      GoRoute(
-        path: '/accounting',
-        builder: (context, state) => const AccountingPage(),
-      ),
-    ],
-  );
-});
+// =============================================================================
+// APP
+// =============================================================================
 
-class MyApp extends ConsumerWidget {
-  const MyApp({super.key});
+class PayKeyApp extends ConsumerWidget {
+  const PayKeyApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
 
     return MaterialApp.router(
-      title: 'PayKey',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
+      title: AppConfig.appName,
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: ThemeMode.light,
       routerConfig: router,
     );
   }
 }
 
-class TaxPage extends StatelessWidget {
-  const TaxPage({super.key});
+// =============================================================================
+// APP CONFIG
+// =============================================================================
 
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: ComprehensiveTaxPage(),
-    );
-  }
+abstract class AppConfig {
+  static const String appName = 'PayKey';
+  static const String initialRoute = AppRoutes.login;
 }
 
+// =============================================================================
+// THEME
+// =============================================================================
 
+abstract class AppTheme {
+  static const _seedColor = Colors.deepPurple;
+
+  static final light = ThemeData(
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: _seedColor,
+      brightness: Brightness.light,
+    ),
+    useMaterial3: true,
+    appBarTheme: const AppBarTheme(
+      centerTitle: false,
+      elevation: 0,
+    ),
+    cardTheme: CardThemeData(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+      filled: true,
+    ),
+  );
+
+  static final dark = ThemeData(
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: _seedColor,
+      brightness: Brightness.dark,
+    ),
+    useMaterial3: true,
+  );
+}
+
+// =============================================================================
+// ROUTES
+// =============================================================================
+
+/// Route path constants.
+abstract class AppRoutes {
+  // Auth
+  static const login = '/login';
+  static const register = '/register';
+  static const onboarding = '/onboarding';
+
+  // Main tabs
+  static const home = '/home';
+  static const workers = '/workers';
+  static const timeTracking = '/time-tracking';
+  static const subscriptions = '/subscriptions';
+  static const tax = '/tax';
+  static const payroll = '/payroll';
+  static const finance = '/finance';
+
+  // Workers
+  static const workersAdd = '/workers/add';
+  static const workersArchived = '/workers/archived';
+  static String workerDetail(String id) => '/workers/$id';
+  static String workerEdit(String id) => '/workers/$id/edit';
+  static String workerTerminate(String id) => '/workers/$id/terminate';
+
+  // Payroll
+  static const payrollRun = '/payroll/run';
+  static String payrollRunWithId(String id) => '/payroll/run/$id';
+  static String payrollReview(String id) => '/payroll/review/$id';
+  static String payslip(String id) => '/payroll/payslip/$id';
+
+  // Subscriptions
+  static const subscriptionPayment = '/subscriptions/payment';
+
+  // Time Tracking
+  static const timeTrackingHistory = '/time-tracking/history';
+
+  // Properties
+  static const properties = '/properties';
+  static const propertiesAdd = '/properties/add';
+  static String propertyDetail(String id) => '/properties/$id';
+  static String propertyEdit(String id) => '/properties/edit/$id';
+
+  // Other
+  static const taxes = '/taxes';
+  static const accounting = '/accounting';
+  static const reports = '/reports';
+  static const attendance = '/attendance';
+  static const leave = '/leave';
+
+  // Employee Portal
+  static const employeeLogin = '/employee/login';
+  static const employeeDashboard = '/employee/dashboard';
+  static const employeeRequestLeave = '/employee/request-leave';
+  static const employeeMyLeaves = '/employee/my-leaves';
+  static const employeeTimesheet = '/employee/timesheet';
+  static const employeePayslips = '/employee/payslips';
+}
+
+/// Navigation tab indices.
+abstract class NavIndex {
+  static const home = 0;
+  static const workers = 1;
+  static const timeTracking = 2;
+  static const subscriptions = 3;
+  static const payroll = 4;
+  static const tax = 5;
+  static const finance = 6;
+}
+
+// =============================================================================
+// ROUTER PROVIDER
+// =============================================================================
+
+final routerProvider = Provider<GoRouter>((ref) {
+  return GoRouter(
+    initialLocation: AppConfig.initialRoute,
+    redirect: _handleRedirect,
+    routes: [
+      ..._authRoutes,
+      ..._mainTabRoutes,
+      ..._workerRoutes,
+      ..._payrollRoutes,
+      ..._subscriptionRoutes,
+      ..._timeTrackingRoutes,
+      ..._propertyRoutes,
+      ..._otherRoutes,
+    ],
+  );
+});
+
+// =============================================================================
+// REDIRECT LOGIC
+// =============================================================================
+
+Future<String?> _handleRedirect(
+  BuildContext context,
+  GoRouterState state,
+) async {
+  final currentPath = state.matchedLocation;
+  final isAuthPage = _isAuthRoute(currentPath);
+
+  // Check authentication status
+  final token = await ApiService().getToken();
+  final isAuthenticated = token != null;
+
+  // Redirect authenticated users away from auth pages
+  if (isAuthenticated && isAuthPage) {
+    return AppRoutes.home;
+  }
+
+  // Let other navigation proceed normally
+  // Auth protection for other routes is handled by providers
+  return null;
+}
+
+bool _isAuthRoute(String path) {
+  return path == AppRoutes.login || 
+         path == AppRoutes.register ||
+         path == AppRoutes.employeeLogin;
+}
+
+// =============================================================================
+// ROUTE DEFINITIONS
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// Auth Routes
+// -----------------------------------------------------------------------------
+
+final _authRoutes = <RouteBase>[
+  GoRoute(
+    path: AppRoutes.login,
+    name: 'login',
+    builder: (_, __) => const LoginPage(),
+  ),
+  GoRoute(
+    path: AppRoutes.register,
+    name: 'register',
+    builder: (_, __) => const RegisterPage(),
+  ),
+  GoRoute(
+    path: AppRoutes.onboarding,
+    name: 'onboarding',
+    builder: (_, __) => const OnboardingPage(),
+  ),
+  // Employee Portal Auth
+  GoRoute(
+    path: AppRoutes.employeeLogin,
+    name: 'employeeLogin',
+    builder: (_, __) => const EmployeeLoginPage(),
+  ),
+];
+
+// -----------------------------------------------------------------------------
+// Main Tab Routes
+// -----------------------------------------------------------------------------
+
+final _mainTabRoutes = <RouteBase>[
+  GoRoute(
+    path: AppRoutes.home,
+    name: 'home',
+    builder: (_, __) => const MainLayout(
+      currentIndex: NavIndex.home,
+      child: HomePage(),
+    ),
+  ),
+  GoRoute(
+    path: AppRoutes.workers,
+    name: 'workers',
+    builder: (_, __) => const MainLayout(
+      currentIndex: NavIndex.workers,
+      child: WorkersListPage(),
+    ),
+  ),
+  GoRoute(
+    path: AppRoutes.timeTracking,
+    name: 'timeTracking',
+    builder: (_, __) => const MainLayout(
+      currentIndex: NavIndex.timeTracking,
+      child: TimeTrackingPage(),
+    ),
+  ),
+  GoRoute(
+    path: AppRoutes.subscriptions,
+    name: 'subscriptions',
+    builder: (_, __) => const MainLayout(
+      currentIndex: NavIndex.subscriptions,
+      child: SubscriptionManagementPage(),
+    ),
+  ),
+  GoRoute(
+    path: AppRoutes.tax,
+    name: 'tax',
+    builder: (_, __) => const MainLayout(
+      currentIndex: NavIndex.tax,
+      child: ComprehensiveTaxPage(),
+    ),
+  ),
+  GoRoute(
+    path: AppRoutes.payroll,
+    name: 'payroll',
+    builder: (_, __) => const MainLayout(
+      currentIndex: NavIndex.payroll,
+      child: PayrollPage(),
+    ),
+  ),
+  GoRoute(
+    path: AppRoutes.finance,
+    name: 'finance',
+    builder: (_, __) => const MainLayout(
+      currentIndex: NavIndex.finance,
+      child: FinancePage(),
+    ),
+  ),
+];
+
+// -----------------------------------------------------------------------------
+// Worker Routes
+// -----------------------------------------------------------------------------
+
+final _workerRoutes = <RouteBase>[
+  GoRoute(
+    path: AppRoutes.workersAdd,
+    name: 'workersAdd',
+    builder: (_, __) => const WorkerFormPage(),
+  ),
+  GoRoute(
+    path: AppRoutes.workersArchived,
+    name: 'workersArchived',
+    builder: (_, __) => const ArchivedWorkersPage(),
+  ),
+  GoRoute(
+    path: '/workers/:id',
+    name: 'workerDetail',
+    builder: (_, state) {
+      final workerId = state.pathParameters['id']!;
+      return WorkerDetailPage(workerId: workerId);
+    },
+  ),
+  GoRoute(
+    path: '/workers/:id/edit',
+    name: 'workerEdit',
+    builder: (_, state) {
+      final worker = state.extra as WorkerModel?;
+      return WorkerFormPage(worker: worker);
+    },
+  ),
+  GoRoute(
+    path: '/workers/:id/terminate',
+    name: 'workerTerminate',
+    builder: (_, state) {
+      final workerId = state.pathParameters['id']!;
+      return TerminateWorkerPage(workerId: workerId);
+    },
+  ),
+];
+
+// -----------------------------------------------------------------------------
+// Payroll Routes
+// -----------------------------------------------------------------------------
+
+final _payrollRoutes = <RouteBase>[
+  GoRoute(
+    path: AppRoutes.payrollRun,
+    name: 'payrollRun',
+    builder: (_, __) => const RunPayrollPage(),
+  ),
+  GoRoute(
+    path: '/payroll/run/:id',
+    name: 'payrollRunWithId',
+    builder: (_, state) {
+      final id = state.pathParameters['id']!;
+      return RunPayrollPage(payPeriodId: id);
+    },
+  ),
+  GoRoute(
+    path: '/payroll/review/:id',
+    name: 'payrollReview',
+    builder: (_, state) {
+      final id = state.pathParameters['id']!;
+      return PayrollReviewPage(payPeriodId: id);
+    },
+  ),
+  GoRoute(
+    path: '/payroll/payslip/:id',
+    name: 'payslip',
+    builder: (_, state) {
+      final id = state.pathParameters['id']!;
+      return PayslipPage(payslipId: id);
+    },
+  ),
+];
+
+// -----------------------------------------------------------------------------
+// Subscription Routes
+// -----------------------------------------------------------------------------
+
+final _subscriptionRoutes = <RouteBase>[
+  GoRoute(
+    path: AppRoutes.subscriptionPayment,
+    name: 'subscriptionPayment',
+    builder: (_, state) {
+      final plan = state.extra as SubscriptionPlan;
+      return PaymentPage(plan: plan);
+    },
+  ),
+];
+
+// -----------------------------------------------------------------------------
+// Time Tracking Routes
+// -----------------------------------------------------------------------------
+
+final _timeTrackingRoutes = <RouteBase>[
+  GoRoute(
+    path: AppRoutes.timeTrackingHistory,
+    name: 'timeTrackingHistory',
+    builder: (_, __) => const TimeTrackingHistoryPage(),
+  ),
+];
+
+// -----------------------------------------------------------------------------
+// Property Routes
+// -----------------------------------------------------------------------------
+
+final _propertyRoutes = <RouteBase>[
+  GoRoute(
+    path: AppRoutes.properties,
+    name: 'properties',
+    builder: (_, __) => const PropertiesPage(),
+  ),
+  GoRoute(
+    path: AppRoutes.propertiesAdd,
+    name: 'propertiesAdd',
+    builder: (_, __) => const PropertyFormPage(),
+  ),
+  GoRoute(
+    path: '/properties/edit/:id',
+    name: 'propertyEdit',
+    builder: (_, state) {
+      final id = state.pathParameters['id'];
+      return PropertyFormPage(propertyId: id);
+    },
+  ),
+  GoRoute(
+    path: '/properties/:id',
+    name: 'propertyDetail',
+    builder: (_, state) {
+      final id = state.pathParameters['id']!;
+      return PropertyDetailPage(propertyId: id);
+    },
+  ),
+];
+
+// -----------------------------------------------------------------------------
+// Other Routes
+// -----------------------------------------------------------------------------
+
+final _otherRoutes = <RouteBase>[
+  GoRoute(
+    path: AppRoutes.taxes,
+    name: 'taxes',
+    builder: (_, __) => const ComprehensiveTaxPage(),
+  ),
+  GoRoute(
+    path: AppRoutes.accounting,
+    name: 'accounting',
+    builder: (_, __) => const AccountingPage(),
+  ),
+  GoRoute(
+    path: AppRoutes.reports,
+    name: 'reports',
+    builder: (_, __) => const ReportsPage(),
+  ),
+  // Attendance (for employers)
+  GoRoute(
+    path: AppRoutes.attendance,
+    name: 'attendance',
+    builder: (_, __) => const AttendanceDashboardPage(),
+  ),
+  GoRoute(
+    path: AppRoutes.leave,
+    name: 'leave',
+    builder: (_, __) => const LeaveDashboardPage(),
+  ),
+  // Employee Portal Routes
+  GoRoute(
+    path: AppRoutes.employeeDashboard,
+    name: 'employeeDashboard',
+    builder: (_, __) => const EmployeeDashboardPage(),
+  ),
+  GoRoute(
+    path: AppRoutes.employeeRequestLeave,
+    name: 'employeeRequestLeave',
+    builder: (_, __) => const RequestLeavePage(),
+  ),
+  GoRoute(
+    path: AppRoutes.employeeMyLeaves,
+    name: 'employeeMyLeaves',
+    builder: (_, __) => const Scaffold(
+      body: Center(child: Text('My Leaves - Coming Soon')),
+    ),
+  ),
+  GoRoute(
+    path: AppRoutes.employeeTimesheet,
+    name: 'employeeTimesheet',
+    builder: (_, __) => const Scaffold(
+      body: Center(child: Text('Timesheet - Coming Soon')),
+    ),
+  ),
+  GoRoute(
+    path: AppRoutes.employeePayslips,
+    name: 'employeePayslips',
+    builder: (_, __) => const Scaffold(
+      body: Center(child: Text('Payslips - Coming Soon')),
+    ),
+  ),
+];
+
+// =============================================================================
+// NAVIGATION EXTENSIONS
+// =============================================================================
+
+/// Extension methods for easier navigation.
+extension NavigationExtensions on BuildContext {
+  // Auth
+  void goToLogin() => go(AppRoutes.login);
+  void goToRegister() => go(AppRoutes.register);
+  void goToOnboarding() => go(AppRoutes.onboarding);
+
+  // Main tabs
+  void goToHome() => go(AppRoutes.home);
+  void goToWorkers() => go(AppRoutes.workers);
+  void goToPayroll() => go(AppRoutes.payroll);
+  void goToFinance() => go(AppRoutes.finance);
+
+  // Workers
+  void goToAddWorker() => go(AppRoutes.workersAdd);
+  void goToWorkerDetail(String id) => go(AppRoutes.workerDetail(id));
+  void pushWorkerEdit(String id, WorkerModel? worker) {
+    push(AppRoutes.workerEdit(id), extra: worker);
+  }
+  void pushWorkerTerminate(String id) => push(AppRoutes.workerTerminate(id));
+
+  // Payroll
+  void goToRunPayroll([String? periodId]) {
+    if (periodId != null) {
+      go(AppRoutes.payrollRunWithId(periodId));
+    } else {
+      go(AppRoutes.payrollRun);
+    }
+  }
+  void pushPayrollReview(String id) => push(AppRoutes.payrollReview(id));
+  void pushPayslip(String id) => push(AppRoutes.payslip(id));
+
+  // Subscriptions
+  void pushSubscriptionPayment(SubscriptionPlan plan) {
+    push(AppRoutes.subscriptionPayment, extra: plan);
+  }
+
+  // Properties
+  void goToProperties() => go(AppRoutes.properties);
+  void goToAddProperty() => go(AppRoutes.propertiesAdd);
+  void goToPropertyDetail(String id) => go(AppRoutes.propertyDetail(id));
+  void goToPropertyEdit(String id) => go(AppRoutes.propertyEdit(id));
+}

@@ -6,9 +6,11 @@ import { TimeEntry } from './entities/time-entry.entity';
 import { Worker } from '../workers/entities/worker.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([TimeEntry, Worker])],
+  imports: [
+    TypeOrmModule.forFeature([TimeEntry, Worker]),
+  ],
   controllers: [TimeTrackingController],
   providers: [TimeTrackingService],
   exports: [TimeTrackingService],
 })
-export class TimeTrackingModule {}
+export class TimeTrackingModule { }

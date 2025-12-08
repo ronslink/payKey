@@ -1,0 +1,27 @@
+{
+  "ignore": [
+    "test/**",
+    "src/migrations/**",
+    "check-*.js",
+    "debug-*.js",
+    "examine-*.js",
+    "final-*.js",
+    "fix-*.js",
+    "link-*.js",
+    "seed-*.js",
+    "setup-*.js",
+    "verify-*.js",
+    "clean-*.js",
+    "create-*.js",
+    "register-*.js",
+    "run-*.js",
+    "update-*.js",
+    "add-*.js",
+    "*.spec.ts",
+    "*.test.ts",
+    "src/modules/export/**",
+    "src/modules/properties/**",
+    "src/modules/reports/**",
+    "src/modules/notifications/**"
+  ]
+}

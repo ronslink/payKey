@@ -437,41 +437,73 @@ export class PayPeriodsService {
     endDate: Date,
   ): Promise<PayPeriod[]> {
     const periods: PayPeriod[] = [];
-    const currentDate = new Date(startDate);
-    const stepDays = this.getStepDays(frequency);
+    let currentDate = new Date(startDate);
+
+    // Normalize start date to beginning of day
+    currentDate.setHours(0, 0, 0, 0);
 
     while (currentDate <= endDate) {
-      const periodEnd = new Date(currentDate);
-      periodEnd.setDate(periodEnd.getDate() + stepDays - 1);
+      let periodStart = new Date(currentDate);
+      let periodEnd: Date;
 
-      if (periodEnd > endDate) break;
+      if (frequency === PayPeriodFrequency.MONTHLY) {
+        // First day of next month
+        const nextMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+        // Last day of current month is "day 0" of next month
+        periodEnd = new Date(nextMonth.getTime() - 1); // effectively last millisecond, or set day 0
+        // Clean up time
+        periodEnd.setHours(0, 0, 0, 0);
 
-      const periodStart = new Date(currentDate);
+        // Prepare for next iteration
+        currentDate = new Date(nextMonth);
+      } else {
+        // Fallback for weekly/biweekly using step days (simplified)
+        const stepDays = this.getStepDays(frequency);
+        periodEnd = new Date(periodStart);
+        periodEnd.setDate(periodEnd.getDate() + stepDays - 1);
+
+        // Next start is day after end
+        currentDate = new Date(periodEnd);
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      if (periodStart > endDate) break;
+
+      // Adjust periodEnd if it exceeds the global endDate (optional, but for yearly gen usually we want full periods)
+      // For clean years, we usually generate full months.
+
       const name = this.generatePeriodName(periodStart, periodEnd, frequency);
 
       const payPeriod = this.payPeriodRepository.create({
         name,
-        startDate: periodStart.toISOString().split('T')[0],
-        endDate: periodEnd.toISOString().split('T')[0],
+        startDate: this.formatDate(periodStart),
+        endDate: this.formatDate(periodEnd),
+        payDate: this.formatDate(periodEnd), // Default pay date to end of period
         frequency: frequency as PayPeriodFrequency,
         status: PayPeriodStatus.DRAFT,
         createdBy: userId,
+        userId: userId,
       });
 
       periods.push(await this.payPeriodRepository.save(payPeriod));
-
-      currentDate.setDate(currentDate.getDate() + stepDays);
     }
 
     return periods;
   }
 
+  private formatDate(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
   private getStepDays(frequency: string): number {
     const frequencyMap: Record<string, number> = {
-      WEEKLY: 7,
-      BIWEEKLY: 14,
-      MONTHLY: 30,
-      QUARTERLY: 90,
+      [PayPeriodFrequency.WEEKLY]: 7,
+      [PayPeriodFrequency.BIWEEKLY]: 14,
+      [PayPeriodFrequency.MONTHLY]: 30, // Fallback, not used in customized loop
+      [PayPeriodFrequency.QUARTERLY]: 90,
     };
     return frequencyMap[frequency] || 30;
   }

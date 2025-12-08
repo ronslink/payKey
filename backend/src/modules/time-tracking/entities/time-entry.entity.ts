@@ -3,64 +3,93 @@ import {
   Column,
   PrimaryGeneratedColumn,
   ManyToOne,
+  JoinColumn,
   CreateDateColumn,
+  UpdateDateColumn,
+  Index,
 } from 'typeorm';
-import { User } from '../../users/entities/user.entity';
 import { Worker } from '../../workers/entities/worker.entity';
 
 export enum TimeEntryStatus {
-  IN_PROGRESS = 'IN_PROGRESS',
-  COMPLETED = 'COMPLETED',
+  ACTIVE = 'ACTIVE', // Currently clocked in
+  COMPLETED = 'COMPLETED', // Clocked out normally
+  ADJUSTED = 'ADJUSTED', // Employer adjusted the entry
+  CANCELLED = 'CANCELLED', // Entry was cancelled
 }
 
 @Entity('time_entries')
+@Index(['workerId', 'clockIn'])
+@Index(['userId', 'clockIn'])
 export class TimeEntry {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => User, (user) => user.id)
-  user: User;
-
-  @Column()
+  @Column({ type: 'uuid' })
   workerId: string;
 
-  @Column()
-  userId: string;
+  @ManyToOne(() => Worker)
+  @JoinColumn({ name: 'workerId' })
+  worker: Worker;
 
-  @Column({ nullable: true })
-  propertyId: string;
+  @Column({ type: 'uuid' })
+  userId: string; // Employer ID
 
+  @Column({ type: 'uuid', nullable: true })
+  recordedById: string; // Who logged it (worker's user ID or employer)
+
+  // Clock times
   @Column({ type: 'timestamp' })
-  clockInTime: Date;
+  clockIn: Date;
 
   @Column({ type: 'timestamp', nullable: true })
-  clockOutTime: Date;
+  clockOut: Date;
 
-  @Column('decimal', { precision: 10, scale: 6, nullable: true })
-  clockInLatitude: number;
+  // Duration
+  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
+  totalHours: number; // Calculated on clock out
 
-  @Column('decimal', { precision: 10, scale: 6, nullable: true })
-  clockInLongitude: number;
+  @Column({ type: 'int', default: 0 })
+  breakMinutes: number;
 
-  @Column('decimal', { precision: 10, scale: 6, nullable: true })
-  clockOutLatitude: number;
+  // Location (optional)
+  @Column({ type: 'decimal', precision: 10, scale: 8, nullable: true })
+  clockInLat: number | null;
 
-  @Column('decimal', { precision: 10, scale: 6, nullable: true })
-  clockOutLongitude: number;
+  @Column({ type: 'decimal', precision: 11, scale: 8, nullable: true })
+  clockInLng: number | null;
 
-  @Column('decimal', { precision: 5, scale: 2, nullable: true })
-  totalHours: number;
+  @Column({ type: 'decimal', precision: 10, scale: 8, nullable: true })
+  clockOutLat: number | null;
 
+  @Column({ type: 'decimal', precision: 11, scale: 8, nullable: true })
+  clockOutLng: number | null;
+
+  // Status
   @Column({
     type: 'enum',
     enum: TimeEntryStatus,
-    default: TimeEntryStatus.IN_PROGRESS,
+    default: TimeEntryStatus.ACTIVE,
   })
   status: TimeEntryStatus;
 
-  @Column({ nullable: true })
-  notes: string;
+  // Metadata
+  @Column({ type: 'text', nullable: true })
+  notes: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  adjustmentReason: string | null; // If employer adjusted
 
   @CreateDateColumn()
   createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
+
+  // Computed property for duration display
+  get durationDisplay(): string {
+    if (!this.totalHours) return '--';
+    const hours = Math.floor(this.totalHours);
+    const minutes = Math.round((this.totalHours - hours) * 60);
+    return `${hours}h ${minutes}m`;
+  }
 }

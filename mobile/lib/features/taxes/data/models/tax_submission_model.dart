@@ -32,10 +32,10 @@ class TaxSubmissionModel {
       id: json['id'] as String,
       userId: json['userId'] as String,
       taxYear: json['taxYear'] as String,
-      income: (json['income'] as num).toDouble(),
-      deductions: (json['deductions'] as num).toDouble(),
-      taxableIncome: (json['taxableIncome'] as num).toDouble(),
-      taxDue: (json['taxDue'] as num).toDouble(),
+      income: double.tryParse(json['income'].toString()) ?? 0.0,
+      deductions: double.tryParse(json['deductions'].toString()) ?? 0.0,
+      taxableIncome: double.tryParse(json['taxableIncome'].toString()) ?? 0.0,
+      taxDue: double.tryParse(json['taxDue'].toString()) ?? 0.0,
       status: json['status'] as String,
       filingDate: json['filingDate'] != null 
           ? DateTime.parse(json['filingDate'] as String)

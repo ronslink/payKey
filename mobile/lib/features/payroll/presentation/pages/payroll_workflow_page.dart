@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/pay_period_model.dart';
 import '../../data/repositories/pay_period_repository.dart';
+import '../../data/repositories/pay_period_repository.dart' show PayPeriodStatistics;
 
 class PayrollWorkflowPage extends ConsumerStatefulWidget {
   final String payPeriodId;
@@ -20,7 +21,7 @@ class PayrollWorkflowPage extends ConsumerStatefulWidget {
 class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
   PayPeriod? _payPeriod;
   bool _isLoading = false;
-  Map<String, dynamic>? _statistics;
+  PayPeriodStatistics? _statistics;
 
   @override
   void initState() {
@@ -61,7 +62,6 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
       }
     } catch (e) {
       // Statistics might not be available for all periods
-      print('Failed to load statistics: $e');
     }
   }
 
@@ -411,21 +411,8 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
 
   Widget _buildStatisticsSection() {
     final stats = _statistics;
-    if (stats == null || !stats.containsKey('statistics')) {
+    if (stats == null) {
       return const SizedBox.shrink();
-    }
-    
-    final statsData = stats['statistics'];
-    if (statsData == null) {
-      return const SizedBox.shrink();
-    }
-
-    // Helper to safely get numeric value
-    num getNumValue(dynamic value) {
-      if (value == null) return 0;
-      if (value is num) return value;
-      if (value is String) return num.tryParse(value) ?? 0;
-      return 0;
     }
 
     return Card(
@@ -447,7 +434,7 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
                 Expanded(
                   child: _buildStatCard(
                     'Total Workers',
-                    '${statsData['totalWorkers'] ?? 0}',
+                    '${stats.totalWorkers}',
                     Icons.people,
                     Colors.blue,
                   ),
@@ -456,7 +443,7 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
                 Expanded(
                   child: _buildStatCard(
                     'Processed',
-                    '${statsData['processedPayments'] ?? 0}',
+                    '${stats.processedPayments}',
                     Icons.check_circle,
                     Colors.green,
                   ),
@@ -465,7 +452,7 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
                 Expanded(
                   child: _buildStatCard(
                     'Pending',
-                    '${statsData['pendingPayments'] ?? 0}',
+                    '${stats.pendingPayments}',
                     Icons.pending,
                     Colors.orange,
                   ),
@@ -478,7 +465,7 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
                 Expanded(
                   child: _buildStatCard(
                     'Gross Total',
-                    'KES ${getNumValue(statsData['totalGrossAmount']).toStringAsFixed(2)}',
+                    'KES ${stats.totalGrossAmount.toStringAsFixed(2)}',
                     Icons.monetization_on,
                     Colors.purple,
                   ),
@@ -487,7 +474,7 @@ class _PayrollWorkflowPageState extends ConsumerState<PayrollWorkflowPage> {
                 Expanded(
                   child: _buildStatCard(
                     'Net Total',
-                    'KES ${getNumValue(statsData['totalNetAmount']).toStringAsFixed(2)}',
+                    'KES ${stats.totalNetAmount.toStringAsFixed(2)}',
                     Icons.account_balance_wallet,
                     Colors.teal,
                   ),

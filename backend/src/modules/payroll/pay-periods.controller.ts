@@ -94,16 +94,16 @@ export class PayPeriodsController {
 
   @Post('generate')
   generatePayPeriods(
+    @Request() req: any,
     @Body()
     body: {
-      userId: string;
       frequency: PayPeriodFrequency;
       startDate: string;
       endDate: string;
     },
   ) {
     return this.payPeriodsService.generatePayPeriods(
-      body.userId,
+      req.user.userId,
       body.frequency,
       new Date(body.startDate),
       new Date(body.endDate),

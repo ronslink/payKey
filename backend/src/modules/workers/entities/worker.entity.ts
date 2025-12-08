@@ -88,6 +88,16 @@ export class Worker {
   @Column({ type: 'int', default: 0 })
   leaveBalance: number;
 
+  // Employee Portal Link
+  @Column({ nullable: true })
+  linkedUserId: string; // Links to User account if employee has logged in
+
+  @Column({ nullable: true })
+  inviteCode: string; // 6-digit code for employee to claim account
+
+  @Column({ type: 'timestamp', nullable: true })
+  inviteCodeExpiry: Date;
+
   @Column({ nullable: true })
   email: string;
 

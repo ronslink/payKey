@@ -38,7 +38,7 @@ export class PayrollService {
     private taxesService: TaxesService,
     private timeTrackingService: TimeTrackingService,
     private mpesaService: MpesaService,
-  ) {}
+  ) { }
 
   /**
    * Calculate payroll for a single worker
@@ -57,15 +57,15 @@ export class PayrollService {
         endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
       }
 
-      const timeEntries = await this.timeTrackingService.getWorkerTimeEntries(
-        worker.userId,
+      const timeEntries = await this.timeTrackingService.getEntriesForWorker(
         worker.id,
+        worker.userId,
         startDate,
         endDate,
       );
 
       const totalHours = timeEntries.reduce(
-        (sum, entry) => sum + (entry.totalHours || 0),
+        (sum: number, entry) => sum + (Number(entry.totalHours) || 0),
         0,
       );
       grossSalary = totalHours * Number(worker.hourlyRate || 0);

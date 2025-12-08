@@ -1,8 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/network/api_service.dart';
 import '../../data/models/pay_period_model.dart';
 import '../../data/repositories/pay_period_repository.dart';
 
-final payPeriodRepositoryProvider = Provider((ref) => PayPeriodRepository());
+final payPeriodRepositoryProvider = Provider((ref) => PayPeriodRepository(ApiService()));
 
 final payPeriodsProvider = StateNotifierProvider<PayPeriodsNotifier, AsyncValue<List<PayPeriod>>>((ref) {
   final repository = ref.read(payPeriodRepositoryProvider);

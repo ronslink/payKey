@@ -4,10 +4,9 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository, Between, IsNull, Not } from 'typeorm';
 import { TimeEntry, TimeEntryStatus } from './entities/time-entry.entity';
 import { Worker } from '../workers/entities/worker.entity';
-import { ClockInDto, ClockOutDto } from './dto/time-tracking.dto';
 
 @Injectable()
 export class TimeTrackingService {
@@ -15,79 +14,32 @@ export class TimeTrackingService {
     @InjectRepository(TimeEntry)
     private timeEntryRepository: Repository<TimeEntry>,
     @InjectRepository(Worker)
-    private workerRepository: Repository<Worker>,
-  ) {}
-
-  /**
-   * Calculate distance between two GPS coordinates in meters
-   * Using Haversine formula
-   */
-  private calculateDistance(
-    lat1: number,
-    lon1: number,
-    lat2: number,
-    lon2: number,
-  ): number {
-    const R = 6371e3; // Earth's radius in meters
-    const φ1 = (lat1 * Math.PI) / 180;
-    const φ2 = (lat2 * Math.PI) / 180;
-    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
-    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
-
-    const a =
-      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-    return R * c; // Distance in meters
-  }
-
-  /**
-   * Validate if location is within geofence
-   * For now, we'll use a default radius of 100 meters
-   * In future, this can be property-specific
-   */
-  private validateGeofence(
-    currentLat: number,
-    currentLon: number,
-    allowedLat?: number,
-    allowedLon?: number,
-    radiusMeters: number = 100,
-  ): boolean {
-    // If no geofence is set, allow any location
-    if (!allowedLat || !allowedLon) {
-      return true;
-    }
-
-    const distance = this.calculateDistance(
-      currentLat,
-      currentLon,
-      allowedLat,
-      allowedLon,
-    );
-
-    return distance <= radiusMeters;
-  }
+    private workersRepository: Repository<Worker>,
+  ) { }
 
   /**
    * Clock in a worker
    */
-  async clockIn(userId: string, dto: ClockInDto): Promise<TimeEntry> {
-    // Verify worker belongs to user and load property
-    const worker = await this.workerRepository.findOne({
-      where: { id: dto.workerId, userId },
-      relations: ['property'],
+  async clockIn(
+    workerId: string,
+    userId: string,
+    recordedById: string,
+    location?: { lat: number; lng: number },
+  ): Promise<TimeEntry> {
+    // Check if worker exists and belongs to employer
+    const worker = await this.workersRepository.findOne({
+      where: { id: workerId, userId },
     });
 
     if (!worker) {
       throw new NotFoundException('Worker not found');
     }
 
-    // Check if worker already has an active time entry
+    // Check if already clocked in
     const activeEntry = await this.timeEntryRepository.findOne({
       where: {
-        workerId: dto.workerId,
-        status: TimeEntryStatus.IN_PROGRESS,
+        workerId,
+        status: TimeEntryStatus.ACTIVE,
       },
     });
 
@@ -95,124 +47,305 @@ export class TimeTrackingService {
       throw new BadRequestException('Worker is already clocked in');
     }
 
-    // Validate geofence if worker is assigned to a property
-    if (
-      worker.property &&
-      worker.property.latitude &&
-      worker.property.longitude
-    ) {
-      const isValid = this.validateGeofence(
-        dto.latitude,
-        dto.longitude,
-        worker.property.latitude,
-        worker.property.longitude,
-        worker.property.geofenceRadius || 100, // Default to 100m if not set
-      );
-
-      if (!isValid) {
-        throw new BadRequestException(
-          `You are not within the allowed area for ${worker.property.name}. Please move closer to the property.`,
-        );
-      }
-    }
-
-    const timeEntry = this.timeEntryRepository.create({
+    const entry = this.timeEntryRepository.create({
+      workerId,
       userId,
-      workerId: dto.workerId,
-      propertyId: worker.property?.id, // Save propertyId
-      clockInTime: new Date(),
-      clockInLatitude: dto.latitude,
-      clockInLongitude: dto.longitude,
-      notes: dto.notes,
-      status: TimeEntryStatus.IN_PROGRESS,
+      recordedById,
+      clockIn: new Date(),
+      status: TimeEntryStatus.ACTIVE,
+      clockInLat: location?.lat,
+      clockInLng: location?.lng,
     });
 
-    return this.timeEntryRepository.save(timeEntry);
+    return this.timeEntryRepository.save(entry);
   }
 
   /**
    * Clock out a worker
    */
-  async clockOut(userId: string, dto: ClockOutDto): Promise<TimeEntry> {
-    const timeEntry = await this.timeEntryRepository.findOne({
-      where: { id: dto.timeEntryId, userId },
+  async clockOut(
+    workerId: string,
+    userId: string,
+    recordedById: string,
+    options?: {
+      breakMinutes?: number;
+      notes?: string;
+      location?: { lat: number; lng: number };
+    },
+  ): Promise<TimeEntry> {
+    // Find active entry
+    const entry = await this.timeEntryRepository.findOne({
+      where: {
+        workerId,
+        userId,
+        status: TimeEntryStatus.ACTIVE,
+      },
     });
 
-    if (!timeEntry) {
+    if (!entry) {
+      throw new BadRequestException('Worker is not clocked in');
+    }
+
+    const clockOut = new Date();
+    const clockIn = new Date(entry.clockIn);
+
+    // Calculate hours worked
+    const diffMs = clockOut.getTime() - clockIn.getTime();
+    const breakMs = (options?.breakMinutes || 0) * 60 * 1000;
+    const workedMs = diffMs - breakMs;
+    const totalHours = Math.round((workedMs / (1000 * 60 * 60)) * 100) / 100;
+
+    entry.clockOut = clockOut;
+    entry.totalHours = Math.max(0, totalHours);
+    entry.breakMinutes = options?.breakMinutes || 0;
+    entry.notes = options?.notes ?? null;
+    entry.clockOutLat = options?.location?.lat ?? null;
+    entry.clockOutLng = options?.location?.lng ?? null;
+    entry.status = TimeEntryStatus.COMPLETED;
+
+    return this.timeEntryRepository.save(entry);
+  }
+
+  /**
+   * Get current clock-in status for a worker
+   */
+  async getStatus(workerId: string, userId: string): Promise<{
+    isClockedIn: boolean;
+    currentEntry: TimeEntry | null;
+    todayTotal: number;
+  }> {
+    const activeEntry = await this.timeEntryRepository.findOne({
+      where: {
+        workerId,
+        userId,
+        status: TimeEntryStatus.ACTIVE,
+      },
+    });
+
+    // Get today's completed entries
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const todayEntries = await this.timeEntryRepository.find({
+      where: {
+        workerId,
+        userId,
+        clockIn: Between(today, tomorrow),
+        status: TimeEntryStatus.COMPLETED,
+      },
+    });
+
+    const todayTotal = todayEntries.reduce(
+      (sum, e) => sum + (Number(e.totalHours) || 0),
+      0,
+    );
+
+    return {
+      isClockedIn: !!activeEntry,
+      currentEntry: activeEntry,
+      todayTotal: Math.round(todayTotal * 100) / 100,
+    };
+  }
+
+  /**
+   * Get time entries for a worker within a date range
+   */
+  async getEntriesForWorker(
+    workerId: string,
+    userId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<TimeEntry[]> {
+    return this.timeEntryRepository.find({
+      where: {
+        workerId,
+        userId,
+        clockIn: Between(startDate, endDate),
+        status: Not(TimeEntryStatus.CANCELLED),
+      },
+      order: { clockIn: 'DESC' },
+    });
+  }
+
+  /**
+   * Get all time entries for an employer within a date range
+   */
+  async getAllEntriesForEmployer(
+    userId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<TimeEntry[]> {
+    return this.timeEntryRepository.find({
+      where: {
+        userId,
+        clockIn: Between(startDate, endDate),
+        status: Not(TimeEntryStatus.CANCELLED),
+      },
+      relations: ['worker'],
+      order: { clockIn: 'DESC' },
+    });
+  }
+
+  /**
+   * Get attendance summary for a pay period
+   */
+  async getAttendanceSummary(
+    userId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<{
+    workers: Array<{
+      workerId: string;
+      workerName: string;
+      totalDays: number;
+      totalHours: number;
+      entries: number;
+    }>;
+    totals: {
+      totalEntries: number;
+      totalHours: number;
+      averageHoursPerDay: number;
+    };
+  }> {
+    const entries = await this.getAllEntriesForEmployer(userId, startDate, endDate);
+
+    // Group by worker
+    const workerMap = new Map<string, {
+      workerId: string;
+      workerName: string;
+      days: Set<string>;
+      totalHours: number;
+      entries: number;
+    }>();
+
+    for (const entry of entries) {
+      if (!workerMap.has(entry.workerId)) {
+        workerMap.set(entry.workerId, {
+          workerId: entry.workerId,
+          workerName: entry.worker?.name || 'Unknown',
+          days: new Set(),
+          totalHours: 0,
+          entries: 0,
+        });
+      }
+
+      const stats = workerMap.get(entry.workerId)!;
+      stats.days.add(new Date(entry.clockIn).toISOString().split('T')[0]);
+      stats.totalHours += Number(entry.totalHours) || 0;
+      stats.entries += 1;
+    }
+
+    const workers = Array.from(workerMap.values()).map((w) => ({
+      workerId: w.workerId,
+      workerName: w.workerName,
+      totalDays: w.days.size,
+      totalHours: Math.round(w.totalHours * 100) / 100,
+      entries: w.entries,
+    }));
+
+    const totalHours = workers.reduce((sum, w) => sum + w.totalHours, 0);
+    const totalDays = workers.reduce((sum, w) => sum + w.totalDays, 0);
+
+    return {
+      workers,
+      totals: {
+        totalEntries: entries.length,
+        totalHours: Math.round(totalHours * 100) / 100,
+        averageHoursPerDay: totalDays > 0 ? Math.round((totalHours / totalDays) * 100) / 100 : 0,
+      },
+    };
+  }
+
+  /**
+   * Employer can adjust a time entry
+   */
+  async adjustEntry(
+    entryId: string,
+    userId: string,
+    adjustments: {
+      clockIn?: Date;
+      clockOut?: Date;
+      breakMinutes?: number;
+      reason: string;
+    },
+  ): Promise<TimeEntry> {
+    const entry = await this.timeEntryRepository.findOne({
+      where: { id: entryId, userId },
+    });
+
+    if (!entry) {
       throw new NotFoundException('Time entry not found');
     }
 
-    if (timeEntry.status === TimeEntryStatus.COMPLETED) {
-      throw new BadRequestException('Time entry already completed');
+    if (adjustments.clockIn) {
+      entry.clockIn = adjustments.clockIn;
+    }
+    if (adjustments.clockOut) {
+      entry.clockOut = adjustments.clockOut;
+    }
+    if (adjustments.breakMinutes !== undefined) {
+      entry.breakMinutes = adjustments.breakMinutes;
     }
 
-    const clockOutTime = new Date();
-    const totalHours =
-      (clockOutTime.getTime() - timeEntry.clockInTime.getTime()) /
-      (1000 * 60 * 60);
-
-    timeEntry.clockOutTime = clockOutTime;
-    timeEntry.clockOutLatitude = dto.latitude;
-    timeEntry.clockOutLongitude = dto.longitude;
-    timeEntry.totalHours = Math.round(totalHours * 100) / 100;
-    timeEntry.status = TimeEntryStatus.COMPLETED;
-    if (dto.notes) {
-      timeEntry.notes = dto.notes;
+    // Recalculate hours if both times exist
+    if (entry.clockIn && entry.clockOut) {
+      const diffMs = new Date(entry.clockOut).getTime() - new Date(entry.clockIn).getTime();
+      const breakMs = (entry.breakMinutes || 0) * 60 * 1000;
+      const workedMs = diffMs - breakMs;
+      entry.totalHours = Math.max(0, Math.round((workedMs / (1000 * 60 * 60)) * 100) / 100);
     }
 
-    return this.timeEntryRepository.save(timeEntry);
+    entry.status = TimeEntryStatus.ADJUSTED;
+    entry.adjustmentReason = adjustments.reason;
+
+    return this.timeEntryRepository.save(entry);
   }
 
   /**
-   * Get active time entry for a worker
+   * Get live status of all workers (who's clocked in now)
    */
-  async getActiveEntry(
-    userId: string,
-    workerId: string,
-  ): Promise<TimeEntry | null> {
-    return this.timeEntryRepository.findOne({
-      where: {
-        userId,
-        workerId,
-        status: TimeEntryStatus.IN_PROGRESS,
-      },
+  async getLiveStatus(userId: string): Promise<Array<{
+    workerId: string;
+    workerName: string;
+    isClockedIn: boolean;
+    clockInTime: Date | null;
+    duration: string;
+  }>> {
+    // Get all workers for employer
+    const workers = await this.workersRepository.find({
+      where: { userId, isActive: true },
     });
-  }
 
-  /**
-   * Get time entries for a user with optional filters
-   */
-  async getTimeEntries(
-    userId: string,
-    workerId?: string,
-    startDate?: Date,
-    endDate?: Date,
-  ): Promise<TimeEntry[]> {
-    const where: any = { userId };
+    const result = [];
 
-    if (workerId) {
-      where.workerId = workerId;
+    for (const worker of workers) {
+      const activeEntry = await this.timeEntryRepository.findOne({
+        where: {
+          workerId: worker.id,
+          status: TimeEntryStatus.ACTIVE,
+        },
+      });
+
+      let duration = '--';
+      if (activeEntry) {
+        const now = new Date();
+        const diffMs = now.getTime() - new Date(activeEntry.clockIn).getTime();
+        const hours = Math.floor(diffMs / (1000 * 60 * 60));
+        const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+        duration = `${hours}h ${minutes}m`;
+      }
+
+      result.push({
+        workerId: worker.id,
+        workerName: worker.name,
+        isClockedIn: !!activeEntry,
+        clockInTime: activeEntry?.clockIn || null,
+        duration,
+      });
     }
 
-    if (startDate && endDate) {
-      where.clockInTime = Between(startDate, endDate);
-    }
-
-    return this.timeEntryRepository.find({
-      where,
-      order: { clockInTime: 'DESC' },
-    });
-  }
-
-  /**
-   * Get time entries for a specific worker
-   */
-  async getWorkerTimeEntries(
-    userId: string,
-    workerId: string,
-    startDate?: Date,
-    endDate?: Date,
-  ): Promise<TimeEntry[]> {
-    return this.getTimeEntries(userId, workerId, startDate, endDate);
+    return result;
   }
 }

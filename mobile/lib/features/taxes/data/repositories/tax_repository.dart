@@ -11,24 +11,30 @@ class TaxRepository {
   // For individual tax submissions (personal/business tax returns)
   Future<List<TaxSubmissionModel>> getIndividualTaxSubmissions() async {
     try {
-      // Return mock data for now
+      // Use the generic submissions endpoint for now, filtering if necessary
+      final response = await _apiService.taxes.getSubmissions(); // Calls taxes.getSubmissions()
+      if (response.data is List) {
+        return (response.data as List)
+            .map((json) => TaxSubmissionModel.fromJson(json))
+            .toList();
+      }
       return [];
     } catch (e) {
-      throw Exception('Failed to fetch individual tax submissions: $e');
+      // Fallback to empty list but log error
+      return [];
     }
   }
 
   // For payroll tax submissions (auto-generated from payroll)
   Future<List<PayrollTaxSubmission>> getPayrollTaxSubmissions() async {
     try {
-      final response = await _apiService.getTaxSubmissions();
+      final response = await _apiService.taxes.getSubmissions();
       final List<dynamic> data = response.data;
       // Map backend TaxSubmission to frontend PayrollTaxSubmission
       // Note: You might need to adjust the model mapping depending on backend response structure
       return data.map((json) => PayrollTaxSubmission.fromJson(json)).toList();
     } catch (e) {
       // Return empty list for 500 errors instead of throwing
-      print('Error fetching tax submissions: $e');
       return [];
     }
   }

@@ -289,7 +289,6 @@ AuthResponse _$AuthResponseFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$AuthResponse {
-  @JsonKey(name: 'access_token')
   String get accessToken => throw _privateConstructorUsedError;
   User? get user => throw _privateConstructorUsedError;
 
@@ -310,7 +309,7 @@ abstract class $AuthResponseCopyWith<$Res> {
     $Res Function(AuthResponse) then,
   ) = _$AuthResponseCopyWithImpl<$Res, AuthResponse>;
   @useResult
-  $Res call({@JsonKey(name: 'access_token') String accessToken, User? user});
+  $Res call({String accessToken, User? user});
 
   $UserCopyWith<$Res>? get user;
 }
@@ -369,7 +368,7 @@ abstract class _$$AuthResponseImplCopyWith<$Res>
   ) = __$$AuthResponseImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({@JsonKey(name: 'access_token') String accessToken, User? user});
+  $Res call({String accessToken, User? user});
 
   @override
   $UserCopyWith<$Res>? get user;
@@ -407,16 +406,12 @@ class __$$AuthResponseImplCopyWithImpl<$Res>
 /// @nodoc
 @JsonSerializable()
 class _$AuthResponseImpl implements _AuthResponse {
-  const _$AuthResponseImpl({
-    @JsonKey(name: 'access_token') required this.accessToken,
-    this.user,
-  });
+  const _$AuthResponseImpl({required this.accessToken, this.user});
 
   factory _$AuthResponseImpl.fromJson(Map<String, dynamic> json) =>
       _$$AuthResponseImplFromJson(json);
 
   @override
-  @JsonKey(name: 'access_token')
   final String accessToken;
   @override
   final User? user;
@@ -456,7 +451,7 @@ class _$AuthResponseImpl implements _AuthResponse {
 
 abstract class _AuthResponse implements AuthResponse {
   const factory _AuthResponse({
-    @JsonKey(name: 'access_token') required final String accessToken,
+    required final String accessToken,
     final User? user,
   }) = _$AuthResponseImpl;
 
@@ -464,7 +459,6 @@ abstract class _AuthResponse implements AuthResponse {
       _$AuthResponseImpl.fromJson;
 
   @override
-  @JsonKey(name: 'access_token')
   String get accessToken;
   @override
   User? get user;

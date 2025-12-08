@@ -38,7 +38,7 @@ _$PayrollCalculationImpl _$$PayrollCalculationImplFromJson(
     json['taxBreakdown'] as Map<String, dynamic>,
   ),
   netPay: (json['netPay'] as num).toDouble(),
-  status: json['status'] as String? ?? 'draft',
+  status: json['status'] as String? ?? PayrollStatus.draft,
   isEdited: json['isEdited'] as bool? ?? false,
 );
 

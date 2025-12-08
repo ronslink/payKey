@@ -261,6 +261,30 @@ class _RunPayrollPageState extends ConsumerState<RunPayrollPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (_payPeriod?.status == PayPeriodStatus.closed || 
+              _payPeriod?.status == PayPeriodStatus.completed)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade100,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.amber.shade300),
+              ),
+              child: Row(
+                children: [
+                   const Icon(Icons.lock, color: Colors.amber),
+                   const SizedBox(width: 12),
+                   Expanded(
+                     child: Text(
+                       'This period is ${_payPeriod?.status.name.toUpperCase()}. Modifications are disabled.',
+                       style: TextStyle(color: Colors.amber.shade900, fontWeight: FontWeight.bold),
+                     ),
+                   ),
+                ],
+              ),
+            ),
           const Text(
             'Run Payroll',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
@@ -343,7 +367,11 @@ class _RunPayrollPageState extends ConsumerState<RunPayrollPage> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: selectedWorkers.isEmpty ? null : () {
+              onPressed: (selectedWorkers.isEmpty || 
+                          _payPeriod?.status == PayPeriodStatus.closed || 
+                          _payPeriod?.status == PayPeriodStatus.completed) 
+                  ? null 
+                  : () {
                 _calculatePayroll(selectedWorkers);
               },
               style: ElevatedButton.styleFrom(

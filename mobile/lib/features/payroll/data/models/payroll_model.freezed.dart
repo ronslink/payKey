@@ -21,10 +21,19 @@ TaxBreakdown _$TaxBreakdownFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$TaxBreakdown {
+  /// National Social Security Fund contribution
   double get nssf => throw _privateConstructorUsedError;
+
+  /// National Hospital Insurance Fund contribution
   double get nhif => throw _privateConstructorUsedError;
+
+  /// Affordable Housing Levy (1.5% of gross salary)
   double get housingLevy => throw _privateConstructorUsedError;
+
+  /// Pay As You Earn tax
   double get paye => throw _privateConstructorUsedError;
+
+  /// Sum of all deductions (nssf + nhif + housingLevy + paye)
   double get totalDeductions => throw _privateConstructorUsedError;
 
   /// Serializes this TaxBreakdown to a JSON map.
@@ -169,26 +178,35 @@ class __$$TaxBreakdownImplCopyWithImpl<$Res>
 
 /// @nodoc
 @JsonSerializable()
-class _$TaxBreakdownImpl implements _TaxBreakdown {
+class _$TaxBreakdownImpl extends _TaxBreakdown {
   const _$TaxBreakdownImpl({
     required this.nssf,
     required this.nhif,
     required this.housingLevy,
     required this.paye,
     required this.totalDeductions,
-  });
+  }) : super._();
 
   factory _$TaxBreakdownImpl.fromJson(Map<String, dynamic> json) =>
       _$$TaxBreakdownImplFromJson(json);
 
+  /// National Social Security Fund contribution
   @override
   final double nssf;
+
+  /// National Hospital Insurance Fund contribution
   @override
   final double nhif;
+
+  /// Affordable Housing Levy (1.5% of gross salary)
   @override
   final double housingLevy;
+
+  /// Pay As You Earn tax
   @override
   final double paye;
+
+  /// Sum of all deductions (nssf + nhif + housingLevy + paye)
   @override
   final double totalDeductions;
 
@@ -230,7 +248,7 @@ class _$TaxBreakdownImpl implements _TaxBreakdown {
   }
 }
 
-abstract class _TaxBreakdown implements TaxBreakdown {
+abstract class _TaxBreakdown extends TaxBreakdown {
   const factory _TaxBreakdown({
     required final double nssf,
     required final double nhif,
@@ -238,18 +256,28 @@ abstract class _TaxBreakdown implements TaxBreakdown {
     required final double paye,
     required final double totalDeductions,
   }) = _$TaxBreakdownImpl;
+  const _TaxBreakdown._() : super._();
 
   factory _TaxBreakdown.fromJson(Map<String, dynamic> json) =
       _$TaxBreakdownImpl.fromJson;
 
+  /// National Social Security Fund contribution
   @override
   double get nssf;
+
+  /// National Hospital Insurance Fund contribution
   @override
   double get nhif;
+
+  /// Affordable Housing Levy (1.5% of gross salary)
   @override
   double get housingLevy;
+
+  /// Pay As You Earn tax
   @override
   double get paye;
+
+  /// Sum of all deductions (nssf + nhif + housingLevy + paye)
   @override
   double get totalDeductions;
 
@@ -267,17 +295,37 @@ PayrollCalculation _$PayrollCalculationFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$PayrollCalculation {
-  String? get id =>
-      throw _privateConstructorUsedError; // Optional because initial calculation won't have it
+  /// Unique identifier. Null for new/unsaved calculations.
+  String? get id => throw _privateConstructorUsedError;
+
+  /// Reference to the worker this calculation belongs to.
   String get workerId => throw _privateConstructorUsedError;
+
+  /// Worker's display name (denormalized for convenience).
   String get workerName => throw _privateConstructorUsedError;
+
+  /// Base salary before any additions or deductions.
   double get grossSalary => throw _privateConstructorUsedError;
+
+  /// Additional bonus payments.
   double get bonuses => throw _privateConstructorUsedError;
+
+  /// Other earnings (allowances, overtime, etc.).
   double get otherEarnings => throw _privateConstructorUsedError;
+
+  /// Additional deductions (loans, advances, etc.).
   double get otherDeductions => throw _privateConstructorUsedError;
+
+  /// Breakdown of statutory tax deductions.
   TaxBreakdown get taxBreakdown => throw _privateConstructorUsedError;
+
+  /// Final amount payable to worker.
   double get netPay => throw _privateConstructorUsedError;
+
+  /// Current status in the payroll workflow.
   String get status => throw _privateConstructorUsedError;
+
+  /// Whether this calculation has been manually edited.
   bool get isEdited => throw _privateConstructorUsedError;
 
   /// Serializes this PayrollCalculation to a JSON map.
@@ -509,7 +557,7 @@ class __$$PayrollCalculationImplCopyWithImpl<$Res>
 
 /// @nodoc
 @JsonSerializable()
-class _$PayrollCalculationImpl implements _PayrollCalculation {
+class _$PayrollCalculationImpl extends _PayrollCalculation {
   const _$PayrollCalculationImpl({
     this.id,
     required this.workerId,
@@ -520,38 +568,58 @@ class _$PayrollCalculationImpl implements _PayrollCalculation {
     this.otherDeductions = 0,
     required this.taxBreakdown,
     required this.netPay,
-    this.status = 'draft',
+    this.status = PayrollStatus.draft,
     this.isEdited = false,
-  });
+  }) : super._();
 
   factory _$PayrollCalculationImpl.fromJson(Map<String, dynamic> json) =>
       _$$PayrollCalculationImplFromJson(json);
 
+  /// Unique identifier. Null for new/unsaved calculations.
   @override
   final String? id;
-  // Optional because initial calculation won't have it
+
+  /// Reference to the worker this calculation belongs to.
   @override
   final String workerId;
+
+  /// Worker's display name (denormalized for convenience).
   @override
   final String workerName;
+
+  /// Base salary before any additions or deductions.
   @override
   final double grossSalary;
+
+  /// Additional bonus payments.
   @override
   @JsonKey()
   final double bonuses;
+
+  /// Other earnings (allowances, overtime, etc.).
   @override
   @JsonKey()
   final double otherEarnings;
+
+  /// Additional deductions (loans, advances, etc.).
   @override
   @JsonKey()
   final double otherDeductions;
+
+  /// Breakdown of statutory tax deductions.
   @override
   final TaxBreakdown taxBreakdown;
+
+  /// Final amount payable to worker.
   @override
   final double netPay;
+
+  /// Current status in the payroll workflow.
   @override
   @JsonKey()
   final String status;
+
+  /// Whether this calculation has been manually edited.
   @override
   @JsonKey()
   final bool isEdited;
@@ -620,7 +688,7 @@ class _$PayrollCalculationImpl implements _PayrollCalculation {
   }
 }
 
-abstract class _PayrollCalculation implements PayrollCalculation {
+abstract class _PayrollCalculation extends PayrollCalculation {
   const factory _PayrollCalculation({
     final String? id,
     required final String workerId,
@@ -634,30 +702,52 @@ abstract class _PayrollCalculation implements PayrollCalculation {
     final String status,
     final bool isEdited,
   }) = _$PayrollCalculationImpl;
+  const _PayrollCalculation._() : super._();
 
   factory _PayrollCalculation.fromJson(Map<String, dynamic> json) =
       _$PayrollCalculationImpl.fromJson;
 
+  /// Unique identifier. Null for new/unsaved calculations.
   @override
-  String? get id; // Optional because initial calculation won't have it
+  String? get id;
+
+  /// Reference to the worker this calculation belongs to.
   @override
   String get workerId;
+
+  /// Worker's display name (denormalized for convenience).
   @override
   String get workerName;
+
+  /// Base salary before any additions or deductions.
   @override
   double get grossSalary;
+
+  /// Additional bonus payments.
   @override
   double get bonuses;
+
+  /// Other earnings (allowances, overtime, etc.).
   @override
   double get otherEarnings;
+
+  /// Additional deductions (loans, advances, etc.).
   @override
   double get otherDeductions;
+
+  /// Breakdown of statutory tax deductions.
   @override
   TaxBreakdown get taxBreakdown;
+
+  /// Final amount payable to worker.
   @override
   double get netPay;
+
+  /// Current status in the payroll workflow.
   @override
   String get status;
+
+  /// Whether this calculation has been manually edited.
   @override
   bool get isEdited;
 
@@ -675,6 +765,7 @@ PayrollRequest _$PayrollRequestFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$PayrollRequest {
+  /// List of worker IDs to calculate payroll for.
   List<String> get workerIds => throw _privateConstructorUsedError;
 
   /// Serializes this PayrollRequest to a JSON map.
@@ -763,14 +854,18 @@ class __$$PayrollRequestImplCopyWithImpl<$Res>
 
 /// @nodoc
 @JsonSerializable()
-class _$PayrollRequestImpl implements _PayrollRequest {
+class _$PayrollRequestImpl extends _PayrollRequest {
   const _$PayrollRequestImpl({required final List<String> workerIds})
-    : _workerIds = workerIds;
+    : _workerIds = workerIds,
+      super._();
 
   factory _$PayrollRequestImpl.fromJson(Map<String, dynamic> json) =>
       _$$PayrollRequestImplFromJson(json);
 
+  /// List of worker IDs to calculate payroll for.
   final List<String> _workerIds;
+
+  /// List of worker IDs to calculate payroll for.
   @override
   List<String> get workerIds {
     if (_workerIds is EqualUnmodifiableListView) return _workerIds;
@@ -816,13 +911,15 @@ class _$PayrollRequestImpl implements _PayrollRequest {
   }
 }
 
-abstract class _PayrollRequest implements PayrollRequest {
+abstract class _PayrollRequest extends PayrollRequest {
   const factory _PayrollRequest({required final List<String> workerIds}) =
       _$PayrollRequestImpl;
+  const _PayrollRequest._() : super._();
 
   factory _PayrollRequest.fromJson(Map<String, dynamic> json) =
       _$PayrollRequestImpl.fromJson;
 
+  /// List of worker IDs to calculate payroll for.
   @override
   List<String> get workerIds;
 
@@ -840,10 +937,17 @@ PayrollSummary _$PayrollSummaryFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$PayrollSummary {
+  /// Individual payroll calculations.
   List<PayrollCalculation> get calculations =>
       throw _privateConstructorUsedError;
+
+  /// Sum of all gross salaries.
   double get totalGross => throw _privateConstructorUsedError;
+
+  /// Sum of all deductions.
   double get totalDeductions => throw _privateConstructorUsedError;
+
+  /// Sum of all net pay amounts.
   double get totalNet => throw _privateConstructorUsedError;
 
   /// Serializes this PayrollSummary to a JSON map.
@@ -976,18 +1080,22 @@ class __$$PayrollSummaryImplCopyWithImpl<$Res>
 
 /// @nodoc
 @JsonSerializable()
-class _$PayrollSummaryImpl implements _PayrollSummary {
+class _$PayrollSummaryImpl extends _PayrollSummary {
   const _$PayrollSummaryImpl({
     required final List<PayrollCalculation> calculations,
     required this.totalGross,
     required this.totalDeductions,
     required this.totalNet,
-  }) : _calculations = calculations;
+  }) : _calculations = calculations,
+       super._();
 
   factory _$PayrollSummaryImpl.fromJson(Map<String, dynamic> json) =>
       _$$PayrollSummaryImplFromJson(json);
 
+  /// Individual payroll calculations.
   final List<PayrollCalculation> _calculations;
+
+  /// Individual payroll calculations.
   @override
   List<PayrollCalculation> get calculations {
     if (_calculations is EqualUnmodifiableListView) return _calculations;
@@ -995,10 +1103,15 @@ class _$PayrollSummaryImpl implements _PayrollSummary {
     return EqualUnmodifiableListView(_calculations);
   }
 
+  /// Sum of all gross salaries.
   @override
   final double totalGross;
+
+  /// Sum of all deductions.
   @override
   final double totalDeductions;
+
+  /// Sum of all net pay amounts.
   @override
   final double totalNet;
 
@@ -1051,23 +1164,31 @@ class _$PayrollSummaryImpl implements _PayrollSummary {
   }
 }
 
-abstract class _PayrollSummary implements PayrollSummary {
+abstract class _PayrollSummary extends PayrollSummary {
   const factory _PayrollSummary({
     required final List<PayrollCalculation> calculations,
     required final double totalGross,
     required final double totalDeductions,
     required final double totalNet,
   }) = _$PayrollSummaryImpl;
+  const _PayrollSummary._() : super._();
 
   factory _PayrollSummary.fromJson(Map<String, dynamic> json) =
       _$PayrollSummaryImpl.fromJson;
 
+  /// Individual payroll calculations.
   @override
   List<PayrollCalculation> get calculations;
+
+  /// Sum of all gross salaries.
   @override
   double get totalGross;
+
+  /// Sum of all deductions.
   @override
   double get totalDeductions;
+
+  /// Sum of all net pay amounts.
   @override
   double get totalNet;
 

@@ -1,8 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/network/api_service.dart';
 import '../../data/models/worker_model.dart';
 import '../../data/repositories/workers_repository.dart';
 
-final workersRepositoryProvider = Provider((ref) => WorkersRepository());
+final workersRepositoryProvider = Provider((ref) => WorkersRepository(ApiService()));
 
 final workersProvider = StateNotifierProvider<WorkersNotifier, AsyncValue<List<WorkerModel>>>((ref) {
   return WorkersNotifier(

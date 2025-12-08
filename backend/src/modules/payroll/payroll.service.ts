@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThanOrEqual, Between, DataSource } from 'typeorm';
 import { Worker } from '../workers/entities/worker.entity';
@@ -8,7 +8,7 @@ import { PayrollPaymentService } from '../payments/payroll-payment.service';
 import { ActivitiesService } from '../activities/activities.service';
 import { ActivityType } from '../activities/entities/activity.entity';
 import { PayslipService } from './payslip.service';
-import { PayPeriod } from './entities/pay-period.entity';
+import { PayPeriod, PayPeriodStatus } from './entities/pay-period.entity';
 
 @Injectable()
 export class PayrollService {
@@ -315,6 +315,16 @@ export class PayrollService {
     const periodStart = new Date(payPeriod.startDate);
     const periodEnd = new Date(payPeriod.endDate);
 
+    // Validate Pay Period Status
+    if (
+      payPeriod.status === PayPeriodStatus.CLOSED ||
+      payPeriod.status === PayPeriodStatus.COMPLETED
+    ) {
+      throw new BadRequestException(
+        'Cannot modify payroll for a closed or completed pay period.',
+      );
+    }
+
     // Use transaction for data integrity
     const savedRecords = await this.dataSource.transaction(async (manager) => {
       const results = [];
@@ -334,17 +344,25 @@ export class PayrollService {
             taxBreakdown.totalDeductions + (item.otherDeductions || 0);
           const netPay = totalEarnings - totalDeductions;
 
-          // Check if draft exists
+          // Check if ANY record exists for this worker in this period
           let record = await manager.findOne(PayrollRecord, {
             where: {
               userId,
               payPeriodId,
               workerId: item.workerId,
-              status: PayrollStatus.DRAFT,
             },
           });
 
-          if (!record) {
+          if (record) {
+            // If record exists but is not DRAFT, we cannot overwrite it via draft save
+            if (record.status !== PayrollStatus.DRAFT) {
+              throw new BadRequestException(
+                `Payroll record for worker ${item.workerId} is already ${record.status} and cannot be modified.`,
+              );
+            }
+            // If DRAFT, we update it (fall through)
+          } else {
+            // Create new record
             record = new PayrollRecord();
             record.userId = userId;
             record.payPeriodId = payPeriodId;

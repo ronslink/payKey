@@ -21,26 +21,57 @@ PayPeriod _$PayPeriodFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$PayPeriod {
+  /// Unique identifier.
   String get id => throw _privateConstructorUsedError;
+
+  /// Display name (e.g., "August 2025", "Week 32").
   String get name => throw _privateConstructorUsedError;
+
+  /// First day of the pay period (inclusive).
   DateTime get startDate => throw _privateConstructorUsedError;
+
+  /// Last day of the pay period (inclusive).
   DateTime get endDate => throw _privateConstructorUsedError;
+
+  /// How often this type of period recurs.
   PayPeriodFrequency get frequency => throw _privateConstructorUsedError;
+
+  /// Current status in the payroll workflow.
   PayPeriodStatus get status => throw _privateConstructorUsedError;
-  @JsonKey(fromJson: _intFromJson, toJson: _intToJson)
+
+  /// Total number of workers included in this period.
+  @JsonKey(fromJson: _intFromJson)
   int? get totalWorkers => throw _privateConstructorUsedError;
-  @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
+
+  /// Sum of all gross salaries.
+  @JsonKey(fromJson: _doubleFromJson)
   double? get totalGrossAmount => throw _privateConstructorUsedError;
-  @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
+
+  /// Sum of all net pay amounts.
+  @JsonKey(fromJson: _doubleFromJson)
   double? get totalNetAmount => throw _privateConstructorUsedError;
-  @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
+
+  /// Sum of all tax deductions.
+  @JsonKey(fromJson: _doubleFromJson)
   double? get totalTaxAmount => throw _privateConstructorUsedError;
-  @JsonKey(fromJson: _intFromJson, toJson: _intToJson)
+
+  /// Number of workers whose payroll has been processed.
+  @JsonKey(fromJson: _intFromJson)
   int? get processedWorkers => throw _privateConstructorUsedError;
+
+  /// When this pay period was created.
   DateTime? get createdAt => throw _privateConstructorUsedError;
+
+  /// When this pay period was last updated.
   DateTime? get updatedAt => throw _privateConstructorUsedError;
+
+  /// Additional notes or comments.
   String? get notes => throw _privateConstructorUsedError;
+
+  /// Owner/employer user ID.
   String? get userId => throw _privateConstructorUsedError;
+
+  /// Scheduled payment date.
   DateTime? get payDate => throw _privateConstructorUsedError;
 
   /// Serializes this PayPeriod to a JSON map.
@@ -65,14 +96,11 @@ abstract class $PayPeriodCopyWith<$Res> {
     DateTime endDate,
     PayPeriodFrequency frequency,
     PayPeriodStatus status,
-    @JsonKey(fromJson: _intFromJson, toJson: _intToJson) int? totalWorkers,
-    @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
-    double? totalGrossAmount,
-    @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
-    double? totalNetAmount,
-    @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
-    double? totalTaxAmount,
-    @JsonKey(fromJson: _intFromJson, toJson: _intToJson) int? processedWorkers,
+    @JsonKey(fromJson: _intFromJson) int? totalWorkers,
+    @JsonKey(fromJson: _doubleFromJson) double? totalGrossAmount,
+    @JsonKey(fromJson: _doubleFromJson) double? totalNetAmount,
+    @JsonKey(fromJson: _doubleFromJson) double? totalTaxAmount,
+    @JsonKey(fromJson: _intFromJson) int? processedWorkers,
     DateTime? createdAt,
     DateTime? updatedAt,
     String? notes,
@@ -201,14 +229,11 @@ abstract class _$$PayPeriodImplCopyWith<$Res>
     DateTime endDate,
     PayPeriodFrequency frequency,
     PayPeriodStatus status,
-    @JsonKey(fromJson: _intFromJson, toJson: _intToJson) int? totalWorkers,
-    @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
-    double? totalGrossAmount,
-    @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
-    double? totalNetAmount,
-    @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
-    double? totalTaxAmount,
-    @JsonKey(fromJson: _intFromJson, toJson: _intToJson) int? processedWorkers,
+    @JsonKey(fromJson: _intFromJson) int? totalWorkers,
+    @JsonKey(fromJson: _doubleFromJson) double? totalGrossAmount,
+    @JsonKey(fromJson: _doubleFromJson) double? totalNetAmount,
+    @JsonKey(fromJson: _doubleFromJson) double? totalTaxAmount,
+    @JsonKey(fromJson: _intFromJson) int? processedWorkers,
     DateTime? createdAt,
     DateTime? updatedAt,
     String? notes,
@@ -321,8 +346,7 @@ class __$$PayPeriodImplCopyWithImpl<$Res>
 
 /// @nodoc
 @JsonSerializable()
-@JsonKey(fromJson: _intFromJson, toJson: _intToJson)
-class _$PayPeriodImpl implements _PayPeriod {
+class _$PayPeriodImpl extends _PayPeriod {
   const _$PayPeriodImpl({
     required this.id,
     required this.name,
@@ -330,59 +354,87 @@ class _$PayPeriodImpl implements _PayPeriod {
     required this.endDate,
     required this.frequency,
     required this.status,
-    @JsonKey(fromJson: _intFromJson, toJson: _intToJson) this.totalWorkers,
-    @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
-    this.totalGrossAmount,
-    @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
-    this.totalNetAmount,
-    @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
-    this.totalTaxAmount,
-    @JsonKey(fromJson: _intFromJson, toJson: _intToJson) this.processedWorkers,
+    @JsonKey(fromJson: _intFromJson) this.totalWorkers,
+    @JsonKey(fromJson: _doubleFromJson) this.totalGrossAmount,
+    @JsonKey(fromJson: _doubleFromJson) this.totalNetAmount,
+    @JsonKey(fromJson: _doubleFromJson) this.totalTaxAmount,
+    @JsonKey(fromJson: _intFromJson) this.processedWorkers,
     this.createdAt,
     this.updatedAt,
     this.notes,
     this.userId,
     this.payDate,
-  });
+  }) : super._();
 
   factory _$PayPeriodImpl.fromJson(Map<String, dynamic> json) =>
       _$$PayPeriodImplFromJson(json);
 
+  /// Unique identifier.
   @override
   final String id;
+
+  /// Display name (e.g., "August 2025", "Week 32").
   @override
   final String name;
+
+  /// First day of the pay period (inclusive).
   @override
   final DateTime startDate;
+
+  /// Last day of the pay period (inclusive).
   @override
   final DateTime endDate;
+
+  /// How often this type of period recurs.
   @override
   final PayPeriodFrequency frequency;
+
+  /// Current status in the payroll workflow.
   @override
   final PayPeriodStatus status;
+
+  /// Total number of workers included in this period.
   @override
-  @JsonKey(fromJson: _intFromJson, toJson: _intToJson)
+  @JsonKey(fromJson: _intFromJson)
   final int? totalWorkers;
+
+  /// Sum of all gross salaries.
   @override
-  @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
+  @JsonKey(fromJson: _doubleFromJson)
   final double? totalGrossAmount;
+
+  /// Sum of all net pay amounts.
   @override
-  @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
+  @JsonKey(fromJson: _doubleFromJson)
   final double? totalNetAmount;
+
+  /// Sum of all tax deductions.
   @override
-  @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
+  @JsonKey(fromJson: _doubleFromJson)
   final double? totalTaxAmount;
+
+  /// Number of workers whose payroll has been processed.
   @override
-  @JsonKey(fromJson: _intFromJson, toJson: _intToJson)
+  @JsonKey(fromJson: _intFromJson)
   final int? processedWorkers;
+
+  /// When this pay period was created.
   @override
   final DateTime? createdAt;
+
+  /// When this pay period was last updated.
   @override
   final DateTime? updatedAt;
+
+  /// Additional notes or comments.
   @override
   final String? notes;
+
+  /// Owner/employer user ID.
   @override
   final String? userId;
+
+  /// Scheduled payment date.
   @override
   final DateTime? payDate;
 
@@ -459,7 +511,7 @@ class _$PayPeriodImpl implements _PayPeriod {
   }
 }
 
-abstract class _PayPeriod implements PayPeriod {
+abstract class _PayPeriod extends PayPeriod {
   const factory _PayPeriod({
     required final String id,
     required final String name,
@@ -467,61 +519,88 @@ abstract class _PayPeriod implements PayPeriod {
     required final DateTime endDate,
     required final PayPeriodFrequency frequency,
     required final PayPeriodStatus status,
-    @JsonKey(fromJson: _intFromJson, toJson: _intToJson)
-    final int? totalWorkers,
-    @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
-    final double? totalGrossAmount,
-    @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
-    final double? totalNetAmount,
-    @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
-    final double? totalTaxAmount,
-    @JsonKey(fromJson: _intFromJson, toJson: _intToJson)
-    final int? processedWorkers,
+    @JsonKey(fromJson: _intFromJson) final int? totalWorkers,
+    @JsonKey(fromJson: _doubleFromJson) final double? totalGrossAmount,
+    @JsonKey(fromJson: _doubleFromJson) final double? totalNetAmount,
+    @JsonKey(fromJson: _doubleFromJson) final double? totalTaxAmount,
+    @JsonKey(fromJson: _intFromJson) final int? processedWorkers,
     final DateTime? createdAt,
     final DateTime? updatedAt,
     final String? notes,
     final String? userId,
     final DateTime? payDate,
   }) = _$PayPeriodImpl;
+  const _PayPeriod._() : super._();
 
   factory _PayPeriod.fromJson(Map<String, dynamic> json) =
       _$PayPeriodImpl.fromJson;
 
+  /// Unique identifier.
   @override
   String get id;
+
+  /// Display name (e.g., "August 2025", "Week 32").
   @override
   String get name;
+
+  /// First day of the pay period (inclusive).
   @override
   DateTime get startDate;
+
+  /// Last day of the pay period (inclusive).
   @override
   DateTime get endDate;
+
+  /// How often this type of period recurs.
   @override
   PayPeriodFrequency get frequency;
+
+  /// Current status in the payroll workflow.
   @override
   PayPeriodStatus get status;
+
+  /// Total number of workers included in this period.
   @override
-  @JsonKey(fromJson: _intFromJson, toJson: _intToJson)
+  @JsonKey(fromJson: _intFromJson)
   int? get totalWorkers;
+
+  /// Sum of all gross salaries.
   @override
-  @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
+  @JsonKey(fromJson: _doubleFromJson)
   double? get totalGrossAmount;
+
+  /// Sum of all net pay amounts.
   @override
-  @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
+  @JsonKey(fromJson: _doubleFromJson)
   double? get totalNetAmount;
+
+  /// Sum of all tax deductions.
   @override
-  @JsonKey(fromJson: _doubleFromJson, toJson: _doubleToJson)
+  @JsonKey(fromJson: _doubleFromJson)
   double? get totalTaxAmount;
+
+  /// Number of workers whose payroll has been processed.
   @override
-  @JsonKey(fromJson: _intFromJson, toJson: _intToJson)
+  @JsonKey(fromJson: _intFromJson)
   int? get processedWorkers;
+
+  /// When this pay period was created.
   @override
   DateTime? get createdAt;
+
+  /// When this pay period was last updated.
   @override
   DateTime? get updatedAt;
+
+  /// Additional notes or comments.
   @override
   String? get notes;
+
+  /// Owner/employer user ID.
   @override
   String? get userId;
+
+  /// Scheduled payment date.
   @override
   DateTime? get payDate;
 
@@ -541,10 +620,19 @@ CreatePayPeriodRequest _$CreatePayPeriodRequestFromJson(
 
 /// @nodoc
 mixin _$CreatePayPeriodRequest {
+  /// Display name for the pay period.
   String get name => throw _privateConstructorUsedError;
+
+  /// First day of the pay period.
   DateTime get startDate => throw _privateConstructorUsedError;
+
+  /// Last day of the pay period.
   DateTime get endDate => throw _privateConstructorUsedError;
+
+  /// Pay frequency.
   PayPeriodFrequency get frequency => throw _privateConstructorUsedError;
+
+  /// Optional notes.
   String? get notes => throw _privateConstructorUsedError;
 
   /// Serializes this CreatePayPeriodRequest to a JSON map.
@@ -693,26 +781,35 @@ class __$$CreatePayPeriodRequestImplCopyWithImpl<$Res>
 
 /// @nodoc
 @JsonSerializable()
-class _$CreatePayPeriodRequestImpl implements _CreatePayPeriodRequest {
+class _$CreatePayPeriodRequestImpl extends _CreatePayPeriodRequest {
   const _$CreatePayPeriodRequestImpl({
     required this.name,
     required this.startDate,
     required this.endDate,
     required this.frequency,
     this.notes,
-  });
+  }) : super._();
 
   factory _$CreatePayPeriodRequestImpl.fromJson(Map<String, dynamic> json) =>
       _$$CreatePayPeriodRequestImplFromJson(json);
 
+  /// Display name for the pay period.
   @override
   final String name;
+
+  /// First day of the pay period.
   @override
   final DateTime startDate;
+
+  /// Last day of the pay period.
   @override
   final DateTime endDate;
+
+  /// Pay frequency.
   @override
   final PayPeriodFrequency frequency;
+
+  /// Optional notes.
   @override
   final String? notes;
 
@@ -758,7 +855,7 @@ class _$CreatePayPeriodRequestImpl implements _CreatePayPeriodRequest {
   }
 }
 
-abstract class _CreatePayPeriodRequest implements CreatePayPeriodRequest {
+abstract class _CreatePayPeriodRequest extends CreatePayPeriodRequest {
   const factory _CreatePayPeriodRequest({
     required final String name,
     required final DateTime startDate,
@@ -766,18 +863,28 @@ abstract class _CreatePayPeriodRequest implements CreatePayPeriodRequest {
     required final PayPeriodFrequency frequency,
     final String? notes,
   }) = _$CreatePayPeriodRequestImpl;
+  const _CreatePayPeriodRequest._() : super._();
 
   factory _CreatePayPeriodRequest.fromJson(Map<String, dynamic> json) =
       _$CreatePayPeriodRequestImpl.fromJson;
 
+  /// Display name for the pay period.
   @override
   String get name;
+
+  /// First day of the pay period.
   @override
   DateTime get startDate;
+
+  /// Last day of the pay period.
   @override
   DateTime get endDate;
+
+  /// Pay frequency.
   @override
   PayPeriodFrequency get frequency;
+
+  /// Optional notes.
   @override
   String? get notes;
 
@@ -797,11 +904,22 @@ UpdatePayPeriodRequest _$UpdatePayPeriodRequestFromJson(
 
 /// @nodoc
 mixin _$UpdatePayPeriodRequest {
+  /// Updated name (optional).
   String? get name => throw _privateConstructorUsedError;
+
+  /// Updated start date (optional).
   DateTime? get startDate => throw _privateConstructorUsedError;
+
+  /// Updated end date (optional).
   DateTime? get endDate => throw _privateConstructorUsedError;
+
+  /// Updated frequency (optional).
   PayPeriodFrequency? get frequency => throw _privateConstructorUsedError;
+
+  /// Updated status (optional).
   PayPeriodStatus? get status => throw _privateConstructorUsedError;
+
+  /// Updated notes (optional).
   String? get notes => throw _privateConstructorUsedError;
 
   /// Serializes this UpdatePayPeriodRequest to a JSON map.
@@ -962,7 +1080,7 @@ class __$$UpdatePayPeriodRequestImplCopyWithImpl<$Res>
 
 /// @nodoc
 @JsonSerializable()
-class _$UpdatePayPeriodRequestImpl implements _UpdatePayPeriodRequest {
+class _$UpdatePayPeriodRequestImpl extends _UpdatePayPeriodRequest {
   const _$UpdatePayPeriodRequestImpl({
     this.name,
     this.startDate,
@@ -970,21 +1088,32 @@ class _$UpdatePayPeriodRequestImpl implements _UpdatePayPeriodRequest {
     this.frequency,
     this.status,
     this.notes,
-  });
+  }) : super._();
 
   factory _$UpdatePayPeriodRequestImpl.fromJson(Map<String, dynamic> json) =>
       _$$UpdatePayPeriodRequestImplFromJson(json);
 
+  /// Updated name (optional).
   @override
   final String? name;
+
+  /// Updated start date (optional).
   @override
   final DateTime? startDate;
+
+  /// Updated end date (optional).
   @override
   final DateTime? endDate;
+
+  /// Updated frequency (optional).
   @override
   final PayPeriodFrequency? frequency;
+
+  /// Updated status (optional).
   @override
   final PayPeriodStatus? status;
+
+  /// Updated notes (optional).
   @override
   final String? notes;
 
@@ -1038,7 +1167,7 @@ class _$UpdatePayPeriodRequestImpl implements _UpdatePayPeriodRequest {
   }
 }
 
-abstract class _UpdatePayPeriodRequest implements UpdatePayPeriodRequest {
+abstract class _UpdatePayPeriodRequest extends UpdatePayPeriodRequest {
   const factory _UpdatePayPeriodRequest({
     final String? name,
     final DateTime? startDate,
@@ -1047,20 +1176,32 @@ abstract class _UpdatePayPeriodRequest implements UpdatePayPeriodRequest {
     final PayPeriodStatus? status,
     final String? notes,
   }) = _$UpdatePayPeriodRequestImpl;
+  const _UpdatePayPeriodRequest._() : super._();
 
   factory _UpdatePayPeriodRequest.fromJson(Map<String, dynamic> json) =
       _$UpdatePayPeriodRequestImpl.fromJson;
 
+  /// Updated name (optional).
   @override
   String? get name;
+
+  /// Updated start date (optional).
   @override
   DateTime? get startDate;
+
+  /// Updated end date (optional).
   @override
   DateTime? get endDate;
+
+  /// Updated frequency (optional).
   @override
   PayPeriodFrequency? get frequency;
+
+  /// Updated status (optional).
   @override
   PayPeriodStatus? get status;
+
+  /// Updated notes (optional).
   @override
   String? get notes;
 

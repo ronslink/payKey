@@ -7,6 +7,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Worker } from '../entities/worker.entity';
 import { Termination } from '../entities/termination.entity';
+import { PayrollRecord } from '../../payroll/entities/payroll-record.entity';
+import { PayPeriod } from '../../payroll/entities/pay-period.entity';
 import { TaxesService } from '../../taxes/taxes.service';
 import {
   CreateTerminationDto,
@@ -20,8 +22,12 @@ export class TerminationService {
     private workerRepository: Repository<Worker>,
     @InjectRepository(Termination)
     private terminationRepository: Repository<Termination>,
+    @InjectRepository(PayrollRecord)
+    private payrollRecordRepository: Repository<PayrollRecord>,
+    @InjectRepository(PayPeriod)
+    private payPeriodRepository: Repository<PayPeriod>,
     private taxesService: TaxesService,
-  ) {}
+  ) { }
 
   /**
    * Calculate final payment for a worker
@@ -51,7 +57,7 @@ export class TerminationService {
     const year = termDate.getFullYear();
     const month = termDate.getMonth();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const daysWorked = termDate.getDate();
+    const daysWorked = termDate.getDate(); // 1-indexed, so if terminated on 15th, worked 15 days
     const dailyRate = grossSalary / daysInMonth;
     const proratedSalary = dailyRate * daysWorked;
 
@@ -139,6 +145,59 @@ export class TerminationService {
       worker.name,
       totalGross,
     );
+
+    // Find the Pay Period covering this termination date
+    const payPeriod = await this.payPeriodRepository.createQueryBuilder('period')
+      .where('period.userId = :userId', { userId })
+      .andWhere('period.startDate <= :date', { date: terminationDate })
+      .andWhere('period.endDate >= :date', { date: terminationDate })
+      .getOne();
+
+    if (payPeriod) {
+      // Check if a record already exists
+      let payrollRecord = await this.payrollRecordRepository.findOne({
+        where: { payPeriodId: payPeriod.id, workerId, userId }
+      });
+
+      if (!payrollRecord) {
+        payrollRecord = this.payrollRecordRepository.create({
+          payPeriodId: payPeriod.id,
+          workerId,
+          userId,
+          periodStart: payPeriod.startDate,
+          periodEnd: payPeriod.endDate,
+        });
+      }
+
+      // Update record with final payment details
+      payrollRecord.grossSalary = totalGross;
+      payrollRecord.netSalary = taxCalculation.netPay;
+      payrollRecord.taxAmount = taxCalculation.taxBreakdown.paye;
+      payrollRecord.taxBreakdown = {
+        nssf: taxCalculation.taxBreakdown.nssf,
+        nhif: taxCalculation.taxBreakdown.nhif,
+        housingLevy: taxCalculation.taxBreakdown.housingLevy,
+        paye: taxCalculation.taxBreakdown.paye,
+        totalDeductions: taxCalculation.taxBreakdown.totalDeductions
+      };
+
+      // Mark as finalized termination pay
+      payrollRecord.status = 'finalized' as any; // Import Enum if possible, otherwise cast
+      payrollRecord.finalizedAt = new Date();
+      payrollRecord.otherEarnings = severancePay + outstandingPayments; // Track this separately?
+      payrollRecord.deductions = {};
+
+      await this.payrollRecordRepository.save(payrollRecord);
+
+      // Trigger Tax Submission Generation/Update
+      try {
+        await this.taxesService.generateTaxSubmission(payPeriod.id, userId);
+      } catch (e) {
+        console.warn('Failed to update tax submission after termination:', e);
+      }
+    } else {
+      console.warn(`No pay period found for termination date ${terminationDate}. Tax liability may not be recorded.`);
+    }
 
     // Create termination record
     const termination = this.terminationRepository.create({

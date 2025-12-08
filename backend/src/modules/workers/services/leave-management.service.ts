@@ -20,7 +20,7 @@ export class LeaveManagementService {
     private leaveRequestRepository: Repository<LeaveRequest>,
     @InjectRepository(Worker)
     private workersRepository: Repository<Worker>,
-  ) {}
+  ) { }
 
   async createLeaveRequest(
     userId: string,
@@ -283,8 +283,8 @@ export class LeaveManagementService {
       0,
     );
 
-    // Standard annual leave entitlement (15 days per year)
-    const totalAnnualLeaves = 15;
+    // Standard annual leave entitlement per Kenya Employment Act 2007 (21 days per year)
+    const totalAnnualLeaves = 21;
 
     // Get pending leaves
     const pendingLeaves = await this.leaveRequestRepository.count({
