@@ -117,6 +117,16 @@ class PayPeriodsNotifier extends StateNotifier<AsyncValue<List<PayPeriod>>> {
       rethrow;
     }
   }
+
+  Future<void> reopenPayPeriod(String payPeriodId) async {
+    try {
+      await _repository.reopenPayPeriod(payPeriodId);
+      await loadPayPeriods();
+    } catch (error, stackTrace) {
+      state = AsyncValue.error(error, stackTrace);
+      rethrow;
+    }
+  }
 }
 
 final payPeriodProvider = FutureProvider.family<PayPeriod, String>((ref, payPeriodId) async {

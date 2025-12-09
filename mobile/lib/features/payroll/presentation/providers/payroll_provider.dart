@@ -4,7 +4,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
 import '../../data/models/payroll_model.dart';
 import '../../data/repositories/payroll_repository.dart';
-import '../../data/repositories/payroll_repository.dart' show PayrollProcessingResult;
 
 final payrollProvider =
     StateNotifierProvider<PayrollNotifier, AsyncValue<List<PayrollCalculation>>>((ref) {

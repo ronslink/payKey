@@ -39,15 +39,21 @@ export class PayslipService {
 
       doc
         .fontSize(12)
-        .text('PayKey Payroll Services', { align: 'center' })
+        .text('PAYSLIP', { align: 'center' })
         .moveDown();
 
       // Worker & Period Details
+      // Worker & Period Details
+      const payPeriodName = record.payPeriod?.name || record.payPeriodId;
+
       doc
         .fontSize(10)
-        .text(`Worker Name: ${record.worker.name}`)
-        .text(`Pay Period: ${record.payPeriodId}`) // Ideally fetch PayPeriod name
-        .text(`Date: ${new Date().toLocaleDateString()}`)
+        .text(`Employer: ${'My Company'}`, { align: 'left' }) // TODO: dynamic
+        .text(`Worker: ${record.worker.name}`, { align: 'left' })
+        .text(`KRA PIN: ${record.worker.kraPin || 'N/A'}`, { align: 'left' })
+        .moveDown(0.5)
+        .text(`Pay Period: ${payPeriodName}`)
+        .text(`Date Paid: ${new Date().toLocaleDateString()}`)
         .moveDown();
 
       // Earnings Section

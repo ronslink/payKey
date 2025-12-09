@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/pay_period_model.dart';
 import '../../data/repositories/pay_period_repository.dart';
-import '../../data/repositories/pay_period_repository.dart' show PayPeriodStatistics;
 
 class PayrollWorkflowPage extends ConsumerStatefulWidget {
   final String payPeriodId;

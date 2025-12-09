@@ -92,4 +92,16 @@ export class CreateWorkerDto {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @IsString()
+  @IsOptional()
+  emergencyContactName?: string;
+
+  @IsString()
+  @IsOptional()
+  emergencyContactPhone?: string;
+
+  @IsString()
+  @IsOptional()
+  emergencyContactRelationship?: string;
 }

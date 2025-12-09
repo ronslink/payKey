@@ -16,6 +16,7 @@ import 'features/payroll/presentation/pages/payroll_page.dart';
 import 'features/payroll/presentation/pages/run_payroll_page.dart';
 import 'features/payroll/presentation/pages/payroll_review_page.dart';
 import 'features/payroll/presentation/pages/payslip_page.dart';
+import 'features/payroll/data/models/payroll_model.dart';
 import 'features/finance/presentation/pages/finance_page.dart';
 import 'features/finance/presentation/pages/accounting_page.dart';
 import 'features/onboarding/presentation/pages/onboarding_page.dart';
@@ -27,7 +28,6 @@ import 'features/time_tracking/presentation/pages/time_tracking_history_page.dar
 import 'features/properties/presentation/pages/properties_page.dart';
 import 'features/properties/presentation/pages/property_form_page.dart';
 import 'features/properties/presentation/pages/property_detail_page.dart';
-import 'features/properties/presentation/pages/property_detail_page.dart';
 import 'features/taxes/presentation/pages/comprehensive_tax_page.dart';
 import 'features/reports/presentation/pages/reports_page.dart';
 import 'features/employee_portal/presentation/pages/employee_login_page.dart';
@@ -35,6 +35,7 @@ import 'features/employee_portal/presentation/pages/employee_dashboard_page.dart
 import 'features/employee_portal/presentation/pages/request_leave_page.dart';
 import 'features/time_tracking/presentation/pages/attendance_dashboard_page.dart';
 import 'features/leave_management/presentation/pages/leave_dashboard_page.dart';
+import 'features/profile/presentation/pages/edit_profile_page.dart';
 
 // Core
 import 'core/network/api_service.dart';
@@ -179,6 +180,7 @@ abstract class AppRoutes {
   static const reports = '/reports';
   static const attendance = '/attendance';
   static const leave = '/leave';
+  static const profileEdit = '/profile/edit';
 
   // Employee Portal
   static const employeeLogin = '/employee/login';
@@ -419,7 +421,8 @@ final _payrollRoutes = <RouteBase>[
     name: 'payslip',
     builder: (_, state) {
       final id = state.pathParameters['id']!;
-      return PayslipPage(payslipId: id);
+      final calculation = state.extra as PayrollCalculation?;
+      return PayslipPage(payslipId: id, calculation: calculation);
     },
   ),
 ];
@@ -514,6 +517,11 @@ final _otherRoutes = <RouteBase>[
     path: AppRoutes.leave,
     name: 'leave',
     builder: (_, __) => const LeaveDashboardPage(),
+  ),
+  GoRoute(
+    path: AppRoutes.profileEdit,
+    name: 'profileEdit',
+    builder: (_, __) => const EditProfilePage(),
   ),
   // Employee Portal Routes
   GoRoute(

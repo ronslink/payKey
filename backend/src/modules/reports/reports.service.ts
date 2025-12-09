@@ -1,11 +1,16 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, StreamableFile } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Between } from 'typeorm';
 import { Worker } from '../workers/entities/worker.entity';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const PDFDocument = require('pdfkit');
+import archiver from 'archiver';
+import { Readable } from 'stream';
 import { Transaction } from '../payments/entities/transaction.entity';
 import { LeaveRequest } from '../workers/entities/leave-request.entity';
+import { TaxSubmission } from '../taxes/entities/tax-submission.entity';
 import { User } from '../users/entities/user.entity';
-import { PayrollRecord } from '../payroll/entities/payroll-record.entity';
+import { PayrollRecord, PayrollStatus } from '../payroll/entities/payroll-record.entity';
 import { PayPeriod } from '../payroll/entities/pay-period.entity';
 
 @Injectable()
@@ -23,6 +28,8 @@ export class ReportsService {
     private payrollRecordRepository: Repository<PayrollRecord>,
     @InjectRepository(PayPeriod)
     private payPeriodRepository: Repository<PayPeriod>,
+    @InjectRepository(TaxSubmission)
+    private taxSubmissionRepository: Repository<TaxSubmission>,
   ) { }
 
   async getMonthlyPayrollReport(userId: string, year: number, month: number) {
@@ -299,5 +306,356 @@ export class ReportsService {
         ).length,
       },
     };
+  }
+  async getP9Report(userId: string, year: number) {
+    const startDate = new Date(year, 0, 1);
+    const endDate = new Date(year, 11, 31, 23, 59, 59);
+
+    const records = await this.payrollRecordRepository.find({
+      where: {
+        userId,
+        periodStart: Between(startDate, endDate),
+        status: PayrollStatus.FINALIZED,
+      },
+      relations: ['worker'],
+      order: { periodStart: 'ASC' },
+    });
+
+    // Group by worker
+    const workerReports: Record<string, any> = {};
+
+    // Default tax relief (Should ideally come from config snapshot)
+    const PERSONAL_RELIEF = 2400;
+
+    for (const record of records) {
+      if (!workerReports[record.workerId]) {
+        workerReports[record.workerId] = {
+          workerId: record.workerId,
+          workerName: record.worker?.name || 'Unknown',
+          kraPin: record.worker?.kraPin || '',
+          months: Array(12).fill(null).map((_, i) => ({
+            month: i + 1,
+            basicSalary: 0,
+            benefits: 0,
+            grossPay: 0,
+            contribution: 0, // NSSF
+            taxablePay: 0,
+            taxCharged: 0,
+            relief: 0,
+            paye: 0,
+            valueOfQuarters: 0,
+            ownerOccupiedInterest: 0,
+            retirementContribution: 0,
+          })),
+          totals: {
+            basicSalary: 0,
+            grossPay: 0,
+            paye: 0,
+          },
+        };
+      }
+
+      const monthIndex = record.periodStart.getMonth(); // 0-11
+      const report = workerReports[record.workerId];
+
+      const basicSalary = Number(record.grossSalary);
+      const benefits = Number(record.bonuses) + Number(record.otherEarnings);
+      const gross = basicSalary + benefits;
+      const nssf = Number(record.taxBreakdown?.nssf || 0);
+      const paye = Number(record.taxBreakdown?.paye || 0);
+      const taxable = Math.max(0, gross - nssf);
+
+      // Back-calculate Tax Charged (PAYE + Relief) only if PAYE > 0
+      // If PAYE is 0, Tax Charged might be less than Relief.
+      // But P9 usually requires showing Tax Charged. 
+      // Simplified: Tax Charged = PAYE + Relief.
+      const taxCharged = paye > 0 ? paye + PERSONAL_RELIEF : 0;
+
+      report.months[monthIndex] = {
+        month: monthIndex + 1,
+        basicSalary: basicSalary,
+        benefits: benefits,
+        valueOfQuarters: 0,
+        grossPay: gross,
+        contribution: nssf, // Defined Contribution
+        ownerOccupiedInterest: 0,
+        retirementContribution: 0,
+        taxablePay: taxable,
+        taxCharged: taxCharged,
+        relief: paye > 0 ? PERSONAL_RELIEF : 0,
+        paye: paye,
+      };
+
+      report.totals.basicSalary += basicSalary;
+      report.totals.grossPay += gross;
+      report.totals.paye += paye;
+    }
+
+    return Object.values(workerReports);
+  }
+
+  async getP10Report(userId: string, year: number) {
+    const startDate = new Date(year, 0, 1);
+    const endDate = new Date(year, 11, 31, 23, 59, 59);
+
+    const submissions = await this.taxSubmissionRepository.find({
+      where: {
+        userId,
+        payPeriod: {
+          startDate: Between(startDate, endDate),
+        },
+      },
+      relations: ['payPeriod'],
+      order: { payPeriod: { startDate: 'ASC' } } as any,
+    });
+
+    const monthlyReturns = submissions.map((sub) => {
+      const paye = Number(sub.totalPaye);
+      const nssf = Number(sub.totalNssf);
+      const nhif = Number(sub.totalNhif);
+      const housing = Number(sub.totalHousingLevy);
+
+      return {
+        month: sub.payPeriod.startDate.getMonth() + 1,
+        periodName: sub.payPeriod.name,
+        paye,
+        nssf,
+        nhif,
+        housingLevy: housing,
+        totalTax: paye + nssf + nhif + housing,
+        status: sub.status,
+      };
+    });
+
+    const annualTotals = monthlyReturns.reduce(
+      (acc, m) => ({
+        paye: acc.paye + m.paye,
+        nssf: acc.nssf + m.nssf,
+        nhif: acc.nhif + m.nhif,
+        housingLevy: acc.housingLevy + m.housingLevy,
+        totalTax: acc.totalTax + m.totalTax,
+      }),
+      { paye: 0, nssf: 0, nhif: 0, housingLevy: 0, totalTax: 0 },
+    );
+
+    return {
+      year,
+      employerName: 'My Company', // Configurable
+      monthlyReturns,
+      annualTotals,
+    };
+  }
+
+  async getEmployeeP9Report(userId: string, year: number) {
+    const startDate = new Date(year, 0, 1);
+    const endDate = new Date(year, 11, 31, 23, 59, 59);
+
+    const worker = await this.workersRepository.findOne({
+      where: { linkedUserId: userId },
+    });
+
+    if (!worker) {
+      throw new NotFoundException('No worker profile linked to this account');
+    }
+
+    const records = await this.payrollRecordRepository.find({
+      where: {
+        workerId: worker.id,
+        periodStart: Between(startDate, endDate),
+        status: PayrollStatus.FINALIZED,
+      },
+      relations: ['worker'],
+      order: { periodStart: 'ASC' },
+    });
+
+    // Reuse similar logic to getP9Report but specific to this worker
+    // Default tax relief
+    const PERSONAL_RELIEF = 2400;
+
+    // Initialize standard P9 Report Structure
+    const report = {
+      workerId: worker.id,
+      workerName: worker.name,
+      kraPin: worker.kraPin || '',
+      months: Array(12).fill(null).map((_, i) => ({
+        month: i + 1,
+        basicSalary: 0,
+        benefits: 0,
+        grossPay: 0,
+        contribution: 0,
+        taxablePay: 0,
+        taxCharged: 0,
+        relief: 0,
+        paye: 0,
+        valueOfQuarters: 0,
+        ownerOccupiedInterest: 0,
+        retirementContribution: 0,
+      })),
+      totals: {
+        basicSalary: 0,
+        grossPay: 0,
+        paye: 0,
+      },
+    };
+
+    for (const record of records) {
+      const monthIndex = record.periodStart.getMonth(); // 0-11
+
+      const basicSalary = Number(record.grossSalary);
+      const benefits = Number(record.bonuses) + Number(record.otherEarnings);
+      const gross = basicSalary + benefits;
+      const nssf = Number(record.taxBreakdown?.nssf || 0);
+      const paye = Number(record.taxBreakdown?.paye || 0);
+      const taxable = Math.max(0, gross - nssf);
+      const taxCharged = paye > 0 ? paye + PERSONAL_RELIEF : 0;
+
+      report.months[monthIndex] = {
+        month: monthIndex + 1,
+        basicSalary: basicSalary,
+        benefits: benefits,
+        valueOfQuarters: 0,
+        grossPay: gross,
+        contribution: nssf,
+        ownerOccupiedInterest: 0,
+        retirementContribution: 0,
+        taxablePay: taxable,
+        taxCharged: taxCharged,
+        relief: paye > 0 ? PERSONAL_RELIEF : 0,
+        paye: paye,
+      };
+
+      report.totals.basicSalary += basicSalary;
+      report.totals.grossPay += gross;
+      report.totals.paye += paye;
+    }
+
+    return [report]; // Return as list for consistency
+  }
+
+  /**
+   * Generate P9 PDF for a single worker report
+   */
+  async generateP9Pdf(report: any): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      const doc = new PDFDocument({ layout: 'landscape', margin: 30 });
+      const buffers: Buffer[] = [];
+
+      doc.on('data', (buffer: any) => buffers.push(buffer));
+      doc.on('end', () => resolve(Buffer.concat(buffers)));
+      doc.on('error', (err: any) => reject(err));
+
+      // Header
+      doc.fontSize(14).font('Helvetica-Bold').text('KENYA REVENUE AUTHORITY', { align: 'center' });
+      doc.fontSize(12).text('INCOME TAX DEPARTMENT', { align: 'center' });
+      doc.fontSize(16).text('P9A', { align: 'left' });
+      doc.fontSize(12).text('TAX DEDUCTION CARD YEAR ' + new Date().getFullYear(), { align: 'center' });
+      doc.moveDown();
+
+      // Details Grid
+      const startX = 30;
+      let y = doc.y;
+
+      doc.fontSize(10).font('Helvetica');
+      doc.text(`Employer's Name: ${report.employerName || 'My Company'}`, startX, y); // TODO: Fetch from config
+      doc.text(`Employee's Main Name: ${report.workerName}`, startX + 300, y);
+      y += 20;
+      doc.text(`Employer's PIN: ${report.employerPin || 'P000000000A'}`, startX, y); // TODO: Fetch from config
+      doc.text(`Employee's PIN: ${report.kraPin}`, startX + 300, y);
+
+      doc.moveDown(2);
+
+      // Table Headers
+      const colWidths = [40, 60, 60, 60, 70, 70, 60, 70, 70, 70, 70, 70];
+      const headers = [
+        'Month', 'Basic\nSalary', 'Benefits\nNon-Cash', 'Value of\nQuarters', 'Total\nGross Pay',
+        'Defined\nContrib.', 'Owner\nOcc Int.', 'Retirement\nContrib.', 'Chargeable\nPay',
+        'Tax\nCharged', 'Personal\nRelief', 'PAYE Tax'
+      ]; // A to L
+
+      // Draw Header Row
+      let x = startX;
+      y = doc.y;
+      const headerHeight = 30;
+
+      doc.font('Helvetica-Bold').fontSize(8);
+
+      headers.forEach((header, i) => {
+        doc.text(header, x, y, { width: colWidths[i], align: 'center' });
+        x += colWidths[i];
+      });
+
+      // Draw Lines
+      doc.moveTo(startX, y - 5).lineTo(x, y - 5).stroke(); // Top
+      doc.moveTo(startX, y + headerHeight).lineTo(x, y + headerHeight).stroke(); // Bottom
+
+      y += headerHeight + 5;
+
+      // Draw Data Rows
+      doc.font('Helvetica').fontSize(9);
+
+      report.months.forEach((monthData: any) => {
+        let rowX = startX;
+        // Month Name
+        const monthName = new Date(0, monthData.month - 1).toLocaleString('default', { month: 'short' });
+
+        doc.text(monthName, rowX, y, { width: colWidths[0], align: 'center' }); rowX += colWidths[0];
+        doc.text(this.formatMoney(monthData.basicSalary), rowX, y, { width: colWidths[1], align: 'right' }); rowX += colWidths[1];
+        doc.text(this.formatMoney(monthData.benefits), rowX, y, { width: colWidths[2], align: 'right' }); rowX += colWidths[2];
+        doc.text(this.formatMoney(monthData.valueOfQuarters), rowX, y, { width: colWidths[3], align: 'right' }); rowX += colWidths[3];
+        doc.text(this.formatMoney(monthData.grossPay), rowX, y, { width: colWidths[4], align: 'right' }); rowX += colWidths[4];
+
+        // Defined Contribution (E1) = 30% of A etc.. usually just NSSF here
+        doc.text(this.formatMoney(monthData.contribution), rowX, y, { width: colWidths[5], align: 'right' }); rowX += colWidths[5];
+        doc.text(this.formatMoney(monthData.ownerOccupiedInterest), rowX, y, { width: colWidths[6], align: 'right' }); rowX += colWidths[6];
+        doc.text(this.formatMoney(monthData.retirementContribution), rowX, y, { width: colWidths[7], align: 'right' }); rowX += colWidths[7];
+
+        doc.text(this.formatMoney(monthData.taxablePay), rowX, y, { width: colWidths[8], align: 'right' }); rowX += colWidths[8];
+        doc.text(this.formatMoney(monthData.taxCharged), rowX, y, { width: colWidths[9], align: 'right' }); rowX += colWidths[9]; // J
+        doc.text(this.formatMoney(monthData.relief), rowX, y, { width: colWidths[10], align: 'right' }); rowX += colWidths[10]; // K
+        doc.text(this.formatMoney(monthData.paye), rowX, y, { width: colWidths[11], align: 'right' }); rowX += colWidths[11]; // L
+
+        y += 20;
+      });
+
+      // Draw Totals Line
+      doc.moveTo(startX, y).lineTo(x, y).stroke();
+      y += 5;
+
+      // Totals Row
+      doc.font('Helvetica-Bold');
+      doc.text('TOTALS', startX, y, { width: colWidths[0], align: 'center' });
+      let totalX = startX + colWidths[0];
+
+      doc.text(this.formatMoney(report.totals.basicSalary), totalX, y, { width: colWidths[1], align: 'right' }); totalX += colWidths[1];
+      // Skip breakdown totals if not calculated, just show key ones
+      totalX += colWidths[2]; // Benefits
+      totalX += colWidths[3]; // Quarters
+      doc.text(this.formatMoney(report.totals.grossPay), totalX, y, { width: colWidths[4], align: 'right' }); totalX += colWidths[4];
+
+      // Skip to PAYE
+      totalX = startX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4] + colWidths[5] + colWidths[6] + colWidths[7] + colWidths[8] + colWidths[9] + colWidths[10];
+      doc.text(this.formatMoney(report.totals.paye), totalX, y, { width: colWidths[11], align: 'right' });
+
+
+      doc.end();
+    });
+  }
+
+  async generateP9Zip(userId: string, year: number): Promise<{ stream: Readable; filename: string }> {
+    const reports = await this.getP9Report(userId, year);
+    const archive = archiver('zip', { zlib: { level: 9 } });
+
+    for (const report of (reports as any[])) {
+      const buffer = await this.generateP9Pdf(report);
+      const filename = `P9_${year}_${report.workerName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+      archive.append(buffer, { name: filename });
+    }
+
+    archive.finalize();
+    return { stream: archive, filename: `P9_Returns_${year}.zip` };
+  }
+
+  private formatMoney(amount: number): string {
+    return (amount || 0).toFixed(2);
   }
 }

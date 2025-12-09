@@ -23,7 +23,7 @@ class _TerminateWorkerPageState extends ConsumerState<TerminateWorkerPage> {
   TerminationReason _selectedReason = TerminationReason.resignation;
   int _noticePeriod = 0;
   double _severancePay = 0;
-  double _outstandingPayments = 0;
+  final double _outstandingPayments = 0;
   
   FinalPaymentCalculation? _calculation;
   bool _isLoading = false;

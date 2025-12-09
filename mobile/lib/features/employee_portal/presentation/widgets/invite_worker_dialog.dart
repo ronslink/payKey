@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/network/api_service.dart';
 import '../../data/models/employee_models.dart';
 
@@ -29,7 +29,6 @@ class _InviteWorkerDialogState extends State<InviteWorkerDialog> {
   InviteCode? _inviteCode;
   bool _isLoading = true;
   bool _isGenerating = false;
-  String? _error;
 
   @override
   void initState() {
@@ -63,7 +62,7 @@ This code expires in 7 days.''';
         });
       }
     } catch (e) {
-      setState(() => _error = e.toString());
+      // Error handling - could add error state if needed
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -122,7 +121,7 @@ This code expires in 7 days.''';
         await launchUrl(uri);
       } else {
         // Fallback to share
-        await SharePlus.instance.share(text: _inviteMessage);
+        await Share.share(_inviteMessage);
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -180,7 +179,7 @@ This code expires in 7 days.''';
 
   Future<void> _shareViaOther() async {
     if (_inviteCode == null) return;
-    await SharePlus.instance.share(text: _inviteMessage, subject: 'PayKey Invite Code');
+        await Share.share(_inviteMessage);
   }
 
   @override

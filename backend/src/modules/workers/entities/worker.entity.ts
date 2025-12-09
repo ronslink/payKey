@@ -158,6 +158,15 @@ export class Worker {
   @Column({ type: 'timestamp', nullable: true })
   terminatedAt: Date;
 
+  @Column({ nullable: true })
+  emergencyContactName: string;
+
+  @Column({ nullable: true })
+  emergencyContactPhone: string;
+
+  @Column({ nullable: true })
+  emergencyContactRelationship: string;
+
   @ManyToOne(() => Property, { nullable: true })
   @JoinColumn({ name: 'propertyId' })
   property: Property;

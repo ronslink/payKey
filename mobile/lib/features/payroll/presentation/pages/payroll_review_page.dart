@@ -284,12 +284,27 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
   // Actions: Stage Transitions
   // ---------------------------------------------------------------------------
 
+  Future<void> _reopenPayPeriod() async {
+    final repository = ref.read(payPeriodRepositoryProvider);
+    await repository.reopenPayPeriod(widget.payPeriodId);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Actions: View Payslip
+  // ---------------------------------------------------------------------------
+
+  void _viewPayslip(PayrollCalculation item) {
+    if (item.id == null) return;
+    context.push('/payroll/payslip/${item.id}', extra: item);
+  }
+
   Future<void> _transitionToNextStage() async {
     if (_payPeriod == null) return;
 
     setState(() => _isLoading = true);
     try {
       final repository = ref.read(payPeriodRepositoryProvider);
+      final payrollRepo = ref.read(payrollRepositoryProvider);
       PayPeriod updatedPeriod;
 
       switch (_payPeriod!.status) {
@@ -302,11 +317,22 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
           updatedPeriod = await repository.getPayPeriod(widget.payPeriodId);
           break;
         case PayPeriodStatus.processing:
+          if (_payrollItems.isEmpty) {
+            _showError('No payroll records found. Please calculate payroll first.');
+            return;
+          }
+          // IMPORTANT: Finalize payroll records before completing the period
+          await payrollRepo.finalizePayroll(widget.payPeriodId);
           await repository.completePayPeriod(widget.payPeriodId);
           updatedPeriod = await repository.getPayPeriod(widget.payPeriodId);
           break;
         case PayPeriodStatus.completed:
           await repository.closePayPeriod(widget.payPeriodId);
+          updatedPeriod = await repository.getPayPeriod(widget.payPeriodId);
+          break;
+        case PayPeriodStatus.closed:
+          await _reopenPayPeriod();
+          // Period should be updated within _reopenPayPeriod or here
           updatedPeriod = await repository.getPayPeriod(widget.payPeriodId);
           break;
         default:
@@ -432,9 +458,13 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
             if (_shouldShowTaxSummary) const SizedBox(height: 24),
             _PayrollRecordsCard(
               payrollItems: _payrollItems,
-              isDraft: _payPeriod?.status == PayPeriodStatus.draft,
+              isDraft: _payPeriod?.status != PayPeriodStatus.completed && 
+                      _payPeriod?.status != PayPeriodStatus.closed,
+              canViewPayslips: _payPeriod?.status == PayPeriodStatus.completed || 
+                              _payPeriod?.status == PayPeriodStatus.closed,
               onAddWorkers: _showAddWorkersDialog,
               onEditItem: _editPayrollItem,
+              onViewPayslip: _viewPayslip,
             ),
             const SizedBox(height: 24),
             _ActionButtonsCard(
@@ -836,12 +866,16 @@ class _PayrollRecordsCard extends StatelessWidget {
   final bool isDraft;
   final VoidCallback onAddWorkers;
   final void Function(PayrollCalculation) onEditItem;
+  final bool canViewPayslips;
+  final void Function(PayrollCalculation)? onViewPayslip;
 
   const _PayrollRecordsCard({
     required this.payrollItems,
     required this.isDraft,
     required this.onAddWorkers,
     required this.onEditItem,
+    this.canViewPayslips = false,
+    this.onViewPayslip,
   });
 
   @override
@@ -891,6 +925,8 @@ class _PayrollRecordsCard extends StatelessWidget {
                     item: item,
                     numberFormat: numberFormat,
                     onTap: () => onEditItem(item),
+                    showPayslipAction: canViewPayslips,
+                    onViewPayslip: () => onViewPayslip?.call(item),
                   );
                 },
               ),
@@ -941,11 +977,15 @@ class _PayrollItemTile extends StatelessWidget {
   final PayrollCalculation item;
   final NumberFormat numberFormat;
   final VoidCallback onTap;
+  final bool showPayslipAction;
+  final VoidCallback? onViewPayslip;
 
   const _PayrollItemTile({
     required this.item,
     required this.numberFormat,
     required this.onTap,
+    this.showPayslipAction = false,
+    this.onViewPayslip,
   });
 
   @override
@@ -958,21 +998,34 @@ class _PayrollItemTile extends StatelessWidget {
         style: const TextStyle(fontWeight: FontWeight.bold),
       ),
       subtitle: Text('Gross: KES ${numberFormat.format(item.grossSalary)}'),
-      trailing: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.end,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            'Net: KES ${numberFormat.format(item.netPay)}',
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.green,
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                'Net: KES ${numberFormat.format(item.netPay)}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
+              ),
+              Text(
+                'Tax: KES ${numberFormat.format(item.taxBreakdown.totalDeductions)}',
+                style: const TextStyle(fontSize: 12, color: Colors.red),
+              ),
+            ],
+          ),
+          if (showPayslipAction) ...[
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.receipt_long, color: Color(0xFF6B7280)),
+              onPressed: onViewPayslip,
+              tooltip: 'View Payslip',
             ),
-          ),
-          Text(
-            'Tax: KES ${numberFormat.format(item.taxBreakdown.totalDeductions)}',
-            style: const TextStyle(fontSize: 12, color: Colors.red),
-          ),
+          ],
         ],
       ),
     );
@@ -1024,9 +1077,7 @@ class _ActionButtonsCard extends StatelessWidget {
 
             // Transition Button
             _ActionButton(
-              onPressed: (isLoading || payPeriod.status == PayPeriodStatus.closed)
-                  ? null
-                  : onTransition,
+              onPressed: isLoading ? null : onTransition,
               icon: Icons.skip_next,
               label: _getNextStageButtonText(),
               backgroundColor: _getNextStageColor(),
@@ -1087,7 +1138,7 @@ class _ActionButtonsCard extends StatelessWidget {
       PayPeriodStatus.active => 'Process Payroll',
       PayPeriodStatus.processing => 'Complete Period',
       PayPeriodStatus.completed => 'Close Period',
-      PayPeriodStatus.closed => 'Period Closed',
+      PayPeriodStatus.closed => 'Reopen Period',
       _ => 'Continue',
     };
   }
@@ -1098,7 +1149,7 @@ class _ActionButtonsCard extends StatelessWidget {
       PayPeriodStatus.active => Colors.orange,
       PayPeriodStatus.processing => Colors.green,
       PayPeriodStatus.completed => Colors.deepPurple,
-      PayPeriodStatus.closed => Colors.grey,
+      PayPeriodStatus.closed => Colors.red.shade400,
       _ => Colors.grey,
     };
   }
@@ -1166,33 +1217,63 @@ class _AddWorkersDialog extends StatefulWidget {
 class _AddWorkersDialogState extends State<_AddWorkersDialog> {
   final Set<String> _selectedWorkers = {};
 
+  void _toggleSelectAll(bool? value) {
+    setState(() {
+      if (value == true) {
+        _selectedWorkers.addAll(widget.availableWorkers.map((w) => w.id));
+      } else {
+        _selectedWorkers.clear();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final allSelected = _selectedWorkers.length == widget.availableWorkers.length && 
+                       widget.availableWorkers.isNotEmpty;
+
     return AlertDialog(
       title: const Text('Add Workers'),
       content: SizedBox(
         width: double.maxFinite,
-        child: ListView.builder(
-          shrinkWrap: true,
-          itemCount: widget.availableWorkers.length,
-          itemBuilder: (context, index) {
-            final worker = widget.availableWorkers[index];
-            final isSelected = _selectedWorkers.contains(worker.id);
-            return CheckboxListTile(
-              title: Text(worker.name),
-              subtitle: Text(worker.jobTitle ?? 'No Job Title'),
-              value: isSelected,
-              onChanged: (bool? value) {
-                setState(() {
-                  if (value == true) {
-                    _selectedWorkers.add(worker.id);
-                  } else {
-                    _selectedWorkers.remove(worker.id);
-                  }
-                });
-              },
-            );
-          },
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (widget.availableWorkers.isNotEmpty)
+              CheckboxListTile(
+                title: const Text('Select All', style: TextStyle(fontWeight: FontWeight.bold)),
+                value: allSelected,
+                onChanged: _toggleSelectAll,
+                controlAffinity: ListTileControlAffinity.leading,
+                contentPadding: EdgeInsets.zero,
+              ),
+            const Divider(),
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: widget.availableWorkers.length,
+                itemBuilder: (context, index) {
+                  final worker = widget.availableWorkers[index];
+                  final isSelected = _selectedWorkers.contains(worker.id);
+                  return CheckboxListTile(
+                    title: Text(worker.name),
+                    subtitle: Text(worker.jobTitle ?? 'No Job Title'),
+                    value: isSelected,
+                    onChanged: (bool? value) {
+                      setState(() {
+                        if (value == true) {
+                          _selectedWorkers.add(worker.id);
+                        } else {
+                          _selectedWorkers.remove(worker.id);
+                        }
+                      });
+                    },
+                    contentPadding: EdgeInsets.zero,
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
       actions: [

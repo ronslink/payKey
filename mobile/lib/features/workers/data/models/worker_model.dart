@@ -29,6 +29,9 @@ class WorkerModel with _$WorkerModel {
     String? bankName,
     String? bankAccount,
     String? notes,
+    String? emergencyContactName,
+    String? emergencyContactPhone,
+    String? emergencyContactRelationship,
     DateTime? terminatedAt,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -62,6 +65,9 @@ class CreateWorkerRequest with _$CreateWorkerRequest {
     String? bankName,
     String? bankAccount,
     String? notes,
+    String? emergencyContactName,
+    String? emergencyContactPhone,
+    String? emergencyContactRelationship,
   }) = _CreateWorkerRequest;
 
   factory CreateWorkerRequest.fromJson(Map<String, dynamic> json) =>
@@ -93,6 +99,9 @@ class UpdateWorkerRequest with _$UpdateWorkerRequest {
     String? bankName,
     String? bankAccount,
     String? notes,
+    String? emergencyContactName,
+    String? emergencyContactPhone,
+    String? emergencyContactRelationship,
   }) = _UpdateWorkerRequest;
 
   factory UpdateWorkerRequest.fromJson(Map<String, dynamic> json) =>

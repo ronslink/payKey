@@ -44,6 +44,10 @@ mixin _$WorkerModel {
   String? get bankName => throw _privateConstructorUsedError;
   String? get bankAccount => throw _privateConstructorUsedError;
   String? get notes => throw _privateConstructorUsedError;
+  String? get emergencyContactName => throw _privateConstructorUsedError;
+  String? get emergencyContactPhone => throw _privateConstructorUsedError;
+  String? get emergencyContactRelationship =>
+      throw _privateConstructorUsedError;
   DateTime? get terminatedAt => throw _privateConstructorUsedError;
   DateTime? get createdAt => throw _privateConstructorUsedError;
   DateTime? get updatedAt => throw _privateConstructorUsedError;
@@ -89,6 +93,9 @@ abstract class $WorkerModelCopyWith<$Res> {
     String? bankName,
     String? bankAccount,
     String? notes,
+    String? emergencyContactName,
+    String? emergencyContactPhone,
+    String? emergencyContactRelationship,
     DateTime? terminatedAt,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -133,6 +140,9 @@ class _$WorkerModelCopyWithImpl<$Res, $Val extends WorkerModel>
     Object? bankName = freezed,
     Object? bankAccount = freezed,
     Object? notes = freezed,
+    Object? emergencyContactName = freezed,
+    Object? emergencyContactPhone = freezed,
+    Object? emergencyContactRelationship = freezed,
     Object? terminatedAt = freezed,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
@@ -231,6 +241,19 @@ class _$WorkerModelCopyWithImpl<$Res, $Val extends WorkerModel>
                 ? _value.notes
                 : notes // ignore: cast_nullable_to_non_nullable
                       as String?,
+            emergencyContactName: freezed == emergencyContactName
+                ? _value.emergencyContactName
+                : emergencyContactName // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            emergencyContactPhone: freezed == emergencyContactPhone
+                ? _value.emergencyContactPhone
+                : emergencyContactPhone // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            emergencyContactRelationship:
+                freezed == emergencyContactRelationship
+                ? _value.emergencyContactRelationship
+                : emergencyContactRelationship // ignore: cast_nullable_to_non_nullable
+                      as String?,
             terminatedAt: freezed == terminatedAt
                 ? _value.terminatedAt
                 : terminatedAt // ignore: cast_nullable_to_non_nullable
@@ -282,6 +305,9 @@ abstract class _$$WorkerModelImplCopyWith<$Res>
     String? bankName,
     String? bankAccount,
     String? notes,
+    String? emergencyContactName,
+    String? emergencyContactPhone,
+    String? emergencyContactRelationship,
     DateTime? terminatedAt,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -325,6 +351,9 @@ class __$$WorkerModelImplCopyWithImpl<$Res>
     Object? bankName = freezed,
     Object? bankAccount = freezed,
     Object? notes = freezed,
+    Object? emergencyContactName = freezed,
+    Object? emergencyContactPhone = freezed,
+    Object? emergencyContactRelationship = freezed,
     Object? terminatedAt = freezed,
     Object? createdAt = freezed,
     Object? updatedAt = freezed,
@@ -423,6 +452,18 @@ class __$$WorkerModelImplCopyWithImpl<$Res>
             ? _value.notes
             : notes // ignore: cast_nullable_to_non_nullable
                   as String?,
+        emergencyContactName: freezed == emergencyContactName
+            ? _value.emergencyContactName
+            : emergencyContactName // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        emergencyContactPhone: freezed == emergencyContactPhone
+            ? _value.emergencyContactPhone
+            : emergencyContactPhone // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        emergencyContactRelationship: freezed == emergencyContactRelationship
+            ? _value.emergencyContactRelationship
+            : emergencyContactRelationship // ignore: cast_nullable_to_non_nullable
+                  as String?,
         terminatedAt: freezed == terminatedAt
             ? _value.terminatedAt
             : terminatedAt // ignore: cast_nullable_to_non_nullable
@@ -467,6 +508,9 @@ class _$WorkerModelImpl implements _WorkerModel {
     this.bankName,
     this.bankAccount,
     this.notes,
+    this.emergencyContactName,
+    this.emergencyContactPhone,
+    this.emergencyContactRelationship,
     this.terminatedAt,
     this.createdAt,
     this.updatedAt,
@@ -527,6 +571,12 @@ class _$WorkerModelImpl implements _WorkerModel {
   @override
   final String? notes;
   @override
+  final String? emergencyContactName;
+  @override
+  final String? emergencyContactPhone;
+  @override
+  final String? emergencyContactRelationship;
+  @override
   final DateTime? terminatedAt;
   @override
   final DateTime? createdAt;
@@ -535,7 +585,7 @@ class _$WorkerModelImpl implements _WorkerModel {
 
   @override
   String toString() {
-    return 'WorkerModel(id: $id, name: $name, phoneNumber: $phoneNumber, salaryGross: $salaryGross, startDate: $startDate, isActive: $isActive, employmentType: $employmentType, hourlyRate: $hourlyRate, propertyId: $propertyId, email: $email, idNumber: $idNumber, kraPin: $kraPin, nssfNumber: $nssfNumber, nhifNumber: $nhifNumber, jobTitle: $jobTitle, housingAllowance: $housingAllowance, transportAllowance: $transportAllowance, paymentFrequency: $paymentFrequency, paymentMethod: $paymentMethod, mpesaNumber: $mpesaNumber, bankName: $bankName, bankAccount: $bankAccount, notes: $notes, terminatedAt: $terminatedAt, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'WorkerModel(id: $id, name: $name, phoneNumber: $phoneNumber, salaryGross: $salaryGross, startDate: $startDate, isActive: $isActive, employmentType: $employmentType, hourlyRate: $hourlyRate, propertyId: $propertyId, email: $email, idNumber: $idNumber, kraPin: $kraPin, nssfNumber: $nssfNumber, nhifNumber: $nhifNumber, jobTitle: $jobTitle, housingAllowance: $housingAllowance, transportAllowance: $transportAllowance, paymentFrequency: $paymentFrequency, paymentMethod: $paymentMethod, mpesaNumber: $mpesaNumber, bankName: $bankName, bankAccount: $bankAccount, notes: $notes, emergencyContactName: $emergencyContactName, emergencyContactPhone: $emergencyContactPhone, emergencyContactRelationship: $emergencyContactRelationship, terminatedAt: $terminatedAt, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -584,6 +634,16 @@ class _$WorkerModelImpl implements _WorkerModel {
             (identical(other.bankAccount, bankAccount) ||
                 other.bankAccount == bankAccount) &&
             (identical(other.notes, notes) || other.notes == notes) &&
+            (identical(other.emergencyContactName, emergencyContactName) ||
+                other.emergencyContactName == emergencyContactName) &&
+            (identical(other.emergencyContactPhone, emergencyContactPhone) ||
+                other.emergencyContactPhone == emergencyContactPhone) &&
+            (identical(
+                  other.emergencyContactRelationship,
+                  emergencyContactRelationship,
+                ) ||
+                other.emergencyContactRelationship ==
+                    emergencyContactRelationship) &&
             (identical(other.terminatedAt, terminatedAt) ||
                 other.terminatedAt == terminatedAt) &&
             (identical(other.createdAt, createdAt) ||
@@ -619,6 +679,9 @@ class _$WorkerModelImpl implements _WorkerModel {
     bankName,
     bankAccount,
     notes,
+    emergencyContactName,
+    emergencyContactPhone,
+    emergencyContactRelationship,
     terminatedAt,
     createdAt,
     updatedAt,
@@ -663,6 +726,9 @@ abstract class _WorkerModel implements WorkerModel {
     final String? bankName,
     final String? bankAccount,
     final String? notes,
+    final String? emergencyContactName,
+    final String? emergencyContactPhone,
+    final String? emergencyContactRelationship,
     final DateTime? terminatedAt,
     final DateTime? createdAt,
     final DateTime? updatedAt,
@@ -718,6 +784,12 @@ abstract class _WorkerModel implements WorkerModel {
   @override
   String? get notes;
   @override
+  String? get emergencyContactName;
+  @override
+  String? get emergencyContactPhone;
+  @override
+  String? get emergencyContactRelationship;
+  @override
   DateTime? get terminatedAt;
   @override
   DateTime? get createdAt;
@@ -759,6 +831,10 @@ mixin _$CreateWorkerRequest {
   String? get bankName => throw _privateConstructorUsedError;
   String? get bankAccount => throw _privateConstructorUsedError;
   String? get notes => throw _privateConstructorUsedError;
+  String? get emergencyContactName => throw _privateConstructorUsedError;
+  String? get emergencyContactPhone => throw _privateConstructorUsedError;
+  String? get emergencyContactRelationship =>
+      throw _privateConstructorUsedError;
 
   /// Serializes this CreateWorkerRequest to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -799,6 +875,9 @@ abstract class $CreateWorkerRequestCopyWith<$Res> {
     String? bankName,
     String? bankAccount,
     String? notes,
+    String? emergencyContactName,
+    String? emergencyContactPhone,
+    String? emergencyContactRelationship,
   });
 }
 
@@ -838,6 +917,9 @@ class _$CreateWorkerRequestCopyWithImpl<$Res, $Val extends CreateWorkerRequest>
     Object? bankName = freezed,
     Object? bankAccount = freezed,
     Object? notes = freezed,
+    Object? emergencyContactName = freezed,
+    Object? emergencyContactPhone = freezed,
+    Object? emergencyContactRelationship = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -925,6 +1007,19 @@ class _$CreateWorkerRequestCopyWithImpl<$Res, $Val extends CreateWorkerRequest>
                 ? _value.notes
                 : notes // ignore: cast_nullable_to_non_nullable
                       as String?,
+            emergencyContactName: freezed == emergencyContactName
+                ? _value.emergencyContactName
+                : emergencyContactName // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            emergencyContactPhone: freezed == emergencyContactPhone
+                ? _value.emergencyContactPhone
+                : emergencyContactPhone // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            emergencyContactRelationship:
+                freezed == emergencyContactRelationship
+                ? _value.emergencyContactRelationship
+                : emergencyContactRelationship // ignore: cast_nullable_to_non_nullable
+                      as String?,
           )
           as $Val,
     );
@@ -962,6 +1057,9 @@ abstract class _$$CreateWorkerRequestImplCopyWith<$Res>
     String? bankName,
     String? bankAccount,
     String? notes,
+    String? emergencyContactName,
+    String? emergencyContactPhone,
+    String? emergencyContactRelationship,
   });
 }
 
@@ -1000,6 +1098,9 @@ class __$$CreateWorkerRequestImplCopyWithImpl<$Res>
     Object? bankName = freezed,
     Object? bankAccount = freezed,
     Object? notes = freezed,
+    Object? emergencyContactName = freezed,
+    Object? emergencyContactPhone = freezed,
+    Object? emergencyContactRelationship = freezed,
   }) {
     return _then(
       _$CreateWorkerRequestImpl(
@@ -1087,6 +1188,18 @@ class __$$CreateWorkerRequestImplCopyWithImpl<$Res>
             ? _value.notes
             : notes // ignore: cast_nullable_to_non_nullable
                   as String?,
+        emergencyContactName: freezed == emergencyContactName
+            ? _value.emergencyContactName
+            : emergencyContactName // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        emergencyContactPhone: freezed == emergencyContactPhone
+            ? _value.emergencyContactPhone
+            : emergencyContactPhone // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        emergencyContactRelationship: freezed == emergencyContactRelationship
+            ? _value.emergencyContactRelationship
+            : emergencyContactRelationship // ignore: cast_nullable_to_non_nullable
+                  as String?,
       ),
     );
   }
@@ -1117,6 +1230,9 @@ class _$CreateWorkerRequestImpl implements _CreateWorkerRequest {
     this.bankName,
     this.bankAccount,
     this.notes,
+    this.emergencyContactName,
+    this.emergencyContactPhone,
+    this.emergencyContactRelationship,
   });
 
   factory _$CreateWorkerRequestImpl.fromJson(Map<String, dynamic> json) =>
@@ -1165,10 +1281,16 @@ class _$CreateWorkerRequestImpl implements _CreateWorkerRequest {
   final String? bankAccount;
   @override
   final String? notes;
+  @override
+  final String? emergencyContactName;
+  @override
+  final String? emergencyContactPhone;
+  @override
+  final String? emergencyContactRelationship;
 
   @override
   String toString() {
-    return 'CreateWorkerRequest(name: $name, phoneNumber: $phoneNumber, salaryGross: $salaryGross, startDate: $startDate, employmentType: $employmentType, hourlyRate: $hourlyRate, propertyId: $propertyId, email: $email, idNumber: $idNumber, kraPin: $kraPin, nssfNumber: $nssfNumber, nhifNumber: $nhifNumber, jobTitle: $jobTitle, housingAllowance: $housingAllowance, transportAllowance: $transportAllowance, paymentFrequency: $paymentFrequency, paymentMethod: $paymentMethod, mpesaNumber: $mpesaNumber, bankName: $bankName, bankAccount: $bankAccount, notes: $notes)';
+    return 'CreateWorkerRequest(name: $name, phoneNumber: $phoneNumber, salaryGross: $salaryGross, startDate: $startDate, employmentType: $employmentType, hourlyRate: $hourlyRate, propertyId: $propertyId, email: $email, idNumber: $idNumber, kraPin: $kraPin, nssfNumber: $nssfNumber, nhifNumber: $nhifNumber, jobTitle: $jobTitle, housingAllowance: $housingAllowance, transportAllowance: $transportAllowance, paymentFrequency: $paymentFrequency, paymentMethod: $paymentMethod, mpesaNumber: $mpesaNumber, bankName: $bankName, bankAccount: $bankAccount, notes: $notes, emergencyContactName: $emergencyContactName, emergencyContactPhone: $emergencyContactPhone, emergencyContactRelationship: $emergencyContactRelationship)';
   }
 
   @override
@@ -1213,7 +1335,17 @@ class _$CreateWorkerRequestImpl implements _CreateWorkerRequest {
                 other.bankName == bankName) &&
             (identical(other.bankAccount, bankAccount) ||
                 other.bankAccount == bankAccount) &&
-            (identical(other.notes, notes) || other.notes == notes));
+            (identical(other.notes, notes) || other.notes == notes) &&
+            (identical(other.emergencyContactName, emergencyContactName) ||
+                other.emergencyContactName == emergencyContactName) &&
+            (identical(other.emergencyContactPhone, emergencyContactPhone) ||
+                other.emergencyContactPhone == emergencyContactPhone) &&
+            (identical(
+                  other.emergencyContactRelationship,
+                  emergencyContactRelationship,
+                ) ||
+                other.emergencyContactRelationship ==
+                    emergencyContactRelationship));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1241,6 +1373,9 @@ class _$CreateWorkerRequestImpl implements _CreateWorkerRequest {
     bankName,
     bankAccount,
     notes,
+    emergencyContactName,
+    emergencyContactPhone,
+    emergencyContactRelationship,
   ]);
 
   /// Create a copy of CreateWorkerRequest
@@ -1283,6 +1418,9 @@ abstract class _CreateWorkerRequest implements CreateWorkerRequest {
     final String? bankName,
     final String? bankAccount,
     final String? notes,
+    final String? emergencyContactName,
+    final String? emergencyContactPhone,
+    final String? emergencyContactRelationship,
   }) = _$CreateWorkerRequestImpl;
 
   factory _CreateWorkerRequest.fromJson(Map<String, dynamic> json) =
@@ -1330,6 +1468,12 @@ abstract class _CreateWorkerRequest implements CreateWorkerRequest {
   String? get bankAccount;
   @override
   String? get notes;
+  @override
+  String? get emergencyContactName;
+  @override
+  String? get emergencyContactPhone;
+  @override
+  String? get emergencyContactRelationship;
 
   /// Create a copy of CreateWorkerRequest
   /// with the given fields replaced by the non-null parameter values.
@@ -1367,6 +1511,10 @@ mixin _$UpdateWorkerRequest {
   String? get bankName => throw _privateConstructorUsedError;
   String? get bankAccount => throw _privateConstructorUsedError;
   String? get notes => throw _privateConstructorUsedError;
+  String? get emergencyContactName => throw _privateConstructorUsedError;
+  String? get emergencyContactPhone => throw _privateConstructorUsedError;
+  String? get emergencyContactRelationship =>
+      throw _privateConstructorUsedError;
 
   /// Serializes this UpdateWorkerRequest to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -1408,6 +1556,9 @@ abstract class $UpdateWorkerRequestCopyWith<$Res> {
     String? bankName,
     String? bankAccount,
     String? notes,
+    String? emergencyContactName,
+    String? emergencyContactPhone,
+    String? emergencyContactRelationship,
   });
 }
 
@@ -1448,6 +1599,9 @@ class _$UpdateWorkerRequestCopyWithImpl<$Res, $Val extends UpdateWorkerRequest>
     Object? bankName = freezed,
     Object? bankAccount = freezed,
     Object? notes = freezed,
+    Object? emergencyContactName = freezed,
+    Object? emergencyContactPhone = freezed,
+    Object? emergencyContactRelationship = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -1539,6 +1693,19 @@ class _$UpdateWorkerRequestCopyWithImpl<$Res, $Val extends UpdateWorkerRequest>
                 ? _value.notes
                 : notes // ignore: cast_nullable_to_non_nullable
                       as String?,
+            emergencyContactName: freezed == emergencyContactName
+                ? _value.emergencyContactName
+                : emergencyContactName // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            emergencyContactPhone: freezed == emergencyContactPhone
+                ? _value.emergencyContactPhone
+                : emergencyContactPhone // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            emergencyContactRelationship:
+                freezed == emergencyContactRelationship
+                ? _value.emergencyContactRelationship
+                : emergencyContactRelationship // ignore: cast_nullable_to_non_nullable
+                      as String?,
           )
           as $Val,
     );
@@ -1577,6 +1744,9 @@ abstract class _$$UpdateWorkerRequestImplCopyWith<$Res>
     String? bankName,
     String? bankAccount,
     String? notes,
+    String? emergencyContactName,
+    String? emergencyContactPhone,
+    String? emergencyContactRelationship,
   });
 }
 
@@ -1616,6 +1786,9 @@ class __$$UpdateWorkerRequestImplCopyWithImpl<$Res>
     Object? bankName = freezed,
     Object? bankAccount = freezed,
     Object? notes = freezed,
+    Object? emergencyContactName = freezed,
+    Object? emergencyContactPhone = freezed,
+    Object? emergencyContactRelationship = freezed,
   }) {
     return _then(
       _$UpdateWorkerRequestImpl(
@@ -1707,6 +1880,18 @@ class __$$UpdateWorkerRequestImplCopyWithImpl<$Res>
             ? _value.notes
             : notes // ignore: cast_nullable_to_non_nullable
                   as String?,
+        emergencyContactName: freezed == emergencyContactName
+            ? _value.emergencyContactName
+            : emergencyContactName // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        emergencyContactPhone: freezed == emergencyContactPhone
+            ? _value.emergencyContactPhone
+            : emergencyContactPhone // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        emergencyContactRelationship: freezed == emergencyContactRelationship
+            ? _value.emergencyContactRelationship
+            : emergencyContactRelationship // ignore: cast_nullable_to_non_nullable
+                  as String?,
       ),
     );
   }
@@ -1738,6 +1923,9 @@ class _$UpdateWorkerRequestImpl implements _UpdateWorkerRequest {
     this.bankName,
     this.bankAccount,
     this.notes,
+    this.emergencyContactName,
+    this.emergencyContactPhone,
+    this.emergencyContactRelationship,
   });
 
   factory _$UpdateWorkerRequestImpl.fromJson(Map<String, dynamic> json) =>
@@ -1787,10 +1975,16 @@ class _$UpdateWorkerRequestImpl implements _UpdateWorkerRequest {
   final String? bankAccount;
   @override
   final String? notes;
+  @override
+  final String? emergencyContactName;
+  @override
+  final String? emergencyContactPhone;
+  @override
+  final String? emergencyContactRelationship;
 
   @override
   String toString() {
-    return 'UpdateWorkerRequest(name: $name, phoneNumber: $phoneNumber, salaryGross: $salaryGross, startDate: $startDate, employmentType: $employmentType, hourlyRate: $hourlyRate, propertyId: $propertyId, isActive: $isActive, email: $email, idNumber: $idNumber, kraPin: $kraPin, nssfNumber: $nssfNumber, nhifNumber: $nhifNumber, jobTitle: $jobTitle, housingAllowance: $housingAllowance, transportAllowance: $transportAllowance, paymentFrequency: $paymentFrequency, paymentMethod: $paymentMethod, mpesaNumber: $mpesaNumber, bankName: $bankName, bankAccount: $bankAccount, notes: $notes)';
+    return 'UpdateWorkerRequest(name: $name, phoneNumber: $phoneNumber, salaryGross: $salaryGross, startDate: $startDate, employmentType: $employmentType, hourlyRate: $hourlyRate, propertyId: $propertyId, isActive: $isActive, email: $email, idNumber: $idNumber, kraPin: $kraPin, nssfNumber: $nssfNumber, nhifNumber: $nhifNumber, jobTitle: $jobTitle, housingAllowance: $housingAllowance, transportAllowance: $transportAllowance, paymentFrequency: $paymentFrequency, paymentMethod: $paymentMethod, mpesaNumber: $mpesaNumber, bankName: $bankName, bankAccount: $bankAccount, notes: $notes, emergencyContactName: $emergencyContactName, emergencyContactPhone: $emergencyContactPhone, emergencyContactRelationship: $emergencyContactRelationship)';
   }
 
   @override
@@ -1837,7 +2031,17 @@ class _$UpdateWorkerRequestImpl implements _UpdateWorkerRequest {
                 other.bankName == bankName) &&
             (identical(other.bankAccount, bankAccount) ||
                 other.bankAccount == bankAccount) &&
-            (identical(other.notes, notes) || other.notes == notes));
+            (identical(other.notes, notes) || other.notes == notes) &&
+            (identical(other.emergencyContactName, emergencyContactName) ||
+                other.emergencyContactName == emergencyContactName) &&
+            (identical(other.emergencyContactPhone, emergencyContactPhone) ||
+                other.emergencyContactPhone == emergencyContactPhone) &&
+            (identical(
+                  other.emergencyContactRelationship,
+                  emergencyContactRelationship,
+                ) ||
+                other.emergencyContactRelationship ==
+                    emergencyContactRelationship));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1866,6 +2070,9 @@ class _$UpdateWorkerRequestImpl implements _UpdateWorkerRequest {
     bankName,
     bankAccount,
     notes,
+    emergencyContactName,
+    emergencyContactPhone,
+    emergencyContactRelationship,
   ]);
 
   /// Create a copy of UpdateWorkerRequest
@@ -1909,6 +2116,9 @@ abstract class _UpdateWorkerRequest implements UpdateWorkerRequest {
     final String? bankName,
     final String? bankAccount,
     final String? notes,
+    final String? emergencyContactName,
+    final String? emergencyContactPhone,
+    final String? emergencyContactRelationship,
   }) = _$UpdateWorkerRequestImpl;
 
   factory _UpdateWorkerRequest.fromJson(Map<String, dynamic> json) =
@@ -1958,6 +2168,12 @@ abstract class _UpdateWorkerRequest implements UpdateWorkerRequest {
   String? get bankAccount;
   @override
   String? get notes;
+  @override
+  String? get emergencyContactName;
+  @override
+  String? get emergencyContactPhone;
+  @override
+  String? get emergencyContactRelationship;
 
   /// Create a copy of UpdateWorkerRequest
   /// with the given fields replaced by the non-null parameter values.

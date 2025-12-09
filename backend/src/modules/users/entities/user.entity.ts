@@ -68,7 +68,7 @@ export class User {
   nssfNumber: string;
 
   @Column({ nullable: true })
-  nhifNumber: string;
+  shifNumber: string; // Renamed from nhifNumber
 
   @Column({
     type: 'enum',
@@ -101,6 +101,22 @@ export class User {
 
   @Column({ default: false, name: 'isOnboardingCompleted' })
   isOnboardingCompleted: boolean;
+
+  // New Compliance & Payment Fields
+  @Column({ nullable: true })
+  businessName: string;
+
+  @Column({ nullable: true })
+  bankName: string;
+
+  @Column({ nullable: true })
+  bankAccount: string;
+
+  @Column({ nullable: true })
+  mpesaPaybill: string;
+
+  @Column({ nullable: true })
+  mpesaTill: string;
 
   // Employee Portal Fields
   @Column({ nullable: true })

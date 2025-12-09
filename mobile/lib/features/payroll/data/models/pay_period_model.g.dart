@@ -53,11 +53,11 @@ Map<String, dynamic> _$$PayPeriodImplToJson(_$PayPeriodImpl instance) =>
     };
 
 const _$PayPeriodFrequencyEnumMap = {
-  PayPeriodFrequency.weekly: 'weekly',
-  PayPeriodFrequency.biWeekly: 'biweekly',
-  PayPeriodFrequency.monthly: 'monthly',
-  PayPeriodFrequency.quarterly: 'quarterly',
-  PayPeriodFrequency.yearly: 'yearly',
+  PayPeriodFrequency.weekly: 'WEEKLY',
+  PayPeriodFrequency.biWeekly: 'BIWEEKLY',
+  PayPeriodFrequency.monthly: 'MONTHLY',
+  PayPeriodFrequency.quarterly: 'QUARTERLY',
+  PayPeriodFrequency.yearly: 'YEARLY',
 };
 
 const _$PayPeriodStatusEnumMap = {

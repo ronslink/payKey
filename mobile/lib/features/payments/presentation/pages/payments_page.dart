@@ -665,7 +665,7 @@ class _PaymentsPageState extends ConsumerState<PaymentsPage> {
     return '${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}/${date.year}';
   }
 
-  void _finalizePayroll(String recordId) async {
+  void _finalizePayroll(String payPeriodId) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -685,11 +685,27 @@ class _PaymentsPageState extends ConsumerState<PaymentsPage> {
     );
 
     if (confirm == true) {
-      // TODO: Implement finalize payroll logic
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Payroll finalized successfully')),
-        );
+      try {
+        // Call the update status API to mark as completed
+        final payrollRepository = ref.read(payrollRecordsRepositoryProvider);
+        await payrollRepository.updatePayrollStatus(payPeriodId, 'completed', paymentDate: DateTime.now().toIso8601String());
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Payroll finalized successfully')),
+          );
+          // Refresh the data
+          _loadData();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to finalize payroll: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }

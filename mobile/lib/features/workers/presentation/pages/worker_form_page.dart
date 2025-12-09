@@ -164,6 +164,9 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
       bankName: _controllers.bankName.nullableText,
       bankAccount: _controllers.bankAccount.nullableText,
       notes: _controllers.notes.nullableText,
+      emergencyContactName: _controllers.emergencyName.nullableText,
+      emergencyContactPhone: _controllers.emergencyPhone.nullableText,
+      emergencyContactRelationship: _controllers.emergencyRelationship.nullableText,
     );
   }
 
@@ -186,6 +189,9 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
       bankName: _controllers.bankName.nullableText,
       bankAccount: _controllers.bankAccount.nullableText,
       notes: _controllers.notes.nullableText,
+      emergencyContactName: _controllers.emergencyName.nullableText,
+      emergencyContactPhone: _controllers.emergencyPhone.nullableText,
+      emergencyContactRelationship: _controllers.emergencyRelationship.nullableText,
     );
   }
 
@@ -230,6 +236,8 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _PersonalInfoSection(controllers: _controllers),
+              const SizedBox(height: 24),
+              _EmergencyContactSection(controllers: _controllers),
               const SizedBox(height: 24),
               _StatutoryDetailsSection(controllers: _controllers),
               const SizedBox(height: 24),
@@ -306,6 +314,11 @@ class _WorkerFormControllers {
   // Notes
   final notes = TextEditingController();
 
+  // Emergency Contact
+  final emergencyName = TextEditingController();
+  final emergencyPhone = TextEditingController();
+  final emergencyRelationship = TextEditingController();
+
   /// Populate controllers from an existing worker model.
   void populateFrom(WorkerModel worker) {
     name.text = worker.name;
@@ -327,6 +340,10 @@ class _WorkerFormControllers {
     bankAccount.text = worker.bankAccount ?? '';
 
     notes.text = worker.notes ?? '';
+    
+    emergencyName.text = worker.emergencyContactName ?? '';
+    emergencyPhone.text = worker.emergencyContactPhone ?? '';
+    emergencyRelationship.text = worker.emergencyContactRelationship ?? '';
   }
 
   /// Dispose all controllers.
@@ -346,6 +363,9 @@ class _WorkerFormControllers {
     bankName.dispose();
     bankAccount.dispose();
     notes.dispose();
+    emergencyName.dispose();
+    emergencyPhone.dispose();
+    emergencyRelationship.dispose();
   }
 }
 
@@ -402,6 +422,41 @@ class _PersonalInfoSection extends StatelessWidget {
           controller: controllers.idNumber,
           label: 'ID Number',
           hint: 'Enter National ID',
+        ),
+      ],
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Emergency Contact Section
+// -----------------------------------------------------------------------------
+
+class _EmergencyContactSection extends StatelessWidget {
+  final _WorkerFormControllers controllers;
+
+  const _EmergencyContactSection({required this.controllers});
+
+  @override
+  Widget build(BuildContext context) {
+    return _FormSection(
+      title: 'Emergency Contact',
+      children: [
+        _FormTextField(
+          controller: controllers.emergencyName,
+          label: 'Contact Name',
+          hint: 'Full Name',
+        ),
+        _FormTextField(
+          controller: controllers.emergencyPhone,
+          label: 'Phone Number',
+          hint: 'Contact Phone Number',
+          keyboardType: TextInputType.phone,
+        ),
+        _FormTextField(
+          controller: controllers.emergencyRelationship,
+          label: 'Relationship',
+          hint: 'e.g. Spouse, Sibling',
         ),
       ],
     );

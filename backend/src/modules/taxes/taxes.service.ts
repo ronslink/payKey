@@ -484,8 +484,8 @@ export class TaxesService {
     return {
       kraPin: !!user?.kraPin,
       nssf: !!user?.nssfNumber,
-      nhif: !!user?.nhifNumber,
-      isCompliant: !!user?.kraPin && !!user?.nssfNumber && !!user?.nhifNumber,
+      shif: !!user?.shifNumber,
+      isCompliant: !!user?.kraPin && !!user?.nssfNumber && !!user?.shifNumber,
     };
   }
 

@@ -573,7 +573,7 @@ class _CreatePayPeriodDialog extends StatefulWidget {
 class _CreatePayPeriodDialogState extends State<_CreatePayPeriodDialog> {
   PayPeriodFrequency _frequency = PayPeriodFrequency.monthly;
   DateTime _selectedMonth = DateTime.now();
-  bool _isCreating = false;
+  final bool _isCreating = false;
 
   @override
   Widget build(BuildContext context) {

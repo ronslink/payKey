@@ -366,4 +366,18 @@ class SubscriptionRepository {
       updatedAt: payment.updatedAt ?? DateTime.now(),
     )).toList();
   }
+  Future<String> subscribeWithStripe(String planId) async {
+    try {
+      final response = await _apiService.subscriptions.subscribeWithStripe(planId);
+      final data = response.data;
+      if (data is Map && data.containsKey('checkoutUrl')) {
+        return data['checkoutUrl'].toString();
+      }
+      throw Exception('Invalid response from server');
+    } on DioException catch (e) {
+      throw Exception(_apiService.getErrorMessage(e));
+    } catch (e) {
+      throw Exception('Failed to initiate subscription: $e');
+    }
+  }
 }

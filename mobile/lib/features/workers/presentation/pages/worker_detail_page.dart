@@ -4,6 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../providers/workers_provider.dart';
 import '../../data/models/worker_model.dart';
+import 'dart:io';
+import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
+import '../../../payroll/data/repositories/payroll_repository.dart';
 import '../../../employee_portal/presentation/widgets/invite_worker_dialog.dart';
 
 // =============================================================================
@@ -91,6 +95,8 @@ class WorkerDetailPage extends ConsumerStatefulWidget {
 }
 
 class _WorkerDetailPageState extends ConsumerState<WorkerDetailPage> {
+  AsyncValue<List<WorkerPaymentHistoryItem>> _history = const AsyncValue.loading();
+
   // ---------------------------------------------------------------------------
   // Lifecycle
   // ---------------------------------------------------------------------------
@@ -100,7 +106,39 @@ class _WorkerDetailPageState extends ConsumerState<WorkerDetailPage> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(workersProvider.notifier).loadWorkers();
+      _loadHistory();
     });
+  }
+
+  Future<void> _loadHistory() async {
+      if (!mounted) return;
+      setState(() => _history = const AsyncValue.loading());
+      try {
+        final repo = ref.read(payrollRepositoryProvider);
+        final data = await repo.getWorkerHistory(widget.workerId);
+        if (mounted) setState(() => _history = AsyncValue.data(data));
+      } catch (e, st) {
+        if (mounted) setState(() => _history = AsyncValue.error(e, st));
+      }
+  }
+
+  Future<void> _downloadPayslip(String recordId, String periodName) async {
+      try {
+          final repo = ref.read(payrollRepositoryProvider);
+          final bytes = await repo.downloadPayslip(recordId);
+          
+          final dir = await getApplicationDocumentsDirectory();
+          final file = File('${dir.path}/payslip_$periodName.pdf');
+          await file.writeAsBytes(bytes);
+          
+          await OpenFilex.open(file.path);
+      } catch (e) {
+          if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Failed to open payslip: $e')),
+              );
+          }
+      }
   }
 
   // ---------------------------------------------------------------------------
@@ -181,6 +219,8 @@ class _WorkerDetailPageState extends ConsumerState<WorkerDetailPage> {
             worker: workerData,
             onEdit: () => _navigateToEdit(workerData),
             onTerminate: _navigateToTerminate,
+            history: _history,
+            onDownloadPayslip: _downloadPayslip,
           );
         },
         loading: () => const _LoadingState(),
@@ -254,7 +294,12 @@ class _WorkerDetailContent extends StatelessWidget {
     required this.worker,
     required this.onEdit,
     required this.onTerminate,
+    required this.history,
+    required this.onDownloadPayslip,
   });
+
+  final AsyncValue<List<WorkerPaymentHistoryItem>> history;
+  final Function(String, String) onDownloadPayslip;
 
   @override
   Widget build(BuildContext context) {
@@ -275,6 +320,11 @@ class _WorkerDetailContent extends StatelessWidget {
             _TaxSection(worker: worker),
             const SizedBox(height: _Spacing.xl),
           ],
+          _PaymentHistorySection(
+              history: history,
+              onDownload: onDownloadPayslip,
+          ),
+          const SizedBox(height: _Spacing.xl),
           if (worker.notes?.isNotEmpty == true) ...[
             _NotesSection(notes: worker.notes!),
             const SizedBox(height: _Spacing.xl),
@@ -499,6 +549,91 @@ class _NotesSection extends StatelessWidget {
       ),
     );
   }
+}
+
+class _PaymentHistorySection extends StatelessWidget {
+  final AsyncValue<List<WorkerPaymentHistoryItem>> history;
+  final Function(String, String) onDownload;
+
+  const _PaymentHistorySection({
+    required this.history,
+    required this.onDownload,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+            const Text(
+            'Payment History',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: _AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: _Spacing.lg),
+          history.when(
+            data: (items) {
+                if (items.isEmpty) {
+                    return const Text('No payment history found.');
+                }
+                return Column(
+                    children: items.map((item) => _PaymentHistoryRow(
+                        item: item,
+                        onDownload: () => onDownload(item.id, item.payPeriodName),
+                    )).toList(),
+                );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Text('Error loading history: $e', style: const TextStyle(color: _AppColors.error)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PaymentHistoryRow extends StatelessWidget {
+    final WorkerPaymentHistoryItem item;
+    final VoidCallback onDownload;
+    
+    const _PaymentHistoryRow({required this.item, required this.onDownload});
+    
+    @override
+    Widget build(BuildContext context) {
+        return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: Row(
+                children: [
+                    const Icon(Icons.receipt_long, color: _AppColors.textSecondary),
+                    const SizedBox(width: 12),
+                    Expanded(
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                                Text(item.payPeriodName, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                Text(
+                                    DateFormat('MMM d, yyyy').format(item.periodStart),
+                                    style: const TextStyle(fontSize: 12, color: _AppColors.textSecondary),
+                                ),
+                            ],
+                        ),
+                    ),
+                    Text(
+                        NumberFormat.currency(symbol: 'KES ').format(item.netPay),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    IconButton(
+                        icon: const Icon(Icons.download, color: _AppColors.primary),
+                        onPressed: onDownload,
+                    ),
+                ],
+            ),
+        );
+    }
 }
 
 // =============================================================================

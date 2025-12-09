@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../data/models/subscription_model.dart';
+import '../../data/repositories/subscription_repository.dart';
 import '../providers/subscription_provider.dart';
 
 class PaymentPage extends ConsumerStatefulWidget {
@@ -14,72 +16,71 @@ class PaymentPage extends ConsumerStatefulWidget {
 }
 
 class _PaymentPageState extends ConsumerState<PaymentPage> {
-  final _formKey = GlobalKey<FormState>();
-  final _cardNumberController = TextEditingController();
-  final _expiryController = TextEditingController();
-  final _cvvController = TextEditingController();
-  final _nameController = TextEditingController();
   bool _isProcessing = false;
 
-  @override
-  void dispose() {
-    _cardNumberController.dispose();
-    _expiryController.dispose();
-    _cvvController.dispose();
-    _nameController.dispose();
-    super.dispose();
+  Future<void> _initiateStripePayment() async {
+    setState(() => _isProcessing = true);
+
+    try {
+      final repo = ref.read(subscriptionRepositoryProvider);
+      final checkoutUrl = await repo.subscribeWithStripe(widget.plan.id);
+      
+      final  uri = Uri.parse(checkoutUrl);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        
+        // In a real app with deep linking, we would handle the return.
+        // For now, we show a dialog explaining what to do.
+        if (mounted) {
+           _showInstructionsDialog();
+        }
+      } else {
+        throw Exception('Could not launch payment URL');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
+    }
   }
 
-  Future<void> _processPayment() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() {
-      _isProcessing = true;
-    });
-
-    // Simulate payment processing
-    await Future.delayed(const Duration(seconds: 2));
-
-    // Update subscription in provider (mock)
-    // In a real app, this would be a backend call
-    // For now, we'll just simulate a successful update via a provider method if available,
-    // or just show success and let the user refresh.
-    // Since we don't have a direct "updateSubscription" method exposed in the provider usage I saw,
-    // I will assume we might need to call an API or just mock it here.
-    
-    // Let's assume we can just navigate back with a success result or show a success page.
-    
-    if (mounted) {
-      setState(() {
-        _isProcessing = false;
-      });
-
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          title: const Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.green),
-              SizedBox(width: 8),
-              Text('Payment Successful'),
-            ],
-          ),
-          content: Text('You have successfully subscribed to the ${widget.plan.name} plan.'),
-          actions: [
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Close dialog
-                context.go('/subscriptions'); // Go back to subscriptions
-                // Trigger a refresh of the subscription data
-                ref.invalidate(userSubscriptionProvider);
-              },
-              child: const Text('Continue'),
-            ),
-          ],
+  void _showInstructionsDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Payment Initiated'),
+        content: const Text(
+          'We have opened the payment page in your browser.\n\n'
+          'Once you complete the payment, please return to this app and click "Refresh" to update your subscription status.'
         ),
-      );
-    }
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+              // Navigate back
+              context.pop();
+            },
+            child: const Text('Close'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // Trigger refresh
+              ref.invalidate(userSubscriptionProvider);
+              context.go('/subscriptions');
+            },
+            child: const Text('Refresh & Check Status'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -91,132 +92,60 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildOrderSummary(),
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
+            
             const Text(
-              'Payment Details',
+              'Payment Method',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 16),
-            Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Cardholder Name',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.person),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter cardholder name';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _cardNumberController,
-                    decoration: const InputDecoration(
-                      labelText: 'Card Number',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.credit_card),
-                      hintText: '0000 0000 0000 0000',
-                    ),
-                    keyboardType: TextInputType.number,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter card number';
-                      }
-                      if (value.length < 16) {
-                        return 'Invalid card number';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextFormField(
-                          controller: _expiryController,
-                          decoration: const InputDecoration(
-                            labelText: 'Expiry Date',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.calendar_today),
-                            hintText: 'MM/YY',
-                          ),
-                          keyboardType: TextInputType.datetime,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Required';
-                            }
-                            return null;
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: TextFormField(
-                          controller: _cvvController,
-                          decoration: const InputDecoration(
-                            labelText: 'CVV',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.lock),
-                            hintText: '123',
-                          ),
-                          keyboardType: TextInputType.number,
-                          obscureText: true,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Required';
-                            }
-                            return null;
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: Colors.grey.shade300),
+              ),
+              child: ListTile(
+                leading: const Icon(Icons.payment, color: Color(0xFF635BFF), size: 32),
+                title: const Text('Pay with Stripe'),
+                subtitle: const Text('Secure credit card payment via Stripe'),
+                trailing: const Icon(Icons.check_circle, color: Color(0xFF635BFF)),
               ),
             ),
+
             const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: _isProcessing ? null : _processPayment,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF3B82F6),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+            ElevatedButton(
+              onPressed: _isProcessing ? null : _initiateStripePayment,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF635BFF), // Stripe blurple
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: _isProcessing
-                    ? const SizedBox(
-                        height: 24,
-                        width: 24,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : Text(
-                        'Pay \$${widget.plan.priceUSD.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
               ),
+              child: _isProcessing
+                  ? const SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Text(
+                      'Pay \$${widget.plan.priceUSD.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
             ),
             const SizedBox(height: 16),
             const Center(
@@ -226,7 +155,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                   Icon(Icons.lock_outline, size: 16, color: Colors.grey),
                   SizedBox(width: 4),
                   Text(
-                    'Payments are secure and encrypted',
+                    'Payments are secure and encrypted by Stripe',
                     style: TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                 ],

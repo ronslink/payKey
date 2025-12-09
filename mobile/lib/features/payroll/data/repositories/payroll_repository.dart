@@ -248,6 +248,36 @@ class PayrollRepository {
     );
   }
 
+  /// Get payment history for a specific worker.
+  Future<List<WorkerPaymentHistoryItem>> getWorkerHistory(String workerId) async {
+    return _executeRequest(
+      operation: 'get worker history',
+      request: () async {
+        final response = await _authenticatedGet('/payroll/worker/$workerId');
+        
+        if (response.data is! List) return [];
+        
+        return (response.data as List).map((json) {
+          final map = json as Map<String, dynamic>;
+          final period = map['payPeriod'] as Map<String, dynamic>?;
+          
+          return WorkerPaymentHistoryItem(
+            id: map['id'] ?? '',
+            payPeriodName: period?['name'] ?? 'Unknown Period',
+            periodStart: period?['startDate'] != null 
+                ? DateTime.parse(period!['startDate']) 
+                : DateTime.now(),
+            netPay: (map['netSalary'] is num) ? (map['netSalary'] as num).toDouble() : 0.0,
+            status: map['status'] ?? 'unknown',
+            paidAt: map['finalizedAt'] != null 
+                ? DateTime.parse(map['finalizedAt']) 
+                : null,
+          );
+        }).toList();
+      },
+    );
+  }
+
   // ---------------------------------------------------------------------------
   // Private Methods: HTTP Helpers
   // ---------------------------------------------------------------------------
@@ -579,4 +609,23 @@ extension PayrollCalculationListExtensions on List<PayrollCalculation> {
     copy.sort((a, b) => b.netPay.compareTo(a.netPay));
     return copy;
   }
+}
+
+/// Simple model for worker payment history list items.
+class WorkerPaymentHistoryItem {
+  final String id;
+  final String payPeriodName;
+  final DateTime periodStart;
+  final double netPay;
+  final String status;
+  final DateTime? paidAt;
+
+  const WorkerPaymentHistoryItem({
+    required this.id,
+    required this.payPeriodName,
+    required this.periodStart,
+    required this.netPay,
+    required this.status,
+    this.paidAt,
+  });
 }

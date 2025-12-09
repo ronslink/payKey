@@ -8,6 +8,7 @@ import {
   UseGuards,
   Request,
   Res,
+  StreamableFile,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -179,7 +180,7 @@ export class PayrollController {
   ) {
     const record = await this.payrollRepository.findOne({
       where: { id: payrollRecordId, userId: req.user.userId },
-      relations: ['worker'],
+      relations: ['worker', 'payPeriod'],
     });
 
     if (!record) {
@@ -239,7 +240,7 @@ export class PayrollController {
       where: {
         userId: req.user.userId,
       },
-      relations: ['worker'],
+      relations: ['worker', 'payPeriod'],
     });
 
     const selectedRecords = records.filter(r => body.payrollRecordIds.includes(r.id));
@@ -290,5 +291,37 @@ export class PayrollController {
         workerName: r.worker.name,
       })),
     };
+  }
+
+  @Get('worker/:workerId')
+  async getWorkerHistory(
+    @Request() req: AuthenticatedRequest,
+    @Param('workerId') workerId: string,
+  ) {
+    return this.payrollService.getWorkerPayrollHistory(req.user.userId, workerId);
+  }
+
+  @Get('me')
+  async getMyPayslips(@Request() req: AuthenticatedRequest) {
+    return this.payrollService.getEmployeePayslips(req.user.userId);
+  }
+
+  @Get('me/:recordId/pdf')
+  async downloadMyPayslip(
+    @Request() req: AuthenticatedRequest,
+    @Param('recordId') recordId: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const buffer = await this.payrollService.getEmployeePayslipPdf(
+      req.user.userId,
+      recordId,
+    );
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="payslip.pdf"`,
+    });
+
+    return new StreamableFile(buffer);
   }
 }

@@ -10,16 +10,34 @@ part 'pay_period_model.g.dart';
 
 /// How often pay periods occur.
 enum PayPeriodFrequency {
-  @JsonValue('weekly')
+  @JsonValue('WEEKLY')
   weekly,
-  @JsonValue('biweekly')
+  @JsonValue('BIWEEKLY')
   biWeekly,
-  @JsonValue('monthly')
+  @JsonValue('MONTHLY')
   monthly,
-  @JsonValue('quarterly')
+  @JsonValue('QUARTERLY')
   quarterly,
-  @JsonValue('yearly')
+  @JsonValue('YEARLY')
   yearly;
+
+  /// Create PayPeriodFrequency from string (handles both uppercase and lowercase)
+  static PayPeriodFrequency fromString(String value) {
+    switch (value.toUpperCase()) {
+      case 'WEEKLY':
+        return weekly;
+      case 'BIWEEKLY':
+        return biWeekly;
+      case 'MONTHLY':
+        return monthly;
+      case 'QUARTERLY':
+        return quarterly;
+      case 'YEARLY':
+        return yearly;
+      default:
+        throw ArgumentError('Invalid frequency value: $value. Supported values: WEEKLY, BIWEEKLY, MONTHLY, QUARTERLY, YEARLY');
+    }
+  }
 
   /// Human-readable display label.
   String get displayName {
@@ -579,7 +597,8 @@ double? _doubleFromJson(dynamic value) {
 }
 
 /// Pass-through converter for toJson.
-dynamic _valueToJson(dynamic value) => value;
+// Note: This function is currently unused but kept for future reference
+// dynamic _valueToJson(dynamic value) => value;
 
 // =============================================================================
 // HELPERS

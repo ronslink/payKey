@@ -21,7 +21,27 @@ export class UpdateComplianceProfileDto {
 
   @IsString()
   @IsNotEmpty()
-  nhifNumber: string;
+  shifNumber: string;
+
+  @IsString()
+  @IsOptional()
+  businessName?: string;
+
+  @IsString()
+  @IsOptional()
+  bankName?: string;
+
+  @IsString()
+  @IsOptional()
+  bankAccount?: string;
+
+  @IsString()
+  @IsOptional()
+  mpesaPaybill?: string;
+
+  @IsString()
+  @IsOptional()
+  mpesaTill?: string;
 
   @IsEnum(IdType)
   idType: IdType;

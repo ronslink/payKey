@@ -172,37 +172,53 @@ class _PayrollPageState extends ConsumerState<PayrollPage> {
             data: (payPeriods) {
               if (payPeriods.isEmpty) {
                 return SliverFillRemaining(
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.calendar_month,
-                          size: 64,
-                          color: Colors.grey,
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'No pay periods found for this year',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        _isInitializing
-                            ? const CircularProgressIndicator()
-                            : ElevatedButton.icon(
-                                onPressed: _initializeYear,
-                                icon: const Icon(Icons.play_circle),
-                                label: Text('Initialize ${DateTime.now().year} Payroll'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF3B82F6),
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                                ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 350),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.calendar_month,
+                              size: 36,
+                              color: Colors.grey,
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'No pay periods found',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey,
                               ),
-                      ],
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 12),
+                            _isInitializing
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : SizedBox(
+                                    width: 200,
+                                    height: 36,
+                                    child: ElevatedButton(
+                                      onPressed: _initializeYear,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFF3B82F6),
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                        textStyle: const TextStyle(fontSize: 12),
+                                      ),
+                                      child: Text('Initialize ${DateTime.now().year}'),
+                                    ),
+                                  ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 );
@@ -553,10 +569,29 @@ class _PayrollPageState extends ConsumerState<PayrollPage> {
       final startOfYear = DateTime(now.year, 1, 1);
       final endOfYear = DateTime(now.year, 12, 31);
       
+      // Check if pay periods already exist for this year
+      final payPeriodsState = ref.read(payPeriodsProvider);
+      final existingPeriods = payPeriodsState.value ?? [];
+      final hasExistingPeriods = existingPeriods.any(
+        (period) => period.startDate.year == now.year
+      );
+      
+      if (hasExistingPeriods) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Pay periods already exist for this year'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+      
       final repo = ref.read(payPeriodRepositoryProvider);
       
       await repo.generatePayPeriods(
-        frequency: 'monthly',
+        frequency: 'MONTHLY',
         startDate: startOfYear,
         endDate: endOfYear,
       );

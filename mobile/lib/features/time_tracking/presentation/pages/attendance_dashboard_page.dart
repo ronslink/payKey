@@ -373,7 +373,7 @@ class _AttendanceDashboardPageState extends ConsumerState<AttendanceDashboardPag
               ),
             ),
             Text(
-              '${_formatMonth(_startDate)}',
+              _formatMonth(_startDate),
               style: const TextStyle(
                 color: AppColors.textSecondary,
                 fontWeight: FontWeight.w500,

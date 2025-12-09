@@ -18,7 +18,6 @@ class _EmployeeDashboardPageState extends ConsumerState<EmployeeDashboardPage> {
   ClockStatus? _clockStatus;
   bool _isLoading = true;
   bool _isClockingIn = false;
-  String? _error;
 
   @override
   void initState() {
@@ -41,7 +40,7 @@ class _EmployeeDashboardPageState extends ConsumerState<EmployeeDashboardPage> {
         _leaveBalance = LeaveBalance.fromJson(leaveResponse.data);
       }
     } catch (e) {
-      setState(() => _error = e.toString());
+      // Error handling - could add error state if needed
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);

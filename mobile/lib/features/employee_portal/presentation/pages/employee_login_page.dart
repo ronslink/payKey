@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/network/api_service.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
 
 /// Employee login page with phone + PIN authentication
 class EmployeeLoginPage extends ConsumerStatefulWidget {

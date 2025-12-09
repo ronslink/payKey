@@ -63,9 +63,7 @@ class ProfilePage extends ConsumerWidget {
               title: const Text('Edit Profile'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Edit profile coming soon')),
-                );
+                context.push('/profile/edit');
               },
             ),
           ),

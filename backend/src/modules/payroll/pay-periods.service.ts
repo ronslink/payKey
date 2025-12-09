@@ -229,6 +229,12 @@ export class PayPeriodsService {
       },
     });
 
+    if (payrollRecords.length === 0) {
+      throw new BadRequestException(
+        'Cannot process payroll with no records. Please add workers first.',
+      );
+    }
+
     const totals = payrollRecords.reduce(
       (acc, record) => ({
         grossAmount: acc.grossAmount + Number(record.grossSalary),

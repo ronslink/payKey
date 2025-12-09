@@ -266,6 +266,19 @@ class MockPayPeriodRepository extends _i1.Mock
           as _i6.Future<_i2.PayPeriod>);
 
   @override
+  _i6.Future<_i2.PayPeriod> reopenPayPeriod(String? payPeriodId) =>
+      (super.noSuchMethod(
+            Invocation.method(#reopenPayPeriod, [payPeriodId]),
+            returnValue: _i6.Future<_i2.PayPeriod>.value(
+              _FakePayPeriod_0(
+                this,
+                Invocation.method(#reopenPayPeriod, [payPeriodId]),
+              ),
+            ),
+          )
+          as _i6.Future<_i2.PayPeriod>);
+
+  @override
   _i6.Future<void> updatePayPeriodStatus(String? payPeriodId, String? action) =>
       (super.noSuchMethod(
             Invocation.method(#updatePayPeriodStatus, [payPeriodId, action]),
@@ -421,4 +434,16 @@ class MockPayrollRepository extends _i1.Mock implements _i4.PayrollRepository {
             ),
           )
           as _i6.Future<_i5.PayrollSummary>);
+
+  @override
+  _i6.Future<List<_i4.WorkerPaymentHistoryItem>> getWorkerHistory(
+    String? workerId,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#getWorkerHistory, [workerId]),
+            returnValue: _i6.Future<List<_i4.WorkerPaymentHistoryItem>>.value(
+              <_i4.WorkerPaymentHistoryItem>[],
+            ),
+          )
+          as _i6.Future<List<_i4.WorkerPaymentHistoryItem>>);
 }

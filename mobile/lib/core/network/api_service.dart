@@ -568,6 +568,7 @@ class PayPeriodEndpoints extends BaseEndpoints {
   Future<Response> process(String id) => _api.post('/pay-periods/$id/process');
   Future<Response> complete(String id) => _api.post('/pay-periods/$id/complete');
   Future<Response> close(String id) => _api.post('/pay-periods/$id/close');
+  Future<Response> reopen(String id) => _api.post('/pay-periods/$id/reopen');
 
   Future<Response> generatePayslips(String id) {
     return _api.post('/pay-periods/$id/payslips');
@@ -713,6 +714,13 @@ class SubscriptionEndpoints extends BaseEndpoints {
 
   Future<Response> subscribe(String planId) {
     return _api.post('/subscriptions/subscribe', data: {'planId': planId});
+  }
+
+  Future<Response> subscribeWithStripe(String planId) {
+    return _api.post('/payments/unified/subscribe', data: {
+      'planId': planId,
+      'paymentMethod': 'stripe',
+    });
   }
 
   Future<Response> cancel(String subscriptionId) {

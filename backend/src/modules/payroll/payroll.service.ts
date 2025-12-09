@@ -1,4 +1,4 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThanOrEqual, Between, DataSource } from 'typeorm';
 import { Worker } from '../workers/entities/worker.entity';
@@ -489,7 +489,7 @@ export class PayrollService {
         payPeriodId,
         status: PayrollStatus.DRAFT,
       },
-      relations: ['worker'],
+      relations: ['worker', 'payPeriod'],
     });
 
     if (records.length === 0) {
@@ -644,5 +644,67 @@ export class PayrollService {
       trendUp: trend >= 0,
       processedCount: thisMonthRecords.length,
     };
+  }
+  async getEmployeePayslips(userId: string) {
+    const worker = await this.workersRepository.findOne({
+      where: { linkedUserId: userId },
+    });
+
+    if (!worker) {
+      throw new NotFoundException('Worker profile not found');
+    }
+
+    return this.payrollRepository.find({
+      where: {
+        workerId: worker.id,
+        status: PayrollStatus.FINALIZED,
+      },
+      relations: ['payPeriod'],
+      order: { periodStart: 'DESC' },
+    });
+  }
+
+  async getEmployeePayslipPdf(userId: string, recordId: string) {
+    const worker = await this.workersRepository.findOne({
+      where: { linkedUserId: userId },
+    });
+
+    if (!worker) {
+      throw new NotFoundException('Worker profile not found');
+    }
+
+    const record = await this.payrollRepository.findOne({
+      where: {
+        id: recordId,
+        workerId: worker.id,
+        status: PayrollStatus.FINALIZED,
+      },
+      relations: ['worker', 'payPeriod'],
+    });
+
+    if (!record) {
+      throw new NotFoundException('Payslip not found');
+    }
+
+    return this.payslipService.generatePayslip(record);
+  }
+
+  async getWorkerPayrollHistory(userId: string, workerId: string) {
+    const worker = await this.workersRepository.findOne({
+      where: { id: workerId, userId },
+    });
+
+    if (!worker) {
+      throw new ForbiddenException('Worker not found or access denied');
+    }
+
+    return this.payrollRepository.find({
+      where: {
+        workerId: worker.id,
+        status: PayrollStatus.FINALIZED,
+      },
+      relations: ['payPeriod'],
+      order: { periodStart: 'DESC' },
+    });
   }
 }

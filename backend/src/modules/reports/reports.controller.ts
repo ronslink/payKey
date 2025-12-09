@@ -1,4 +1,5 @@
-import { Controller, Get, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Request, Res, StreamableFile } from '@nestjs/common';
+import type { Response } from 'express';
 import { ReportsService } from './reports.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -71,5 +72,59 @@ export class ReportsController {
   @Get('dashboard')
   async getDashboardMetrics(@Request() req: any) {
     return this.reportsService.getDashboardMetrics(req.user.userId);
+  }
+
+  @Get('p9')
+  async getP9Report(@Request() req: any, @Query('year') year: string) {
+    return this.reportsService.getP9Report(req.user.userId, parseInt(year));
+  }
+
+  @Get('p10')
+  async getP10Report(@Request() req: any, @Query('year') year: string) {
+    return this.reportsService.getP10Report(req.user.userId, parseInt(year));
+  }
+
+  @Get('my-p9')
+  async getEmployeeP9Report(@Request() req: any, @Query('year') year: string) {
+    return this.reportsService.getEmployeeP9Report(req.user.userId, parseInt(year));
+  }
+
+  @Get('my-p9/pdf')
+  async getEmployeeP9Pdf(
+    @Request() req: any,
+    @Query('year') year: string,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const reports = await this.reportsService.getEmployeeP9Report(
+      req.user.userId,
+      parseInt(year),
+    );
+    const buffer = await this.reportsService.generateP9Pdf(reports[0]);
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="P9_${year}.pdf"`,
+    });
+
+    return new StreamableFile(buffer);
+  }
+
+  @Get('p9/zip')
+  async getP9Zip(
+    @Request() req: any,
+    @Query('year') year: string,
+    @Res() res: Response,
+  ) {
+    const { stream, filename } = await this.reportsService.generateP9Zip(
+      req.user.userId,
+      parseInt(year),
+    );
+
+    res.set({
+      'Content-Type': 'application/zip',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+    });
+
+    stream.pipe(res);
   }
 }

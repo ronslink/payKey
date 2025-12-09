@@ -63,7 +63,8 @@ class PayPeriodRepository {
       operation: 'fetch pay period',
       request: () async {
         final response = await _apiService.payPeriods.getById(payPeriodId);
-        return PayPeriod.fromJson(response.data as Map<String, dynamic>);
+        final jsonMap = _normalizePayPeriodJson(response.data as Map<String, dynamic>);
+        return PayPeriod.fromJson(jsonMap);
       },
     );
   }
@@ -115,7 +116,8 @@ class PayPeriodRepository {
         final response = await _apiService.payPeriods.create(
           _buildCreatePayload(request),
         );
-        return PayPeriod.fromJson(response.data as Map<String, dynamic>);
+        final jsonMap = _normalizePayPeriodJson(response.data as Map<String, dynamic>);
+        return PayPeriod.fromJson(jsonMap);
       },
     );
   }
@@ -134,7 +136,8 @@ class PayPeriodRepository {
           payPeriodId,
           _buildUpdatePayload(request),
         );
-        return PayPeriod.fromJson(response.data as Map<String, dynamic>);
+        final jsonMap = _normalizePayPeriodJson(response.data as Map<String, dynamic>);
+        return PayPeriod.fromJson(jsonMap);
       },
     );
   }
@@ -200,6 +203,13 @@ class PayPeriodRepository {
     return _transitionStatus(payPeriodId, 'close');
   }
 
+  /// Reopen a closed pay period.
+  ///
+  /// Transition: CLOSED -> COMPLETED (or ACTIVE depending on backend logic)
+  Future<PayPeriod> reopenPayPeriod(String payPeriodId) async {
+    return _transitionStatus(payPeriodId, 'reopen');
+  }
+
   /// Generic status transition using action name.
   Future<void> updatePayPeriodStatus(String payPeriodId, String action) async {
     return _executeRequest(
@@ -243,6 +253,9 @@ class PayPeriodRepository {
             break;
           case 'close':
             await _apiService.payPeriods.close(payPeriodId);
+            break;
+          case 'reopen':
+            await _apiService.payPeriods.reopen(payPeriodId);
             break;
           default:
             throw ArgumentError('Unknown action: $action');
@@ -304,9 +317,8 @@ class PayPeriodRepository {
 
     for (final json in items) {
       try {
-        final payPeriod = PayPeriod.fromJson(
-          Map<String, dynamic>.from(json as Map),
-        );
+        final jsonMap = _normalizePayPeriodJson(json);
+        final payPeriod = PayPeriod.fromJson(jsonMap);
         results.add(payPeriod);
       } catch (e) {
         _logDebug('Error parsing pay period: $e\nJSON: $json');
@@ -315,6 +327,21 @@ class PayPeriodRepository {
     }
 
     return results;
+  }
+
+  /// Normalize pay period JSON data before parsing
+  ///
+  /// Handles frequency case normalization and other data cleanup
+  Map<String, dynamic> _normalizePayPeriodJson(dynamic json) {
+    final jsonMap = Map<String, dynamic>.from(json as Map);
+    
+    // Fix frequency case issue - convert to uppercase
+    if (jsonMap['frequency'] is String) {
+      jsonMap['frequency'] = jsonMap['frequency'].toString().toUpperCase();
+    }
+    
+    // Handle other potential data normalization here if needed
+    return jsonMap;
   }
 
   // ---------------------------------------------------------------------------
@@ -342,7 +369,7 @@ class PayPeriodRepository {
 
   void _logDebug(String message) {
     if (kDebugMode) {
-      debugPrint('[PayPeriodRepository] $message');
+      print('[PayPeriodRepository] $message');
     }
   }
 }
