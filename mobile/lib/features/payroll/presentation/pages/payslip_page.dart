@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 import '../../data/models/payroll_model.dart';
 import '../../../../core/network/api_service.dart';
 // ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
+import 'package:universal_html/html.dart' as html;
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 class PayslipPage extends ConsumerWidget {

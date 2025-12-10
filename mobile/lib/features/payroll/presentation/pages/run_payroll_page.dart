@@ -21,6 +21,9 @@ class RunPayrollPage extends ConsumerStatefulWidget {
 class _RunPayrollPageState extends ConsumerState<RunPayrollPage> {
   PayPeriod? _payPeriod;
   bool _isCreatingPayPeriod = false;
+  bool _isSelectingPayPeriod = false;
+  List<PayPeriod> _availablePeriods = [];
+  bool _isLoadingPeriods = false;
 
   // Form controllers for pay period creation
   final _nameController = TextEditingController();
@@ -37,9 +40,7 @@ class _RunPayrollPageState extends ConsumerState<RunPayrollPage> {
       if (widget.payPeriodId != null) {
         _loadPayPeriod();
       } else {
-        setState(() {
-          _isCreatingPayPeriod = true;
-        });
+        _loadAvailablePayPeriods();
       }
     });
   }
@@ -60,6 +61,7 @@ class _RunPayrollPageState extends ConsumerState<RunPayrollPage> {
         setState(() {
           _payPeriod = period;
           _isCreatingPayPeriod = false;
+          _isSelectingPayPeriod = false;
         });
       }
     } catch (e) {
@@ -69,6 +71,47 @@ class _RunPayrollPageState extends ConsumerState<RunPayrollPage> {
             content: Text('Failed to load pay period: $e'),
             backgroundColor: Colors.red,
           ),
+        );
+      }
+    }
+  }
+
+  Future<void> _loadAvailablePayPeriods() async {
+    setState(() => _isLoadingPeriods = true);
+    try {
+      final repository = ref.read(payPeriodRepositoryProvider);
+      final allPeriods = await repository.getPayPeriods();
+      
+      // Filter for actionable periods (Draft, Active, Processing)
+      // Sort by date descending (newest first)
+      final actionable = allPeriods.where((p) => 
+        p.status == PayPeriodStatus.draft || 
+        p.status == PayPeriodStatus.active ||
+        p.status == PayPeriodStatus.processing
+      ).toList()
+       ..sort((a, b) => b.startDate.compareTo(a.startDate));
+
+      if (mounted) {
+        setState(() {
+          _availablePeriods = actionable;
+          _isLoadingPeriods = false;
+          
+          if (_availablePeriods.isNotEmpty) {
+            _isSelectingPayPeriod = true;
+            _isCreatingPayPeriod = false;
+          } else {
+            _isCreatingPayPeriod = true;
+            _isSelectingPayPeriod = false;
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingPeriods = false);
+        // Fallback to creation if fetch fails
+        setState(() => _isCreatingPayPeriod = true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load periods: $e')),
         );
       }
     }
@@ -131,7 +174,82 @@ class _RunPayrollPageState extends ConsumerState<RunPayrollPage> {
           ),
         ],
       ),
-      body: _isCreatingPayPeriod ? _buildPayPeriodCreationForm() : _buildPayrollRunInterface(),
+      body: _buildBody(),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_isLoadingPeriods) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_isSelectingPayPeriod) {
+      return _buildPeriodSelectionList();
+    }
+    if (_isCreatingPayPeriod) {
+      return _buildPayPeriodCreationForm();
+    }
+    return _buildPayrollRunInterface();
+  }
+
+  Widget _buildPeriodSelectionList() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Select Pay Period',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Choose an existing open pay period to run payroll for, or create a new one.',
+            style: TextStyle(color: Colors.grey),
+          ),
+          const SizedBox(height: 24),
+          Expanded(
+            child: ListView.builder(
+              itemCount: _availablePeriods.length,
+              itemBuilder: (context, index) {
+                final period = _availablePeriods[index];
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: ListTile(
+                    title: Text(period.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text('${period.frequency.name} • ${period.startDate.toString().split(" ")[0]}'),
+                    trailing: Chip(
+                      label: Text(period.status.name.toUpperCase()),
+                      backgroundColor: Colors.blue.withValues(alpha: 0.1),
+                    ),
+                    onTap: () {
+                      setState(() {
+                        _payPeriod = period;
+                        _isSelectingPayPeriod = false;
+                        _isCreatingPayPeriod = false;
+                      });
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                setState(() {
+                  _isSelectingPayPeriod = false;
+                  _isCreatingPayPeriod = true;
+                });
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Create New Pay Period'),
+              style: OutlinedButton.styleFrom(padding: const EdgeInsets.all(16)),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

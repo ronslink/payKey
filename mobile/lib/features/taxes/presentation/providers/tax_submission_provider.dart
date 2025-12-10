@@ -5,7 +5,9 @@ import '../../data/models/tax_submission_model.dart';
 class TaxSubmissionNotifier extends StateNotifier<AsyncValue<List<TaxSubmissionModel>>> {
   final TaxRepository _repository;
 
-  TaxSubmissionNotifier(this._repository) : super(const AsyncValue.loading());
+  TaxSubmissionNotifier(this._repository) : super(const AsyncValue.loading()) {
+    loadSubmissions();
+  }
 
   Future<void> loadSubmissions({
     String? taxYear,

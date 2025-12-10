@@ -15,10 +15,6 @@ final _privateConstructorUsedError = UnsupportedError(
   'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models',
 );
 
-LeaveRequestModel _$LeaveRequestModelFromJson(Map<String, dynamic> json) {
-  return _LeaveRequestModel.fromJson(json);
-}
-
 /// @nodoc
 mixin _$LeaveRequestModel {
   String get id => throw _privateConstructorUsedError;
@@ -41,9 +37,6 @@ mixin _$LeaveRequestModel {
   bool get paidLeave => throw _privateConstructorUsedError;
   String? get emergencyContact => throw _privateConstructorUsedError;
   String? get emergencyPhone => throw _privateConstructorUsedError;
-
-  /// Serializes this LeaveRequestModel to a JSON map.
-  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
 
   /// Create a copy of LeaveRequestModel
   /// with the given fields replaced by the non-null parameter values.
@@ -351,8 +344,8 @@ class __$$LeaveRequestModelImplCopyWithImpl<$Res>
 }
 
 /// @nodoc
-@JsonSerializable()
-class _$LeaveRequestModelImpl implements _LeaveRequestModel {
+
+class _$LeaveRequestModelImpl extends _LeaveRequestModel {
   const _$LeaveRequestModelImpl({
     required this.id,
     required this.workerId,
@@ -373,10 +366,7 @@ class _$LeaveRequestModelImpl implements _LeaveRequestModel {
     required this.paidLeave,
     this.emergencyContact,
     this.emergencyPhone,
-  });
-
-  factory _$LeaveRequestModelImpl.fromJson(Map<String, dynamic> json) =>
-      _$$LeaveRequestModelImplFromJson(json);
+  }) : super._();
 
   @override
   final String id;
@@ -464,7 +454,6 @@ class _$LeaveRequestModelImpl implements _LeaveRequestModel {
                 other.emergencyPhone == emergencyPhone));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   int get hashCode => Object.hashAll([
     runtimeType,
@@ -499,14 +488,9 @@ class _$LeaveRequestModelImpl implements _LeaveRequestModel {
         this,
         _$identity,
       );
-
-  @override
-  Map<String, dynamic> toJson() {
-    return _$$LeaveRequestModelImplToJson(this);
-  }
 }
 
-abstract class _LeaveRequestModel implements LeaveRequestModel {
+abstract class _LeaveRequestModel extends LeaveRequestModel {
   const factory _LeaveRequestModel({
     required final String id,
     required final String workerId,
@@ -528,9 +512,7 @@ abstract class _LeaveRequestModel implements LeaveRequestModel {
     final String? emergencyContact,
     final String? emergencyPhone,
   }) = _$LeaveRequestModelImpl;
-
-  factory _LeaveRequestModel.fromJson(Map<String, dynamic> json) =
-      _$LeaveRequestModelImpl.fromJson;
+  const _LeaveRequestModel._() : super._();
 
   @override
   String get id;

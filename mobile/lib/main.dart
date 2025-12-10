@@ -33,12 +33,17 @@ import 'features/reports/presentation/pages/reports_page.dart';
 import 'features/employee_portal/presentation/pages/employee_login_page.dart';
 import 'features/employee_portal/presentation/pages/employee_dashboard_page.dart';
 import 'features/employee_portal/presentation/pages/request_leave_page.dart';
+import 'features/employee_portal/presentation/pages/employee_p9_page.dart';
+import 'features/employee_portal/presentation/pages/employee_my_leaves_page.dart';
+import 'features/employee_portal/presentation/pages/employee_timesheet_page.dart';
+import 'features/employee_portal/presentation/pages/employee_payslips_page.dart';
 import 'features/time_tracking/presentation/pages/attendance_dashboard_page.dart';
 import 'features/leave_management/presentation/pages/leave_dashboard_page.dart';
 import 'features/profile/presentation/pages/edit_profile_page.dart';
 
 // Core
 import 'core/network/api_service.dart';
+import 'core/widgets/feature_gate.dart';
 import 'main_layout.dart';
 
 // =============================================================================
@@ -189,6 +194,7 @@ abstract class AppRoutes {
   static const employeeMyLeaves = '/employee/my-leaves';
   static const employeeTimesheet = '/employee/timesheet';
   static const employeePayslips = '/employee/payslips';
+  static const employeeP9 = '/employee/p9';
 }
 
 /// Navigation tab indices.
@@ -266,23 +272,23 @@ final _authRoutes = <RouteBase>[
   GoRoute(
     path: AppRoutes.login,
     name: 'login',
-    builder: (_, __) => const LoginPage(),
+    builder: (_, _) => const LoginPage(),
   ),
   GoRoute(
     path: AppRoutes.register,
     name: 'register',
-    builder: (_, __) => const RegisterPage(),
+    builder: (_, _) => const RegisterPage(),
   ),
   GoRoute(
     path: AppRoutes.onboarding,
     name: 'onboarding',
-    builder: (_, __) => const OnboardingPage(),
+    builder: (_, _) => const OnboardingPage(),
   ),
   // Employee Portal Auth
   GoRoute(
     path: AppRoutes.employeeLogin,
     name: 'employeeLogin',
-    builder: (_, __) => const EmployeeLoginPage(),
+    builder: (_, _) => const EmployeeLoginPage(),
   ),
 ];
 
@@ -294,7 +300,7 @@ final _mainTabRoutes = <RouteBase>[
   GoRoute(
     path: AppRoutes.home,
     name: 'home',
-    builder: (_, __) => const MainLayout(
+    builder: (_, _) => const MainLayout(
       currentIndex: NavIndex.home,
       child: HomePage(),
     ),
@@ -302,7 +308,7 @@ final _mainTabRoutes = <RouteBase>[
   GoRoute(
     path: AppRoutes.workers,
     name: 'workers',
-    builder: (_, __) => const MainLayout(
+    builder: (_, _) => const MainLayout(
       currentIndex: NavIndex.workers,
       child: WorkersListPage(),
     ),
@@ -310,15 +316,18 @@ final _mainTabRoutes = <RouteBase>[
   GoRoute(
     path: AppRoutes.timeTracking,
     name: 'timeTracking',
-    builder: (_, __) => const MainLayout(
+    builder: (_, _) => const MainLayout(
       currentIndex: NavIndex.timeTracking,
-      child: TimeTrackingPage(),
+      child: FeatureGate(
+        featureKey: 'time_tracking',
+        child: TimeTrackingPage(),
+      ),
     ),
   ),
   GoRoute(
     path: AppRoutes.subscriptions,
     name: 'subscriptions',
-    builder: (_, __) => const MainLayout(
+    builder: (_, _) => const MainLayout(
       currentIndex: NavIndex.subscriptions,
       child: SubscriptionManagementPage(),
     ),
@@ -326,7 +335,7 @@ final _mainTabRoutes = <RouteBase>[
   GoRoute(
     path: AppRoutes.tax,
     name: 'tax',
-    builder: (_, __) => const MainLayout(
+    builder: (_, _) => const MainLayout(
       currentIndex: NavIndex.tax,
       child: ComprehensiveTaxPage(),
     ),
@@ -334,7 +343,7 @@ final _mainTabRoutes = <RouteBase>[
   GoRoute(
     path: AppRoutes.payroll,
     name: 'payroll',
-    builder: (_, __) => const MainLayout(
+    builder: (_, _) => const MainLayout(
       currentIndex: NavIndex.payroll,
       child: PayrollPage(),
     ),
@@ -342,7 +351,7 @@ final _mainTabRoutes = <RouteBase>[
   GoRoute(
     path: AppRoutes.finance,
     name: 'finance',
-    builder: (_, __) => const MainLayout(
+    builder: (_, _) => const MainLayout(
       currentIndex: NavIndex.finance,
       child: FinancePage(),
     ),
@@ -357,12 +366,12 @@ final _workerRoutes = <RouteBase>[
   GoRoute(
     path: AppRoutes.workersAdd,
     name: 'workersAdd',
-    builder: (_, __) => const WorkerFormPage(),
+    builder: (_, _) => const WorkerFormPage(),
   ),
   GoRoute(
     path: AppRoutes.workersArchived,
     name: 'workersArchived',
-    builder: (_, __) => const ArchivedWorkersPage(),
+    builder: (_, _) => const ArchivedWorkersPage(),
   ),
   GoRoute(
     path: '/workers/:id',
@@ -398,7 +407,7 @@ final _payrollRoutes = <RouteBase>[
   GoRoute(
     path: AppRoutes.payrollRun,
     name: 'payrollRun',
-    builder: (_, __) => const RunPayrollPage(),
+    builder: (_, _) => const RunPayrollPage(),
   ),
   GoRoute(
     path: '/payroll/run/:id',
@@ -450,7 +459,7 @@ final _timeTrackingRoutes = <RouteBase>[
   GoRoute(
     path: AppRoutes.timeTrackingHistory,
     name: 'timeTrackingHistory',
-    builder: (_, __) => const TimeTrackingHistoryPage(),
+    builder: (_, _) => const TimeTrackingHistoryPage(),
   ),
 ];
 
@@ -462,12 +471,12 @@ final _propertyRoutes = <RouteBase>[
   GoRoute(
     path: AppRoutes.properties,
     name: 'properties',
-    builder: (_, __) => const PropertiesPage(),
+    builder: (_, _) => const PropertiesPage(),
   ),
   GoRoute(
     path: AppRoutes.propertiesAdd,
     name: 'propertiesAdd',
-    builder: (_, __) => const PropertyFormPage(),
+    builder: (_, _) => const PropertyFormPage(),
   ),
   GoRoute(
     path: '/properties/edit/:id',
@@ -495,65 +504,73 @@ final _otherRoutes = <RouteBase>[
   GoRoute(
     path: AppRoutes.taxes,
     name: 'taxes',
-    builder: (_, __) => const ComprehensiveTaxPage(),
+    builder: (_, _) => const ComprehensiveTaxPage(),
   ),
   GoRoute(
     path: AppRoutes.accounting,
     name: 'accounting',
-    builder: (_, __) => const AccountingPage(),
+    builder: (_, _) => const FeatureGate(
+      featureKey: 'accounting_integration',
+      child: AccountingPage(),
+    ),
   ),
   GoRoute(
     path: AppRoutes.reports,
     name: 'reports',
-    builder: (_, __) => const ReportsPage(),
+    builder: (_, _) => const FeatureGate(
+      featureKey: 'basic_reports',
+      child: ReportsPage(),
+    ),
   ),
   // Attendance (for employers)
   GoRoute(
     path: AppRoutes.attendance,
     name: 'attendance',
-    builder: (_, __) => const AttendanceDashboardPage(),
+    builder: (_, _) => const AttendanceDashboardPage(),
   ),
   GoRoute(
     path: AppRoutes.leave,
     name: 'leave',
-    builder: (_, __) => const LeaveDashboardPage(),
+    builder: (_, _) => const FeatureGate(
+      featureKey: 'leave_management',
+      child: LeaveDashboardPage(),
+    ),
   ),
   GoRoute(
     path: AppRoutes.profileEdit,
     name: 'profileEdit',
-    builder: (_, __) => const EditProfilePage(),
+    builder: (_, _) => const EditProfilePage(),
   ),
   // Employee Portal Routes
   GoRoute(
     path: AppRoutes.employeeDashboard,
     name: 'employeeDashboard',
-    builder: (_, __) => const EmployeeDashboardPage(),
+    builder: (_, _) => const EmployeeDashboardPage(),
   ),
   GoRoute(
     path: AppRoutes.employeeRequestLeave,
     name: 'employeeRequestLeave',
-    builder: (_, __) => const RequestLeavePage(),
+    builder: (_, _) => const RequestLeavePage(),
   ),
   GoRoute(
     path: AppRoutes.employeeMyLeaves,
     name: 'employeeMyLeaves',
-    builder: (_, __) => const Scaffold(
-      body: Center(child: Text('My Leaves - Coming Soon')),
-    ),
+    builder: (_, _) => const EmployeeMyLeavesPage(),
   ),
   GoRoute(
     path: AppRoutes.employeeTimesheet,
     name: 'employeeTimesheet',
-    builder: (_, __) => const Scaffold(
-      body: Center(child: Text('Timesheet - Coming Soon')),
-    ),
+    builder: (_, _) => const EmployeeTimesheetPage(),
   ),
   GoRoute(
     path: AppRoutes.employeePayslips,
     name: 'employeePayslips',
-    builder: (_, __) => const Scaffold(
-      body: Center(child: Text('Payslips - Coming Soon')),
-    ),
+    builder: (_, _) => const EmployeePayslipsPage(),
+  ),
+  GoRoute(
+    path: AppRoutes.employeeP9,
+    name: 'employeeP9',
+    builder: (_, _) => const EmployeeP9Page(),
   ),
 ];
 

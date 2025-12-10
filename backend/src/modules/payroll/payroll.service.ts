@@ -460,7 +460,22 @@ export class PayrollService {
       relations: ['worker'],
     });
 
-    // Transform to match the expected format (PayrollCalculation)
+    return this._transformRecords(records);
+  }
+
+  async getPeriodRecords(userId: string, payPeriodId: string) {
+    const records = await this.payrollRepository.find({
+      where: {
+        userId,
+        payPeriodId,
+      },
+      relations: ['worker'],
+    });
+
+    return this._transformRecords(records);
+  }
+
+  private _transformRecords(records: PayrollRecord[]) {
     return records.map((record) => ({
       id: record.id,
       workerId: record.workerId,

@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
+import { createTestUserData } from './test-utils';
 
 describe('Payroll Batch Flow E2E', () => {
     let app: INestApplication;
@@ -17,18 +18,21 @@ describe('Payroll Batch Flow E2E', () => {
         await app.init();
 
         // Register a new user for this test to ensure clean state
-        const email = `batch.test.${Date.now()}@paykey.com`;
-        const password = 'Password123!';
+        const userData = createTestUserData({
+            firstName: 'Batch',
+            lastName: 'Tester',
+            businessName: 'Batch Inc'
+        });
 
         const registerRes = await request(app.getHttpServer())
             .post('/auth/register')
             .send({
-                email,
-                password,
-                firstName: 'Batch',
-                lastName: 'Tester',
-                businessName: 'Batch Inc',
-                phone: '+254700000000'
+                email: userData.email,
+                password: userData.password,
+                firstName: userData.firstName,
+                lastName: userData.lastName,
+                businessName: userData.businessName,
+                phone: userData.phone
             });
 
         // If registration fails (e.g. user exists), try login
@@ -38,7 +42,7 @@ describe('Payroll Batch Flow E2E', () => {
 
         const loginRes = await request(app.getHttpServer())
             .post('/auth/login')
-            .send({ email, password });
+            .send({ email: userData.email, password: userData.password });
 
         authToken = loginRes.body.access_token;
         userId = loginRes.body.user.id;

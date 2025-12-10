@@ -35,6 +35,7 @@ class LeaveBalancePage extends ConsumerWidget {
               ),
               const Spacer(),
               IconButton(
+                // ignore: unused_result
                 onPressed: () => ref.refresh(leaveBalanceProvider(selectedWorkerId!)),
                 icon: const Icon(Icons.refresh),
                 tooltip: 'Refresh Balance',
@@ -67,6 +68,7 @@ class LeaveBalancePage extends ConsumerWidget {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () {
+                      // ignore: unused_result
                       ref.refresh(leaveBalanceProvider(selectedWorkerId!));
                     },
                     child: const Text('Retry'),

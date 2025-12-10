@@ -528,6 +528,11 @@ class PayrollEndpoints extends BaseEndpoints {
       throw _api.handleError(e);
     }
   }
+
+  /// Get payslips for a specific worker
+  Future<Response> getPayslipsForWorker(String workerId) {
+    return _api.get('/payroll-records/worker/$workerId');
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -606,6 +611,38 @@ class TaxEndpoints extends BaseEndpoints {
 
   // Submissions
   Future<Response> getSubmissions() => _api.get('/taxes/submissions');
+
+  Future<Response> getMonthlySummaries() => _api.get('/taxes/submissions/monthly');
+
+  Future<Response> markMonthAsFiled(int year, int month) {
+    return _api.post('/taxes/submissions/monthly/file', data: {
+      'year': year,
+      'month': month,
+    });
+  }
+
+  Future<Response> exportStatutoryReturn({
+    required String exportType,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) {
+    return _api.post('/export', data: {
+      'exportType': exportType,
+      'startDate': startDate.toIso8601String(),
+      'endDate': endDate.toIso8601String(),
+    });
+  }
+
+  Future<Response> downloadExport(String maxId) {
+    // This returns the binary stream directly or a temporary link?
+    // Controller returns StreamableFile, so we might need special handling if using Dio to download.
+    // However, usually we get a downloadUrl. This method might be for metadata or direct stream.
+    // The controller returns StreamableFile on /export/download/:id
+    return _api.get(
+      '/export/download/$maxId',
+      options: Options(responseType: ResponseType.bytes),
+    );
+  }
 
   Future<Response> getSubmissionByPeriod(String payPeriodId) {
     return _api.get('/taxes/submissions/period/$payPeriodId');
@@ -850,6 +887,34 @@ class ReportEndpoints extends BaseEndpoints {
   }
 
   Future<Response> getDashboardMetrics() => _api.get('/reports/dashboard');
+
+  /// Get P9 reports for all workers for a given year
+  Future<Response> getP9Reports(int year, {String? workerId}) {
+    final queryParams = {'year': year.toString()};
+    if (workerId != null) {
+      queryParams['workerId'] = workerId;
+    }
+    return _api.get('/reports/p9', queryParams: queryParams);
+  }
+
+  /// Get P10 report (annual employer return)
+  Future<Response> getP10Report(int year) {
+    return _api.get('/reports/p10', queryParams: {'year': year.toString()});
+  }
+
+  /// Download P9 ZIP file containing all worker P9 PDFs
+  Future<List<int>> downloadP9Zip(int year) async {
+    try {
+      final response = await _api.dio.get<List<int>>(
+        '/reports/p9/zip',
+        queryParameters: {'year': year.toString()},
+        options: Options(responseType: ResponseType.bytes),
+      );
+      return response.data ?? [];
+    } catch (e) {
+      throw _api.handleError(e);
+    }
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -920,6 +985,25 @@ class EmployeePortalEndpoints extends BaseEndpoints {
   /// Employee: Cancel leave request
   Future<Response> cancelLeaveRequest(String requestId) {
     return _api.post('/employee-portal/cancel-leave/$requestId');
+  }
+
+  /// Employee: Get own P9 tax report for a given year
+  Future<Response> getMyP9Report(int year) {
+    return _api.get('/reports/my-p9', queryParams: {'year': year.toString()});
+  }
+
+  /// Employee: Download own P9 as PDF
+  Future<List<int>> downloadMyP9Pdf(int year) async {
+    try {
+      final response = await _api.dio.get<List<int>>(
+        '/reports/my-p9/pdf',
+        queryParameters: {'year': year.toString()},
+        options: Options(responseType: ResponseType.bytes),
+      );
+      return response.data ?? [];
+    } catch (e) {
+      throw _api.handleError(e);
+    }
   }
 }
 

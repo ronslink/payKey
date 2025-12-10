@@ -133,6 +133,18 @@ class PayrollRepository {
     );
   }
 
+  /// Get payroll records for a pay period (all statuses).
+  Future<List<PayrollCalculation>> getPeriodRecords(String payPeriodId) async {
+    return _executeRequest(
+      operation: 'get period records',
+      request: () async {
+        final response =
+            await _authenticatedGet('/payroll/period-records/$payPeriodId');
+        return _parsePayrollList(response.data);
+      },
+    );
+  }
+
   /// Update a single payroll item in the draft.
   ///
   /// Allows editing bonuses, deductions, and other adjustments

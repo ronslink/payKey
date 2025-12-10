@@ -7,6 +7,104 @@ import '../../data/repositories/pay_period_repository.dart' as repo;
 import '../../data/repositories/pay_period_repository.dart' show PayPeriodStatistics;
 import '../../presentation/providers/pay_period_provider.dart';
 
+// ============================================================================
+// Constants
+// ============================================================================
+
+class _PayPeriodColors {
+  static Color forStatus(PayPeriodStatus status) {
+    return switch (status) {
+      PayPeriodStatus.draft => Colors.grey.shade600,
+      PayPeriodStatus.active => Colors.blue,
+      PayPeriodStatus.processing => Colors.orange,
+      PayPeriodStatus.completed => Colors.green,
+      PayPeriodStatus.closed => Colors.deepPurple,
+      PayPeriodStatus.cancelled => Colors.red,
+    };
+  }
+
+  static Color forAction(PayPeriodStatusAction action) {
+    return switch (action) {
+      PayPeriodStatusAction.activate => Colors.blue,
+      PayPeriodStatusAction.process => Colors.orange,
+      PayPeriodStatusAction.complete => Colors.green,
+      PayPeriodStatusAction.close => Colors.red,
+      _ => Colors.grey,
+    };
+  }
+}
+
+class _PayPeriodStyles {
+  static const cardMargin = EdgeInsets.symmetric(horizontal: 16, vertical: 8);
+  static const cardPadding = EdgeInsets.all(16.0);
+  static const filterPadding = EdgeInsets.all(16.0);
+}
+
+// ============================================================================
+// Action Configuration
+// ============================================================================
+
+class _ActionConfig {
+  static String labelFor(PayPeriodStatusAction action, PayPeriodStatus status) {
+    return switch (action) {
+      PayPeriodStatusAction.activate => 'Activate',
+      PayPeriodStatusAction.process => 
+          status == PayPeriodStatus.completed ? 'Reopen' : 'Process',
+      PayPeriodStatusAction.complete => 'Complete',
+      PayPeriodStatusAction.close => 'Close',
+      _ => '',
+    };
+  }
+
+  static List<PayPeriodStatusAction> availableFor(PayPeriodStatus status) {
+    return switch (status) {
+      PayPeriodStatus.draft => [
+          PayPeriodStatusAction.activate,
+          PayPeriodStatusAction.close,
+        ],
+      PayPeriodStatus.active => [
+          PayPeriodStatusAction.process,
+          PayPeriodStatusAction.close,
+        ],
+      PayPeriodStatus.processing => [
+          PayPeriodStatusAction.complete,
+          PayPeriodStatusAction.close,
+        ],
+      PayPeriodStatus.completed => [
+          PayPeriodStatusAction.process, // Reopen
+          PayPeriodStatusAction.close
+        ],
+      PayPeriodStatus.closed => [],
+      PayPeriodStatus.cancelled => [],
+    };
+  }
+}
+
+// ============================================================================
+// Formatters
+// ============================================================================
+
+class _Formatters {
+  static final date = DateFormat('MMM dd, yyyy');
+  static final number = NumberFormat('#,###.00');
+
+  static String currency(double? value) =>
+      'KES ${(value ?? 0.0).toStringAsFixed(2)}';
+
+  static String currencyFormatted(double value) =>
+      'KES ${number.format(value)}';
+
+  static String statusLabel(PayPeriodStatus status) =>
+      status.name.replaceAll('_', ' ');
+
+  static String frequencyLabel(PayPeriodFrequency frequency) =>
+      frequency.name.replaceAll('_', ' ');
+}
+
+// ============================================================================
+// Main Page Widget
+// ============================================================================
+
 class PayPeriodManagementPage extends ConsumerStatefulWidget {
   const PayPeriodManagementPage({super.key});
 
@@ -28,407 +126,98 @@ class _PayPeriodManagementPageState
     });
   }
 
+  // --------------------------------------------------------------------------
+  // Actions
+  // --------------------------------------------------------------------------
+
   Future<void> _executeAction(
     PayPeriodStatusAction action,
     String payPeriodId,
   ) async {
-    setState(() => _isLoading = true);
+    _setLoading(true);
     try {
       final notifier = ref.read(payPeriodsProvider.notifier);
 
-      switch (action) {
-        case PayPeriodStatusAction.activate:
-          await notifier.activatePayPeriod(payPeriodId);
-          break;
-        case PayPeriodStatusAction.process:
-          await notifier.processPayPeriod(payPeriodId);
-          break;
-        case PayPeriodStatusAction.complete:
-          await notifier.completePayPeriod(payPeriodId);
-          break;
-        case PayPeriodStatusAction.close:
-          await notifier.closePayPeriod(payPeriodId);
-          break;
-        default:
-          break;
-      }
+      await switch (action) {
+        PayPeriodStatusAction.activate => notifier.activatePayPeriod(payPeriodId),
+        PayPeriodStatusAction.process => notifier.processPayPeriod(payPeriodId),
+        PayPeriodStatusAction.complete => notifier.completePayPeriod(payPeriodId),
+        PayPeriodStatusAction.close => notifier.closePayPeriod(payPeriodId),
+        _ => Future.value(),
+      };
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Pay period ${action.name.toLowerCase()}d successfully',
-            ),
-          ),
-        );
+      _showSnackBar('Pay period ${action.name.toLowerCase()}d successfully');
+    } catch (e) {
+      _showSnackBar('Failed to ${action.name.toLowerCase()}: $e', isError: true);
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<void> _loadStatistics(PayPeriod period) async {
+    try {
+      final repository = ref.read(repo.payPeriodRepositoryProvider);
+      final statistics = await repository.getPayPeriodStatistics(period.id);
+      if (context.mounted) {
+        _showStatisticsDialog(period.name, statistics);
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to ${action.name.toLowerCase()}: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      _showSnackBar('Failed to load statistics: $e', isError: true);
     }
   }
 
-  Color _getStatusColor(PayPeriodStatus status) {
-    switch (status) {
-      case PayPeriodStatus.draft:
-        return Colors.grey.shade600;
-      case PayPeriodStatus.active:
-        return Colors.blue;
-      case PayPeriodStatus.processing:
-        return Colors.orange;
-      case PayPeriodStatus.completed:
-        return Colors.green;
-      case PayPeriodStatus.closed:
-        return Colors.deepPurple;
-      case PayPeriodStatus.cancelled:
-        return Colors.red;
-    }
+  void _refreshPayPeriods() {
+    ref.read(payPeriodsProvider.notifier).loadPayPeriods();
   }
 
-  List<PayPeriodStatusAction> getAvailableActions(PayPeriodStatus status) {
-    switch (status) {
-      case PayPeriodStatus.draft:
-        return [
-          PayPeriodStatusAction.activate,
-          PayPeriodStatusAction.close,
-        ];
-      case PayPeriodStatus.active:
-        return [
-          PayPeriodStatusAction.process,
-          PayPeriodStatusAction.close,
-        ];
-      case PayPeriodStatus.processing:
-        return [
-          PayPeriodStatusAction.complete,
-          PayPeriodStatusAction.close,
-        ];
-      case PayPeriodStatus.completed:
-        return [PayPeriodStatusAction.close];
-      case PayPeriodStatus.closed:
-        return []; // No actions available for closed periods
-      case PayPeriodStatus.cancelled:
-        return []; // No actions available for cancelled periods
-    }
+  // --------------------------------------------------------------------------
+  // Helpers
+  // --------------------------------------------------------------------------
+
+  void _setLoading(bool value) {
+    if (mounted) setState(() => _isLoading = value);
   }
+
+  void _showSnackBar(String message, {bool isError = false}) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : null,
+      ),
+    );
+  }
+
+  void _onFilterChanged(PayPeriodStatus? value) {
+    setState(() => _selectedStatusFilter = value);
+  }
+
+  List<PayPeriod> _filterPeriods(List<PayPeriod> periods) {
+    if (_selectedStatusFilter == null) return periods;
+    return periods.where((p) => p.status == _selectedStatusFilter).toList();
+  }
+
+  // --------------------------------------------------------------------------
+  // Build
+  // --------------------------------------------------------------------------
+
   @override
   Widget build(BuildContext context) {
     final payPeriodsState = ref.watch(payPeriodsProvider);
-    final dateFormat = DateFormat('MMM dd, yyyy');
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Pay Period Management'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              context.push('/payroll/run');
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              ref.read(payPeriodsProvider.notifier).loadPayPeriods();
-            },
-          ),
-        ],
-      ),
+      appBar: _buildAppBar(),
       body: Column(
         children: [
-          // Status Filter
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                const Text(
-                  'Filter by Status:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: DropdownButtonFormField<PayPeriodStatus?>(
-                    initialValue: _selectedStatusFilter,
-                    decoration: const InputDecoration(
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                    ),
-                    items: [
-                      const DropdownMenuItem(
-                        value: null,
-                        child: Text('All Status'),
-                      ),
-                      ...PayPeriodStatus.values.map((status) {
-                        return DropdownMenuItem(
-                          value: status,
-                          child: Text(status.name.replaceAll('_', ' ')),
-                        );
-                      }),
-                    ],
-                    onChanged: (value) {
-                      setState(() => _selectedStatusFilter = value);
-                    },
-                  ),
-                ),
-              ],
-            ),
+          _StatusFilter(
+            selectedStatus: _selectedStatusFilter,
+            onChanged: _onFilterChanged,
           ),
-
-          // Pay Periods List
           Expanded(
             child: payPeriodsState.when(
-              data: (payPeriods) {
-                final filteredPeriods = _selectedStatusFilter == null
-                    ? payPeriods
-                    : payPeriods.where(
-                        (p) => p.status == _selectedStatusFilter,
-                      ).toList();
-
-                if (filteredPeriods.isEmpty) {
-                  return const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.calendar_month_outlined,
-                          size: 64,
-                          color: Colors.grey,
-                        ),
-                        SizedBox(height: 16),
-                        Text(
-                          'No pay periods found',
-                          style: TextStyle(fontSize: 18),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                return RefreshIndicator(
-                  onRefresh: () async {
-                    ref.read(payPeriodsProvider.notifier).loadPayPeriods();
-                  },
-                  child: ListView.builder(
-                    itemCount: filteredPeriods.length,
-                    itemBuilder: (context, index) {
-                      final period = filteredPeriods[index];
-                      final availableActions =
-                          getAvailableActions(period.status);
-
-                      return Card(
-                        margin: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          period.name,
-                                          style: const TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          '${dateFormat.format(period.startDate)} - ${dateFormat.format(period.endDate)}',
-                                          style: const TextStyle(
-                                            color: Colors.grey,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          period.frequency.name
-                                              .replaceAll('_', ' '),
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 6,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: _getStatusColor(period.status)
-                                           .withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(16),
-                                      border: Border.all(
-                                        color: _getStatusColor(period.status),
-                                        width: 1,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      period.status.name.replaceAll('_', ' '),
-                                      style: TextStyle(
-                                        color: _getStatusColor(period.status),
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-
-                              const SizedBox(height: 16),
-
-                              // Statistics (if available)
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: buildStatCard(
-                                      'Total Gross',
-                                      'KES ${(period.totalGrossAmount ?? 0.0).toStringAsFixed(2)}',
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: buildStatCard(
-                                      'Total Net',
-                                      'KES ${(period.totalNetAmount ?? 0.0).toStringAsFixed(2)}',
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: buildStatCard(
-                                      'Workers',
-                                      '${period.processedWorkers ?? 0}',
-                                    ),
-                                  ),
-                                ],
-                              ),
-
-                              const SizedBox(height: 16),
-
-                              // Actions
-                              if (availableActions.isNotEmpty)
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: availableActions.map((action) {
-                                    return Padding(
-                                      padding:
-                                          const EdgeInsets.only(left: 8.0),
-                                      child: ElevatedButton(
-                                        onPressed: _isLoading
-                                            ? null
-                                            : () => _executeAction(
-                                                  action,
-                                                  period.id,
-                                                ),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor:
-                                              getActionColor(action),
-                                          foregroundColor: Colors.white,
-                                        ),
-                                        child: Text(
-                                          getActionLabel(action),
-                                        ),
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-
-                              // Navigation buttons
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  TextButton(
-                                    onPressed: () {
-                                      context.push(
-                                        '/payroll/run/${period.id}',
-                                      );
-                                    },
-                                    child: const Text('View/Edit'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () async {
-                                      try {
-                                        final repository = ref.read(
-                                          repo.payPeriodRepositoryProvider,
-                                        );
-                                        final statistics =
-                                            await repository.getPayPeriodStatistics(
-                                              period.id,
-                                            );
-                                        if (mounted) {
-                                          showStatisticsDialog(
-                                            context,
-                                            period.name,
-                                            statistics,
-                                          );
-                                        }
-                                      } catch (e) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              'Failed to load statistics: $e',
-                                            ),
-                                            backgroundColor: Colors.red,
-                                          ),
-                                        );
-                                      }
-                                    },
-                                    child: const Text('Statistics'),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                );
-              },
-              loading: () => const Center(
-                child: CircularProgressIndicator(),
-              ),
-              error: (error, stack) => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      size: 64,
-                      color: Colors.red,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Error loading pay periods: ${error.toString()}',
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
+              data: (periods) => _buildPeriodsList(_filterPeriods(periods)),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) => _ErrorView(error: error.toString()),
             ),
           ),
         ],
@@ -436,7 +225,294 @@ class _PayPeriodManagementPageState
     );
   }
 
-  Widget buildStatCard(String title, String value) {
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      title: const Text('Pay Period Management'),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.add),
+          onPressed: () => context.push('/payroll/run'),
+        ),
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          onPressed: _refreshPayPeriods,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPeriodsList(List<PayPeriod> periods) {
+    if (periods.isEmpty) {
+      return const _EmptyView();
+    }
+
+    return RefreshIndicator(
+      onRefresh: () async => _refreshPayPeriods(),
+      child: ListView.builder(
+        itemCount: periods.length,
+        itemBuilder: (context, index) => _PayPeriodCard(
+          period: periods[index],
+          isLoading: _isLoading,
+          onAction: _executeAction,
+          onViewStatistics: _loadStatistics,
+        ),
+      ),
+    );
+  }
+
+  // --------------------------------------------------------------------------
+  // Statistics Dialog
+  // --------------------------------------------------------------------------
+
+  void _showStatisticsDialog(String periodName, PayPeriodStatistics statistics) {
+    showDialog(
+      context: context,
+      builder: (context) => _StatisticsDialog(
+        periodName: periodName,
+        statistics: statistics,
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// Status Filter
+// ============================================================================
+
+class _StatusFilter extends StatelessWidget {
+  final PayPeriodStatus? selectedStatus;
+  final ValueChanged<PayPeriodStatus?> onChanged;
+
+  const _StatusFilter({
+    required this.selectedStatus,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: _PayPeriodStyles.filterPadding,
+      child: Row(
+        children: [
+          const Text(
+            'Filter by Status:',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(width: 16),
+          Expanded(child: _buildDropdown()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDropdown() {
+    return DropdownButtonFormField<PayPeriodStatus?>(
+      initialValue: selectedStatus,
+      decoration: const InputDecoration(
+        border: OutlineInputBorder(),
+        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      ),
+      items: [
+        const DropdownMenuItem(value: null, child: Text('All Status')),
+        ...PayPeriodStatus.values.map((status) => DropdownMenuItem(
+              value: status,
+              child: Text(_Formatters.statusLabel(status)),
+            )),
+      ],
+      onChanged: onChanged,
+    );
+  }
+}
+
+// ============================================================================
+// Pay Period Card
+// ============================================================================
+
+class _PayPeriodCard extends StatelessWidget {
+  final PayPeriod period;
+  final bool isLoading;
+  final Future<void> Function(PayPeriodStatusAction, String) onAction;
+  final Future<void> Function(PayPeriod) onViewStatistics;
+
+  const _PayPeriodCard({
+    required this.period,
+    required this.isLoading,
+    required this.onAction,
+    required this.onViewStatistics,
+  });
+
+  List<PayPeriodStatusAction> get _availableActions =>
+      _ActionConfig.availableFor(period.status);
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: _PayPeriodStyles.cardMargin,
+      child: Padding(
+        padding: _PayPeriodStyles.cardPadding,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHeader(),
+            const SizedBox(height: 16),
+            _buildStatistics(),
+            const SizedBox(height: 16),
+            if (_availableActions.isNotEmpty) _buildActions(),
+            _buildNavigationButtons(context),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(child: _PeriodInfo(period: period)),
+        _StatusBadge(status: period.status),
+      ],
+    );
+  }
+
+  Widget _buildStatistics() {
+    return Row(
+      children: [
+        Expanded(
+          child: _StatCard(
+            title: 'Total Gross',
+            value: _Formatters.currency(period.totalGrossAmount),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _StatCard(
+            title: 'Total Net',
+            value: _Formatters.currency(period.totalNetAmount),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _StatCard(
+            title: 'Workers',
+            value: '${period.processedWorkers ?? 0}',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActions() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: _availableActions
+          .map((action) => Padding(
+                padding: const EdgeInsets.only(left: 8.0),
+                child: _ActionButton(
+                  action: action,
+                  status: period.status,
+                  isLoading: isLoading,
+                  onPressed: () => onAction(action, period.id),
+                ),
+              ))
+          .toList(),
+    );
+  }
+
+  Widget _buildNavigationButtons(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        TextButton(
+          onPressed: () => context.push('/payroll/run/${period.id}'),
+          child: const Text('View/Edit'),
+        ),
+        TextButton(
+          onPressed: () => onViewStatistics(period),
+          child: const Text('Statistics'),
+        ),
+      ],
+    );
+  }
+}
+
+// ============================================================================
+// Period Info
+// ============================================================================
+
+class _PeriodInfo extends StatelessWidget {
+  final PayPeriod period;
+
+  const _PeriodInfo({required this.period});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          period.name,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '${_Formatters.date.format(period.startDate)} - ${_Formatters.date.format(period.endDate)}',
+          style: const TextStyle(color: Colors.grey),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          _Formatters.frequencyLabel(period.frequency),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+        ),
+      ],
+    );
+  }
+}
+
+// ============================================================================
+// Status Badge
+// ============================================================================
+
+class _StatusBadge extends StatelessWidget {
+  final PayPeriodStatus status;
+
+  const _StatusBadge({required this.status});
+
+  Color get _color => _PayPeriodColors.forStatus(status);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: _color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _color, width: 1),
+      ),
+      child: Text(
+        _Formatters.statusLabel(status),
+        style: TextStyle(
+          color: _color,
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// Stat Card
+// ============================================================================
+
+class _StatCard extends StatelessWidget {
+  final String title;
+  final String value;
+
+  const _StatCard({required this.title, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
@@ -447,115 +523,159 @@ class _PayPeriodManagementPageState
         children: [
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// Action Button
+// ============================================================================
+
+class _ActionButton extends StatelessWidget {
+  final PayPeriodStatusAction action;
+  final PayPeriodStatus status;
+  final bool isLoading;
+  final VoidCallback onPressed;
+
+  const _ActionButton({
+    required this.action,
+    required this.status,
+    required this.isLoading,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: isLoading ? null : onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: _PayPeriodColors.forAction(action),
+        foregroundColor: Colors.white,
+      ),
+      child: Text(_ActionConfig.labelFor(action, status)),
+    );
+  }
+}
+
+// ============================================================================
+// State Views
+// ============================================================================
+
+class _EmptyView extends StatelessWidget {
+  const _EmptyView();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.calendar_month_outlined, size: 64, color: Colors.grey),
+          SizedBox(height: 16),
+          Text('No pay periods found', style: TextStyle(fontSize: 18)),
+        ],
+      ),
+    );
+  }
+}
+
+class _ErrorView extends StatelessWidget {
+  final String error;
+
+  const _ErrorView({required this.error});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline, size: 64, color: Colors.red),
+          const SizedBox(height: 16),
+          Text(
+            'Error loading pay periods: $error',
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// Statistics Dialog
+// ============================================================================
+
+class _StatisticsDialog extends StatelessWidget {
+  final String periodName;
+  final PayPeriodStatistics statistics;
+
+  const _StatisticsDialog({
+    required this.periodName,
+    required this.statistics,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Statistics: $periodName'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _StatRow(label: 'Total Workers', value: '${statistics.totalWorkers}'),
+            _StatRow(label: 'Pending Payments', value: '${statistics.pendingPayments}'),
+            _StatRow(label: 'Processed Payments', value: '${statistics.processedPayments}'),
+            const Divider(),
+            _StatRow(
+              label: 'Total Gross Amount',
+              value: _Formatters.currencyFormatted(statistics.totalGrossAmount),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Color getActionColor(PayPeriodStatusAction action) {
-    switch (action) {
-      case PayPeriodStatusAction.activate:
-        return Colors.blue;
-      case PayPeriodStatusAction.process:
-        return Colors.orange;
-      case PayPeriodStatusAction.complete:
-        return Colors.green;
-      case PayPeriodStatusAction.close:
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  String getActionLabel(PayPeriodStatusAction action) {
-    switch (action) {
-      case PayPeriodStatusAction.activate:
-        return 'Activate';
-      case PayPeriodStatusAction.process:
-        return 'Process';
-      case PayPeriodStatusAction.complete:
-        return 'Complete';
-      case PayPeriodStatusAction.close:
-        return 'Close';
-      default:
-        return '';
-    }
-  }
-
-  void showStatisticsDialog(
-    BuildContext context,
-    String periodName,
-    PayPeriodStatistics statistics,
-  ) {
-    final numberFormat = NumberFormat('#,###.00');
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Statistics: $periodName'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              buildStatRow('Total Workers', '${statistics.totalWorkers}'),
-              buildStatRow(
-                'Pending Payments',
-                '${statistics.pendingPayments}',
-              ),
-              buildStatRow(
-                'Processed Payments',
-                '${statistics.processedPayments}',
-              ),
-              const Divider(),
-              buildStatRow(
-                'Total Gross Amount',
-                'KES ${numberFormat.format(statistics.totalGrossAmount)}',
-              ),
-              buildStatRow(
-                'Total Net Amount',
-                'KES ${numberFormat.format(statistics.totalNetAmount)}',
-              ),
-              buildStatRow(
-                'Total Tax Amount',
-                'KES ${numberFormat.format(statistics.totalTaxAmount)}',
-              ),
-            ],
-          ),
+            _StatRow(
+              label: 'Total Net Amount',
+              value: _Formatters.currencyFormatted(statistics.totalNetAmount),
+            ),
+            _StatRow(
+              label: 'Total Tax Amount',
+              value: _Formatters.currencyFormatted(statistics.totalTaxAmount),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => context.pop(),
-            child: const Text('Close'),
-          ),
-        ],
       ),
+      actions: [
+        TextButton(
+          onPressed: () => context.pop(),
+          child: const Text('Close'),
+        ),
+      ],
     );
   }
+}
 
-  Widget buildStatRow(String label, String value) {
+class _StatRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _StatRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: const TextStyle(fontWeight: FontWeight.w500),
-          ),
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
           Text(value),
         ],
       ),

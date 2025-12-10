@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../workers/presentation/providers/workers_provider.dart';
 import '../../../payroll/presentation/providers/pay_period_provider.dart';
+import '../../../subscriptions/presentation/providers/feature_access_provider.dart';
+import '../../../onboarding/presentation/widgets/guided_tour.dart';
 import '../providers/activity_provider.dart';
 import '../data/models/activity_model.dart';
 import '../../../workers/data/models/worker_model.dart';
@@ -18,6 +20,7 @@ class HomePage extends ConsumerStatefulWidget {
 
 class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
+  bool _showWelcomeBanner = true;
 
   @override
   void initState() {
@@ -27,6 +30,17 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
       duration: const Duration(milliseconds: 1000),
     );
     _animationController.forward();
+    
+    // Check if we should show welcome banner
+    _checkWelcomeBanner();
+  }
+  
+  void _checkWelcomeBanner() {
+    // Check tour progress to see if user has dismissed welcome
+    final tourProgress = ref.read(tourProgressProvider);
+    if (tourProgress.hasSeen(TourKeys.dashboardTour)) {
+      setState(() => _showWelcomeBanner = false);
+    }
   }
 
   @override
@@ -40,6 +54,8 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
     final workersAsync = ref.watch(workersProvider);
     final payPeriodsAsync = ref.watch(payPeriodsProvider);
     final activitiesAsync = ref.watch(recentActivitiesProvider);
+    final trialStatusAsync = ref.watch(trialStatusProvider);
+    final tourProgress = ref.watch(tourProgressProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F6),
@@ -50,7 +66,25 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildHeader(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
+              
+              // Trial countdown banner (if in trial)
+              trialStatusAsync.when(
+                data: (trialStatus) {
+                  if (trialStatus.isInTrial && trialStatus.daysRemaining > 0) {
+                    return _buildTrialBanner(trialStatus);
+                  }
+                  return const SizedBox.shrink();
+                },
+                loading: () => const SizedBox.shrink(),
+                error: (_, _) => const SizedBox.shrink(),
+              ),
+              
+              // Welcome banner for new users
+              if (_showWelcomeBanner && !tourProgress.hasSeen(TourKeys.dashboardTour))
+                _buildWelcomeBanner(),
+              
+              const SizedBox(height: 8),
               _buildBusinessSnapshot(workersAsync, payPeriodsAsync),
               const SizedBox(height: 24),
               _buildQuickActionsGrid(context),
@@ -58,6 +92,180 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
               _buildRecentActivitySection(activitiesAsync),
               const SizedBox(height: 40),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildTrialBanner(TrialStatus trial) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.purple.shade600, Colors.indigo.shade600],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.purple.withValues(alpha: 0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.star_rounded, color: Colors.white, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Premium Trial Active',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${trial.daysRemaining} days remaining - Explore all features!',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: () => context.go('/subscriptions'),
+            style: TextButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.purple.shade700,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('View Plans', style: TextStyle(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildWelcomeBanner() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Welcome to PayKey! 👋',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Your all-in-one solution for domestic worker payroll management.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: () {
+                  setState(() => _showWelcomeBanner = false);
+                  ref.read(tourProgressProvider.notifier).completeTour(TourKeys.dashboardTour);
+                },
+                icon: Icon(Icons.close, color: Colors.white.withValues(alpha: 0.7)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              _buildQuickStartButton(
+                'Add Your First Worker',
+                Icons.person_add_rounded,
+                () => context.go('/workers/add'),
+              ),
+              const SizedBox(width: 12),
+              _buildQuickStartButton(
+                'View Plans',
+                Icons.workspace_premium_rounded,
+                () => context.go('/subscriptions'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildQuickStartButton(String label, IconData icon, VoidCallback onTap) {
+    return Expanded(
+      child: Material(
+        color: Colors.white.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(10),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -180,7 +388,7 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
                     workersAsync.when(
                       data: (w) => w.where((x) => x.isActive).length.toString(),
                       loading: () => '-',
-                      error: (_, __) => '0',
+                      error: (_, _) => '0',
                     ),
                     Icons.people,
                   ),
@@ -330,7 +538,7 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: activities.take(5).length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final activity = activities[index];
                 return _buildActivityCard(activity);
@@ -338,7 +546,7 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (_, __) => const Text('Failed to load activity'),
+          error: (_, _) => const Text('Failed to load activity'),
         ),
       ],
     );

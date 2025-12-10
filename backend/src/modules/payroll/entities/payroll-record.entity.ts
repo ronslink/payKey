@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Worker } from '../../workers/entities/worker.entity';
 import { PayPeriod } from './pay-period.entity';
@@ -17,6 +18,9 @@ export enum PayrollStatus {
 }
 
 @Entity('payroll_records')
+@Index(['payPeriodId'])
+@Index(['userId', 'periodStart'])
+@Index(['workerId'])
 export class PayrollRecord {
   @PrimaryGeneratedColumn('uuid')
   id: string;

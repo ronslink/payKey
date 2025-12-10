@@ -365,6 +365,18 @@ class MockPayrollRepository extends _i1.Mock implements _i4.PayrollRepository {
           as _i6.Future<List<_i5.PayrollCalculation>>);
 
   @override
+  _i6.Future<List<_i5.PayrollCalculation>> getPeriodRecords(
+    String? payPeriodId,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#getPeriodRecords, [payPeriodId]),
+            returnValue: _i6.Future<List<_i5.PayrollCalculation>>.value(
+              <_i5.PayrollCalculation>[],
+            ),
+          )
+          as _i6.Future<List<_i5.PayrollCalculation>>);
+
+  @override
   _i6.Future<_i5.PayrollCalculation> updatePayrollItem(
     String? payrollRecordId,
     Map<String, dynamic>? updates,

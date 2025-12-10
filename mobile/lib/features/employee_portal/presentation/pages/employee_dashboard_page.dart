@@ -3,9 +3,77 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/network/api_service.dart';
 import '../../data/models/employee_models.dart';
-import '../../../time_tracking/data/models/time_entry_model.dart';
 
-/// Employee Dashboard - main view for employee users
+// ============================================================================
+// Constants
+// ============================================================================
+
+class _DashboardColors {
+  static const primary = Color(0xFF6366F1);
+  static const secondary = Color(0xFF8B5CF6);
+  static const background = Color(0xFFF8FAFC);
+  static const text = Color(0xFF1E293B);
+  static const textSecondary = Color(0xFF374151);
+  static const success = Color(0xFF10B981);
+  static const warning = Color(0xFFF59E0B);
+  static const successDark = Color(0xFF059669);
+}
+
+class _DashboardStyles {
+  static const cardRadius = 16.0;
+  static const smallRadius = 12.0;
+  static const headerRadius = 24.0;
+  static const padding = 16.0;
+  static const cardPadding = 20.0;
+
+  static BoxDecoration get cardDecoration => BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(cardRadius),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      );
+
+  static BoxDecoration get smallCardDecoration => BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(smallRadius),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      );
+}
+
+// ============================================================================
+// Date/Time Formatting
+// ============================================================================
+
+class _DateFormatter {
+  static const _days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  static const _months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  static String formatDate(DateTime date) {
+    return '${_days[date.weekday - 1]}, ${_months[date.month - 1]} ${date.day}, ${date.year}';
+  }
+
+  static String formatTime(DateTime time) {
+    final hour = time.hour > 12 ? time.hour - 12 : (time.hour == 0 ? 12 : time.hour);
+    final period = time.hour >= 12 ? 'PM' : 'AM';
+    return '$hour:${time.minute.toString().padLeft(2, '0')} $period';
+  }
+}
+
+// ============================================================================
+// Main Page Widget
+// ============================================================================
+
 class EmployeeDashboardPage extends ConsumerStatefulWidget {
   const EmployeeDashboardPage({super.key});
 
@@ -25,103 +93,118 @@ class _EmployeeDashboardPageState extends ConsumerState<EmployeeDashboardPage> {
     _loadData();
   }
 
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);
+  // --------------------------------------------------------------------------
+  // Data Loading
+  // --------------------------------------------------------------------------
 
+  Future<void> _loadData() async {
+    _setLoading(true);
     try {
-      // Load leave balance and clock status in parallel
       final results = await Future.wait([
         ApiService().employeePortal.getMyLeaveBalance(),
-        _getClockStatus(),
+        _fetchClockStatus(),
       ]);
 
       final leaveResponse = results[0];
       if (leaveResponse.statusCode == 200) {
         _leaveBalance = LeaveBalance.fromJson(leaveResponse.data);
       }
-    } catch (e) {
-      // Error handling - could add error state if needed
+    } catch (_) {
+      // Silent failure - partial data is acceptable
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      _setLoading(false);
     }
   }
 
-  Future<dynamic> _getClockStatus() async {
+  Future<dynamic> _fetchClockStatus() async {
     try {
-      // Get profile first to get workerId
       final profileResponse = await ApiService().employeePortal.getMyProfile();
-      if (profileResponse.statusCode == 200) {
-        final profile = EmployeeProfile.fromJson(profileResponse.data);
-        if (profile.workerId != null) {
-          final statusResponse = await ApiService().timeTracking.getStatus(profile.workerId!);
-          if (statusResponse.statusCode == 200) {
-            setState(() {
-              _clockStatus = ClockStatus.fromJson(statusResponse.data);
-            });
-          }
-        }
+      if (profileResponse.statusCode != 200) return;
+
+      final profile = EmployeeProfile.fromJson(profileResponse.data);
+      if (profile.workerId == null) return;
+
+      final statusResponse = await ApiService().timeTracking.getStatus(profile.workerId!);
+      if (statusResponse.statusCode == 200 && mounted) {
+        setState(() => _clockStatus = ClockStatus.fromJson(statusResponse.data));
       }
-    } catch (e) {
-      // Clock status is optional, don't fail the whole page
+    } catch (_) {
+      // Clock status is optional
     }
   }
+
+  // --------------------------------------------------------------------------
+  // Clock Actions
+  // --------------------------------------------------------------------------
 
   Future<void> _handleClockAction() async {
-    setState(() => _isClockingIn = true);
-
+    _setClockingIn(true);
     try {
-      final profileResponse = await ApiService().employeePortal.getMyProfile();
-      if (profileResponse.statusCode != 200) {
-        throw Exception('Failed to get profile');
-      }
-      
-      final profile = EmployeeProfile.fromJson(profileResponse.data);
-      if (profile.workerId == null) {
-        throw Exception('Worker ID not found');
-      }
+      final workerId = await _getWorkerId();
+      final isClockedIn = _clockStatus?.isClockedIn == true;
 
-      if (_clockStatus?.isClockedIn == true) {
-        // Clock out
-        await ApiService().timeTracking.clockOut(profile.workerId!);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Clocked out successfully!'),
-            backgroundColor: Colors.orange,
-          ),
-        );
+      if (isClockedIn) {
+        await ApiService().timeTracking.clockOut(workerId);
+        _showSnackBar('Clocked out successfully!', Colors.orange);
       } else {
-        // Clock in
-        await ApiService().timeTracking.clockIn(profile.workerId!);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Clocked in successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        await ApiService().timeTracking.clockIn(workerId);
+        _showSnackBar('Clocked in successfully!', Colors.green);
       }
 
-      // Refresh status
-      await _getClockStatus();
+      await _fetchClockStatus();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showSnackBar('Error: $e', Colors.red);
     } finally {
-      if (mounted) {
-        setState(() => _isClockingIn = false);
-      }
+      _setClockingIn(false);
     }
   }
+
+  Future<String> _getWorkerId() async {
+    final profileResponse = await ApiService().employeePortal.getMyProfile();
+    if (profileResponse.statusCode != 200) {
+      throw Exception('Failed to get profile');
+    }
+
+    final profile = EmployeeProfile.fromJson(profileResponse.data);
+    if (profile.workerId == null) {
+      throw Exception('Worker ID not found');
+    }
+
+    return profile.workerId!;
+  }
+
+  // --------------------------------------------------------------------------
+  // State Helpers
+  // --------------------------------------------------------------------------
+
+  void _setLoading(bool value) {
+    if (mounted) setState(() => _isLoading = value);
+  }
+
+  void _setClockingIn(bool value) {
+    if (mounted) setState(() => _isClockingIn = value);
+  }
+
+  void _showSnackBar(String message, Color color) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: color),
+    );
+  }
+
+  Future<void> _handleLogout() async {
+    await ApiService().clearToken();
+    if (mounted) context.go('/employee/login');
+  }
+
+  // --------------------------------------------------------------------------
+  // Build
+  // --------------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: _DashboardColors.background,
       body: SafeArea(
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
@@ -129,364 +212,410 @@ class _EmployeeDashboardPageState extends ConsumerState<EmployeeDashboardPage> {
                 onRefresh: _loadData,
                 child: CustomScrollView(
                   slivers: [
-                    // Header
-                    SliverToBoxAdapter(
-                      child: _buildHeader(),
-                    ),
-                    
-                    // Clock In/Out Card
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: _buildClockCard(),
+                    SliverToBoxAdapter(child: _DashboardHeader(
+                      workerName: _leaveBalance?.workerName,
+                      onLogout: _handleLogout,
+                    )),
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: _DashboardStyles.padding),
+                      sliver: SliverToBoxAdapter(
+                        child: _ClockCard(
+                          clockStatus: _clockStatus,
+                          isClockingIn: _isClockingIn,
+                          onClockAction: _handleClockAction,
+                        ),
                       ),
                     ),
-                    
-                    // Leave Balance Card
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: _buildLeaveCard(),
+                    SliverPadding(
+                      padding: const EdgeInsets.all(_DashboardStyles.padding),
+                      sliver: SliverToBoxAdapter(
+                        child: _LeaveBalanceCard(balance: _leaveBalance),
                       ),
                     ),
-                    
-                    // Quick Actions
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: _buildQuickActions(),
-                      ),
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: _DashboardStyles.padding),
+                      sliver: const SliverToBoxAdapter(child: _QuickActionsSection()),
                     ),
-                    
-                    const SliverToBoxAdapter(
-                      child: SizedBox(height: 32),
-                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 32)),
                   ],
                 ),
               ),
       ),
     );
   }
+}
 
-  Widget _buildHeader() {
+// ============================================================================
+// Header Component
+// ============================================================================
+
+class _DashboardHeader extends StatelessWidget {
+  final String? workerName;
+  final VoidCallback onLogout;
+
+  const _DashboardHeader({required this.workerName, required this.onLogout});
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
+      padding: const EdgeInsets.all(_DashboardStyles.cardPadding),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+          colors: [_DashboardColors.primary, _DashboardColors.secondary],
         ),
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(_DashboardStyles.headerRadius),
+          bottomRight: Radius.circular(_DashboardStyles.headerRadius),
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Welcome back,',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _leaveBalance?.workerName ?? 'Employee',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-              IconButton(
-                onPressed: () async {
-                  await ApiService().clearToken();
-                  if (mounted) {
-                    context.go('/employee/login');
-                  }
-                },
-                icon: const Icon(Icons.logout, color: Colors.white),
-                tooltip: 'Sign out',
-              ),
-            ],
-          ),
+          _buildGreeting(),
           const SizedBox(height: 16),
-          // Today's date
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.calendar_today, color: Colors.white, size: 16),
-                const SizedBox(width: 8),
-                Text(
-                  _formatDate(DateTime.now()),
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
-                ),
-              ],
-            ),
-          ),
+          _buildDateBadge(),
         ],
       ),
     );
   }
 
-  Widget _buildClockCard() {
-    final isClockedIn = _clockStatus?.isClockedIn ?? false;
-    
+  Widget _buildGreeting() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Welcome back,',
+              style: TextStyle(color: Colors.white70, fontSize: 14),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              workerName ?? 'Employee',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        IconButton(
+          onPressed: onLogout,
+          icon: const Icon(Icons.logout, color: Colors.white),
+          tooltip: 'Sign out',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDateBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.calendar_today, color: Colors.white, size: 16),
+          const SizedBox(width: 8),
+          Text(
+            _DateFormatter.formatDate(DateTime.now()),
+            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// Clock Card Component
+// ============================================================================
+
+class _ClockCard extends StatelessWidget {
+  final ClockStatus? clockStatus;
+  final bool isClockingIn;
+  final VoidCallback onClockAction;
+
+  const _ClockCard({
+    required this.clockStatus,
+    required this.isClockingIn,
+    required this.onClockAction,
+  });
+
+  bool get _isClockedIn => clockStatus?.isClockedIn ?? false;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(top: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      padding: const EdgeInsets.all(_DashboardStyles.cardPadding),
+      decoration: _DashboardStyles.cardDecoration,
       child: Column(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: isClockedIn 
-                      ? Colors.green.withValues(alpha: 0.1) 
-                      : Colors.grey.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  isClockedIn ? Icons.timer : Icons.timer_outlined,
-                  color: isClockedIn ? Colors.green : Colors.grey,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      isClockedIn ? 'Currently Working' : 'Not Clocked In',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: isClockedIn ? Colors.green : Colors.grey[600],
-                      ),
-                    ),
-                    if (isClockedIn && _clockStatus?.currentEntry != null)
-                      Text(
-                        'Since ${_formatTime(_clockStatus!.currentEntry!.clockIn)}',
-                        style: TextStyle(
-                          color: Colors.grey[500],
-                          fontSize: 13,
-                        ),
-                      ),
-                    if (!isClockedIn)
-                      Text(
-                        'Today: ${_clockStatus?.todayTotalDisplay ?? '0h 0m'}',
-                        style: TextStyle(
-                          color: Colors.grey[500],
-                          fontSize: 13,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          _buildStatus(),
           const SizedBox(height: 20),
-          // Clock In/Out Button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _isClockingIn ? null : _handleClockAction,
-              icon: _isClockingIn
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Icon(isClockedIn ? Icons.stop_circle_outlined : Icons.play_circle_outline),
-              label: Text(
-                isClockedIn ? 'Clock Out' : 'Clock In',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isClockedIn ? Colors.orange : const Color(0xFF6366F1),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 0,
-              ),
-            ),
-          ),
+          _buildActionButton(),
         ],
       ),
     );
   }
 
-  Widget _buildLeaveCard() {
-    final balance = _leaveBalance;
-    
+  Widget _buildStatus() {
+    return Row(
+      children: [
+        _buildStatusIcon(),
+        const SizedBox(width: 16),
+        Expanded(child: _buildStatusText()),
+      ],
+    );
+  }
+
+  Widget _buildStatusIcon() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: (_isClockedIn ? Colors.green : Colors.grey).withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(_DashboardStyles.smallRadius),
       ),
+      child: Icon(
+        _isClockedIn ? Icons.timer : Icons.timer_outlined,
+        color: _isClockedIn ? Colors.green : Colors.grey,
+        size: 28,
+      ),
+    );
+  }
+
+  Widget _buildStatusText() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          _isClockedIn ? 'Currently Working' : 'Not Clocked In',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: _isClockedIn ? Colors.green : Colors.grey[600],
+          ),
+        ),
+        if (_isClockedIn && clockStatus?.currentEntry != null)
+          Text(
+            'Since ${_DateFormatter.formatTime(clockStatus!.currentEntry!.clockIn)}',
+            style: TextStyle(color: Colors.grey[500], fontSize: 13),
+          ),
+        if (!_isClockedIn)
+          Text(
+            'Today: ${clockStatus?.todayTotalDisplay ?? '0h 0m'}',
+            style: TextStyle(color: Colors.grey[500], fontSize: 13),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildActionButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: isClockingIn ? null : onClockAction,
+        icon: isClockingIn
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              )
+            : Icon(_isClockedIn ? Icons.stop_circle_outlined : Icons.play_circle_outline),
+        label: Text(
+          _isClockedIn ? 'Clock Out' : 'Clock In',
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _isClockedIn ? Colors.orange : _DashboardColors.primary,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(_DashboardStyles.smallRadius),
+          ),
+          elevation: 0,
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// Leave Balance Card Component
+// ============================================================================
+
+class _LeaveBalanceCard extends StatelessWidget {
+  final LeaveBalance? balance;
+
+  const _LeaveBalanceCard({required this.balance});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(_DashboardStyles.cardPadding),
+      decoration: _DashboardStyles.cardDecoration,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Leave Balance',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF1E293B),
-                ),
-              ),
-              Text(
-                balance?.year.toString() ?? DateTime.now().year.toString(),
-                style: TextStyle(
-                  color: Colors.grey[500],
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
+          _buildHeader(),
           const SizedBox(height: 20),
-          // Progress bar
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: (balance?.usagePercentage ?? 0) / 100,
-              backgroundColor: Colors.grey[200],
-              valueColor: AlwaysStoppedAnimation<Color>(
-                (balance?.usagePercentage ?? 0) > 80 
-                    ? Colors.orange 
-                    : const Color(0xFF6366F1),
-              ),
-              minHeight: 10,
-            ),
-          ),
+          _buildProgressBar(),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildLeaveStatItem(
-                  'Available',
-                  '${balance?.remainingAnnualLeaves ?? 21}',
-                  Colors.green,
-                ),
-              ),
-              Expanded(
-                child: _buildLeaveStatItem(
-                  'Used',
-                  '${balance?.usedAnnualLeaves ?? 0}',
-                  Colors.orange,
-                ),
-              ),
-              Expanded(
-                child: _buildLeaveStatItem(
-                  'Total',
-                  '${balance?.totalAnnualLeaves ?? 21}',
-                  Colors.grey[600]!,
-                ),
-              ),
-            ],
-          ),
+          _buildStats(),
           if ((balance?.pendingLeaves ?? 0) > 0) ...[
             const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.amber.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.pending_actions, color: Colors.amber, size: 18),
-                  const SizedBox(width: 8),
-                  Text(
-                    '${balance!.pendingLeaves} leave request(s) pending',
-                    style: const TextStyle(
-                      color: Colors.amber,
-                      fontWeight: FontWeight.w500,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _buildPendingAlert(),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildLeaveStatItem(String label, String value, Color color) {
-    return Column(
+  Widget _buildHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          value,
+        const Text(
+          'Leave Balance',
           style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: color,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: _DashboardColors.text,
           ),
         ),
-        const SizedBox(height: 4),
         Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
-          ),
+          (balance?.year ?? DateTime.now().year).toString(),
+          style: TextStyle(color: Colors.grey[500], fontWeight: FontWeight.w500),
         ),
       ],
     );
   }
 
-  Widget _buildQuickActions() {
+  Widget _buildProgressBar() {
+    final usagePercent = (balance?.usagePercentage ?? 0) / 100;
+    final isHighUsage = (balance?.usagePercentage ?? 0) > 80;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: LinearProgressIndicator(
+        value: usagePercent,
+        backgroundColor: Colors.grey[200],
+        valueColor: AlwaysStoppedAnimation<Color>(
+          isHighUsage ? Colors.orange : _DashboardColors.primary,
+        ),
+        minHeight: 10,
+      ),
+    );
+  }
+
+  Widget _buildStats() {
+    return Row(
+      children: [
+        Expanded(child: _LeaveStatItem(
+          label: 'Available',
+          value: '${balance?.remainingAnnualLeaves ?? 21}',
+          color: Colors.green,
+        )),
+        Expanded(child: _LeaveStatItem(
+          label: 'Used',
+          value: '${balance?.usedAnnualLeaves ?? 0}',
+          color: Colors.orange,
+        )),
+        Expanded(child: _LeaveStatItem(
+          label: 'Total',
+          value: '${balance?.totalAnnualLeaves ?? 21}',
+          color: Colors.grey[600]!,
+        )),
+      ],
+    );
+  }
+
+  Widget _buildPendingAlert() {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.amber.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.pending_actions, color: Colors.amber, size: 18),
+          const SizedBox(width: 8),
+          Text(
+            '${balance!.pendingLeaves} leave request(s) pending',
+            style: const TextStyle(
+              color: Colors.amber,
+              fontWeight: FontWeight.w500,
+              fontSize: 13,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LeaveStatItem extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _LeaveStatItem({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+        ),
+      ],
+    );
+  }
+}
+
+// ============================================================================
+// Quick Actions Section
+// ============================================================================
+
+class _QuickActionsSection extends StatelessWidget {
+  const _QuickActionsSection();
+
+  static const _actions = [
+    [
+      _QuickActionData('Request Leave', Icons.event_note, _DashboardColors.primary, '/employee/request-leave'),
+      _QuickActionData('My Leaves', Icons.calendar_view_month, _DashboardColors.success, '/employee/my-leaves'),
+    ],
+    [
+      _QuickActionData('Timesheet', Icons.access_time, _DashboardColors.warning, '/employee/timesheet'),
+      _QuickActionData('Payslips', Icons.receipt_long, _DashboardColors.secondary, '/employee/payslips'),
+    ],
+    [
+      _QuickActionData('P9 Tax Report', Icons.description, _DashboardColors.successDark, '/employee/p9'),
+      null, // Placeholder for future action
+    ],
+  ];
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -495,89 +624,70 @@ class _EmployeeDashboardPageState extends ConsumerState<EmployeeDashboardPage> {
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF1E293B),
+            color: _DashboardColors.text,
           ),
         ),
         const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _buildActionCard(
-                'Request Leave',
-                Icons.event_note,
-                const Color(0xFF6366F1),
-                () => context.push('/employee/request-leave'),
+        ..._actions.map((row) => Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: row[0] != null
+                    ? _QuickActionCard(data: row[0]!)
+                    : const SizedBox(),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildActionCard(
-                'My Leaves',
-                Icons.calendar_view_month,
-                const Color(0xFF10B981),
-                () => context.push('/employee/my-leaves'),
+              const SizedBox(width: 12),
+              Expanded(
+                child: row[1] != null
+                    ? _QuickActionCard(data: row[1]!)
+                    : const SizedBox(),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildActionCard(
-                'Timesheet',
-                Icons.access_time,
-                const Color(0xFFF59E0B),
-                () => context.push('/employee/timesheet'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildActionCard(
-                'Payslips',
-                Icons.receipt_long,
-                const Color(0xFF8B5CF6),
-                () => context.push('/employee/payslips'),
-              ),
-            ),
-          ],
-        ),
+            ],
+          ),
+        )),
       ],
     );
   }
+}
 
-  Widget _buildActionCard(String title, IconData icon, Color color, VoidCallback onTap) {
+class _QuickActionData {
+  final String title;
+  final IconData icon;
+  final Color color;
+  final String route;
+
+  const _QuickActionData(this.title, this.icon, this.color, this.route);
+}
+
+class _QuickActionCard extends StatelessWidget {
+  final _QuickActionData data;
+
+  const _QuickActionCard({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () => context.push(data.route),
       child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
+        padding: const EdgeInsets.all(_DashboardStyles.padding),
+        decoration: _DashboardStyles.smallCardDecoration,
         child: Column(
           children: [
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
+                color: data.color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: color, size: 24),
+              child: Icon(data.icon, color: data.color, size: 24),
             ),
             const SizedBox(height: 10),
             Text(
-              title,
+              data.title,
               style: const TextStyle(
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF374151),
+                color: _DashboardColors.textSecondary,
                 fontSize: 13,
               ),
             ),
@@ -585,17 +695,5 @@ class _EmployeeDashboardPageState extends ConsumerState<EmployeeDashboardPage> {
         ),
       ),
     );
-  }
-
-  String _formatDate(DateTime date) {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return '${days[date.weekday - 1]}, ${months[date.month - 1]} ${date.day}, ${date.year}';
-  }
-
-  String _formatTime(DateTime time) {
-    final hour = time.hour > 12 ? time.hour - 12 : time.hour;
-    final period = time.hour >= 12 ? 'PM' : 'AM';
-    return '${hour == 0 ? 12 : hour}:${time.minute.toString().padLeft(2, '0')} $period';
   }
 }

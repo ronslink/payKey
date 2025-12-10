@@ -23,7 +23,7 @@ import { AccountingExport } from '../src/modules/accounting/entities/accounting-
       useFactory: async (configService: ConfigService) => ({
         type: 'postgres',
         host: configService.get<string>('DB_HOST', 'localhost'),
-        port: parseInt(configService.get<string>('DB_PORT', '5432')) + 1, // Test DB port
+        port: parseInt(configService.get<string>('DB_PORT', '5432')), // Use same port as main app
         username: configService.get<string>('DB_USERNAME', 'postgres'),
         password: configService.get<string>('DB_PASSWORD', 'admin'),
         database: configService.get<string>('DB_DATABASE', 'paykey_test'),

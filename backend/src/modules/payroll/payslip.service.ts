@@ -90,13 +90,13 @@ export class PayslipService {
         .fontSize(10)
         .moveDown(0.5);
 
-      this.addCurrencyRow(doc, 'PAYE (Tax)', Number(record.taxBreakdown.paye));
-      this.addCurrencyRow(doc, 'NSSF', Number(record.taxBreakdown.nssf));
-      this.addCurrencyRow(doc, 'NHIF', Number(record.taxBreakdown.nhif));
+      this.addCurrencyRow(doc, 'PAYE (Tax)', Number(record.taxBreakdown?.paye || 0));
+      this.addCurrencyRow(doc, 'NSSF', Number(record.taxBreakdown?.nssf || 0));
+      this.addCurrencyRow(doc, 'NHIF', Number(record.taxBreakdown?.nhif || 0));
       this.addCurrencyRow(
         doc,
         'Housing Levy',
-        Number(record.taxBreakdown.housingLevy),
+        Number(record.taxBreakdown?.housingLevy || 0),
       );
 
       if (Number(record.otherDeductions) > 0) {
@@ -108,7 +108,7 @@ export class PayslipService {
       }
 
       const totalDeductions =
-        Number(record.taxBreakdown.totalDeductions) +
+        Number(record.taxBreakdown?.totalDeductions || 0) +
         Number(record.otherDeductions);
       doc.moveDown(0.5);
       this.addCurrencyRow(doc, 'Total Deductions', totalDeductions, true);

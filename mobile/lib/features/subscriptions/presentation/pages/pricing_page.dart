@@ -131,7 +131,7 @@ class _PricingPageState extends ConsumerState<PricingPage> {
     final isCurrentPlan = userSubscription.when(
       data: (subscription) => subscription?.plan.tier == plan.tier,
       loading: () => false,
-      error: (_, __) => false,
+      error: (_, _) => false,
     );
     final isFreeTier = plan.tier == 'free';
     final isPopular = plan.isPopular;

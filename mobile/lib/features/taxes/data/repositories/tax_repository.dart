@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_service.dart';
 import '../models/payroll_tax_submission.dart';
 import '../models/tax_submission_model.dart';
+import '../models/monthly_tax_summary.dart';
 
 final taxRepositoryProvider = Provider((ref) => TaxRepository());
 
@@ -30,12 +32,29 @@ class TaxRepository {
     try {
       final response = await _apiService.taxes.getSubmissions();
       final List<dynamic> data = response.data;
-      // Map backend TaxSubmission to frontend PayrollTaxSubmission
-      // Note: You might need to adjust the model mapping depending on backend response structure
       return data.map((json) => PayrollTaxSubmission.fromJson(json)).toList();
     } catch (e) {
-      // Return empty list for 500 errors instead of throwing
       return [];
+    }
+  }
+
+  // Get aggregated monthly tax summaries
+  Future<List<MonthlyTaxSummary>> getMonthlyTaxSummaries() async {
+    try {
+      final response = await _apiService.taxes.getMonthlySummaries();
+      final List<dynamic> data = response.data;
+      return data.map((json) => MonthlyTaxSummary.fromJson(json)).toList();
+    } catch (e) {
+      debugPrint('Error fetching monthly summaries: $e');
+      return [];
+    }
+  }
+
+  Future<void> markMonthAsFiled(int year, int month) async {
+    try {
+      await _apiService.taxes.markMonthAsFiled(year, month);
+    } catch (e) {
+      throw Exception('Failed to file monthly taxes: $e');
     }
   }
 
@@ -136,16 +155,25 @@ class TaxRepository {
   // Get compliance status
   Future<Map<String, dynamic>> getComplianceStatus() async {
     try {
-      // Return mock compliance status
+      final response = await _apiService.taxes.getComplianceStatus();
+      if (response.data != null) {
+        return Map<String, dynamic>.from(response.data);
+      }
       return {
-        'kraPin': true,
-        'nssf': true,
-        'nhif': true,
-        'status': 'compliant',
-        'nextFilingDate': '2024-04-30',
+        'kraPin': false,
+        'nssf': false,
+        'nhif': false,
+        'status': 'unknown',
       };
     } catch (e) {
-      throw Exception('Failed to fetch compliance status: $e');
+      // Fallback for UI if API fails, but ideally should propagate or show error state
+      debugPrint('Failed to fetch compliance status: $e');
+      return {
+        'kraPin': false,
+        'nssf': false,
+        'nhif': false,
+        'status': 'error',
+      };
     }
   }
 
@@ -251,6 +279,33 @@ class TaxRepository {
       return response.data;
     } catch (e) {
       throw Exception('Failed to fetch tax payment instructions: $e');
+    }
+  }
+  // Download statutory return (KRA, NSSF, SHIF)
+  Future<String> downloadStatutoryReturn(String exportType, DateTime startDate, DateTime endDate) async {
+    try {
+      final response = await _apiService.taxes.exportStatutoryReturn(
+        exportType: exportType,
+        startDate: startDate,
+        endDate: endDate,
+      );
+      
+      final data = response.data;
+      // We expect data to contain { id, downloadUrl, fileName }
+      // This ID is needed to trigger the actual download
+      return data['id'] as String;
+    } catch (e) {
+      throw Exception('Failed to generate export: $e');
+    }
+  }
+
+  Future<List<int>> getExportFile(String exportId) async {
+    try {
+      final response = await _apiService.taxes.downloadExport(exportId);
+      // Response data should be bytes (List<int>) because responseType was bytes
+      return response.data;
+    } catch (e) {
+      throw Exception('Failed to download export file: $e');
     }
   }
 }

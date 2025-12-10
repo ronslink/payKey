@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository, Between, In } from 'typeorm';
 import { LeaveRequest, LeaveStatus } from '../entities/leave-request.entity';
 import { Worker } from '../entities/worker.entity';
 import {
@@ -94,8 +94,12 @@ export class LeaveManagementService {
 
     const workerIds = workers.map((worker) => worker.id);
 
+    if (workerIds.length === 0) {
+      return [];
+    }
+
     return this.leaveRequestRepository.find({
-      where: { workerId: workerIds as any },
+      where: { workerId: In(workerIds) },
       relations: ['worker', 'approvedBy', 'requestedBy'],
       order: { createdAt: 'DESC' },
     });

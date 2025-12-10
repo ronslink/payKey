@@ -74,3 +74,9 @@ coverage/
 # Docker
 .dockerignore
 backend/dist/
+
+# Backend specific
+backend/coverage/
+backend/test_output*.txt
+*.log
+backend/.env

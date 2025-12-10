@@ -105,8 +105,8 @@ final leaveBalanceProvider = FutureProvider.family<LeaveBalanceModel, String>((r
   // Convert Map to LeaveBalanceModel - assuming the map has the expected keys
   return LeaveBalanceModel(
     workerId: workerId,
-    workerName: 'Worker Name', // This should come from actual data
-    year: DateTime.now().year,
+    workerName: balanceMap['workerName'] as String? ?? 'Unknown Worker',
+    year: _parseInt(balanceMap['year']),
     totalAnnualLeaves: _parseInt(balanceMap['totalAnnualLeaves']),
     usedAnnualLeaves: _parseInt(balanceMap['usedAnnualLeaves']),
     remainingAnnualLeaves: _parseInt(balanceMap['remainingAnnualLeaves']),

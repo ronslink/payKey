@@ -374,19 +374,19 @@ export class TaxesService {
 
     // Aggregate tax amounts
     const totalPaye = payrollRecords.reduce(
-      (sum, record) => sum + Number(record.taxAmount),
+      (sum, record) => sum + Number(record.taxAmount || 0),
       0,
     );
     const totalNssf = payrollRecords.reduce(
-      (sum, record) => sum + Number(record.taxBreakdown.nssf),
+      (sum, record) => sum + Number(record.taxBreakdown?.nssf || 0),
       0,
     );
     const totalNhif = payrollRecords.reduce(
-      (sum, record) => sum + Number(record.taxBreakdown.nhif),
+      (sum, record) => sum + Number(record.taxBreakdown?.nhif || 0),
       0,
     );
     const totalHousingLevy = payrollRecords.reduce(
-      (sum, record) => sum + Number(record.taxBreakdown.housingLevy),
+      (sum, record) => sum + Number(record.taxBreakdown?.housingLevy || 0),
       0,
     );
 
@@ -487,6 +487,104 @@ export class TaxesService {
       shif: !!user?.shifNumber,
       isCompliant: !!user?.kraPin && !!user?.nssfNumber && !!user?.shifNumber,
     };
+  }
+
+  async getMonthlySummaries(userId: string): Promise<any[]> {
+    const submissions = await this.getSubmissions(userId);
+    const summaries = new Map<string, any>();
+
+    for (const sub of submissions) {
+      // Use payPeriod endDate to determine tax month
+      // Default to createdAt if payPeriod relation missing (fallback)
+      const date = sub.payPeriod?.endDate
+        ? new Date(sub.payPeriod.endDate)
+        : sub.createdAt;
+
+      const year = date.getFullYear();
+      const month = date.getMonth(); // 0-11
+      const key = `${year}-${month}`;
+
+      if (!summaries.has(key)) {
+        summaries.set(key, {
+          year,
+          month,
+          monthName: new Intl.DateTimeFormat('en-US', { month: 'long' }).format(date),
+          totalPaye: 0,
+          totalNssf: 0,
+          totalNhif: 0,
+          totalHousingLevy: 0,
+          totalTax: 0,
+          status: 'FILED', // Start as FILED, if any is PENDING, switch to PENDING
+          submissions: [],
+          submissionIds: [],
+        });
+      }
+
+      const summary = summaries.get(key);
+      summary.totalPaye += Number(sub.totalPaye);
+      summary.totalNssf += Number(sub.totalNssf);
+      summary.totalNhif += Number(sub.totalNhif);
+      summary.totalHousingLevy += Number(sub.totalHousingLevy);
+      summary.totalTax += Number(sub.totalPaye) + Number(sub.totalNssf) + Number(sub.totalNhif) + Number(sub.totalHousingLevy);
+
+      if (sub.status === TaxSubmissionStatus.PENDING) {
+        summary.status = 'PENDING';
+      }
+
+      summary.submissions.push(sub);
+      summary.submissionIds.push(sub.id);
+    }
+
+    // Convert map to array and sort by date descending
+    return Array.from(summaries.values()).sort((a, b) => {
+      if (a.year !== b.year) return b.year - a.year;
+      return b.month - a.month;
+    });
+  }
+
+  async markMonthAsFiled(userId: string, year: number, month: number): Promise<void> {
+    const submissions = await this.getSubmissions(userId);
+    const toFile: TaxSubmission[] = [];
+
+    for (const sub of submissions) {
+      const date = sub.payPeriod?.endDate
+        ? new Date(sub.payPeriod.endDate)
+        : sub.createdAt;
+
+      if (date.getFullYear() === year && date.getMonth() === month) {
+        if (sub.status === TaxSubmissionStatus.PENDING) {
+          toFile.push(sub);
+        }
+      }
+    }
+
+    if (toFile.length === 0) {
+      throw new NotFoundException('No pending submissions found for this month');
+    }
+
+    const filedDate = new Date();
+    for (const sub of toFile) {
+      sub.status = TaxSubmissionStatus.FILED;
+      sub.filingDate = filedDate;
+      await this.taxSubmissionRepository.save(sub);
+    }
+
+    try {
+      await this.activitiesService.logActivity(
+        userId,
+        ActivityType.TAX,
+        'Monthly Tax Filed',
+        `Filed tax returns for ${new Intl.DateTimeFormat('en-US', { month: 'long' }).format(new Date(year, month))} ${year}`,
+        {
+          count: toFile.length,
+          year,
+          month,
+          ids: toFile.map(s => s.id),
+        },
+      );
+    } catch (e) {
+      console.error('Failed to log activity:', e);
+    }
   }
 
   getUpcomingDeadlines() {

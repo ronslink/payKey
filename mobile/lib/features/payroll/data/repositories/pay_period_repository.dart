@@ -452,6 +452,14 @@ class PayPeriodStatistics {
         'totalGrossAmount': totalGrossAmount,
         'totalNetAmount': totalNetAmount,
         'totalTaxAmount': totalTaxAmount,
+        if (taxSummary != null)
+          'taxSummary': {
+            'paye': taxSummary!.paye,
+            'nhif': taxSummary!.nhif,
+            'nssf': taxSummary!.nssf,
+            'housingLevy': taxSummary!.housingLevy,
+            'total': taxSummary!.total,
+          },
       };
 
   static int _toInt(dynamic value) {

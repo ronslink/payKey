@@ -47,4 +47,9 @@ extension PayrollService on ApiService {
       throw handleError(e);
     }
   }
+
+  /// Get payslips for a specific worker
+  Future<Response> getPayslipsForWorker(String workerId) async {
+    return dio.get('/payroll-records/worker/$workerId');
+  }
 }

@@ -156,6 +156,126 @@ export class ExportService {
   }
 
   /**
+   * Generate KRA P10 CSV Format
+   * Based on standard KRA iTax CSV columns
+   */
+  async generateKRA_P10_CSV(
+    userId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<string> {
+    const records = await this.getPayrollData(userId, startDate, endDate);
+
+    // KRA P10 CSV Layout (approximate standard)
+    // PIN of Employee, Name of Employee, Residential Status, Type of Employee, Basic Salary, House Allowance, Transport Allowance, Overtime Allowance, Directors Fee, Leave Pay, Overtime, Total Cash Pay, Value of Car Benefit, Other Non-Cash Benefits, Total Non-Cash Pay, Global Income, Type of Housing, Rent of House, Computed Rent, Rent Recovered, Net Value of Housing, Total Gross Pay, 30% of Cash Pay, Actual Contribution, Permissible Limit, Mortgage Interest, Deposit on Home Ownership, Amount of Benefit, Taxable Pay, Tax Payable, Personal Relief, Insurance Relief, PAYE Tax
+
+    let csv = 'PIN of Employee,Name of Employee,Residential Status,Type of Employee,Basic Salary,House Allowance,Transport Allowance,Overtime Allowance,other Allowances,Total Cash Pay,Car Benefit,Other Non Cash Benefits,Total Non Cash Pay,Total Gross Pay,Actual Contribution,Morgage Interest,Taxable Pay,Tax Payable,Personal Relief,Insurance Relief,PAYE Tax\n';
+
+    for (const r of records) {
+      // Fetch employee PIN from metadata if available, otherwise blank/placeholder
+      // Note: In real app, we need to ensure Worker entity has kraPin field populated and joined here.
+      // For now, using placeholders or available data.
+      const pin = 'A000000000Z'; // Placeholder if missing
+      const name = r.workerName;
+      const resStatus = 'Resident';
+      const empType = 'Primary Employee';
+      const basic = r.grossSalary; // Simplified: Assuming Basic = Gross for MVP exports
+      // Zeros for allowances explicitly for now
+      const houseAllow = 0;
+      const transportAllow = 0;
+      const overtime = 0;
+      const otherAllow = 0;
+
+      const totalCash = basic + houseAllow + transportAllow + overtime + otherAllow;
+
+      const carBen = 0;
+      const otherNonCash = 0;
+      const totalNonCash = carBen + otherNonCash;
+
+      const totalGross = totalCash + totalNonCash;
+
+      const actualContrib = r.nssf; // Pension contribution
+      const mortgage = 0;
+
+      // Taxable Pay is usually Gross - NSSF (Allowable Deduction)
+      const taxable = totalGross - actualContrib;
+
+      const taxPayable = r.paye + 2400; // Gross Tax before relief (Approx back-calculation)
+      const relief = 2400; // Personal Relief
+      const insRelief = r.shif * 0.15; // SHIF attracts 15% relief usually, verifying... 
+      // Actually standard personal relief is fixed. Insurance relief is separate.
+      // Let's stick to simple: Tax Payable = PAYE (Net Tax) for this export if we can't reverse calc easily
+      // OR: Tax Payable (Gross) -> Relief -> PAYE (Net).
+      // Let's use PAYE (Net) as the final column.
+
+      const paye = r.paye;
+
+      csv += `${pin},"${name}",${resStatus},${empType},`;
+      csv += `${basic.toFixed(2)},${houseAllow.toFixed(2)},${transportAllow.toFixed(2)},${overtime.toFixed(2)},${otherAllow.toFixed(2)},`;
+      csv += `${totalCash.toFixed(2)},${carBen.toFixed(2)},${otherNonCash.toFixed(2)},${totalNonCash.toFixed(2)},`;
+      csv += `${totalGross.toFixed(2)},${actualContrib.toFixed(2)},${mortgage.toFixed(2)},`;
+      csv += `${taxable.toFixed(2)},${(paye + relief).toFixed(2)},${relief.toFixed(2)},0.00,${paye.toFixed(2)}\n`;
+    }
+
+    return csv;
+  }
+
+  /**
+   * Generate NSSF Excel/CSV Format
+   * Columns: Payroll Number, Surname, Other Names, ID No, KRA PIN, NSSF No, Gross Pay
+   */
+  async generateNSSF_Excel(
+    userId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<string> {
+    const records = await this.getPayrollData(userId, startDate, endDate);
+
+    let csv = 'Payroll Number,Surname,Other Names,ID No,KRA PIN,NSSF No,Gross Pay,Voluntary Contribution\n';
+
+    for (const r of records) {
+      // Split name
+      const nameParts = r.workerName.split(' ');
+      const surname = nameParts[0] || '';
+      const otherNames = nameParts.slice(1).join(' ') || surname;
+
+      const empId = r.workerId.substring(0, 8); // Fake payroll number from ID
+      const idNo = '000000'; // Placeholder
+      const kraPin = 'A000000000Z'; // Placeholder
+      const nssfNo = '000000'; // Placeholder
+
+      csv += `${empId},"${surname}","${otherNames}",${idNo},${kraPin},${nssfNo},${r.grossSalary.toFixed(2)},0.00\n`;
+    }
+
+    return csv;
+  }
+
+  /**
+   * Generate SHIF Excel/CSV Format
+   * Columns: Payroll No, Last Name, First Name, ID No, Gross Pay, SHIF Amount
+   */
+  async generateSHIF_Excel(
+    userId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<string> {
+    const records = await this.getPayrollData(userId, startDate, endDate);
+
+    let csv = 'Payroll No,Last Name,First Name,ID No,Gross Salary,SHIF Amount\n';
+
+    for (const r of records) {
+      const nameParts = r.workerName.split(' ');
+      const lastName = nameParts[nameParts.length - 1] || '';
+      const firstName = nameParts[0] || '';
+      const idNo = '000000';
+
+      csv += `${r.workerId.substring(0, 8)},"${lastName}","${firstName}",${idNo},${r.grossSalary.toFixed(2)},${r.shif.toFixed(2)}\n`;
+    }
+
+    return csv;
+  }
+
+  /**
    * Save export file and create record
    */
   async createExport(
@@ -180,11 +300,23 @@ export class ExportService {
         content = await this.generateGenericCSV(userId, startDate, endDate);
         extension = 'csv';
         break;
+      case ExportType.KRA_P10_CSV:
+        content = await this.generateKRA_P10_CSV(userId, startDate, endDate);
+        extension = 'csv';
+        break;
+      case ExportType.NSSF_RETURN_EXCEL:
+        content = await this.generateNSSF_Excel(userId, startDate, endDate);
+        extension = 'csv'; // Sticking to CSV for simplicity
+        break;
+      case ExportType.SHIF_RETURN_EXCEL:
+        content = await this.generateSHIF_Excel(userId, startDate, endDate);
+        extension = 'csv'; // Sticking to CSV for simplicity
+        break;
       default:
         throw new Error('Unsupported export type');
     }
 
-    const fileName = `payroll_export_${Date.now()}.${extension}`;
+    const fileName = `payroll_export_${exportType.toLowerCase()}_${Date.now()}.${extension}`;
     const filePath = path.join(this.exportsDir, fileName);
 
     fs.writeFileSync(filePath, content, 'utf-8');

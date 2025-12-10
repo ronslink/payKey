@@ -74,7 +74,8 @@ export class StripeService {
   ): Promise<{ sessionId: string; url: string }> {
     const stripe = this.ensureStripeConfigured();
 
-    if (!['FREE', 'BASIC', 'GOLD', 'PLATINUM'].includes(planTier.toUpperCase())) {
+    const normalizedTier = planTier.toUpperCase();
+    if (!['FREE', 'BASIC', 'GOLD', 'PLATINUM'].includes(normalizedTier)) {
       throw new BadRequestException('Invalid subscription plan');
     }
 
@@ -105,14 +106,14 @@ export class StripeService {
               recurring: {
                 interval: 'month',
               },
-              unit_amount: this.getPlanPrice(planTier.toUpperCase()), // Convert to cents
+              unit_amount: this.getPlanPrice(normalizedTier), // Convert to cents
             },
             quantity: 1,
           },
         ],
         metadata: {
           userId,
-          planTier: planTier.toUpperCase(),
+          planTier: normalizedTier,
           source: 'PayKey',
         },
         success_url:
@@ -137,9 +138,9 @@ export class StripeService {
   private getPlanPrice(planTier: string): number {
     const prices: Record<string, number> = {
       FREE: 0,
-      BASIC: 2000, // $20.00
-      GOLD: 5000,  // $50.00
-      PLATINUM: 10000, // $100.00
+      BASIC: 999, // $9.99
+      GOLD: 2999,  // $29.99
+      PLATINUM: 4999, // $49.99
     };
     return prices[planTier] || prices.BASIC;
   }
@@ -390,7 +391,8 @@ export class StripeService {
       throw new NotFoundException('Active subscription not found');
     }
 
-    if (!['FREE', 'BASIC', 'GOLD', 'PLATINUM'].includes(newPlanTier.toUpperCase())) {
+    const normalizedTier = newPlanTier.toUpperCase();
+    if (!['FREE', 'BASIC', 'GOLD', 'PLATINUM'].includes(normalizedTier)) {
       throw new BadRequestException('Invalid subscription plan');
     }
 
@@ -403,13 +405,13 @@ export class StripeService {
 
       // Create new subscription with updated plan
       // This is simplified - in production, you'd use subscription modification
-      subscription.tier = newPlanTier as SubscriptionTier;
+      subscription.tier = normalizedTier as SubscriptionTier;
       subscription.status = SubscriptionStatus.ACTIVE;
       subscription.startDate = new Date();
 
       await this.subscriptionRepository.save(subscription);
       this.logger.log(
-        `Subscription updated for user ${userId} to ${newPlanTier}`,
+        `Subscription updated for user ${userId} to ${normalizedTier}`,
       );
     } catch (error) {
       this.logger.error('Failed to update subscription', error);

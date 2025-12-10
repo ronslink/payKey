@@ -188,3 +188,165 @@ class EmployeeUser {
     return '${firstName ?? ''} ${lastName ?? ''}'.trim();
   }
 }
+
+/// Clock status for employee dashboard
+class ClockStatus {
+  final bool isClockedIn;
+  final EmployeeTimeEntry? currentEntry;
+  final double todayTotal;
+
+  const ClockStatus({
+    required this.isClockedIn,
+    this.currentEntry,
+    required this.todayTotal,
+  });
+
+  factory ClockStatus.fromJson(Map<String, dynamic> json) {
+    return ClockStatus(
+      isClockedIn: json['isClockedIn'] as bool? ?? false,
+      currentEntry: json['currentEntry'] != null
+          ? EmployeeTimeEntry.fromJson(json['currentEntry'] as Map<String, dynamic>)
+          : null,
+      todayTotal: (json['todayTotal'] as num?)?.toDouble() ?? 0,
+    );
+  }
+
+  String get todayTotalDisplay {
+    final hours = todayTotal.floor();
+    final minutes = ((todayTotal - hours) * 60).round();
+    return '${hours}h ${minutes}m';
+  }
+}
+
+/// Employee time entry model
+class EmployeeTimeEntry {
+  final String id;
+  final String workerId;
+  final DateTime clockIn;
+  final DateTime? clockOut;
+  final double? totalHours;
+  final int? breakMinutes;
+  final String? notes;
+  final String status;
+
+  const EmployeeTimeEntry({
+    required this.id,
+    required this.workerId,
+    required this.clockIn,
+    this.clockOut,
+    this.totalHours,
+    this.breakMinutes,
+    this.notes,
+    required this.status,
+  });
+
+  factory EmployeeTimeEntry.fromJson(Map<String, dynamic> json) {
+    return EmployeeTimeEntry(
+      id: json['id'] as String,
+      workerId: json['workerId'] as String,
+      clockIn: DateTime.parse(json['clockIn'] as String),
+      clockOut: json['clockOut'] != null ? DateTime.parse(json['clockOut'] as String) : null,
+      totalHours: (json['totalHours'] as num?)?.toDouble(),
+      breakMinutes: json['breakMinutes'] as int?,
+      notes: json['notes'] as String?,
+      status: json['status'] as String? ?? 'ACTIVE',
+    );
+  }
+}
+
+/// Employee leave request model
+class EmployeeLeaveRequest {
+  final String id;
+  final String workerId;
+  final String leaveType;
+  final DateTime startDate;
+  final DateTime endDate;
+  final int totalDays;
+  final String? reason;
+  final String status;
+  final DateTime createdAt;
+
+  const EmployeeLeaveRequest({
+    required this.id,
+    required this.workerId,
+    required this.leaveType,
+    required this.startDate,
+    required this.endDate,
+    required this.totalDays,
+    this.reason,
+    required this.status,
+    required this.createdAt,
+  });
+
+  factory EmployeeLeaveRequest.fromJson(Map<String, dynamic> json) {
+    final start = DateTime.parse(json['startDate'] as String);
+    final end = DateTime.parse(json['endDate'] as String);
+    return EmployeeLeaveRequest(
+      id: json['id'] as String,
+      workerId: json['workerId'] as String,
+      leaveType: json['leaveType'] as String,
+      startDate: start,
+      endDate: end,
+      totalDays: json['totalDays'] as int? ?? (end.difference(start).inDays + 1),
+      reason: json['reason'] as String?,
+      status: json['status'] as String? ?? 'PENDING',
+      createdAt: DateTime.parse(json['createdAt'] as String? ?? DateTime.now().toIso8601String()),
+    );
+  }
+}
+
+/// Employee payslip model
+class EmployeePayslip {
+  final String id;
+  final String workerId;
+  final String periodName;
+  final DateTime payDate;
+  final double basicSalary;
+  final double allowances;
+  final double overtime;
+  final double grossPay;
+  final double paye;
+  final double nhif;
+  final double nssf;
+  final double housingLevy;
+  final double totalDeductions;
+  final double netPay;
+
+  const EmployeePayslip({
+    required this.id,
+    required this.workerId,
+    required this.periodName,
+    required this.payDate,
+    required this.basicSalary,
+    required this.allowances,
+    required this.overtime,
+    required this.grossPay,
+    required this.paye,
+    required this.nhif,
+    required this.nssf,
+    required this.housingLevy,
+    required this.totalDeductions,
+    required this.netPay,
+  });
+
+  factory EmployeePayslip.fromJson(Map<String, dynamic> json) {
+    final payPeriod = json['payPeriod'] as Map<String, dynamic>?;
+    return EmployeePayslip(
+      id: json['id'] as String,
+      workerId: json['workerId'] as String,
+      periodName: payPeriod?['name'] as String? ?? json['periodName'] as String? ?? 'Pay Period',
+      payDate: DateTime.parse(json['payDate'] as String? ?? payPeriod?['paymentDate'] as String? ?? DateTime.now().toIso8601String()),
+      basicSalary: (json['basicSalary'] as num?)?.toDouble() ?? 0,
+      allowances: (json['allowances'] as num?)?.toDouble() ?? 0,
+      overtime: (json['overtimePay'] as num?)?.toDouble() ?? (json['overtime'] as num?)?.toDouble() ?? 0,
+      grossPay: (json['grossPay'] as num?)?.toDouble() ?? 0,
+      paye: (json['paye'] as num?)?.toDouble() ?? 0,
+      nhif: (json['nhif'] as num?)?.toDouble() ?? 0,
+      nssf: (json['nssf'] as num?)?.toDouble() ?? 0,
+      housingLevy: (json['housingLevy'] as num?)?.toDouble() ?? 0,
+      totalDeductions: (json['totalDeductions'] as num?)?.toDouble() ?? 0,
+      netPay: (json['netPay'] as num?)?.toDouble() ?? 0,
+    );
+  }
+}
+

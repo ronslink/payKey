@@ -6,6 +6,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Property } from '../../properties/entities/property.entity';
@@ -35,6 +36,8 @@ export enum PaymentMethod {
 }
 
 @Entity('workers')
+@Index(['userId', 'isActive'])
+@Index(['userId', 'createdAt'])
 export class Worker {
   @PrimaryGeneratedColumn('uuid')
   id: string;

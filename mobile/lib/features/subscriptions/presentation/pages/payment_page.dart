@@ -23,7 +23,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
 
     try {
       final repo = ref.read(subscriptionRepositoryProvider);
-      final checkoutUrl = await repo.subscribeWithStripe(widget.plan.id);
+      final checkoutUrl = await repo.subscribeWithStripe(widget.plan.tier);
       
       final  uri = Uri.parse(checkoutUrl);
       if (await canLaunchUrl(uri)) {

@@ -75,8 +75,12 @@ export class ReportsController {
   }
 
   @Get('p9')
-  async getP9Report(@Request() req: any, @Query('year') year: string) {
-    return this.reportsService.getP9Report(req.user.userId, parseInt(year));
+  async getP9Report(
+    @Request() req: any,
+    @Query('year') year: string,
+    @Query('workerId') workerId?: string,
+  ) {
+    return this.reportsService.getP9Report(req.user.userId, parseInt(year), workerId);
   }
 
   @Get('p10')

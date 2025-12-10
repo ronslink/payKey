@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../providers/tax_submission_provider.dart';
 import '../../data/models/tax_submission_model.dart';
 import '../providers/tax_provider.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../widgets/payroll_history_tab.dart';
 
 class ComprehensiveTaxPage extends ConsumerStatefulWidget {
   const ComprehensiveTaxPage({super.key});
@@ -41,11 +43,24 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
         children: [
           _buildTabBar(),
           Expanded(
-            child: _currentIndex == 0 ? _buildSubmissionsTab() : _buildCalculatorTab(),
+            child: _buildTabContent(),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildTabContent() {
+    switch (_currentIndex) {
+      case 0:
+        return _buildSubmissionsTab();
+      case 1:
+        return const PayrollHistoryTab();
+      case 2:
+        return _buildCalculatorTab();
+      default:
+        return _buildSubmissionsTab();
+    }
   }
 
   Widget _buildTabBar() {
@@ -68,7 +83,10 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
             child: _buildTabButton(0, 'My Returns'),
           ),
           Expanded(
-            child: _buildTabButton(1, 'Calculator'),
+            child: _buildTabButton(1, 'History'),
+          ),
+          Expanded(
+            child: _buildTabButton(2, 'Calculator'),
           ),
         ],
       ),
@@ -124,8 +142,6 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildTaxCalculationCard(),
-          const SizedBox(height: 16),
-          _buildPayrollTaxInfo(),
         ],
       ),
     );
@@ -272,41 +288,54 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
   }
 
   Widget _buildComplianceCard() {
-    return Container(
-      decoration: _buildCardDecoration(),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    final taxNotifier = ref.watch(taxNotifierProvider.notifier);
+    
+    return FutureBuilder<Map<String, dynamic>>(
+      future: taxNotifier.getComplianceStatus(),
+      builder: (context, snapshot) {
+        final data = snapshot.data ?? {};
+        final kraPin = data['kraPin'] == true;
+        final nssf = data['nssf'] == true;
+        final shif = data['shif'] == true; // Assuming shif is mapped to nhif key or new key
+        final housing = true; // Placeholder for now or fetch if available
+
+        return Container(
+          decoration: _buildCardDecoration(),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.verified_user, color: Colors.green, size: 20),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.verified_user, color: Colors.green, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Compliance Status',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              const Text(
-                'Compliance Status',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildComplianceItem('KRA PIN', kraPin),
+                  _buildComplianceItem('NSSF', nssf),
+                  _buildComplianceItem('SHIF', shif),
+                  _buildComplianceItem('Housing', housing),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildComplianceItem('KRA PIN', true),
-              _buildComplianceItem('NSSF', true),
-              _buildComplianceItem('NHIF', true),
-              _buildComplianceItem('Housing', true), // Added Housing Levy
-            ],
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -362,13 +391,22 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
                 () => _showNewSubmissionDialog(),
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             Expanded(
               child: _buildActionButton(
                 'Calculate',
                 Icons.calculate_outlined,
                 Colors.green,
                 () => setState(() => _currentIndex = 1),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildActionButton(
+                'P9 Reports',
+                Icons.description_outlined,
+                Colors.orange,
+                () => context.push('/reports'),
               ),
             ),
           ],
@@ -432,7 +470,7 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: submissions.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final submission = submissions[index];
                 return _buildSubmissionCard(submission);
@@ -529,6 +567,17 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
                         'Income: KES ${NumberFormat('#,##0').format(submission.income)}',
                         style: TextStyle(color: Colors.grey[600], fontSize: 13),
                       ),
+                      if (submission.filingDate != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Filed: ${DateFormat('MMM d, y').format(submission.filingDate!)}',
+                          style: TextStyle(
+                            color: Colors.green[700],
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -624,75 +673,7 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
     );
   }
 
-  Widget _buildPayrollTaxInfo() {
-    final payrollTaxState = ref.watch(taxNotifierProvider);
 
-    return Container(
-      decoration: _buildCardDecoration(),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Payroll Tax History',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Worker taxes filed automatically via payroll.',
-            style: TextStyle(color: Colors.grey[600], fontSize: 13),
-          ),
-          const SizedBox(height: 20),
-          payrollTaxState.when(
-            data: (submissions) {
-              if (submissions.isEmpty) {
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text('No payroll tax records found'),
-                  ),
-                );
-              }
-              return ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: submissions.length,
-                separatorBuilder: (_, __) => const Divider(),
-                itemBuilder: (context, index) {
-                  final submission = submissions[index];
-                  final date = submission.createdAt; 
-                  final month = DateFormat('MMM yyyy').format(date);
-                  final paye = submission.totalPaye;
-                  final isFiled = submission.status == 'FILED';
-
-                  return ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.receipt, color: Colors.blue, size: 20),
-                    ),
-                    title: Text('$month Payroll'),
-                    subtitle: Text('PAYE: KES ${NumberFormat('#,##0').format(paye)}'),
-                    trailing: Icon(
-                      isFiled ? Icons.check_circle : Icons.pending, 
-                      color: isFiled ? Colors.green : Colors.orange,
-                      size: 20,
-                    ),
-                  );
-                },
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, s) => Text('Error: $e'),
-          ),
-        ],
-      ),
-    );
-  }
 
   // ---------------------------------------------------------------------------
   // LOGIC
@@ -860,6 +841,27 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
             _buildDetailItem('Annual Income', 'KES ${NumberFormat('#,##0').format(submission.income)}'),
             _buildDetailItem('Total Deductions', 'KES ${NumberFormat('#,##0').format(submission.deductions)}'),
             _buildDetailItem('Taxable Income', 'KES ${NumberFormat('#,##0').format(submission.taxableIncome)}'),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.amber[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.amber[200]!),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, size: 20, color: Colors.amber),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'This marks the return as filed in PayKey. You must still file returns on the KRA iTax portal.',
+                      style: TextStyle(fontSize: 12, color: Colors.black87),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 24),
             Container(
               padding: const EdgeInsets.all(16),

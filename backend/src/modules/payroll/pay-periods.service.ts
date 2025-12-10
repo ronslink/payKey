@@ -215,10 +215,11 @@ export class PayPeriodsService {
 
     if (
       payPeriod.status !== PayPeriodStatus.ACTIVE &&
-      payPeriod.status !== PayPeriodStatus.DRAFT
+      payPeriod.status !== PayPeriodStatus.DRAFT &&
+      payPeriod.status !== PayPeriodStatus.COMPLETED // Allow reopening from COMPLETED
     ) {
       throw new BadRequestException(
-        'Only draft or active pay periods can be processed',
+        'Only draft, active, or completed pay periods can be processed',
       );
     }
 
@@ -384,7 +385,10 @@ export class PayPeriodsService {
         PayPeriodStatus.COMPLETED,
         PayPeriodStatus.CLOSED,
       ],
-      [PayPeriodStatus.COMPLETED]: [PayPeriodStatus.CLOSED],
+      [PayPeriodStatus.COMPLETED]: [
+        PayPeriodStatus.CLOSED,
+        PayPeriodStatus.PROCESSING, // Allow reopening
+      ],
       [PayPeriodStatus.CLOSED]: [], // No transitions from closed
     };
 
@@ -430,6 +434,28 @@ export class PayPeriodsService {
         ),
         totalTaxAmount: payrollRecords.reduce(
           (sum, r) => sum + Number(r.taxAmount),
+          0,
+        ),
+      },
+      taxSummary: {
+        paye: payrollRecords.reduce(
+          (sum, r) => sum + Number(r.taxBreakdown?.paye || 0),
+          0,
+        ),
+        nhif: payrollRecords.reduce(
+          (sum, r) => sum + Number(r.taxBreakdown?.nhif || 0),
+          0,
+        ),
+        nssf: payrollRecords.reduce(
+          (sum, r) => sum + Number(r.taxBreakdown?.nssf || 0),
+          0,
+        ),
+        housingLevy: payrollRecords.reduce(
+          (sum, r) => sum + Number(r.taxBreakdown?.housingLevy || 0),
+          0,
+        ),
+        total: payrollRecords.reduce(
+          (sum, r) => sum + Number(r.taxAmount || 0),
           0,
         ),
       },

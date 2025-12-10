@@ -307,19 +307,29 @@ export class ReportsService {
       },
     };
   }
-  async getP9Report(userId: string, year: number) {
+  async getP9Report(userId: string, year: number, workerId?: string) {
     const startDate = new Date(year, 0, 1);
     const endDate = new Date(year, 11, 31, 23, 59, 59);
 
+    const whereClause: any = {
+      userId,
+      periodStart: Between(startDate, endDate),
+      status: PayrollStatus.FINALIZED,
+    };
+
+    if (workerId) {
+      whereClause.workerId = workerId;
+    }
+
     const records = await this.payrollRecordRepository.find({
-      where: {
-        userId,
-        periodStart: Between(startDate, endDate),
-        status: PayrollStatus.FINALIZED,
-      },
+      where: whereClause,
       relations: ['worker'],
       order: { periodStart: 'ASC' },
     });
+
+    if (!records.length) {
+      return [];
+    }
 
     // Group by worker
     const workerReports: Record<string, any> = {};
@@ -358,33 +368,32 @@ export class ReportsService {
       const monthIndex = record.periodStart.getMonth(); // 0-11
       const report = workerReports[record.workerId];
 
-      const basicSalary = Number(record.grossSalary);
-      const benefits = Number(record.bonuses) + Number(record.otherEarnings);
+      const basicSalary = Number(record.grossSalary || 0);
+      const benefits = Number(record.bonuses || 0) + Number(record.otherEarnings || 0);
       const gross = basicSalary + benefits;
       const nssf = Number(record.taxBreakdown?.nssf || 0);
       const paye = Number(record.taxBreakdown?.paye || 0);
       const taxable = Math.max(0, gross - nssf);
 
       // Back-calculate Tax Charged (PAYE + Relief) only if PAYE > 0
-      // If PAYE is 0, Tax Charged might be less than Relief.
-      // But P9 usually requires showing Tax Charged. 
-      // Simplified: Tax Charged = PAYE + Relief.
       const taxCharged = paye > 0 ? paye + PERSONAL_RELIEF : 0;
 
-      report.months[monthIndex] = {
-        month: monthIndex + 1,
-        basicSalary: basicSalary,
-        benefits: benefits,
-        valueOfQuarters: 0,
-        grossPay: gross,
-        contribution: nssf, // Defined Contribution
-        ownerOccupiedInterest: 0,
-        retirementContribution: 0,
-        taxablePay: taxable,
-        taxCharged: taxCharged,
-        relief: paye > 0 ? PERSONAL_RELIEF : 0,
-        paye: paye,
-      };
+      if (report.months[monthIndex]) {
+        report.months[monthIndex] = {
+          month: monthIndex + 1,
+          basicSalary: basicSalary,
+          benefits: benefits,
+          valueOfQuarters: 0,
+          grossPay: gross,
+          contribution: nssf, // Defined Contribution
+          ownerOccupiedInterest: 0,
+          retirementContribution: 0,
+          taxablePay: taxable,
+          taxCharged: taxCharged,
+          relief: paye > 0 ? PERSONAL_RELIEF : 0,
+          paye: paye,
+        };
+      }
 
       report.totals.basicSalary += basicSalary;
       report.totals.grossPay += gross;

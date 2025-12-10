@@ -78,7 +78,7 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
       // Load draft items (non-critical, continue on failure)
       List<PayrollCalculation> items = [];
       try {
-        items = await payrollRepo.getDraftPayroll(widget.payPeriodId);
+        items = await payrollRepo.getPeriodRecords(widget.payPeriodId);
       } catch (e) {
         debugPrint('No draft items found or error loading them: $e');
       }
@@ -918,7 +918,7 @@ class _PayrollRecordsCard extends StatelessWidget {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: payrollItems.length,
-                separatorBuilder: (_, __) => const Divider(),
+                separatorBuilder: (_, _) => const Divider(),
                 itemBuilder: (context, index) {
                   final item = payrollItems[index];
                   return _PayrollItemTile(

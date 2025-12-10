@@ -6,6 +6,7 @@ import {
   JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
 } from 'typeorm';
 import { Worker } from './worker.entity';
 import { User } from '../../users/entities/user.entity';
@@ -27,6 +28,9 @@ export enum LeaveStatus {
 }
 
 @Entity('leave_requests')
+@Index(['workerId', 'status'])
+@Index(['requestedById'])
+@Index(['workerId', 'startDate'])
 export class LeaveRequest {
   @PrimaryGeneratedColumn('uuid')
   id: string;

@@ -1,6 +1,8 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/payroll_tax_submission.dart';
 import '../../data/models/tax_submission_model.dart';
+import '../../data/models/monthly_tax_summary.dart';
 import '../../data/repositories/tax_repository.dart';
 
 final taxRepositoryProvider = Provider((ref) => TaxRepository());
@@ -97,6 +99,53 @@ class PayrollTaxNotifier extends StateNotifier<AsyncValue<List<PayrollTaxSubmiss
   Future<List<Map<String, dynamic>>> getTaxDeadlines() async {
     try {
       return await _repository.getTaxDeadlines();
+    } catch (e) {
+      rethrow;
+    }
+  }
+}
+
+final monthlyTaxSummariesProvider = StateNotifierProvider<MonthlyTaxNotifier, AsyncValue<List<MonthlyTaxSummary>>>((ref) {
+  final repository = ref.read(taxRepositoryProvider);
+  return MonthlyTaxNotifier(repository);
+});
+
+class MonthlyTaxNotifier extends StateNotifier<AsyncValue<List<MonthlyTaxSummary>>> {
+  final TaxRepository _repository;
+
+  MonthlyTaxNotifier(this._repository) : super(const AsyncValue.loading()) {
+    loadSummaries();
+  }
+
+  Future<void> loadSummaries() async {
+    state = const AsyncValue.loading();
+    try {
+      final summaries = await _repository.getMonthlyTaxSummaries();
+      state = AsyncValue.data(summaries);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  Future<void> markMonthAsFiled(int year, int month) async {
+    try {
+      await _repository.markMonthAsFiled(year, month);
+      await loadSummaries(); // Refresh
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+
+  Future<List<int>> downloadReturn(String exportType, int year, int month) async {
+    try {
+      // Create dates for the full month
+      final startDate = DateTime(year, month, 1);
+      final daysInMonth = DateUtils.getDaysInMonth(year, month);
+      final endDate = DateTime(year, month, daysInMonth, 23, 59, 59);
+
+      final exportId = await _repository.downloadStatutoryReturn(exportType, startDate, endDate);
+      final bytes = await _repository.getExportFile(exportId);
+      return bytes;
     } catch (e) {
       rethrow;
     }

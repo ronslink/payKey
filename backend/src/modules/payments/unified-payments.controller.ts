@@ -200,9 +200,10 @@ export class UnifiedPaymentsController {
     const { userId, email, name } = req.user;
 
     try {
+      const normalizedPlanId = body.planId.toUpperCase();
       const checkoutSession = await this.stripeService.createCheckoutSession(
         userId,
-        body.planId.toUpperCase(),
+        normalizedPlanId,
         email,
         name || email,
       );

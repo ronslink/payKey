@@ -17,6 +17,7 @@ import { PayrollRecord } from './entities/payroll-record.entity';
 import type { AuthenticatedRequest } from '../../common/interfaces/user.interface';
 import { PayrollService } from './payroll.service';
 import { PayslipService } from './payslip.service';
+import { TaxesService } from '../taxes/taxes.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller('payroll')
@@ -25,9 +26,51 @@ export class PayrollController {
   constructor(
     private readonly payrollService: PayrollService,
     private readonly payslipService: PayslipService,
+    private readonly taxesService: TaxesService,
     @InjectRepository(PayrollRecord)
     private payrollRepository: Repository<PayrollRecord>,
   ) { }
+
+  // ... existing methods ...
+
+  @Post('regenerate-documents/:payPeriodId')
+  async regenerateDocuments(
+    @Request() req: AuthenticatedRequest,
+    @Param('payPeriodId') payPeriodId: string,
+  ) {
+    // 1. Fetch all finalized records for this period
+    const records = await this.payrollRepository.find({
+      where: {
+        payPeriodId,
+        userId: req.user.userId,
+        status: 'finalized' as any,
+      },
+      relations: ['worker', 'payPeriod'],
+    });
+
+    if (records.length === 0) {
+      throw new Error('No finalized payroll records found for this period. Please verify the period is completed.');
+    }
+
+    // 2. Generate Payslips
+    const payslips = await this.payslipService.generatePayslipsBatch(records);
+
+    // 3. Generate Tax Submission
+    const taxSubmission = await this.taxesService.generateTaxSubmission(
+      payPeriodId,
+      req.user.userId,
+    );
+
+    return {
+      success: true,
+      message: 'Documents regenerated successfully',
+      details: {
+        recordsFound: records.length,
+        payslipsGenerated: payslips.length,
+        taxSubmissionId: taxSubmission.id,
+      },
+    };
+  }
 
   @Get('calculate')
   async calculatePayroll(@Request() req: AuthenticatedRequest) {
@@ -162,6 +205,14 @@ export class PayrollController {
     @Param('payPeriodId') payPeriodId: string,
   ) {
     return this.payrollService.getDraftPayroll(req.user.userId, payPeriodId);
+  }
+
+  @Get('period-records/:payPeriodId')
+  async getPeriodRecords(
+    @Request() req: AuthenticatedRequest,
+    @Param('payPeriodId') payPeriodId: string,
+  ) {
+    return this.payrollService.getPeriodRecords(req.user.userId, payPeriodId);
   }
 
   @Post('finalize/:payPeriodId')

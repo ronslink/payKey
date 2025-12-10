@@ -8,6 +8,19 @@ final timeTrackingProvider =
   return TimeTrackingNotifier(ref.read(timeTrackingRepositoryProvider));
 });
 
+// Provider for all time entries (Dashboard Overview)
+final allTimeEntriesProvider =
+    StateNotifierProvider<TimeEntriesNotifier, AsyncValue<List<TimeEntry>>>((ref) {
+  return TimeEntriesNotifier(ref.read(timeTrackingRepositoryProvider));
+});
+
+// Provider for specific worker entries (Drill Down)
+final workerTimeEntriesProvider =
+    StateNotifierProvider<TimeEntriesNotifier, AsyncValue<List<TimeEntry>>>((ref) {
+  return TimeEntriesNotifier(ref.read(timeTrackingRepositoryProvider));
+});
+
+// Legacy provider (keep for backward compatibility if needed, or deprecate)
 final timeEntriesProvider =
     StateNotifierProvider<TimeEntriesNotifier, AsyncValue<List<TimeEntry>>>((ref) {
   return TimeEntriesNotifier(ref.read(timeTrackingRepositoryProvider));
