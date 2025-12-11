@@ -321,6 +321,56 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
             _showError('No payroll records found. Please calculate payroll first.');
             return;
           }
+          
+          // Check for high value payments that need splitting
+          final highValueItems = _payrollItems.where((item) => item.netPay > 150000).toList();
+          
+          if (highValueItems.isNotEmpty) {
+            final confirmed = await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Small Payment Splitting Notice'),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'The following employees have salaries exceeding the M-Pesa transaction limit of KES 150,000:',
+                      ),
+                      const SizedBox(height: 12),
+                      ...highValueItems.map((item) => Text(
+                        '• ${item.workerName}: KES ${item.netPay.toStringAsFixed(0)}',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      )),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'These payments will be AUTOMATICALLY SPLIT into multiple transactions to ensure successful delivery without any manual action required.',
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Do you want to proceed?',
+                        style: TextStyle(fontStyle: FontStyle.italic),
+                      ),
+                    ],
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: const Text('Proceed'),
+                  ),
+                ],
+              ),
+            );
+
+            if (confirmed != true) return;
+          }
+
           // IMPORTANT: Finalize payroll records before completing the period
           await payrollRepo.finalizePayroll(widget.payPeriodId);
           await repository.completePayPeriod(widget.payPeriodId);

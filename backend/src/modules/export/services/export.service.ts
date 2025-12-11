@@ -13,6 +13,10 @@ interface PayrollRecord {
   date: string;
   workerName: string;
   workerId: string;
+  workerPin?: string;
+  workerNssf?: string;
+  workerNhif?: string;
+  workerIdNo?: string;
   grossSalary: number;
   paye: number;
   nssf: number;
@@ -52,6 +56,7 @@ export class ExportService {
         createdAt: Between(startDate, endDate),
         type: TransactionType.SALARY_PAYOUT,
       },
+      relations: ['worker'], // Fetch worker details
       order: {
         createdAt: 'ASC',
       },
@@ -59,8 +64,12 @@ export class ExportService {
 
     return transactions.map((t) => ({
       date: t.createdAt.toISOString().split('T')[0],
-      workerName: t.metadata?.workerName || 'Unknown',
+      workerName: t.metadata?.workerName || t.worker?.name || 'Unknown',
       workerId: t.workerId,
+      workerPin: t.worker?.kraPin || '',
+      workerNssf: t.worker?.nssfNumber || '',
+      workerNhif: t.worker?.nhifNumber || '',
+      workerIdNo: t.worker?.idNumber || '',
       grossSalary: t.metadata?.grossSalary || 0,
       paye: t.metadata?.taxBreakdown?.paye || 0,
       nssf: t.metadata?.taxBreakdown?.nssf || 0,
@@ -172,10 +181,8 @@ export class ExportService {
     let csv = 'PIN of Employee,Name of Employee,Residential Status,Type of Employee,Basic Salary,House Allowance,Transport Allowance,Overtime Allowance,other Allowances,Total Cash Pay,Car Benefit,Other Non Cash Benefits,Total Non Cash Pay,Total Gross Pay,Actual Contribution,Morgage Interest,Taxable Pay,Tax Payable,Personal Relief,Insurance Relief,PAYE Tax\n';
 
     for (const r of records) {
-      // Fetch employee PIN from metadata if available, otherwise blank/placeholder
-      // Note: In real app, we need to ensure Worker entity has kraPin field populated and joined here.
-      // For now, using placeholders or available data.
-      const pin = 'A000000000Z'; // Placeholder if missing
+      // Fetch employee PIN from worker details
+      const pin = r.workerPin || 'A000000000Z'; // Fallback to placeholder only if missing
       const name = r.workerName;
       const resStatus = 'Resident';
       const empType = 'Primary Employee';
@@ -240,9 +247,9 @@ export class ExportService {
       const otherNames = nameParts.slice(1).join(' ') || surname;
 
       const empId = r.workerId.substring(0, 8); // Fake payroll number from ID
-      const idNo = '000000'; // Placeholder
-      const kraPin = 'A000000000Z'; // Placeholder
-      const nssfNo = '000000'; // Placeholder
+      const idNo = r.workerIdNo || '000000';
+      const kraPin = r.workerPin || 'A000000000Z';
+      const nssfNo = r.workerNssf || '000000';
 
       csv += `${empId},"${surname}","${otherNames}",${idNo},${kraPin},${nssfNo},${r.grossSalary.toFixed(2)},0.00\n`;
     }
@@ -267,7 +274,7 @@ export class ExportService {
       const nameParts = r.workerName.split(' ');
       const lastName = nameParts[nameParts.length - 1] || '';
       const firstName = nameParts[0] || '';
-      const idNo = '000000';
+      const idNo = r.workerIdNo || '000000';
 
       csv += `${r.workerId.substring(0, 8)},"${lastName}","${firstName}",${idNo},${r.grossSalary.toFixed(2)},${r.shif.toFixed(2)}\n`;
     }

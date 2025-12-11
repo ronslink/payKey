@@ -23,7 +23,7 @@ export class UpdateUserDto {
 
   @IsOptional()
   @IsString()
-  nhifNumber?: string;
+  shifNumber?: string;
 
   @IsOptional()
   @IsString()

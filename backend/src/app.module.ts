@@ -20,6 +20,7 @@ import { TasksModule } from './modules/tasks/tasks.module';
 import { TestingModule } from './modules/testing/testing.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { TimeTrackingModule } from './modules/time-tracking/time-tracking.module';
+import { ExportModule } from './modules/export/export.module';
 
 // Explicit Entity Imports
 // Explicit Entity Imports
@@ -42,6 +43,8 @@ import { AccountMapping } from './modules/accounting/entities/account-mapping.en
 import { AccountingExport } from './modules/accounting/entities/accounting-export.entity';
 import { Activity } from './modules/activities/entities/activity.entity';
 import { TimeEntry } from './modules/time-tracking/entities/time-entry.entity';
+import { Export } from './modules/export/entities/export.entity';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -78,6 +81,7 @@ import { TimeEntry } from './modules/time-tracking/entities/time-entry.entity';
             AccountingExport,
             Activity,
             TimeEntry,
+            Export,
           ],
 
           synchronize: false,
@@ -103,6 +107,7 @@ import { TimeEntry } from './modules/time-tracking/entities/time-entry.entity';
     TestingModule,
     ReportsModule,
     TimeTrackingModule,
+    ExportModule,
   ],
   controllers: [AppController],
   providers: [AppService],

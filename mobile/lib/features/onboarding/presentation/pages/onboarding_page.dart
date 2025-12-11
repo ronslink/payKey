@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,38 +12,39 @@ class OnboardingPage extends ConsumerStatefulWidget {
   ConsumerState<OnboardingPage> createState() => _OnboardingPageState();
 }
 
-class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTickerProviderStateMixin {
+class _OnboardingPageState extends ConsumerState<OnboardingPage>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _pageController = PageController();
   late AnimationController _animationController;
-  
+
   int _currentStep = 0;
   final int _totalSteps = 4;
-  
+
   // Track step completion
   final Set<int> _completedSteps = {};
-  
+
   // Personal Details
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
-  
+
   // Identification
   String? _selectedIdType;
   final _idNumberController = TextEditingController();
   String? _selectedNationalityId;
-  
+
   // Tax & Compliance
   final _kraPinController = TextEditingController();
   bool _isResident = true;
   String? _countryOfOrigin;
   final _nssfController = TextEditingController();
   final _nhifController = TextEditingController();
-  
+
   // Location
   String? _selectedCountryId;
   final _addressController = TextEditingController();
   final _cityController = TextEditingController();
-  
+
   bool _isLoading = false;
 
   @override
@@ -50,7 +52,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTick
     super.initState();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 500),
     );
     _animationController.forward();
   }
@@ -85,12 +87,16 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTick
         'nationalityId': _selectedNationalityId,
         'kraPin': _kraPinController.text.trim(),
         'isResident': _isResident,
-        if (!_isResident && _countryOfOrigin != null) 'countryOfOrigin': _countryOfOrigin,
-        if (_nssfController.text.isNotEmpty) 'nssfNumber': _nssfController.text.trim(),
-        if (_nhifController.text.isNotEmpty) 'nhifNumber': _nhifController.text.trim(),
+        if (!_isResident && _countryOfOrigin != null)
+          'countryOfOrigin': _countryOfOrigin,
+        if (_nssfController.text.isNotEmpty)
+          'nssfNumber': _nssfController.text.trim(),
+        if (_nhifController.text.isNotEmpty)
+          'shifNumber': _nhifController.text.trim(),
         'countryId': _selectedCountryId,
         if (_cityController.text.isNotEmpty) 'city': _cityController.text.trim(),
-        if (_addressController.text.isNotEmpty) 'address': _addressController.text.trim(),
+        if (_addressController.text.isNotEmpty)
+          'address': _addressController.text.trim(),
       });
 
       if (mounted) {
@@ -108,7 +114,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTick
             behavior: SnackBarBehavior.floating,
           ),
         );
-        
+
         // Navigate after a short delay
         await Future.delayed(const Duration(milliseconds: 500));
         if (mounted) {
@@ -145,8 +151,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTick
         setState(() => _currentStep++);
         _pageController.animateToPage(
           _currentStep,
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.easeInOutCubic,
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.easeOutQuart,
         );
         _animationController.reset();
         _animationController.forward();
@@ -164,8 +170,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTick
       setState(() => _currentStep--);
       _pageController.animateToPage(
         _currentStep,
-        duration: const Duration(milliseconds: 400),
-        curve: Curves.easeInOutCubic,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeOutQuart,
       );
       _animationController.reset();
       _animationController.forward();
@@ -175,7 +181,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTick
   bool _validateCurrentStep() {
     switch (_currentStep) {
       case 0:
-        if (_firstNameController.text.trim().isEmpty || 
+        if (_firstNameController.text.trim().isEmpty ||
             _lastNameController.text.trim().isEmpty) {
           _showValidationError('Please enter your full name');
           return false;
@@ -238,96 +244,143 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTick
     final countriesState = ref.watch(countriesProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            _buildProgressIndicator(),
-            Expanded(
-              child: Form(
-                key: _formKey,
-                child: PageView(
-                  controller: _pageController,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    _buildPersonalDetailsStep(),
-                    _buildIdentificationStep(countriesState),
-                    _buildTaxComplianceStep(countriesState),
-                    _buildLocationStep(countriesState),
+      body: Stack(
+        children: [
+          // Dynamic Abstract Background
+          Positioned.fill(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF0F172A), // Dark Slate
+                    Color(0xFF1E293B), // Slate
+                    Color(0xFF0F172A),
                   ],
                 ),
               ),
             ),
-            _buildNavigationButtons(),
-          ],
-        ),
+          ),
+          
+          // Decorative Orbs
+          Positioned(
+            top: -100,
+            right: -100,
+            child: ImageFiltered(
+              imageFilter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+              child: Container(
+                width: 400,
+                height: 400,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFF3B82F6).withValues(alpha: 0.2),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -50,
+            left: -50,
+            child: ImageFiltered(
+              imageFilter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+              child: Container(
+                width: 300,
+                height: 300,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
+                ),
+              ),
+            ),
+          ),
+
+          SafeArea(
+            child: Column(
+              children: [
+                _buildHeader(),
+                Expanded(
+                  child: Column(
+                    children: [
+                      _buildProgressIndicator(),
+                      Expanded(
+                        child: Form(
+                          key: _formKey,
+                          child: PageView(
+                            controller: _pageController,
+                            physics: const NeverScrollableScrollPhysics(),
+                            children: [
+                              _buildPersonalDetailsStep(),
+                              _buildIdentificationStep(countriesState),
+                              _buildTaxComplianceStep(countriesState),
+                              _buildLocationStep(countriesState),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                _buildNavigationButtons(),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildHeader() {
     return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF3B82F6),
-            const Color(0xFF2563EB),
-          ],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF3B82F6) .withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+      child: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white .withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.account_circle,
-                  color: Colors.white,
-                  size: 32,
-                ),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.white.withValues(alpha: 0.1),
+                  Colors.white.withValues(alpha: 0.05),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              const SizedBox(width: 16),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Complete Your Profile',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Just a few more details to get started',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.white70,
-                      ),
-                    ),
-                  ],
-                ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.1),
               ),
-            ],
+            ),
+            child: const Icon(
+              Icons.account_circle,
+              color: Colors.white,
+              size: 32,
+            ),
+          ),
+          const SizedBox(width: 16),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Finish Customizing',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Complete your profile to get started',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white70,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -336,8 +389,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTick
 
   Widget _buildProgressIndicator() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       child: Column(
         children: [
           Row(
@@ -351,15 +403,24 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTick
                     Expanded(
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 300),
-                        height: 4,
+                        height: 6,
                         decoration: BoxDecoration(
                           gradient: isCompleted || isCurrent
                               ? const LinearGradient(
-                                  colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                                  colors: [Color(0xFF60A5FA), Color(0xFF3B82F6)],
                                 )
                               : null,
-                          color: isCompleted || isCurrent ? null : const Color(0xFFE5E7EB),
-                          borderRadius: BorderRadius.circular(2),
+                          color: isCompleted || isCurrent 
+                              ? null 
+                              : Colors.white.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(3),
+                          boxShadow: isCurrent ? [
+                            BoxShadow(
+                              color: const Color(0xFF3B82F6).withValues(alpha: 0.5),
+                              blurRadius: 8,
+                              offset: const Offset(0, 0),
+                            )
+                          ] : null,
                         ),
                       ),
                     ),
@@ -369,30 +430,34 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTick
               );
             }),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 _getStepTitle(_currentStep),
                 style: const TextStyle(
-                  fontSize: 14,
+                  fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF111827),
+                  color: Colors.white,
+                  letterSpacing: 0.5,
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF3B82F6) .withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  color: const Color(0xFF3B82F6).withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Text(
-                  'Step ${_currentStep + 1} of $_totalSteps',
+                  'Step ${_currentStep + 1}/$_totalSteps',
                   style: const TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF3B82F6),
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF93C5FD),
                   ),
                 ),
               ),
@@ -418,30 +483,40 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTick
       opacity: _animationController,
       child: SlideTransition(
         position: Tween<Offset>(
-          begin: const Offset(0.1, 0),
+          begin: const Offset(0.05, 0),
           end: Offset.zero,
         ).animate(CurvedAnimation(
           parent: _animationController,
-          curve: Curves.easeOutCubic,
+          curve: Curves.easeOutQuart,
         )),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black .withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: children,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: children,
+                ),
+              ),
             ),
           ),
         ),
@@ -453,25 +528,25 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTick
     return _buildStepCard(
       children: [
         _buildSectionHeader(
-          icon: Icons.person,
+          icon: Icons.person_rounded,
           title: 'Personal Information',
-          subtitle: 'Tell us about yourself',
+          subtitle: 'Tell us a bit about yourself',
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 32),
         _buildTextField(
           _firstNameController,
           'First Name',
           'Enter your first name',
           required: true,
-          icon: Icons.person_outline,
+          icon: Icons.person_outline_rounded,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
         _buildTextField(
           _lastNameController,
           'Last Name',
           'Enter your last name',
           required: true,
-          icon: Icons.person_outline,
+          icon: Icons.person_outline_rounded,
         ),
       ],
     );
@@ -481,11 +556,11 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTick
     return _buildStepCard(
       children: [
         _buildSectionHeader(
-          icon: Icons.badge,
+          icon: Icons.badge_rounded,
           title: 'Identification',
-          subtitle: 'Verify your identity',
+          subtitle: 'Verify your identity securely',
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 32),
         _buildDropdown(
           value: _selectedIdType,
           label: 'ID Type',
@@ -498,20 +573,20 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTick
           ],
           onChanged: (value) => setState(() => _selectedIdType = value),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
         _buildTextField(
           _idNumberController,
           'ID / Passport Number',
           'Enter your ID number',
           required: true,
-          icon: Icons.credit_card,
+          icon: Icons.credit_card_rounded,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
         _buildDropdown(
           value: _selectedNationalityId,
           label: 'Nationality',
           hint: 'Select your nationality',
-          icon: Icons.flag_outlined,
+          icon: Icons.public_rounded,
           items: countries.map<DropdownMenuItem<String>>((c) => DropdownMenuItem<String>(
             value: c.id as String,
             child: Text(c.name as String),
@@ -526,34 +601,27 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTick
     return _buildStepCard(
       children: [
         _buildSectionHeader(
-          icon: Icons.account_balance,
+          icon: Icons.account_balance_rounded,
           title: 'Tax & Compliance',
-          subtitle: 'Required for payroll processing',
+          subtitle: 'Required for compliant payroll',
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 32),
         _buildTextField(
           _kraPinController,
           'KRA PIN',
           'e.g., A000000000A',
           required: true,
-          icon: Icons.account_balance_outlined,
+          icon: Icons.qr_code_rounded,
           helperText: 'Your Kenya Revenue Authority PIN',
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 24),
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                const Color(0xFF3B82F6) .withValues(alpha: 0.05),
-                const Color(0xFF2563EB) .withValues(alpha: 0.05),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(12),
+            color: Colors.white.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: const Color(0xFF3B82F6) .withValues(alpha: 0.2),
+              color: Colors.white.withValues(alpha: 0.1),
             ),
           ),
           child: Column(
@@ -564,12 +632,12 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTick
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF3B82F6) .withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      color: const Color(0xFF3B82F6).withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(
-                      Icons.home_outlined,
-                      color: Color(0xFF3B82F6),
+                      Icons.home_rounded,
+                      color: Color(0xFF60A5FA),
                       size: 20,
                     ),
                   ),
@@ -579,7 +647,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTick
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 16,
-                      color: Color(0xFF111827),
+                      color: Colors.white,
                     ),
                   ),
                 ],
@@ -589,7 +657,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTick
                 'Are you a Kenya resident for tax purposes?',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Color(0xFF6B7280),
+                  color: Colors.white70,
                 ),
               ),
               const SizedBox(height: 16),
@@ -597,7 +665,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTick
                 children: [
                   Expanded(
                     child: _buildResidencyOption(
-                      label: 'Yes, I am a resident',
+                      label: 'Resident',
                       value: true,
                       groupValue: _isResident,
                       onChanged: (value) => setState(() {
@@ -609,7 +677,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTick
                   const SizedBox(width: 12),
                   Expanded(
                     child: _buildResidencyOption(
-                      label: 'No, I am not',
+                      label: 'Non-Resident',
                       value: false,
                       groupValue: _isResident,
                       onChanged: (value) => setState(() => _isResident = value!),
@@ -621,12 +689,12 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTick
           ),
         ),
         if (!_isResident) ...[
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           _buildDropdown(
             value: _countryOfOrigin,
             label: 'Country of Origin',
             hint: 'Select your country',
-            icon: Icons.public,
+            icon: Icons.flag_rounded,
             items: countries.map<DropdownMenuItem<String>>((c) => DropdownMenuItem<String>(
               value: c.id as String,
               child: Text(c.name as String),
@@ -634,20 +702,20 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTick
             onChanged: (value) => setState(() => _countryOfOrigin = value),
           ),
         ],
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
         _buildTextField(
           _nssfController,
           'NSSF Number (Optional)',
           'Enter NSSF number',
-          icon: Icons.security_outlined,
+          icon: Icons.security_rounded,
           helperText: 'National Social Security Fund',
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
         _buildTextField(
           _nhifController,
           'NHIF/SHIF Number (Optional)',
           'Enter NHIF number',
-          icon: Icons.local_hospital_outlined,
+          icon: Icons.medical_services_rounded,
           helperText: 'Social Health Insurance Fund',
         ),
       ],
@@ -658,35 +726,35 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTick
     return _buildStepCard(
       children: [
         _buildSectionHeader(
-          icon: Icons.location_on,
+          icon: Icons.location_on_rounded,
           title: 'Location Details',
-          subtitle: 'Where are you based?',
+          subtitle: 'Where are you currently based?',
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 32),
         _buildDropdown(
           value: _selectedCountryId,
           label: 'Country of Residence',
           hint: 'Select your country',
-          icon: Icons.location_on_outlined,
+          icon: Icons.public_rounded,
           items: countries.map<DropdownMenuItem<String>>((c) => DropdownMenuItem<String>(
             value: c.id as String,
             child: Text(c.name as String),
           )).toList(),
           onChanged: (value) => setState(() => _selectedCountryId = value),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
         _buildTextField(
           _cityController,
           'City / County (Optional)',
           'e.g., Nairobi',
-          icon: Icons.location_city_outlined,
+          icon: Icons.apartment_rounded,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
         _buildTextField(
           _addressController,
           'Physical Address (Optional)',
           'Enter your address',
-          icon: Icons.home_outlined,
+          icon: Icons.home_work_rounded,
           maxLines: 3,
         ),
       ],
@@ -705,13 +773,15 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTick
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF3B82F6) .withValues(alpha: 0.3),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+                color: const Color(0xFF3B82F6).withValues(alpha: 0.4),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
@@ -727,15 +797,16 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTick
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF111827),
+                  color: Colors.white,
+                  letterSpacing: -0.5,
                 ),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 4),
               Text(
                 subtitle,
                 style: const TextStyle(
                   fontSize: 14,
-                  color: Color(0xFF6B7280),
+                  color: Colors.white60,
                 ),
               ),
             ],
@@ -757,38 +828,30 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTick
       onTap: () => onChanged(value),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF3B82F6) : Colors.white,
+          color: isSelected ? const Color(0xFF3B82F6) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? const Color(0xFF3B82F6) : const Color(0xFFE5E7EB),
-            width: 2,
+            color: isSelected ? const Color(0xFF3B82F6) : Colors.white.withValues(alpha: 0.2),
+            width: 1.5,
           ),
-          boxShadow: isSelected ? [
-            BoxShadow(
-              color: const Color(0xFF3B82F6) .withValues(alpha: 0.2),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ] : null,
         ),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              isSelected ? Icons.check_circle : Icons.circle_outlined,
-              color: isSelected ? Colors.white : const Color(0xFF9CA3AF),
-              size: 20,
+              isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+              color: isSelected ? Colors.white : Colors.white60,
+              size: 18,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                  color: isSelected ? Colors.white : const Color(0xFF111827),
-                ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected ? Colors.white : Colors.white70,
               ),
             ),
           ],
@@ -796,21 +859,129 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTick
       ),
     );
   }
+  
+  // Custom text field with premium styling
+  Widget _buildTextField(
+    TextEditingController controller,
+    String label,
+    String hint, {
+    bool required = false,
+    IconData? icon,
+    String? helperText,
+    int maxLines = 1,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.white70,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          maxLines: maxLines,
+          style: const TextStyle(fontSize: 16, color: Colors.white),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
+            helperText: helperText,
+            helperStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
+            filled: true,
+            fillColor: Colors.white.withValues(alpha: 0.05),
+            contentPadding: const EdgeInsets.all(16),
+            prefixIcon: icon != null ? Icon(icon, color: Colors.white54) : null,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 2),
+            ),
+            errorStyle: const TextStyle(color: Color(0xFFF87171)),
+          ),
+          validator: (value) {
+            if (required && (value == null || value.trim().isEmpty)) {
+              return '$label is required';
+            }
+            return null;
+          },
+        ),
+      ],
+    );
+  }
+
+  // Custom dropdown with premium styling
+  Widget _buildDropdown({
+    required String? value,
+    required String label,
+    required String hint,
+    required IconData icon,
+    required List<DropdownMenuItem<String>> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.white70,
+          ),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          initialValue: value,
+          dropdownColor: const Color(0xFF1E293B),
+          style: const TextStyle(fontSize: 16, color: Colors.white),
+          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white54),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
+            filled: true,
+            fillColor: Colors.white.withValues(alpha: 0.05),
+            contentPadding: const EdgeInsets.all(16),
+            prefixIcon: Icon(icon, color: Colors.white54),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 2),
+            ),
+          ),
+          items: items,
+          onChanged: onChanged,
+        ),
+      ],
+    );
+  }
 
   Widget _buildNavigationButtons() {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black .withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -4),
-          ),
-        ],
+        color: const Color(0xFF0F172A).withValues(alpha: 0.8),
+        border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.05))),
       ),
       child: SafeArea(
+        top: false,
         child: Row(
           children: [
             if (_currentStep > 0)
@@ -819,44 +990,29 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTick
                   onPressed: _isLoading ? null : _previousStep,
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
+                    side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    side: const BorderSide(
-                      color: Color(0xFF3B82F6),
-                      width: 2,
-                    ),
+                    foregroundColor: Colors.white,
                   ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.arrow_back, size: 20),
-                      SizedBox(width: 8),
-                      Text(
-                        'Back',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
+                  child: const Text('Back', style: TextStyle(fontWeight: FontWeight.w600)),
                 ),
               ),
             if (_currentStep > 0) const SizedBox(width: 16),
             Expanded(
-              flex: _currentStep == 0 ? 1 : 1,
+              flex: _currentStep == 0 ? 1 : 1, // Keep consistant sizing
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _nextStep,
                 style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                   backgroundColor: const Color(0xFF3B82F6),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  elevation: 0,
+                  shadowColor: const Color(0xFF3B82F6).withValues(alpha: 0.4),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  elevation: 0,
-                  shadowColor: const Color(0xFF3B82F6) .withValues(alpha: 0.3),
                 ),
                 child: _isLoading
                     ? const SizedBox(
@@ -879,7 +1035,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTick
                           ),
                           const SizedBox(width: 8),
                           Icon(
-                            _currentStep == _totalSteps - 1 ? Icons.check : Icons.arrow_forward,
+                            _currentStep == _totalSteps - 1 ? Icons.check_circle_outline : Icons.arrow_forward_rounded,
                             size: 20,
                           ),
                         ],
@@ -889,85 +1045,6 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> with SingleTick
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildTextField(
-    TextEditingController controller,
-    String label,
-    String hint, {
-    bool required = false,
-    IconData? icon,
-    String? helperText,
-    int maxLines = 1,
-  }) {
-    return TextFormField(
-      controller: controller,
-      maxLines: maxLines,
-      style: const TextStyle(fontSize: 16),
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        helperText: helperText,
-        helperStyle: const TextStyle(fontSize: 12),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 2),
-        ),
-        filled: true,
-        fillColor: const Color(0xFFF9FAFB),
-        prefixIcon: icon != null ? Icon(icon, color: Color(0xFF6B7280)) : null,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      ),
-      validator: (value) {
-        if (required && (value == null || value.trim().isEmpty)) {
-          return '$label is required';
-        }
-        return null;
-      },
-    );
-  }
-
-  Widget _buildDropdown({
-    required String? value,
-    required String label,
-    required String hint,
-    required IconData icon,
-    required List<DropdownMenuItem<String>> items,
-    required ValueChanged<String?> onChanged,
-  }) {
-    return DropdownButtonFormField<String>(
-      initialValue: value,
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 2),
-        ),
-        filled: true,
-        fillColor: const Color(0xFFF9FAFB),
-        prefixIcon: Icon(icon, color: const Color(0xFF6B7280)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      ),
-      items: items,
-      onChanged: onChanged,
     );
   }
 }

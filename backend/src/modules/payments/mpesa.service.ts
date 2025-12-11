@@ -20,7 +20,7 @@ export class MpesaService {
     private httpService: HttpService,
     @InjectRepository(Transaction)
     private transactionsRepository: Repository<Transaction>,
-  ) {}
+  ) { }
 
   async getAccessToken(): Promise<string> {
     const consumerKey = this.configService.get('MPESA_CONSUMER_KEY');
@@ -45,7 +45,12 @@ export class MpesaService {
     }
   }
 
+  private readonly MPESA_MAX_AMOUNT = 150000;
+
   async initiateStkPush(userId: string, phoneNumber: string, amount: number) {
+    if (amount > this.MPESA_MAX_AMOUNT) {
+      throw new Error(`Amount cannot exceed M-Pesa limit of KES ${this.MPESA_MAX_AMOUNT}`);
+    }
     const token = await this.getAccessToken();
     const shortCode = this.configService.get('MPESA_SHORTCODE');
     const passkey = this.configService.get('MPESA_PASSKEY');

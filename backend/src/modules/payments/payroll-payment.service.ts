@@ -93,42 +93,72 @@ export class PayrollPaymentService {
     };
   }
 
+  private readonly MPESA_LIMIT = 150000;
+
   private async processMobilePayment(record: PayrollRecord) {
     try {
       if (record.status !== PayrollStatus.FINALIZED) {
         throw new Error(`Payroll record ${record.id} is not finalized`);
       }
 
-      const transaction = this.transactionRepository.create({
-        userId: record.userId,
-        workerId: record.workerId,
-        amount: Number(record.netSalary),
-        currency: 'KES',
-        type: TransactionType.SALARY_PAYOUT,
-        status: TransactionStatus.PENDING,
-        metadata: {
-          payrollRecordId: record.id,
-          workerName: record.worker.name,
-          provider: 'MPESA'
-        },
-      });
-      const savedTransaction = await this.transactionRepository.save(transaction);
+      let remainingAmount = Number(record.netSalary);
+      const transactions: string[] = [];
+      const errors: string[] = [];
 
-      const b2cResult = await this.mpesaService.sendB2C(
-        savedTransaction.id,
-        record.worker.phoneNumber,
-        Number(record.netSalary),
-        `Salary Payment`,
-      );
+      // Smart Splitting Loop
+      while (remainingAmount > 0) {
+        const currentAmount = Math.min(remainingAmount, this.MPESA_LIMIT);
 
-      if (b2cResult.error) {
+        // Create pending transaction for this chunk
+        const transaction = this.transactionRepository.create({
+          userId: record.userId,
+          workerId: record.workerId,
+          amount: currentAmount,
+          currency: 'KES',
+          type: TransactionType.SALARY_PAYOUT,
+          status: TransactionStatus.PENDING,
+          metadata: {
+            payrollRecordId: record.id,
+            workerName: record.worker.name,
+            provider: 'MPESA',
+            isSplit: Number(record.netSalary) > this.MPESA_LIMIT,
+            splitChunk: currentAmount,
+            taxBreakdown: record.taxBreakdown,
+            grossSalary: record.grossSalary,
+            netPay: record.netSalary
+          },
+        });
+        const savedTransaction = await this.transactionRepository.save(transaction);
+
+        // Send B2C for this chunk
+        const b2cResult = await this.mpesaService.sendB2C(
+          savedTransaction.id,
+          record.worker.phoneNumber,
+          currentAmount,
+          `Salary Payment${Number(record.netSalary) > this.MPESA_LIMIT ? ' (Part)' : ''}`,
+        );
+
+        if (b2cResult.error) {
+          // If a chunk fails, we log it and potentially stop or continue. 
+          // For safety, we'll mark this chunk failed and stop processing the rest to avoid partial mess if possible,
+          // OR we could try to process other chunks. 
+          // Safest to stop and report error so admin can handle the rest manually.
+          errors.push(b2cResult.error);
+          break; // Stop splitting on first error
+        } else {
+          transactions.push(savedTransaction.id);
+          remainingAmount -= currentAmount;
+        }
+      }
+
+      if (errors.length > 0) {
         record.paymentStatus = 'failed';
         await this.payrollRecordRepository.save(record);
         return {
           workerId: record.workerId,
           workerName: record.worker.name,
           success: false,
-          error: b2cResult.error,
+          error: `Partial/Full Failure: ${errors.join(', ')}. Processed ${transactions.length} chunks.`,
         };
       }
 
@@ -140,7 +170,7 @@ export class PayrollPaymentService {
         workerId: record.workerId,
         workerName: record.worker.name,
         success: true,
-        transactionId: savedTransaction.id,
+        transactionId: transactions.join(','), // Return all IDs
       };
     } catch (error) {
       return {

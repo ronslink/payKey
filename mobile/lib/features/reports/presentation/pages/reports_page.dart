@@ -5,6 +5,7 @@ import '../../../pay_periods/data/models/pay_period_model.dart';
 import '../../../pay_periods/presentation/providers/pay_periods_provider.dart';
 import '../../data/models/report_models.dart';
 import '../providers/reports_provider.dart';
+import '../providers/export_provider.dart';
 
 
 class ReportsPage extends ConsumerWidget {
@@ -741,12 +742,8 @@ class _P9ReportView extends ConsumerWidget {
           ElevatedButton.icon(
             onPressed: () {
               Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Downloading P9 forms... (Feature coming soon)'),
-                  backgroundColor: Colors.green,
-                ),
-              );
+              final year = ref.read(selectedP9YearProvider);
+              ref.read(taxExportProvider.notifier).downloadP9Zip(year: year);
             },
             icon: const Icon(Icons.download),
             label: const Text('Download'),
@@ -1207,13 +1204,13 @@ class _PayrollSummaryView extends StatelessWidget {
 // STATUTORY REPORT VIEW
 // =============================================================================
 
-class _StatutoryReportView extends StatelessWidget {
+class _StatutoryReportView extends ConsumerWidget {
   final StatutoryReport report;
 
   const _StatutoryReportView({required this.report});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final currencyFormat = NumberFormat('#,##0.00');
 
     return SingleChildScrollView(
@@ -1226,32 +1223,38 @@ class _StatutoryReportView extends StatelessWidget {
             color: Colors.orange.shade50,
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: Row(
+              child: Column(
                 children: [
-                  Icon(Icons.gavel, color: Colors.orange.shade700, size: 32),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Statutory Deductions Report',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.orange.shade800,
-                            fontSize: 16,
-                          ),
+                  Row(
+                    children: [
+                      Icon(Icons.gavel, color: Colors.orange.shade700, size: 32),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Statutory Deductions Report',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.orange.shade800,
+                                fontSize: 16,
+                              ),
+                            ),
+                            Text(
+                              'P10-style statutory summary',
+                              style: TextStyle(
+                                color: Colors.orange.shade600,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
                         ),
-                        Text(
-                          'P10-style statutory summary',
-                          style: TextStyle(
-                            color: Colors.orange.shade600,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 16),
+                  _buildDownloadButtons(context, ref),
                 ],
               ),
             ),
@@ -1346,6 +1349,102 @@ class _StatutoryReportView extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDownloadButtons(BuildContext context, WidgetRef ref) {
+    final exportState = ref.watch(taxExportProvider);
+
+    // Listen for export state changes to show snackbars
+    ref.listen(taxExportProvider, (previous, next) {
+      if (next.error != null && next.error != previous?.error) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Export Failed: ${next.error}'), backgroundColor: Colors.red),
+          );
+        }
+      }
+      if (next.successMessage != null && next.successMessage != previous?.successMessage) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(next.successMessage!), backgroundColor: Colors.green),
+          );
+        }
+      }
+    });
+
+    if (exportState.isLoading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(8.0),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _buildExportButton(
+            context,
+            ref,
+            'KRA P10 CSV',
+            Icons.download,
+            Colors.green,
+            'KRA_P10_CSV',
+          ),
+          const SizedBox(width: 8),
+          _buildExportButton(
+            context,
+            ref,
+            'NSSF Excel',
+            Icons.table_chart,
+            Colors.blue,
+            'NSSF_RETURN_EXCEL',
+          ),
+          const SizedBox(width: 8),
+          _buildExportButton(
+            context,
+            ref,
+            'SHIF Excel',
+            Icons.health_and_safety,
+            Colors.purple,
+            'SHIF_RETURN_EXCEL',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExportButton(
+    BuildContext context,
+    WidgetRef ref,
+    String label,
+    IconData icon,
+    Color color,
+    String exportType,
+  ) {
+    return ElevatedButton.icon(
+      onPressed: () {
+        final startDate = DateTime.parse(report.payPeriod.startDate);
+        final endDate = DateTime.parse(report.payPeriod.endDate);
+
+        ref.read(taxExportProvider.notifier).downloadStatutoryReport(
+              exportType: exportType,
+              startDate: startDate,
+              endDate: endDate,
+              title: label,
+            );
+      },
+      icon: Icon(icon, size: 18),
+      label: Text(label),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color.withValues(alpha: 0.1),
+        foregroundColor: color,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
