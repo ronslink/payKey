@@ -21,6 +21,7 @@ import { TestingModule } from './modules/testing/testing.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { TimeTrackingModule } from './modules/time-tracking/time-tracking.module';
 import { ExportModule } from './modules/export/export.module';
+import { HolidaysModule } from './modules/holidays/holidays.module';
 
 // Explicit Entity Imports
 // Explicit Entity Imports
@@ -44,6 +45,7 @@ import { AccountingExport } from './modules/accounting/entities/accounting-expor
 import { Activity } from './modules/activities/entities/activity.entity';
 import { TimeEntry } from './modules/time-tracking/entities/time-entry.entity';
 import { Export } from './modules/export/entities/export.entity';
+import { Holiday } from './modules/holidays/entities/holiday.entity';
 
 @Module({
   imports: [
@@ -82,9 +84,10 @@ import { Export } from './modules/export/entities/export.entity';
             Activity,
             TimeEntry,
             Export,
+            Holiday,
           ],
 
-          synchronize: false,
+          synchronize: true, // Re-enabled after fixing entity types
           logging: ['query', 'error'],
         };
       },
@@ -108,6 +111,7 @@ import { Export } from './modules/export/entities/export.entity';
     ReportsModule,
     TimeTrackingModule,
     ExportModule,
+    HolidaysModule,
   ],
   controllers: [AppController],
   providers: [AppService],

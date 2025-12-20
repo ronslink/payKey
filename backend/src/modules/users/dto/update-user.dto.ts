@@ -57,4 +57,28 @@ export class UpdateUserDto {
   @IsOptional()
   @IsString()
   countryOfOrigin?: string;
+
+  @IsOptional()
+  @IsString()
+  residentStatus?: string;
+
+  @IsOptional()
+  @IsString()
+  businessName?: string;
+
+  @IsOptional()
+  @IsString()
+  bankName?: string;
+
+  @IsOptional()
+  @IsString()
+  bankAccount?: string;
+
+  @IsOptional()
+  @IsString()
+  mpesaPaybill?: string;
+
+  @IsOptional()
+  @IsString()
+  mpesaTill?: string;
 }

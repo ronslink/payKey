@@ -25,13 +25,13 @@ export class PayrollRecord {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   userId: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   workerId: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   payPeriodId: string;
 
   @ManyToOne(() => PayPeriod, (payPeriod) => payPeriod.payrollRecords)
@@ -59,6 +59,15 @@ export class PayrollRecord {
 
   @Column('decimal', { precision: 10, scale: 2, default: 0 })
   otherDeductions: number;
+
+  @Column('decimal', { precision: 10, scale: 2, default: 0 })
+  holidayHours: number;
+
+  @Column('decimal', { precision: 10, scale: 2, default: 0 })
+  sundayHours: number;
+
+  @Column('decimal', { precision: 10, scale: 2, default: 0 })
+  overtimePay: number;
 
   @Column('decimal', { precision: 10, scale: 2 })
   netSalary: number;

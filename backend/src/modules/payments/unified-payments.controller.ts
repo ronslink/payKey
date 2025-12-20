@@ -99,6 +99,8 @@ interface CreateSubscriptionDto {
 interface MpesaTopupDto {
   phoneNumber: string;
   amount: number;
+  accountReference?: string;
+  transactionDesc?: string;
 }
 
 interface RecordTaxPaymentDto {
@@ -139,7 +141,7 @@ export class UnifiedPaymentsController {
     private readonly subscriptionRepository: Repository<Subscription>,
     @InjectRepository(SubscriptionPayment)
     private readonly subscriptionPaymentRepository: Repository<SubscriptionPayment>,
-  ) {}
+  ) { }
 
   // ==========================================================================
   // Public Endpoints
@@ -249,6 +251,8 @@ export class UnifiedPaymentsController {
         userId,
         body.phoneNumber,
         body.amount,
+        body.accountReference,
+        body.transactionDesc,
       );
 
       return {

@@ -120,12 +120,18 @@ export class FeatureAccessService {
      * Get the current active subscription for a user
      */
     async getCurrentSubscription(userId: string): Promise<Subscription | null> {
-        return this.subscriptionRepository.findOne({
-            where: {
-                userId,
-                status: SubscriptionStatus.ACTIVE,
-            },
-        });
+        try {
+            return await this.subscriptionRepository.findOne({
+                where: {
+                    userId,
+                    status: SubscriptionStatus.ACTIVE,
+                },
+            });
+        } catch (error) {
+            // Handle case where subscriptions table doesn't exist yet
+            // Fall back to user.tier instead
+            return null;
+        }
     }
 
     /**

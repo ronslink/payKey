@@ -410,6 +410,8 @@ export class PayrollService {
       bonuses?: number;
       otherEarnings?: number;
       otherDeductions?: number;
+      holidayHours?: number;
+      sundayHours?: number;
     },
   ) {
     const record = await this.payrollRepository.findOne({
@@ -427,12 +429,39 @@ export class PayrollService {
       record.otherEarnings = updates.otherEarnings;
     if (updates.otherDeductions !== undefined)
       record.otherDeductions = updates.otherDeductions;
+    if (updates.holidayHours !== undefined) record.holidayHours = updates.holidayHours;
+    if (updates.sundayHours !== undefined) record.sundayHours = updates.sundayHours;
+
+    // Fetch worker to get employment details for hourly rate calculation
+    const worker = await this.workersRepository.findOne({
+      where: { id: record.workerId },
+    });
+
+    let overtimePay = 0;
+    if (worker) {
+      // Determine hourly rate
+      let hourlyRate = 0;
+      if (worker.employmentType === 'HOURLY') {
+        hourlyRate = Number(worker.hourlyRate) || 0;
+      } else {
+        // Fixed: Standard Kenya practice (26 days * 8 hours = 208 hours)
+        hourlyRate = Number(record.grossSalary) / 208;
+      }
+
+      const holidayPay = hourlyRate * 1.5 * Number(record.holidayHours);
+      const sundayPay = hourlyRate * 2.0 * Number(record.sundayHours);
+      overtimePay = holidayPay + sundayPay;
+    }
+
+    record.overtimePay = overtimePay;
 
     // Recalculate
     const totalEarnings =
       Number(record.grossSalary) +
       Number(record.bonuses) +
-      Number(record.otherEarnings);
+      Number(record.otherEarnings) +
+      overtimePay;
+
     const taxBreakdown = await this.taxesService.calculateTaxes(totalEarnings);
 
     const totalDeductions =

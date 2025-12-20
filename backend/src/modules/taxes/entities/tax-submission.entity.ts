@@ -19,7 +19,7 @@ export class TaxSubmission {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({ nullable: true })
   userId: string;
 
   @ManyToOne(() => PayPeriod, (payPeriod) => payPeriod.taxSubmissions)

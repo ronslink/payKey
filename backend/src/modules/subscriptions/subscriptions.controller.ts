@@ -16,6 +16,10 @@ import {
 } from './entities/subscription.entity';
 import { SubscriptionPayment } from './entities/subscription-payment.entity';
 import { SUBSCRIPTION_PLANS } from './subscription-plans.config';
+import { UsersService } from '../users/users.service';
+
+// TODO: Move to configuration service
+const MPESA_SUBSCRIPTION_TILL_NUMBER = process.env.MPESA_SUBSCRIPTION_TILL_NUMBER || '123456';
 
 @Controller('subscriptions')
 @UseGuards(JwtAuthGuard)
@@ -25,7 +29,8 @@ export class SubscriptionsController {
     private subscriptionRepository: Repository<Subscription>,
     @InjectRepository(SubscriptionPayment)
     private subscriptionPaymentRepository: Repository<SubscriptionPayment>,
-  ) {}
+    private usersService: UsersService,
+  ) { }
 
   @Get('plans')
   getPlans() {
@@ -44,6 +49,7 @@ export class SubscriptionsController {
       billing_period: 'monthly',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      mpesa_till_number: MPESA_SUBSCRIPTION_TILL_NUMBER,
     }));
   }
 
@@ -73,16 +79,11 @@ export class SubscriptionsController {
     // Return free tier if no active subscription found
     if (!subscription) {
       // Get full user data
-      const userData = await this.subscriptionRepository.manager.findOne(
-        'users',
-        {
-          where: { id: req.user.userId },
-        },
-      );
+      const userData = await this.usersService.findOneById(req.user.userId);
 
       return {
         id: null,
-        tier: 'FREE',
+        tier: userData?.tier || 'FREE',
         planName: 'Free Tier',
         price: 0,
         currency: 'KES',
@@ -103,9 +104,9 @@ export class SubscriptionsController {
   }
 
   @Post('subscribe')
-  async subscribe(@Request() req: any, @Body() body: { planId: string }) {
-    // TODO: Implement actual payment integration
-    // For now, just update/create subscription record
+  async subscribe(@Request() req: any, @Body() body: { planId: string; paymentMethod?: string }) {
+    // TODO: Implement actual payment integration (Stripe / M-Pesa)
+    // For now, just update/create subscription record and User tier
 
     const plan = SUBSCRIPTION_PLANS.find(
       (p) => p.tier.toLowerCase() === body.planId.toLowerCase(),
@@ -131,7 +132,12 @@ export class SubscriptionsController {
       subscription.updatedAt = new Date();
     }
 
-    return this.subscriptionRepository.save(subscription);
+    const savedSubscription = await this.subscriptionRepository.save(subscription);
+
+    // CRITICAL FIX: Also update the User entity's tier to ensure checks against User work
+    await this.usersService.update(req.user.userId, { tier: plan.tier as any });
+
+    return savedSubscription;
   }
 
   @Get('subscription-payment-history')

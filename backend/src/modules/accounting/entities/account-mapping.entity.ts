@@ -20,7 +20,7 @@ export class AccountMapping {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   userId: string;
 
   @Column({

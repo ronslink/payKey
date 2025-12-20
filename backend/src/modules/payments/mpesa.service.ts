@@ -47,9 +47,17 @@ export class MpesaService {
 
   private readonly MPESA_MAX_AMOUNT = 150000;
 
-  async initiateStkPush(userId: string, phoneNumber: string, amount: number) {
+  async initiateStkPush(
+    userId: string,
+    phoneNumber: string,
+    amount: number,
+    accountReference: string = 'PayKey',
+    transactionDesc: string = 'Wallet Topup',
+  ) {
     if (amount > this.MPESA_MAX_AMOUNT) {
-      throw new Error(`Amount cannot exceed M-Pesa limit of KES ${this.MPESA_MAX_AMOUNT}`);
+      throw new Error(
+        `Amount cannot exceed M-Pesa limit of KES ${this.MPESA_MAX_AMOUNT}`,
+      );
     }
     const token = await this.getAccessToken();
     const shortCode = this.configService.get('MPESA_SHORTCODE');
@@ -63,13 +71,17 @@ export class MpesaService {
     );
     const callbackUrl = this.configService.get('MPESA_CALLBACK_URL');
 
-    // Create pending transaction
+    // Create a pending transaction record
     const transaction = this.transactionsRepository.create({
       userId,
       amount,
-      type: TransactionType.TOPUP,
+      currency: 'KES',
+      type: TransactionType.DEPOSIT,
       status: TransactionStatus.PENDING,
-      metadata: { phoneNumber },
+      provider: 'MPESA',
+      accountReference, // Store the reference
+      recipientPhone: phoneNumber,
+      createdAt: new Date(),
     });
     await this.transactionsRepository.save(transaction);
 
@@ -82,13 +94,13 @@ export class MpesaService {
             Password: password,
             Timestamp: timestamp,
             TransactionType: 'CustomerPayBillOnline',
-            Amount: amount,
+            Amount: Math.floor(amount), // M-Pesa accepts integers only
             PartyA: phoneNumber,
             PartyB: shortCode,
             PhoneNumber: phoneNumber,
             CallBackURL: `${callbackUrl}/payments/callback`,
-            AccountReference: 'PayKey',
-            TransactionDesc: 'Wallet Topup',
+            AccountReference: accountReference,
+            TransactionDesc: transactionDesc,
           },
           {
             headers: { Authorization: `Bearer ${token}` },

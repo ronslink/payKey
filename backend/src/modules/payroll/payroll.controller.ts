@@ -190,6 +190,8 @@ export class PayrollController {
       bonuses?: number;
       otherEarnings?: number;
       otherDeductions?: number;
+      holidayHours?: number;
+      sundayHours?: number;
     },
   ) {
     return this.payrollService.updateDraftPayrollItem(

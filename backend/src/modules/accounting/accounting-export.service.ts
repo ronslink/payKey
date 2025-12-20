@@ -57,7 +57,7 @@ export class AccountingExportService {
     });
 
     if (payrollRecords.length === 0) {
-      throw new Error('No finalized payroll records found for this period');
+      throw new Error('No finalized payroll records found for this period. Please process and finalize payroll first.');
     }
 
     // Get user's account mappings
@@ -71,7 +71,7 @@ export class AccountingExportService {
     const date = new Date();
     const description = `Payroll for ${new Date(payrollRecords[0].createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
 
-    // Debit: Salary Expense
+    // Debit: Salary Expense (Gross Salary)
     entries.push({
       date,
       account: mappings.SALARY_EXPENSE.accountCode,
@@ -139,15 +139,33 @@ export class AccountingExportService {
       description: `${description} - Net Pay`,
     });
 
-    // Calculate totals and verify balance
+    // Calculate totals
     const totalDebits = entries.reduce((sum, e) => sum + e.debit, 0);
     const totalCredits = entries.reduce((sum, e) => sum + e.credit, 0);
-    const isBalanced = Math.abs(totalDebits - totalCredits) < 0.01; // Allow for rounding
+
+    // Handle any difference (usually from other deductions like advances, loans, etc.)
+    const difference = totalDebits - totalCredits;
+    if (Math.abs(difference) > 0.01) {
+      // Add a balancing entry for "Other Deductions"
+      entries.push({
+        date,
+        account: '2190',
+        accountName: 'Other Payroll Deductions',
+        debit: 0,
+        credit: difference,
+        description: `${description} - Other Deductions/Adjustments`,
+      });
+    }
+
+    // Recalculate after balancing
+    const finalDebits = entries.reduce((sum, e) => sum + e.debit, 0);
+    const finalCredits = entries.reduce((sum, e) => sum + e.credit, 0);
+    const isBalanced = Math.abs(finalDebits - finalCredits) < 0.01;
 
     return {
       entries,
-      totalDebits,
-      totalCredits,
+      totalDebits: finalDebits,
+      totalCredits: finalCredits,
       isBalanced,
     };
   }

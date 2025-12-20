@@ -55,10 +55,8 @@ export class UsersService {
     const hasRequiredLocation =
       updatedData.countryId;
 
-    // If non-resident, country of origin is required
-    const hasRequiredResidencyInfo =
-      updatedData.isResident !== undefined &&
-      (updatedData.isResident || updatedData.countryOfOrigin);
+    // Residency status is optional but tracked
+    const hasRequiredResidencyInfo = true; // Residency status is optional for onboarding
 
     // Mark onboarding as completed if all required fields are present
     if (

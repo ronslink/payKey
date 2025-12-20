@@ -13,6 +13,7 @@ export enum TransactionType {
   SUBSCRIPTION = 'SUBSCRIPTION',
   SALARY_PAYOUT = 'SALARY_PAYOUT',
   TOPUP = 'TOPUP',
+  DEPOSIT = 'DEPOSIT', // Alias for TOPUP/INCOMING
 }
 
 export enum TransactionStatus {
@@ -47,6 +48,7 @@ export class Transaction {
   @Column({
     type: 'enum',
     enum: TransactionType,
+    nullable: true,
   })
   type: TransactionType;
 
@@ -59,6 +61,15 @@ export class Transaction {
 
   @Column({ nullable: true })
   providerRef: string;
+
+  @Column({ nullable: true })
+  provider: string;
+
+  @Column({ nullable: true })
+  recipientPhone: string;
+
+  @Column({ nullable: true })
+  accountReference: string;
 
   @Column({ nullable: true })
   propertyId: string;
