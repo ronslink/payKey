@@ -1,8 +1,11 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/network/api_service.dart';
+import '../../../../core/utils/download_helper.dart';
 import '../../../payroll/presentation/providers/pay_period_provider.dart';
 import '../../../payroll/data/models/pay_period_model.dart';
 
@@ -821,8 +824,17 @@ class _FinancePageState extends ConsumerState<FinancePage>
 
     try {
       final response = await ApiService().exportPayrollToCSV(_selectedPayPeriodId!);
-      final filename = response.data['filename'] as String;
-      _showSnack('Exported: $filename');
+      final csvData = response.data['data'] as String;
+      final filename = response.data['filename'] as String? ?? 'payroll_export.csv';
+
+      // Convert CSV string to bytes and trigger download
+      final bytes = utf8.encode(csvData);
+      
+      if (kIsWeb) {
+        downloadFileInBrowser(bytes, filename);
+      }
+      
+      _showSnack('Downloaded: $filename');
     } catch (e) {
       _showSnack('Export failed: $e', isError: true);
     } finally {

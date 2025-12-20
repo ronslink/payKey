@@ -1,6 +1,10 @@
 import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../constants/api_constants.dart';
+
+/// Provider for the singleton ApiService instance
+final apiServiceProvider = Provider<ApiService>((ref) => ApiService());
 
 // =============================================================================
 // API SERVICE - CORE
@@ -102,7 +106,9 @@ class ApiService {
   }
 
   bool _isAuthEndpoint(String path) {
-    return path.contains('/auth/login') || path.contains('/auth/register');
+    return path.contains('/auth/login') || 
+           path.contains('/auth/register') ||
+           path.contains('/countries');
   }
 
   Future<String?> _getStoredToken() async {
@@ -344,8 +350,18 @@ class ApiService {
 
   Future<Response> getTaxPaymentSummary() => payments.getTaxPaymentSummary();
 
-  Future<Response> initiateMpesaTopup(String phoneNumber, double amount) =>
-      payments.initiateMpesaTopup(phoneNumber, amount);
+  Future<Response> initiateMpesaTopup(
+    String phoneNumber, 
+    double amount, {
+    String? accountReference, 
+    String? transactionDesc,
+  }) =>
+      payments.initiateMpesaTopup(
+        phoneNumber, 
+        amount,
+        accountReference: accountReference,
+        transactionDesc: transactionDesc,
+      );
 
   Future<Response> recordTaxPayment({
     required String taxType,
@@ -382,6 +398,12 @@ class ApiService {
         startDate: startDate,
         endDate: endDate,
       );
+
+  // ---------------------------------------------------------------------------
+  // Countries (Public)
+  // ---------------------------------------------------------------------------
+
+  Future<Response> getCountries() => get('/countries');
 
   // ---------------------------------------------------------------------------
   // Tax Submissions
@@ -685,10 +707,12 @@ class PaymentEndpoints extends BaseEndpoints {
   Future<Response> getMethods() => _api.get('/payments/unified/methods');
 
   // M-Pesa
-  Future<Response> initiateMpesaTopup(String phoneNumber, double amount) {
+  Future<Response> initiateMpesaTopup(String phoneNumber, double amount, {String? accountReference, String? transactionDesc}) {
     return _api.post('/payments/unified/mpesa/topup', data: {
       'phoneNumber': phoneNumber,
       'amount': amount,
+      if (accountReference != null) 'accountReference': accountReference,
+      if (transactionDesc != null) 'transactionDesc': transactionDesc,
     });
   }
 

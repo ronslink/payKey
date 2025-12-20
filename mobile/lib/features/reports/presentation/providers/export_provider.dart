@@ -1,9 +1,11 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:open_filex/open_filex.dart'; // Make sure this matches pubspec
+import 'package:open_filex/open_filex.dart';
 
 import '../../../../core/network/api_service.dart';
+import '../../../../core/utils/download_helper.dart';
 
 class ExportState {
   final bool isLoading;
@@ -23,7 +25,7 @@ class ExportState {
   }) {
     return ExportState(
       isLoading: isLoading ?? this.isLoading,
-      error: error, // Nullable update logic requires care, but usually we define explicit behavior
+      error: error,
       successMessage: successMessage,
     );
   }
@@ -55,28 +57,15 @@ class TaxExportNotifier extends StateNotifier<ExportState> {
 
       // 2. Download File Content
       final downloadRes = await _api.taxes.downloadExport(exportId);
-      final List<int> bytes = downloadRes.data; // Assuming ResponseType.bytes
+      final List<int> bytes = downloadRes.data;
 
-      // 3. Save to File
-      final directory = await getApplicationDocumentsDirectory();
-      final filePath = '${directory.path}/$fileName';
-      final file = File(filePath);
-      await file.writeAsBytes(bytes);
+      // 3. Save/Download based on platform
+      await _saveFile(bytes, fileName);
 
-      // 4. Open File
-      final result = await OpenFilex.open(filePath);
-      
-      if (result.type != ResultType.done) {
-         state = ExportState(
-          isLoading: false,
-          error: 'File saved to $filePath, but could not be opened: ${result.message}',
-        );
-      } else {
-        state = ExportState(
-          isLoading: false,
-          successMessage: 'Report downloaded successfully',
-        );
-      }
+      state = ExportState(
+        isLoading: false,
+        successMessage: 'Report downloaded successfully',
+      );
 
     } catch (e) {
       state = ExportState(
@@ -90,32 +79,42 @@ class TaxExportNotifier extends StateNotifier<ExportState> {
     state = ExportState(isLoading: true);
     try {
       final List<int> bytes = await _api.reports.downloadP9Zip(year);
-      
-      final directory = await getApplicationDocumentsDirectory();
-      final filePath = '${directory.path}/P9_Returns_$year.zip';
-      final file = File(filePath);
-      await file.writeAsBytes(bytes);
+      final fileName = 'P9_Returns_$year.zip';
 
-      // Open the file
-      final result = await OpenFilex.open(filePath);
+      await _saveFile(bytes, fileName);
 
-      if (result.type != ResultType.done) {
-         state = ExportState(
-          isLoading: false,
-          error: 'File saved to $filePath, but could not be opened: ${result.message}',
-        );
-      } else {
-        state = ExportState(
-          isLoading: false,
-          successMessage: 'P9 Reports downloaded successfully',
-        );
-      }
+      state = ExportState(
+        isLoading: false,
+        successMessage: 'P9 Reports downloaded successfully',
+      );
     } catch (e) {
       state = ExportState(
         isLoading: false,
         error: _api.getErrorMessage(e),
       );
     }
+  }
+
+  /// Cross-platform file save/download
+  Future<void> _saveFile(List<int> bytes, String fileName) async {
+    if (kIsWeb) {
+      // Use web download helper
+      downloadFileInBrowser(bytes, fileName);
+    } else {
+      // Use native file save
+      await _saveFileNative(bytes, fileName);
+    }
+  }
+
+  /// Native (mobile/desktop) file save
+  Future<void> _saveFileNative(List<int> bytes, String fileName) async {
+    final directory = await getApplicationDocumentsDirectory();
+    final filePath = '${directory.path}/$fileName';
+    final file = File(filePath);
+    await file.writeAsBytes(bytes);
+
+    // Try to open the file
+    await OpenFilex.open(filePath);
   }
 }
 

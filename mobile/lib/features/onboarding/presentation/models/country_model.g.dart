@@ -11,7 +11,8 @@ _$CountryModelImpl _$$CountryModelImplFromJson(Map<String, dynamic> json) =>
       id: json['id'] as String,
       name: json['name'] as String,
       code: json['code'] as String,
-      phoneCode: json['phoneCode'] as String,
+      currency: json['currency'] as String?,
+      isActive: json['isActive'] as bool? ?? true,
     );
 
 Map<String, dynamic> _$$CountryModelImplToJson(_$CountryModelImpl instance) =>
@@ -19,5 +20,6 @@ Map<String, dynamic> _$$CountryModelImplToJson(_$CountryModelImpl instance) =>
       'id': instance.id,
       'name': instance.name,
       'code': instance.code,
-      'phoneCode': instance.phoneCode,
+      'currency': instance.currency,
+      'isActive': instance.isActive,
     };

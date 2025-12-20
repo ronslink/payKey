@@ -5,6 +5,7 @@ import '../../../workers/presentation/providers/workers_provider.dart';
 import '../../../payroll/presentation/providers/pay_period_provider.dart';
 import '../../../subscriptions/presentation/providers/feature_access_provider.dart';
 import '../../../onboarding/presentation/widgets/guided_tour.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/activity_provider.dart';
 import '../data/models/activity_model.dart';
 import '../../../workers/data/models/worker_model.dart';
@@ -299,23 +300,133 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
             ),
           ],
         ),
-        Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.notifications_outlined, color: Color(0xFF111827)),
-          ),
+              child: IconButton(
+                onPressed: () {},
+                icon: const Icon(Icons.notifications_outlined, color: Color(0xFF111827)),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: PopupMenuButton<String>(
+                icon: const Icon(Icons.account_circle_outlined, color: Color(0xFF111827), size: 28),
+                offset: const Offset(0, 50),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                onSelected: (value) async {
+                  switch (value) {
+                    case 'profile':
+                      context.push('/profile');
+                      break;
+                    case 'subscriptions':
+                      context.push('/subscriptions');
+                      break;
+                    case 'logout':
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          title: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(Icons.logout, color: Colors.red, size: 20),
+                              ),
+                              const SizedBox(width: 12),
+                              const Text('Logout'),
+                            ],
+                          ),
+                          content: const Text('Are you sure you want to logout?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('Cancel'),
+                            ),
+                            ElevatedButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                              ),
+                              child: const Text('Logout'),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (confirm == true && mounted) {
+                        await ref.read(authStateProvider.notifier).logout();
+                        if (mounted) {
+                          context.go('/login');
+                        }
+                      }
+                      break;
+                  }
+                },
+                itemBuilder: (context) => [
+                  PopupMenuItem<String>(
+                    value: 'profile',
+                    child: Row(
+                      children: [
+                        Icon(Icons.person_outline, color: Colors.grey[700], size: 20),
+                        const SizedBox(width: 12),
+                        const Text('Profile'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem<String>(
+                    value: 'subscriptions',
+                    child: Row(
+                      children: [
+                        Icon(Icons.workspace_premium_outlined, color: Colors.grey[700], size: 20),
+                        const SizedBox(width: 12),
+                        const Text('Subscription'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuDivider(),
+                  const PopupMenuItem<String>(
+                    value: 'logout',
+                    child: Row(
+                      children: [
+                        Icon(Icons.logout, color: Colors.red, size: 20),
+                        SizedBox(width: 12),
+                        Text('Logout', style: TextStyle(color: Colors.red)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ],
     );

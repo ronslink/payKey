@@ -24,7 +24,8 @@ mixin _$CountryModel {
   String get id => throw _privateConstructorUsedError;
   String get name => throw _privateConstructorUsedError;
   String get code => throw _privateConstructorUsedError;
-  String get phoneCode => throw _privateConstructorUsedError;
+  String? get currency => throw _privateConstructorUsedError;
+  bool get isActive => throw _privateConstructorUsedError;
 
   /// Serializes this CountryModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -43,7 +44,13 @@ abstract class $CountryModelCopyWith<$Res> {
     $Res Function(CountryModel) then,
   ) = _$CountryModelCopyWithImpl<$Res, CountryModel>;
   @useResult
-  $Res call({String id, String name, String code, String phoneCode});
+  $Res call({
+    String id,
+    String name,
+    String code,
+    String? currency,
+    bool isActive,
+  });
 }
 
 /// @nodoc
@@ -64,7 +71,8 @@ class _$CountryModelCopyWithImpl<$Res, $Val extends CountryModel>
     Object? id = null,
     Object? name = null,
     Object? code = null,
-    Object? phoneCode = null,
+    Object? currency = freezed,
+    Object? isActive = null,
   }) {
     return _then(
       _value.copyWith(
@@ -80,10 +88,14 @@ class _$CountryModelCopyWithImpl<$Res, $Val extends CountryModel>
                 ? _value.code
                 : code // ignore: cast_nullable_to_non_nullable
                       as String,
-            phoneCode: null == phoneCode
-                ? _value.phoneCode
-                : phoneCode // ignore: cast_nullable_to_non_nullable
-                      as String,
+            currency: freezed == currency
+                ? _value.currency
+                : currency // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            isActive: null == isActive
+                ? _value.isActive
+                : isActive // ignore: cast_nullable_to_non_nullable
+                      as bool,
           )
           as $Val,
     );
@@ -99,7 +111,13 @@ abstract class _$$CountryModelImplCopyWith<$Res>
   ) = __$$CountryModelImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({String id, String name, String code, String phoneCode});
+  $Res call({
+    String id,
+    String name,
+    String code,
+    String? currency,
+    bool isActive,
+  });
 }
 
 /// @nodoc
@@ -119,7 +137,8 @@ class __$$CountryModelImplCopyWithImpl<$Res>
     Object? id = null,
     Object? name = null,
     Object? code = null,
-    Object? phoneCode = null,
+    Object? currency = freezed,
+    Object? isActive = null,
   }) {
     return _then(
       _$CountryModelImpl(
@@ -135,10 +154,14 @@ class __$$CountryModelImplCopyWithImpl<$Res>
             ? _value.code
             : code // ignore: cast_nullable_to_non_nullable
                   as String,
-        phoneCode: null == phoneCode
-            ? _value.phoneCode
-            : phoneCode // ignore: cast_nullable_to_non_nullable
-                  as String,
+        currency: freezed == currency
+            ? _value.currency
+            : currency // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        isActive: null == isActive
+            ? _value.isActive
+            : isActive // ignore: cast_nullable_to_non_nullable
+                  as bool,
       ),
     );
   }
@@ -151,7 +174,8 @@ class _$CountryModelImpl implements _CountryModel {
     required this.id,
     required this.name,
     required this.code,
-    required this.phoneCode,
+    this.currency,
+    this.isActive = true,
   });
 
   factory _$CountryModelImpl.fromJson(Map<String, dynamic> json) =>
@@ -164,11 +188,14 @@ class _$CountryModelImpl implements _CountryModel {
   @override
   final String code;
   @override
-  final String phoneCode;
+  final String? currency;
+  @override
+  @JsonKey()
+  final bool isActive;
 
   @override
   String toString() {
-    return 'CountryModel(id: $id, name: $name, code: $code, phoneCode: $phoneCode)';
+    return 'CountryModel(id: $id, name: $name, code: $code, currency: $currency, isActive: $isActive)';
   }
 
   @override
@@ -179,13 +206,16 @@ class _$CountryModelImpl implements _CountryModel {
             (identical(other.id, id) || other.id == id) &&
             (identical(other.name, name) || other.name == name) &&
             (identical(other.code, code) || other.code == code) &&
-            (identical(other.phoneCode, phoneCode) ||
-                other.phoneCode == phoneCode));
+            (identical(other.currency, currency) ||
+                other.currency == currency) &&
+            (identical(other.isActive, isActive) ||
+                other.isActive == isActive));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(runtimeType, id, name, code, phoneCode);
+  int get hashCode =>
+      Object.hash(runtimeType, id, name, code, currency, isActive);
 
   /// Create a copy of CountryModel
   /// with the given fields replaced by the non-null parameter values.
@@ -206,7 +236,8 @@ abstract class _CountryModel implements CountryModel {
     required final String id,
     required final String name,
     required final String code,
-    required final String phoneCode,
+    final String? currency,
+    final bool isActive,
   }) = _$CountryModelImpl;
 
   factory _CountryModel.fromJson(Map<String, dynamic> json) =
@@ -219,7 +250,9 @@ abstract class _CountryModel implements CountryModel {
   @override
   String get code;
   @override
-  String get phoneCode;
+  String? get currency;
+  @override
+  bool get isActive;
 
   /// Create a copy of CountryModel
   /// with the given fields replaced by the non-null parameter values.

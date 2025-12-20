@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import '../../../payments/presentation/providers/payments_provider.dart';
 import '../../data/models/subscription_model.dart';
 import '../providers/subscription_provider.dart';
 
@@ -377,8 +379,15 @@ class _PricingPageState extends ConsumerState<PricingPage> {
   }
 
   void _handleSelectPlan(SubscriptionPlan plan) {
-    // TODO: Implement plan selection and payment flow
-    // For now, show a simple dialog
+    if (plan.tier == 'free') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Free plan selected successfully!')),
+      );
+      return;
+    }
+
+    final phoneController = TextEditingController();
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -387,15 +396,17 @@ class _PricingPageState extends ConsumerState<PricingPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Price: \$${plan.priceUSD}/month'),
-            const SizedBox(height: 8),
-            Text('or KES ${plan.priceKES.toStringAsFixed(0)} via M-Pesa'),
+            Text('Amount: KES ${NumberFormat('#,##0').format(plan.priceKES)}'),
             const SizedBox(height: 16),
-            const Text(
-              'This will redirect to payment processing. Continue?',
-              style: TextStyle(
-                fontSize: 14,
-                color: Color(0xFF6B7280),
+            const Text('Enter M-Pesa phone number for payment:'),
+            const SizedBox(height: 8),
+            TextField(
+              controller: phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                hintText: '2547XXXXXXXX',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.phone_android),
               ),
             ),
           ],
@@ -405,17 +416,54 @@ class _PricingPageState extends ConsumerState<PricingPage> {
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Cancel'),
           ),
-          TextButton(
-            onPressed: () {
+          ElevatedButton(
+            onPressed: () async {
+              if (phoneController.text.isEmpty) return;
+              
               Navigator.of(context).pop();
-              // TODO: Implement actual payment processing
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Payment processing will be implemented'),
-                ),
-              );
+              
+              try {
+                // Initiate M-Pesa STK Push
+                await ref.read(paymentsProvider.notifier).initiatePayment(
+                  phoneController.text, 
+                  plan.priceKES,
+                  accountReference: 'PayKey-${plan.name}',
+                  transactionDesc: 'Subscription Upgrade',
+                );
+
+                if (mounted) {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Request Sent'),
+                      content: Text(
+                        'Please check your phone (${phoneController.text}) to complete the payment of KES ${NumberFormat('#,##0').format(plan.priceKES)}.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('OK'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Payment initiation failed: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
             },
-            child: const Text('Continue'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF10B981), // M-Pesa Green
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Pay via M-Pesa'),
           ),
         ],
       ),

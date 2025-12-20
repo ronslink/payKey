@@ -9,7 +9,8 @@ class CountryModel with _$CountryModel {
     required String id,
     required String name,
     required String code,
-    required String phoneCode,
+    String? currency,
+    @Default(true) bool isActive,
   }) = _CountryModel;
 
   factory CountryModel.fromJson(Map<String, dynamic> json) =>

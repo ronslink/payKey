@@ -1,7 +1,10 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/network/api_service.dart';
+import '../../../../core/utils/download_helper.dart';
 import '../../../payroll/presentation/providers/pay_period_provider.dart';
 
 class AccountingPage extends ConsumerStatefulWidget {
@@ -111,10 +114,23 @@ class _AccountingPageState extends ConsumerState<AccountingPage> with SingleTick
     try {
       final apiService = ApiService();
       final response = await apiService.exportPayrollToCSV(_selectedPayPeriodId!);
-      final filename = response.data['filename'] as String;
+      final csvData = response.data['data'] as String;
+      final filename = response.data['filename'] as String? ?? 'payroll_export.csv';
 
-      if (mounted) {
-        _showSnack('Exported: $filename');
+      // Convert CSV string to bytes and trigger download
+      final bytes = utf8.encode(csvData);
+      
+      if (kIsWeb) {
+        // Use web download helper
+        downloadFileInBrowser(bytes, filename);
+        if (mounted) {
+          _showSnack('Downloaded: $filename');
+        }
+      } else {
+        // For native platforms, save to documents
+        if (mounted) {
+          _showSnack('Exported: $filename');
+        }
       }
     } catch (e) {
       if (mounted) {

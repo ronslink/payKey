@@ -38,11 +38,21 @@ class PaymentsNotifier extends StateNotifier<AsyncValue<void>> {
 
   PaymentsNotifier(this._apiService) : super(const AsyncValue.data(null));
 
-  Future<Map<String, dynamic>> initiatePayment(String phoneNumber, double amount) async {
+  Future<Map<String, dynamic>> initiatePayment(
+    String phoneNumber, 
+    double amount, {
+    String? accountReference, 
+    String? transactionDesc,
+  }) async {
     try {
       state = const AsyncValue.loading();
       
-      final response = await _apiService.initiateMpesaTopup(phoneNumber, amount);
+      final response = await _apiService.initiateMpesaTopup(
+        phoneNumber, 
+        amount,
+        accountReference: accountReference,
+        transactionDesc: transactionDesc,
+      );
       
       state = const AsyncValue.data(null);
       return response.data;

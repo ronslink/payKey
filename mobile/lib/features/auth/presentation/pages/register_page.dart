@@ -156,7 +156,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           );
         },
         data: (_) {
-          context.go('/home');
+          // New users should complete onboarding first
+          context.go('/onboarding');
         },
       );
     });

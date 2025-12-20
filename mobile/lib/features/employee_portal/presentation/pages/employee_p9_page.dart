@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/network/api_service.dart';
+import '../../../../core/utils/download_helper.dart';
 import '../../../reports/data/models/report_models.dart';
 
 // ============================================================================
@@ -108,18 +110,18 @@ class _EmployeeP9PageState extends ConsumerState<EmployeeP9Page> {
       final bytes = await ApiService().employeePortal.downloadMyP9Pdf(_selectedYear);
 
       if (bytes.isNotEmpty && context.mounted) {
+        final filename = 'P9_${_selectedYear}.pdf';
+        
+        if (kIsWeb) {
+          // Trigger browser download
+          downloadFileInBrowser(bytes, filename);
+        }
+        
         // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('P9 PDF downloaded (${bytes.length} bytes)'),
+            content: Text('Downloaded: $filename'),
             backgroundColor: _P9Colors.primary,
-            action: SnackBarAction(
-              label: 'Share',
-              textColor: Colors.white,
-              onPressed: () {
-                // TODO: Implement share functionality
-              },
-            ),
           ),
         );
       }

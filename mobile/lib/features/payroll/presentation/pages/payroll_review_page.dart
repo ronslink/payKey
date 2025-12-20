@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +11,7 @@ import '../../data/repositories/payroll_repository.dart';
 import '../../../workers/presentation/providers/workers_provider.dart';
 import '../../../workers/data/models/worker_model.dart';
 import '../../../../core/network/api_service.dart';
+import '../../../../core/utils/download_helper.dart';
 
 // ============================================================================
 // MAIN PAGE
@@ -252,7 +255,16 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
       final apiService = ApiService();
       final response = await apiService.exportPayrollToCSV(widget.payPeriodId);
 
-      final filename = response.data['filename'] as String;
+      final csvData = response.data['data'] as String;
+      final filename = response.data['filename'] as String? ?? 'payroll_export.csv';
+
+      // Convert CSV string to bytes and trigger download
+      final bytes = utf8.encode(csvData);
+      
+      if (kIsWeb) {
+        // Use web download helper
+        downloadFileInBrowser(bytes, filename);
+      }
 
       if (mounted) {
         Navigator.of(context).pop(); // Close dialog
@@ -262,7 +274,7 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
               children: [
                 const Icon(Icons.check_circle, color: Colors.white),
                 const SizedBox(width: 12),
-                Expanded(child: Text('Exported successfully: $filename')),
+                Expanded(child: Text('Downloaded: $filename')),
               ],
             ),
             backgroundColor: const Color(0xFF10B981),

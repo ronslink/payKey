@@ -42,6 +42,22 @@ class PayPeriodModel {
   });
 
   factory PayPeriodModel.fromJson(Map<String, dynamic> json) {
+    // Helper to parse numeric values that may be strings or numbers
+    double parseDouble(dynamic value) {
+      if (value == null) return 0.0;
+      if (value is num) return value.toDouble();
+      if (value is String) return double.tryParse(value) ?? 0.0;
+      return 0.0;
+    }
+    
+    int parseInt(dynamic value) {
+      if (value == null) return 0;
+      if (value is int) return value;
+      if (value is num) return value.toInt();
+      if (value is String) return int.tryParse(value) ?? 0;
+      return 0;
+    }
+
     return PayPeriodModel(
       id: json['id'] as String,
       name: json['name'] as String,
@@ -50,11 +66,11 @@ class PayPeriodModel {
       payDate: json['payDate'] as String?,
       frequency: PayPeriodFrequency.fromString(json['frequency'] as String),
       status: PayPeriodStatus.fromString(json['status'] as String),
-      totalGrossAmount: (json['totalGrossAmount'] as num).toDouble(),
-      totalNetAmount: (json['totalNetAmount'] as num).toDouble(),
-      totalTaxAmount: (json['totalTaxAmount'] as num).toDouble(),
-      totalWorkers: json['totalWorkers'] as int? ?? 0,
-      processedWorkers: json['processedWorkers'] as int? ?? 0,
+      totalGrossAmount: parseDouble(json['totalGrossAmount']),
+      totalNetAmount: parseDouble(json['totalNetAmount']),
+      totalTaxAmount: parseDouble(json['totalTaxAmount']),
+      totalWorkers: parseInt(json['totalWorkers']),
+      processedWorkers: parseInt(json['processedWorkers']),
       notes: json['notes'] as Map<String, dynamic>?,
       createdBy: json['createdBy'] as String?,
       approvedBy: json['approvedBy'] as String?,
