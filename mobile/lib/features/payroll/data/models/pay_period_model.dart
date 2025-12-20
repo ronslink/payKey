@@ -466,6 +466,9 @@ class CreatePayPeriodRequest with _$CreatePayPeriodRequest {
 
     /// Optional notes.
     String? notes,
+
+    /// Whether this is an off-cycle payroll (bonus, advance, etc.).
+    @Default(false) bool isOffCycle,
   }) = _CreatePayPeriodRequest;
 
   factory CreatePayPeriodRequest.fromJson(Map<String, dynamic> json) =>

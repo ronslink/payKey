@@ -45,6 +45,16 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
   final _addressController = TextEditingController();
   final _cityController = TextEditingController();
 
+  // Payment & Business
+  final _businessNameController = TextEditingController();
+  final _bankNameController = TextEditingController();
+  final _bankAccountController = TextEditingController();
+  final _mpesaPaybillController = TextEditingController();
+  final _mpesaTillController = TextEditingController();
+
+  // Payroll Settings
+  String _payrollFrequency = 'MONTHLY';
+
   bool _isLoading = false;
 
   @override
@@ -67,6 +77,11 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
     _nhifController.dispose();
     _addressController.dispose();
     _cityController.dispose();
+    _businessNameController.dispose();
+    _bankNameController.dispose();
+    _bankAccountController.dispose();
+    _mpesaPaybillController.dispose();
+    _mpesaTillController.dispose();
     _pageController.dispose();
     _animationController.dispose();
     super.dispose();
@@ -86,17 +101,27 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
         'idNumber': _idNumberController.text.trim(),
         'nationalityId': _selectedNationalityId,
         'kraPin': _kraPinController.text.trim(),
-        'isResident': _isResident,
-        if (!_isResident && _countryOfOrigin != null)
-          'countryOfOrigin': _countryOfOrigin,
+        // Use residentStatus field - maps isResident boolean to string
+        'residentStatus': _isResident ? 'RESIDENT' : 'NON_RESIDENT',
         if (_nssfController.text.isNotEmpty)
           'nssfNumber': _nssfController.text.trim(),
         if (_nhifController.text.isNotEmpty)
           'shifNumber': _nhifController.text.trim(),
         'countryId': _selectedCountryId,
         if (_cityController.text.isNotEmpty) 'city': _cityController.text.trim(),
+        if (_businessNameController.text.isNotEmpty)
+          'businessName': _businessNameController.text.trim(),
+        if (_bankNameController.text.isNotEmpty)
+          'bankName': _bankNameController.text.trim(),
+        if (_bankAccountController.text.isNotEmpty)
+          'bankAccount': _bankAccountController.text.trim(),
+        if (_mpesaPaybillController.text.isNotEmpty)
+          'mpesaPaybill': _mpesaPaybillController.text.trim(),
+        if (_mpesaTillController.text.isNotEmpty)
+          'mpesaTill': _mpesaTillController.text.trim(),
         if (_addressController.text.isNotEmpty)
           'address': _addressController.text.trim(),
+        'defaultPayrollFrequency': _payrollFrequency,
       });
 
       if (mounted) {
@@ -548,6 +573,13 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
           required: true,
           icon: Icons.person_outline_rounded,
         ),
+        const SizedBox(height: 20),
+        _buildTextField(
+          _businessNameController,
+          'Business Name (Optional)',
+          'e.g. Acme Corp',
+          icon: Icons.business_rounded,
+        ),
       ],
     );
   }
@@ -713,8 +745,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
         const SizedBox(height: 20),
         _buildTextField(
           _nhifController,
-          'NHIF/SHIF Number (Optional)',
-          'Enter NHIF number',
+          'SHIF Number (Optional)',
+          'Enter SHIF number',
           icon: Icons.medical_services_rounded,
           helperText: 'Social Health Insurance Fund',
         ),
@@ -727,8 +759,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
       children: [
         _buildSectionHeader(
           icon: Icons.location_on_rounded,
-          title: 'Location Details',
-          subtitle: 'Where are you currently based?',
+          title: 'Location & Payment',
+          subtitle: 'Where are you based & how to pay?',
         ),
         const SizedBox(height: 32),
         _buildDropdown(
@@ -755,9 +787,130 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
           'Physical Address (Optional)',
           'Enter your address',
           icon: Icons.home_work_rounded,
-          maxLines: 3,
+          maxLines: 2,
         ),
+        const SizedBox(height: 32),
+         const Text(
+          'Payment Details (Optional)',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildTextField(
+          _bankNameController,
+          'Bank Name',
+          'e.g. KCB, Equity',
+          icon: Icons.account_balance_rounded,
+        ),
+        const SizedBox(height: 16),
+        _buildTextField(
+          _bankAccountController,
+          'Bank Account Number',
+          'Enter account number',
+          icon: Icons.numbers_rounded,
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: _buildTextField(
+                _mpesaPaybillController,
+                'M-Pesa Paybill',
+                'Paybill No.',
+                icon: Icons.phone_android_rounded,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildTextField(
+                _mpesaTillController,
+                'M-Pesa Till',
+                'Till No.',
+                icon: Icons.store_rounded,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 32),
+        // Payroll Settings Section
+        const Text(
+          'Payroll Settings',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'How often do you pay your workers?',
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.white60,
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildPayrollFrequencySelector(),
       ],
+    );
+  }
+
+  Widget _buildPayrollFrequencySelector() {
+    final frequencies = [
+      {'value': 'WEEKLY', 'label': 'Weekly', 'icon': Icons.view_week_rounded},
+      {'value': 'BI_WEEKLY', 'label': 'Bi-Weekly', 'icon': Icons.date_range_rounded},
+      {'value': 'MONTHLY', 'label': 'Monthly', 'icon': Icons.calendar_month_rounded},
+    ];
+
+    return Row(
+      children: frequencies.map((freq) {
+        final isSelected = _payrollFrequency == freq['value'];
+        return Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: GestureDetector(
+              onTap: () => setState(() => _payrollFrequency = freq['value'] as String),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? const Color(0xFF3B82F6)
+                      : Colors.white.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isSelected
+                        ? const Color(0xFF3B82F6)
+                        : Colors.white.withValues(alpha: 0.1),
+                    width: 2,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      freq['icon'] as IconData,
+                      color: isSelected ? Colors.white : Colors.white60,
+                      size: 24,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      freq['label'] as String,
+                      style: TextStyle(
+                        color: isSelected ? Colors.white : Colors.white60,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 

@@ -82,9 +82,12 @@ class PayCalendarPage extends ConsumerWidget {
   }
 
   Future<void> _showCreateDialog(BuildContext context, WidgetRef ref) async {
+    // TODO: Fetch user's defaultPayrollFrequency from profile when available
     final result = await showDialog<CreatePayPeriodRequest>(
       context: context,
-      builder: (context) => const _CreatePayPeriodDialog(),
+      builder: (context) => const _CreatePayPeriodDialog(
+        defaultFrequency: PayPeriodFrequency.monthly,
+      ),
     );
 
     if (result != null) {
@@ -564,26 +567,97 @@ class _EmptyState extends StatelessWidget {
 // =============================================================================
 
 class _CreatePayPeriodDialog extends StatefulWidget {
-  const _CreatePayPeriodDialog();
+  final PayPeriodFrequency? defaultFrequency;
+  
+  const _CreatePayPeriodDialog({this.defaultFrequency});
 
   @override
   State<_CreatePayPeriodDialog> createState() => _CreatePayPeriodDialogState();
 }
 
 class _CreatePayPeriodDialogState extends State<_CreatePayPeriodDialog> {
-  PayPeriodFrequency _frequency = PayPeriodFrequency.monthly;
+  late PayPeriodFrequency _frequency;
   DateTime _selectedMonth = DateTime.now();
   final bool _isCreating = false;
+  bool _isOffCycle = false;
+  final _customNameController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _frequency = widget.defaultFrequency ?? PayPeriodFrequency.monthly;
+  }
+
+  @override
+  void dispose() {
+    _customNameController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Text('Create Pay Period'),
+      title: Row(
+        children: [
+          const Text('Create Pay Period'),
+          const Spacer(),
+          // Off-cycle toggle
+          Tooltip(
+            message: 'Off-cycle payroll (bonus, advance, etc.)',
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Off-cycle', style: TextStyle(fontSize: 12, color: _AppColors.textSecondary)),
+                Switch(
+                  value: _isOffCycle,
+                  onChanged: (value) => setState(() => _isOffCycle = value),
+                  activeTrackColor: _AppColors.warning.withValues(alpha: 0.5),
+                  thumbColor: WidgetStatePropertyAll(_isOffCycle ? _AppColors.warning : Colors.grey),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (_isOffCycle) ...[
+            // Custom name for off-cycle
+            TextField(
+              controller: _customNameController,
+              decoration: InputDecoration(
+                labelText: 'Payroll Name',
+                hintText: 'e.g., December Bonus, Salary Advance',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                prefixIcon: const Icon(Icons.edit_outlined),
+              ),
+            ),
+            const SizedBox(height: _Spacing.lg),
+            Container(
+              padding: const EdgeInsets.all(_Spacing.md),
+              decoration: BoxDecoration(
+                color: _AppColors.warning.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: _AppColors.warning.withValues(alpha: 0.3)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: _AppColors.warning),
+                  SizedBox(width: _Spacing.sm),
+                  Expanded(
+                    child: Text(
+                      'Off-cycle payrolls are for bonuses, advances, or special payments outside regular pay periods.',
+                      style: TextStyle(fontSize: 12, color: _AppColors.textSecondary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: _Spacing.lg),
+          ],
           const Text(
             'Frequency',
             style: TextStyle(
@@ -636,7 +710,7 @@ class _CreatePayPeriodDialogState extends State<_CreatePayPeriodDialog> {
         ElevatedButton(
           onPressed: _isCreating ? null : _handleCreate,
           style: ElevatedButton.styleFrom(
-            backgroundColor: _AppColors.primary,
+            backgroundColor: _isOffCycle ? _AppColors.warning : _AppColors.primary,
             foregroundColor: Colors.white,
           ),
           child: _isCreating
@@ -648,7 +722,7 @@ class _CreatePayPeriodDialogState extends State<_CreatePayPeriodDialog> {
                     color: Colors.white,
                   ),
                 )
-              : const Text('Create'),
+              : Text(_isOffCycle ? 'Create Off-Cycle' : 'Create'),
         ),
       ],
     );
@@ -692,19 +766,39 @@ class _CreatePayPeriodDialogState extends State<_CreatePayPeriodDialog> {
     return Container(
       padding: const EdgeInsets.all(_Spacing.md),
       decoration: BoxDecoration(
-        color: _AppColors.primary.withValues(alpha: 0.05),
+        color: (_isOffCycle ? _AppColors.warning : _AppColors.primary).withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: _AppColors.primary.withValues(alpha: 0.2)),
+        border: Border.all(color: (_isOffCycle ? _AppColors.warning : _AppColors.primary).withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            _generateName(),
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              color: _AppColors.textPrimary,
-            ),
+          Row(
+            children: [
+              if (_isOffCycle) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: _AppColors.warning,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    'OFF-CYCLE',
+                    style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white),
+                  ),
+                ),
+                const SizedBox(width: _Spacing.sm),
+              ],
+              Expanded(
+                child: Text(
+                  _generateName(),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: _AppColors.textPrimary,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: _Spacing.xs),
           Text(
@@ -764,10 +858,14 @@ class _CreatePayPeriodDialogState extends State<_CreatePayPeriodDialog> {
   }
 
   String _generateName() {
+    if (_isOffCycle && _customNameController.text.isNotEmpty) {
+      return _customNameController.text;
+    }
+    
     final monthFormat = DateFormat('MMMM yyyy');
     final weekFormat = DateFormat('MMM d');
 
-    return switch (_frequency) {
+    final baseName = switch (_frequency) {
       PayPeriodFrequency.weekly =>
         'Week of ${weekFormat.format(_selectedMonth)}',
       PayPeriodFrequency.biWeekly =>
@@ -777,6 +875,8 @@ class _CreatePayPeriodDialogState extends State<_CreatePayPeriodDialog> {
         'Q${((_selectedMonth.month - 1) ~/ 3) + 1} ${_selectedMonth.year}',
       PayPeriodFrequency.yearly => 'Year ${_selectedMonth.year}',
     };
+    
+    return _isOffCycle ? 'Off-Cycle: $baseName' : baseName;
   }
 
   void _handleCreate() {
@@ -787,6 +887,7 @@ class _CreatePayPeriodDialogState extends State<_CreatePayPeriodDialog> {
       startDate: startDate,
       endDate: endDate,
       frequency: _frequency,
+      isOffCycle: _isOffCycle,
     );
 
     Navigator.pop(context, request);

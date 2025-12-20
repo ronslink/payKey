@@ -77,6 +77,7 @@ _$CreatePayPeriodRequestImpl _$$CreatePayPeriodRequestImplFromJson(
   endDate: DateTime.parse(json['endDate'] as String),
   frequency: $enumDecode(_$PayPeriodFrequencyEnumMap, json['frequency']),
   notes: json['notes'] as String?,
+  isOffCycle: json['isOffCycle'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$$CreatePayPeriodRequestImplToJson(
@@ -87,6 +88,7 @@ Map<String, dynamic> _$$CreatePayPeriodRequestImplToJson(
   'endDate': instance.endDate.toIso8601String(),
   'frequency': _$PayPeriodFrequencyEnumMap[instance.frequency]!,
   'notes': instance.notes,
+  'isOffCycle': instance.isOffCycle,
 };
 
 _$UpdatePayPeriodRequestImpl _$$UpdatePayPeriodRequestImplFromJson(

@@ -26,6 +26,12 @@ export enum IdType {
   PASSPORT = 'PASSPORT',
 }
 
+export enum PayrollFrequency {
+  WEEKLY = 'WEEKLY',
+  BI_WEEKLY = 'BI_WEEKLY',
+  MONTHLY = 'MONTHLY',
+}
+
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
@@ -74,14 +80,13 @@ export class User {
     type: 'enum',
     enum: IdType,
     nullable: true,
-    name: 'idtype',
   })
   idType: IdType;
 
   @Column({ nullable: true })
   idNumber: string;
 
-  @Column({ nullable: true, name: 'nationalityid' })
+  @Column({ nullable: true })
   nationalityId: string;
 
   @Column({ nullable: true })
@@ -93,11 +98,8 @@ export class User {
   @Column({ nullable: true })
   countryId: string;
 
-  @Column({ default: true, name: 'isresident' })
-  isResident: boolean;
-
-  @Column({ nullable: true, name: 'countryoforigin' })
-  countryOfOrigin: string;
+  @Column({ nullable: true })
+  residentStatus: string;
 
   @Column({ default: false, name: 'isOnboardingCompleted' })
   isOnboardingCompleted: boolean;
@@ -117,6 +119,15 @@ export class User {
 
   @Column({ nullable: true })
   mpesaTill: string;
+
+  // Payroll Settings
+  @Column({
+    type: 'enum',
+    enum: PayrollFrequency,
+    default: PayrollFrequency.MONTHLY,
+    nullable: true,
+  })
+  defaultPayrollFrequency: PayrollFrequency;
 
   // Employee Portal Fields
   @Column({ nullable: true })

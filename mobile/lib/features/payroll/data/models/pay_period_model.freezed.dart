@@ -635,6 +635,9 @@ mixin _$CreatePayPeriodRequest {
   /// Optional notes.
   String? get notes => throw _privateConstructorUsedError;
 
+  /// Whether this is an off-cycle payroll (bonus, advance, etc.).
+  bool get isOffCycle => throw _privateConstructorUsedError;
+
   /// Serializes this CreatePayPeriodRequest to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
 
@@ -658,6 +661,7 @@ abstract class $CreatePayPeriodRequestCopyWith<$Res> {
     DateTime endDate,
     PayPeriodFrequency frequency,
     String? notes,
+    bool isOffCycle,
   });
 }
 
@@ -684,6 +688,7 @@ class _$CreatePayPeriodRequestCopyWithImpl<
     Object? endDate = null,
     Object? frequency = null,
     Object? notes = freezed,
+    Object? isOffCycle = null,
   }) {
     return _then(
       _value.copyWith(
@@ -707,6 +712,10 @@ class _$CreatePayPeriodRequestCopyWithImpl<
                 ? _value.notes
                 : notes // ignore: cast_nullable_to_non_nullable
                       as String?,
+            isOffCycle: null == isOffCycle
+                ? _value.isOffCycle
+                : isOffCycle // ignore: cast_nullable_to_non_nullable
+                      as bool,
           )
           as $Val,
     );
@@ -728,6 +737,7 @@ abstract class _$$CreatePayPeriodRequestImplCopyWith<$Res>
     DateTime endDate,
     PayPeriodFrequency frequency,
     String? notes,
+    bool isOffCycle,
   });
 }
 
@@ -751,6 +761,7 @@ class __$$CreatePayPeriodRequestImplCopyWithImpl<$Res>
     Object? endDate = null,
     Object? frequency = null,
     Object? notes = freezed,
+    Object? isOffCycle = null,
   }) {
     return _then(
       _$CreatePayPeriodRequestImpl(
@@ -774,6 +785,10 @@ class __$$CreatePayPeriodRequestImplCopyWithImpl<$Res>
             ? _value.notes
             : notes // ignore: cast_nullable_to_non_nullable
                   as String?,
+        isOffCycle: null == isOffCycle
+            ? _value.isOffCycle
+            : isOffCycle // ignore: cast_nullable_to_non_nullable
+                  as bool,
       ),
     );
   }
@@ -788,6 +803,7 @@ class _$CreatePayPeriodRequestImpl extends _CreatePayPeriodRequest {
     required this.endDate,
     required this.frequency,
     this.notes,
+    this.isOffCycle = false,
   }) : super._();
 
   factory _$CreatePayPeriodRequestImpl.fromJson(Map<String, dynamic> json) =>
@@ -813,9 +829,14 @@ class _$CreatePayPeriodRequestImpl extends _CreatePayPeriodRequest {
   @override
   final String? notes;
 
+  /// Whether this is an off-cycle payroll (bonus, advance, etc.).
+  @override
+  @JsonKey()
+  final bool isOffCycle;
+
   @override
   String toString() {
-    return 'CreatePayPeriodRequest(name: $name, startDate: $startDate, endDate: $endDate, frequency: $frequency, notes: $notes)';
+    return 'CreatePayPeriodRequest(name: $name, startDate: $startDate, endDate: $endDate, frequency: $frequency, notes: $notes, isOffCycle: $isOffCycle)';
   }
 
   @override
@@ -829,13 +850,22 @@ class _$CreatePayPeriodRequestImpl extends _CreatePayPeriodRequest {
             (identical(other.endDate, endDate) || other.endDate == endDate) &&
             (identical(other.frequency, frequency) ||
                 other.frequency == frequency) &&
-            (identical(other.notes, notes) || other.notes == notes));
+            (identical(other.notes, notes) || other.notes == notes) &&
+            (identical(other.isOffCycle, isOffCycle) ||
+                other.isOffCycle == isOffCycle));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, name, startDate, endDate, frequency, notes);
+  int get hashCode => Object.hash(
+    runtimeType,
+    name,
+    startDate,
+    endDate,
+    frequency,
+    notes,
+    isOffCycle,
+  );
 
   /// Create a copy of CreatePayPeriodRequest
   /// with the given fields replaced by the non-null parameter values.
@@ -862,6 +892,7 @@ abstract class _CreatePayPeriodRequest extends CreatePayPeriodRequest {
     required final DateTime endDate,
     required final PayPeriodFrequency frequency,
     final String? notes,
+    final bool isOffCycle,
   }) = _$CreatePayPeriodRequestImpl;
   const _CreatePayPeriodRequest._() : super._();
 
@@ -887,6 +918,10 @@ abstract class _CreatePayPeriodRequest extends CreatePayPeriodRequest {
   /// Optional notes.
   @override
   String? get notes;
+
+  /// Whether this is an off-cycle payroll (bonus, advance, etc.).
+  @override
+  bool get isOffCycle;
 
   /// Create a copy of CreatePayPeriodRequest
   /// with the given fields replaced by the non-null parameter values.

@@ -116,7 +116,7 @@ export class PayPeriod {
    * Display name for the pay period.
    * @example "August 2025 - Week 1", "September 2025 Monthly"
    */
-  @Column({ length: 100 })
+  @Column({ length: 100, nullable: true })
   name: string;
 
   /**
@@ -157,6 +157,12 @@ export class PayPeriod {
   })
   status: PayPeriodStatus;
 
+  /**
+   * Whether this is an off-cycle payroll (bonus, advance, etc.).
+   */
+  @Column({ type: 'boolean', default: false })
+  isOffCycle: boolean;
+
   // ---------------------------------------------------------------------------
   // Ownership & Authorization
   // ---------------------------------------------------------------------------
@@ -164,7 +170,7 @@ export class PayPeriod {
   /**
    * User/employer who owns this pay period.
    */
-  @Column({ type: 'varchar' })
+  @Column({ type: 'uuid' })
   @Index()
   userId: string;
 

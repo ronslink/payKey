@@ -276,6 +276,7 @@ class PayPeriodRepository {
       'endDate': _formatDate(request.endDate),
       'frequency': request.frequency.name.toUpperCase(),
       if (request.notes != null) 'notes': request.notes,
+      'isOffCycle': request.isOffCycle,
     };
   }
 
