@@ -12,6 +12,9 @@ _WorkerModel _$WorkerModelFromJson(Map<String, dynamic> json) => _WorkerModel(
   phoneNumber: json['phoneNumber'] as String,
   salaryGross: (json['salaryGross'] as num).toDouble(),
   startDate: DateTime.parse(json['startDate'] as String),
+  dateOfBirth: json['dateOfBirth'] == null
+      ? null
+      : DateTime.parse(json['dateOfBirth'] as String),
   isActive: json['isActive'] as bool,
   employmentType: json['employmentType'] as String? ?? 'FIXED',
   hourlyRate: (json['hourlyRate'] as num?)?.toDouble(),
@@ -51,6 +54,7 @@ Map<String, dynamic> _$WorkerModelToJson(_WorkerModel instance) =>
       'phoneNumber': instance.phoneNumber,
       'salaryGross': instance.salaryGross,
       'startDate': instance.startDate.toIso8601String(),
+      'dateOfBirth': instance.dateOfBirth?.toIso8601String(),
       'isActive': instance.isActive,
       'employmentType': instance.employmentType,
       'hourlyRate': instance.hourlyRate,
@@ -83,6 +87,9 @@ _CreateWorkerRequest _$CreateWorkerRequestFromJson(Map<String, dynamic> json) =>
       phoneNumber: json['phoneNumber'] as String,
       salaryGross: (json['salaryGross'] as num).toDouble(),
       startDate: DateTime.parse(json['startDate'] as String),
+      dateOfBirth: json['dateOfBirth'] == null
+          ? null
+          : DateTime.parse(json['dateOfBirth'] as String),
       employmentType: json['employmentType'] as String? ?? 'FIXED',
       hourlyRate: (json['hourlyRate'] as num?)?.toDouble(),
       propertyId: json['propertyId'] as String?,
@@ -113,6 +120,7 @@ Map<String, dynamic> _$CreateWorkerRequestToJson(
   'phoneNumber': instance.phoneNumber,
   'salaryGross': instance.salaryGross,
   'startDate': instance.startDate.toIso8601String(),
+  'dateOfBirth': instance.dateOfBirth?.toIso8601String(),
   'employmentType': instance.employmentType,
   'hourlyRate': instance.hourlyRate,
   'propertyId': instance.propertyId,
@@ -143,6 +151,9 @@ _UpdateWorkerRequest _$UpdateWorkerRequestFromJson(Map<String, dynamic> json) =>
       startDate: json['startDate'] == null
           ? null
           : DateTime.parse(json['startDate'] as String),
+      dateOfBirth: json['dateOfBirth'] == null
+          ? null
+          : DateTime.parse(json['dateOfBirth'] as String),
       employmentType: json['employmentType'] as String?,
       hourlyRate: (json['hourlyRate'] as num?)?.toDouble(),
       propertyId: json['propertyId'] as String?,
@@ -174,6 +185,7 @@ Map<String, dynamic> _$UpdateWorkerRequestToJson(
   'phoneNumber': instance.phoneNumber,
   'salaryGross': instance.salaryGross,
   'startDate': instance.startDate?.toIso8601String(),
+  'dateOfBirth': instance.dateOfBirth?.toIso8601String(),
   'employmentType': instance.employmentType,
   'hourlyRate': instance.hourlyRate,
   'propertyId': instance.propertyId,

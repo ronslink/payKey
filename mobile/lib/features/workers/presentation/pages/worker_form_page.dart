@@ -73,6 +73,8 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
   late final _WorkerFormControllers _controllers;
   late PaymentFrequency _paymentFrequency;
   late PaymentMethod _paymentMethod;
+  DateTime? _dateOfBirth;
+  DateTime _startDate = DateTime.now();
   bool _isSaving = false;
 
   // ---------------------------------------------------------------------------
@@ -99,9 +101,12 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
       _controllers.populateFrom(worker);
       _paymentFrequency = PaymentFrequency.fromValue(worker.paymentFrequency);
       _paymentMethod = PaymentMethod.fromValue(worker.paymentMethod);
+      _dateOfBirth = worker.dateOfBirth;
+      _startDate = worker.startDate;
     } else {
       _paymentFrequency = PaymentFrequency.monthly;
       _paymentMethod = PaymentMethod.mpesa;
+      _startDate = DateTime.now();
     }
   }
 
@@ -149,7 +154,7 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
       name: _controllers.name.trimmedText,
       phoneNumber: _controllers.phone.trimmedText,
       salaryGross: _controllers.salary.doubleValue,
-      startDate: DateTime.now(),
+      startDate: _startDate,
       email: _controllers.email.nullableText,
       idNumber: _controllers.idNumber.nullableText,
       kraPin: _controllers.kraPin.nullableText,
@@ -167,6 +172,7 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
       emergencyContactName: _controllers.emergencyName.nullableText,
       emergencyContactPhone: _controllers.emergencyPhone.nullableText,
       emergencyContactRelationship: _controllers.emergencyRelationship.nullableText,
+      dateOfBirth: _dateOfBirth,
     );
   }
 
@@ -175,6 +181,7 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
       name: _controllers.name.trimmedText,
       phoneNumber: _controllers.phone.trimmedText,
       salaryGross: _controllers.salary.doubleValue,
+      startDate: _startDate,
       email: _controllers.email.nullableText,
       idNumber: _controllers.idNumber.nullableText,
       kraPin: _controllers.kraPin.nullableText,
@@ -192,6 +199,7 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
       emergencyContactName: _controllers.emergencyName.nullableText,
       emergencyContactPhone: _controllers.emergencyPhone.nullableText,
       emergencyContactRelationship: _controllers.emergencyRelationship.nullableText,
+      dateOfBirth: _dateOfBirth,
     );
   }
 
@@ -235,13 +243,21 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _PersonalInfoSection(controllers: _controllers),
+              _PersonalInfoSection(
+                controllers: _controllers,
+                dateOfBirth: _dateOfBirth,
+                onDateOfBirthChanged: (date) => setState(() => _dateOfBirth = date),
+              ),
               const SizedBox(height: 24),
               _EmergencyContactSection(controllers: _controllers),
               const SizedBox(height: 24),
               _StatutoryDetailsSection(controllers: _controllers),
               const SizedBox(height: 24),
-              _EmploymentDetailsSection(controllers: _controllers),
+              _EmploymentDetailsSection(
+                controllers: _controllers,
+                startDate: _startDate,
+                onStartDateChanged: (date) => setState(() => _startDate = date),
+              ),
               const SizedBox(height: 24),
               _PaymentDetailsSection(
                 controllers: _controllers,
@@ -391,8 +407,25 @@ extension _TextEditingControllerExt on TextEditingController {
 
 class _PersonalInfoSection extends StatelessWidget {
   final _WorkerFormControllers controllers;
+  final DateTime? dateOfBirth;
+  final ValueChanged<DateTime?> onDateOfBirthChanged;
 
-  const _PersonalInfoSection({required this.controllers});
+  const _PersonalInfoSection({
+    required this.controllers,
+    required this.dateOfBirth,
+    required this.onDateOfBirthChanged,
+  });
+
+  int? get _age {
+    if (dateOfBirth == null) return null;
+    final today = DateTime.now();
+    int age = today.year - dateOfBirth!.year;
+    if (today.month < dateOfBirth!.month ||
+        (today.month == dateOfBirth!.month && today.day < dateOfBirth!.day)) {
+      age--;
+    }
+    return age;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -423,8 +456,61 @@ class _PersonalInfoSection extends StatelessWidget {
           label: 'ID Number',
           hint: 'Enter National ID',
         ),
+        // Date of Birth Picker
+        _buildDateOfBirthField(context),
       ],
     );
+  }
+
+  Widget _buildDateOfBirthField(BuildContext context) {
+    final displayText = dateOfBirth != null
+        ? '${dateOfBirth!.day}/${dateOfBirth!.month}/${dateOfBirth!.year}'
+        : 'Select date of birth';
+    
+    final ageText = _age != null ? ' (Age: $_age)' : '';
+    final isUnderAge = _age != null && _age! < 13;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: () => _selectDate(context),
+          child: InputDecorator(
+            decoration: InputDecoration(
+              labelText: 'Date of Birth$ageText',
+              hintText: 'Select date of birth',
+              border: const OutlineInputBorder(),
+              filled: true,
+              fillColor: _AppColors.background,
+              suffixIcon: const Icon(Icons.calendar_today),
+              errorText: isUnderAge 
+                  ? 'Worker must be at least 13 years old (Kenya Labor Law)' 
+                  : null,
+            ),
+            child: Text(
+              displayText,
+              style: TextStyle(
+                color: dateOfBirth == null ? Colors.grey : _AppColors.textPrimary,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: dateOfBirth ?? DateTime(now.year - 25, 1, 1),
+      firstDate: DateTime(1940),
+      lastDate: DateTime(now.year - 13, now.month, now.day), // Max age 13+
+      helpText: 'Select Date of Birth',
+    );
+    if (picked != null) {
+      onDateOfBirthChanged(picked);
+    }
   }
 }
 
@@ -503,8 +589,14 @@ class _StatutoryDetailsSection extends StatelessWidget {
 
 class _EmploymentDetailsSection extends StatelessWidget {
   final _WorkerFormControllers controllers;
+  final DateTime startDate;
+  final ValueChanged<DateTime> onStartDateChanged;
 
-  const _EmploymentDetailsSection({required this.controllers});
+  const _EmploymentDetailsSection({
+    required this.controllers,
+    required this.startDate,
+    required this.onStartDateChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -516,6 +608,37 @@ class _EmploymentDetailsSection extends StatelessWidget {
           label: 'Job Title',
           hint: 'e.g. Housekeeper, Gardener',
         ),
+        
+        // Start Date Field
+        InkWell(
+          onTap: () async {
+            final picked = await showDatePicker(
+              context: context,
+              initialDate: startDate,
+              firstDate: DateTime(2000),
+              lastDate: DateTime(2100),
+              helpText: 'Select Start Date',
+            );
+            if (picked != null) {
+              onStartDateChanged(picked);
+            }
+          },
+          child: InputDecorator(
+            decoration: const InputDecoration(
+              labelText: 'Start Date',
+              hintText: 'Select start date',
+              border: OutlineInputBorder(),
+              filled: true,
+              fillColor: _AppColors.background,
+              suffixIcon: Icon(Icons.calendar_today),
+            ),
+            child: Text(
+              '${startDate.day}/${startDate.month}/${startDate.year}',
+              style: const TextStyle(color: _AppColors.textPrimary),
+            ),
+          ),
+        ),
+
         _FormTextField(
           controller: controllers.salary,
           label: 'Basic Salary (KES)',

@@ -57,6 +57,15 @@ export class Worker {
   })
   hourlyRate: number;
 
+  @Column('decimal', {
+    precision: 5,
+    scale: 2,
+    nullable: true,
+    default: 40,
+    transformer: decimalTransformer,
+  })
+  standardWeeklyHours: number;
+
   @ManyToOne(() => User, (user) => user.id)
   user: User;
 
@@ -84,6 +93,9 @@ export class Worker {
 
   @Column({ type: 'date' })
   startDate: Date;
+
+  @Column({ type: 'date', nullable: true })
+  dateOfBirth: Date;
 
   @Column({ default: true })
   isActive: boolean;

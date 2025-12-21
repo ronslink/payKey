@@ -440,6 +440,12 @@ class _ContactSection extends StatelessWidget {
           _DetailRowData('Email', worker.email!, Icons.email),
         if (worker.idNumber?.isNotEmpty == true)
           _DetailRowData('ID Number', worker.idNumber!, Icons.credit_card),
+        if (worker.dateOfBirth != null)
+          _DetailRowData(
+            'Date of Birth',
+            WorkerFormatters.date(worker.dateOfBirth!),
+            Icons.cake,
+          ),
       ],
     );
   }

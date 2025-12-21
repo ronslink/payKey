@@ -175,7 +175,8 @@ class WorkersRepository {
       'name': json['name'],
       'phoneNumber': json['phoneNumber'],
       'salaryGross': _toDouble(json['salaryGross']),
-      'startDate': json['startDate'],
+      'startDate': json['startDate'] == null ? DateTime.now() : DateTime.parse(json['startDate']),
+      'dateOfBirth': json['dateOfBirth'] == null ? null : DateTime.parse(json['dateOfBirth']),
       'employmentType': json['employmentType'] ?? _Defaults.employmentType,
       'hourlyRate': _toNullableDouble(json['hourlyRate']),
       'propertyId': json['propertyId'],
@@ -207,6 +208,7 @@ class WorkersRepository {
       'phoneNumber': request.phoneNumber,
       'salaryGross': request.salaryGross,
       'startDate': request.startDate.toIso8601String(),
+      if (request.dateOfBirth != null) 'dateOfBirth': request.dateOfBirth!.toIso8601String(),
       'employmentType': request.employmentType,
       'hourlyRate': request.hourlyRate,
       'propertyId': request.propertyId,
@@ -237,6 +239,8 @@ class WorkersRepository {
       if (request.salaryGross != null) 'salaryGross': request.salaryGross,
       if (request.startDate != null)
         'startDate': request.startDate!.toIso8601String(),
+      if (request.dateOfBirth != null)
+        'dateOfBirth': request.dateOfBirth!.toIso8601String(),
       if (request.employmentType != null)
         'employmentType': request.employmentType,
       if (request.hourlyRate != null) 'hourlyRate': request.hourlyRate,
