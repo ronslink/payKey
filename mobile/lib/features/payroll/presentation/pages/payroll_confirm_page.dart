@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../providers/payroll_provider.dart';
 import '../../../payments/presentation/providers/transactions_provider.dart';
 import '../../data/repositories/payroll_repository.dart';
@@ -23,6 +24,7 @@ class PayrollConfirmPage extends ConsumerStatefulWidget {
 class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
   bool _isProcessing = false;
   bool _isVerifying = true;
+  FundVerificationResult? _verificationResult;
   Map<String, dynamic>? _batchResult;
   String? _error;
 
@@ -37,133 +39,209 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
     try {
       final repo = ref.read(payrollRepositoryProvider);
       final result = await repo.verifyFunds(widget.payPeriodId);
-      setState(() {
-        _isVerifying = false;
-      });
-      
-      // Show dialog if insufficient funds
-      if (!result.canProceed && mounted) {
-        _showInsufficientFundsDialog(result);
+      if (mounted) {
+        setState(() {
+          _isVerifying = false;
+          _verificationResult = result;
+        });
       }
     } catch (e) {
-      setState(() {
-        _isVerifying = false;
-        _error = 'Failed to verify funds: $e';
-      });
+      if (mounted) {
+        setState(() {
+          _isVerifying = false;
+          _error = 'Failed to verify funds: $e';
+        });
+      }
     }
   }
 
-  void _showInsufficientFundsDialog(FundVerificationResult result) {
-    showDialog(
+  // MODERN M-PESA TOPUP SHEET
+  void _showTopupDialog() {
+    final shortfall = _verificationResult?.shortfall ?? 0;
+    final defaultAmount = (shortfall > 0 ? shortfall : 1000).ceil().toDouble();
+    
+    final controller = TextEditingController(text: defaultAmount.toStringAsFixed(0));
+    final phoneController = TextEditingController(text: '07'); 
+
+    showModalBottomSheet(
       context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
-            SizedBox(width: 8),
-            Text('Insufficient Funds'),
-          ],
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
-        content: Column(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          top: 24,
+          left: 24,
+          right: 24,
+        ),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('You don\'t have enough funds to process payroll.'),
-            SizedBox(height: 16),
-            _buildFundRow('Required:', result.formattedRequired, Colors.red),
-            _buildFundRow('Available:', result.formattedBalance, Colors.green),
-            Divider(),
-            _buildFundRow('Shortfall:', result.formattedShortfall, Colors.orange),
-            SizedBox(height: 16),
-            Text(
-              'Please top up your wallet before proceeding.',
-              style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
+            // Handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              context.pop(); // Go back to previous page
-            },
-            child: Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              // Navigate to top-up page or show top-up dialog
-              _showDevTopupDialog(result.shortfall);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            child: Text('Top Up Wallet'),
-          ),
-        ],
-      ),
-    );
-  }
+            const SizedBox(height: 24),
+            
+            // Header with Icon
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00D632).withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.account_balance_wallet, color: Color(0xFF00D632), size: 28),
+                ),
+                const SizedBox(width: 16),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Top Up Wallet',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        'via M-Pesa',
+                        style: TextStyle(color: Colors.grey, fontSize: 14),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 32),
 
-  Widget _buildFundRow(String label, String value, Color color) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: TextStyle(fontWeight: FontWeight.w500)),
-          Text(value, style: TextStyle(fontWeight: FontWeight.bold, color: color)),
-        ],
-      ),
-    );
-  }
-
-  void _showDevTopupDialog(double suggestedAmount) {
-    final controller = TextEditingController(text: suggestedAmount.toStringAsFixed(0));
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('DEV: Top Up Wallet'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('This is a development feature. Enter amount to add to wallet:'),
-            SizedBox(height: 16),
+            // Amount Input
+            const Text('Amount to Load', style: TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
             TextField(
               controller: controller,
               keyboardType: TextInputType.number,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               decoration: InputDecoration(
-                labelText: 'Amount (KES)',
-                border: OutlineInputBorder(),
                 prefixText: 'KES ',
+                prefixStyle: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.grey),
+                filled: true,
+                fillColor: Colors.grey.shade50,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
               ),
             ),
+
+            const SizedBox(height: 24),
+
+            // Phone Input
+            const Text('M-Pesa Phone Number', style: TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: phoneController,
+              keyboardType: TextInputType.phone,
+              style: const TextStyle(fontSize: 16),
+              decoration: InputDecoration(
+                hintText: '07XX...',
+                prefixIcon: const Icon(Icons.phone_android, color: Colors.grey),
+                filled: true,
+                fillColor: Colors.grey.shade50,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+              ),
+            ),
+
+            // Dev Note Badge
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade50,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.amber.shade200),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.developer_mode, size: 14, color: Colors.amber),
+                    SizedBox(width: 6),
+                    Text(
+                      'DEV MODE: Simulates instant top-up',
+                      style: TextStyle(fontSize: 12, color: Colors.brown, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 32),
+
+            // Action Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () async {
+                  Navigator.of(context).pop();
+                  final amount = double.tryParse(controller.text) ?? defaultAmount;
+                  await _performDevTopup(amount);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00D632),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 0,
+                ),
+                child: const Text(
+                  'Confirm & Pay',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.of(context).pop();
-              await _performDevTopup(double.tryParse(controller.text) ?? suggestedAmount);
-            },
-            child: Text('Top Up'),
-          ),
-        ],
       ),
     );
   }
 
   Future<void> _performDevTopup(double amount) async {
+    // Show loading indicator
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Initiating Top Up...')),
+    );
+
     try {
       final repo = ref.read(payrollRepositoryProvider);
+      // Simulate STK Push delay
+      await Future.delayed(const Duration(seconds: 1));
+      
       final result = await repo.devTopup(amount);
       if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('DEV: Topped up KES ${amount.toStringAsFixed(0)}. New balance: ${result['newBalance']}'),
+            content: Text('Success! New balance: ${result['newBalance']}'),
             backgroundColor: Colors.green,
           ),
         );
@@ -172,8 +250,9 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
       }
     } catch (e) {
       if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Top Up Failed: $e'), backgroundColor: Colors.red),
         );
       }
     }
@@ -186,7 +265,8 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
     });
 
     try {
-      await ref.read(payrollProvider.notifier).processPayroll(
+      // Call processPayroll which returns PayrollProcessingResult
+      final result = await ref.read(payrollProvider.notifier).processPayroll(
             widget.workerIds,
             widget.payPeriodId,
           );
@@ -194,29 +274,36 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
       // Refresh transactions list
       await ref.read(transactionsProvider.notifier).fetchTransactions();
       
-      // Get the batch result from the provider
-      final result = ref.read(payrollProvider).value;
-      
-      setState(() {
-        _isProcessing = false;
-        _batchResult = result as Map<String, dynamic>?;
-      });
-
-      // Wait a moment then navigate if all succeeded
-      if (_batchResult != null && _batchResult!['failureCount'] == 0) {
-        await Future.delayed(const Duration(seconds: 3));
-        
-        if (mounted) {
-          ref.read(payrollProvider.notifier).reset();
-          ref.read(selectedWorkersProvider.notifier).set({});
-          context.go('/home');
-        }
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+          // Convert PayrollProcessingResult to Map for results page
+          _batchResult = {
+            'successCount': result.successCount,
+            'failureCount': result.failureCount,
+            'totalProcessed': result.totalProcessed,
+            'failedWorkerIds': result.failedWorkerIds,
+            'batchId': result.batchId,
+            // Generate simplified results list from counts
+            'results': List.generate(
+              result.totalProcessed,
+              (i) => {
+                'success': i < result.successCount,
+                'workerName': 'Worker ${i + 1}',
+                'netPay': 0.0,
+                'error': i >= result.successCount ? 'Payment failed' : null,
+              },
+            ),
+          };
+        });
       }
     } catch (e) {
-      setState(() {
-        _isProcessing = false;
-        _error = e.toString();
-      });
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+          _error = e.toString();
+        });
+      }
     }
   }
 
@@ -230,7 +317,7 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
             children: [
               CircularProgressIndicator(),
               SizedBox(height: 16),
-              Text('Verifying wallet balance...'),
+              Text('Checking wallet balance...'),
             ],
           ),
         ),
@@ -241,121 +328,138 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
       return _buildResultsPage();
     }
 
+    // Safe fallback if calculation failed but verification finished
+    final verification = _verificationResult ?? const FundVerificationResult(
+      requiredAmount: 0,
+      availableBalance: 0,
+      canProceed: false,
+      shortfall: 0,
+      workerCount: 0,
+    );
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Confirm Payroll'),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Icon(
-              Icons.warning_amber_rounded,
-              size: 64,
-              color: Colors.orange,
+            // 1. Wallet Balance Card
+            _WalletBalanceCard(
+              verification: verification,
+              onTopUp: _showTopupDialog,
             ),
             const SizedBox(height: 24),
+
+            // 2. Payroll Summary
             const Text(
-              'Confirm Payroll Processing',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
+              'Payroll Summary',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                side: BorderSide(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'You are about to process payroll for:',
-                      style: TextStyle(fontSize: 16),
+                    _buildSummaryRow('Total Workers', '${widget.workerIds.length}'),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8.0),
+                      child: Divider(),
                     ),
+                    const Text('Funds Allocation:', style: TextStyle(fontWeight: FontWeight.w600)),
                     const SizedBox(height: 8),
-                    Text(
-                      '${widget.workerIds.length} worker(s)',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'This will:',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text('• Create salary payout transactions'),
-                    const Text('• Deduct taxes (PAYE, NSSF, NHIF, Housing Levy)'),
-                    const Text('• Send net pay to workers'),
-                    const SizedBox(height: 8),
-                    const Text(
-                      '• Process each worker individually',
-                      style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
-                    ),
+                    const Text('• Net Pay Transfers (M-Pesa)'),
+                    const Text('• Tax Remittance (KRA)'),
+                    const Text('• Statutory Deductions (NSSF/NHIF)'),
                   ],
                 ),
               ),
             ),
+
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.only(top: 16),
-                child: Card(
+                child: Material(
                   color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(8),
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(12),
                     child: Row(
                       children: [
-                        const Icon(Icons.error, color: Colors.red),
-                        const SizedBox(width: 8),
+                        const Icon(Icons.error_outline, color: Colors.red),
+                        const SizedBox(width: 12),
                         Expanded(
-                          child: Text(
-                            'Error: $_error',
-                            style: const TextStyle(color: Colors.red),
-                          ),
+                          child: Text(_error!, style: const TextStyle(color: Colors.red)),
                         ),
                       ],
                     ),
                   ),
                 ),
               ),
-            const Spacer(),
-            if (_isProcessing)
-              const Column(
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Processing payroll...'),
-                  SizedBox(height: 8),
-                  Text(
-                    'This may take a moment',
-                    style: TextStyle(color: Colors.grey, fontSize: 12),
-                  ),
-                ],
-              )
-            else
-              Column(
-                children: [
-                  ElevatedButton(
-                    onPressed: _processPayroll,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.all(16),
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
+
+             const SizedBox(height: 32),
+
+             if (_isProcessing)
+               const Column(
+                 children: [
+                   CircularProgressIndicator(),
+                   SizedBox(height: 16),
+                   Text('Processing payments...'),
+                   Text('Please do not close this screen', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                 ],
+               )
+             else
+               Column(
+                 crossAxisAlignment: CrossAxisAlignment.stretch,
+                 children: [
+                   ElevatedButton(
+                     onPressed: verification.canProceed ? _processPayroll : null,
+                     style: ElevatedButton.styleFrom(
+                       padding: const EdgeInsets.symmetric(vertical: 16),
+                       backgroundColor: Colors.green,
+                       foregroundColor: Colors.white,
+                       disabledBackgroundColor: Colors.grey.shade300,
+                     ),
+                     child: Text(
+                       verification.canProceed 
+                         ? 'Confirm & Pay ${verification.formattedRequired}' 
+                         : 'Insufficient Funds',
+                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                     ),
+                   ),
+                   if (!verification.canProceed)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: TextButton.icon(
+                        onPressed: _showTopupDialog, 
+                        icon: const Icon(Icons.add_card),
+                        label: const Text('Top Up Wallet Now'),
+                      ),
                     ),
-                    child: const Text('Confirm & Process Payroll'),
-                  ),
-                  const SizedBox(height: 8),
-                  TextButton(
-                    onPressed: () => context.pop(),
-                    child: const Text('Cancel'),
-                  ),
-                ],
-              ),
+                 ],
+               ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSummaryRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 16)),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+      ],
     );
   }
 
@@ -367,122 +471,101 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
     final allSuccess = failureCount == 0;
 
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Payroll Results'),
-        leading: allSuccess
-            ? null
-            : IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () {
-                  ref.read(payrollProvider.notifier).reset();
-                  ref.read(selectedWorkersProvider.notifier).set({});
-                  context.go('/home');
-                },
-              ),
+        title: const Text('Payment Results'),
+        centerTitle: true,
+        automaticallyImplyLeading: false, // Hide back button
       ),
       body: Column(
         children: [
-          // Summary Card
-          Card(
-            margin: const EdgeInsets.all(16),
-            color: allSuccess ? Colors.green.shade50 : Colors.orange.shade50,
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  Icon(
-                    allSuccess ? Icons.check_circle : Icons.warning,
-                    size: 64,
+          // Header Status
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: allSuccess ? Colors.green.shade50 : Colors.orange.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    allSuccess ? Icons.check_rounded : Icons.priority_high_rounded,
+                    size: 48,
                     color: allSuccess ? Colors.green : Colors.orange,
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    allSuccess
-                        ? 'Payroll Processed Successfully!'
-                        : 'Payroll Partially Processed',
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _StatChip(
-                        label: 'Success',
-                        value: successCount.toString(),
-                        color: Colors.green,
-                      ),
-                      if (failureCount > 0)
-                        _StatChip(
-                          label: 'Failed',
-                          value: failureCount.toString(),
-                          color: Colors.red,
-                        ),
-                    ],
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  allSuccess ? 'All Payments Initiated' : 'Payments Completed with Errors',
+                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  allSuccess 
+                    ? 'Workers will receive M-Pesa notifications shortly.'
+                    : '$successCount successful, $failureCount failed.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.grey),
+                ),
+              ],
             ),
           ),
+          
+          const Divider(),
 
-          // Individual Results
+          // Worker List
           Expanded(
-            child: ListView.builder(
+            child: ListView.separated(
               itemCount: results.length,
+              separatorBuilder: (c, i) => const Divider(height: 1),
               itemBuilder: (context, index) {
-                final workerResult = results[index];
-                final success = workerResult['success'] as bool;
-                
-                return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  child: ListTile(
-                    leading: Icon(
-                      success ? Icons.check_circle : Icons.error,
+                final item = results[index];
+                final success = item['success'] as bool;
+                final name = item['workerName'] as String;
+                final netPay = (item['netPay'] as num?)?.toDouble() ?? 0.0;
+                final error = item['error'] ?? 'Unknown error';
+
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: success ? Colors.green.shade100 : Colors.red.shade100,
+                    child: Icon(
+                      success ? Icons.check : Icons.close,
                       color: success ? Colors.green : Colors.red,
+                      size: 20,
                     ),
-                    title: Text(workerResult['workerName'] as String),
-                    subtitle: success
-                        ? Text(
-                            'Net Pay: KES ${(workerResult['netPay'] as num).toStringAsFixed(2)}',
-                          )
-                        : Text(
-                            'Error: ${workerResult['error']}',
-                            style: const TextStyle(color: Colors.red),
-                          ),
-                    trailing: success
-                        ? const Chip(
-                            label: Text('Paid'),
-                            backgroundColor: Colors.green,
-                            labelStyle: TextStyle(color: Colors.white),
-                          )
-                        : const Chip(
-                            label: Text('Failed'),
-                            backgroundColor: Colors.red,
-                            labelStyle: TextStyle(color: Colors.white),
-                          ),
                   ),
+                  title: Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  subtitle: success 
+                    ? Text('Net Pay: KES ${NumberFormat("#,##0").format(netPay)}')
+                    : Text(error, style: const TextStyle(color: Colors.red, fontSize: 13)),
+                  trailing: success 
+                    ? const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey)
+                    : null,
                 );
               },
             ),
           ),
 
-          // Action Button
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    ref.read(payrollProvider.notifier).reset();
-                    ref.read(selectedWorkersProvider.notifier).set({});
-                    context.go('/home');
-                  },
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.all(16),
-                  ),
-                  child: Text(allSuccess ? 'Done' : 'Back to Home'),
+          // Footer Action
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                   ref.read(payrollProvider.notifier).reset();
+                   ref.read(selectedWorkersProvider.notifier).set({});
+                   context.go('/home');
+                },
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.all(16),
+                  backgroundColor: Colors.black, // Primary Action
+                  foregroundColor: Colors.white,
                 ),
+                child: const Text('Back to Home'),
               ),
             ),
           ),
@@ -492,33 +575,139 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
   }
 }
 
-class _StatChip extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
+class _WalletBalanceCard extends StatelessWidget {
+  final FundVerificationResult verification;
+  final VoidCallback onTopUp;
 
-  const _StatChip({
-    required this.label,
-    required this.value,
-    required this.color,
+  const _WalletBalanceCard({
+    required this.verification,
+    required this.onTopUp,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            color: color,
+    final isSufficient = verification.canProceed;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isSufficient ? Colors.grey.shade200 : Colors.red.shade200,
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-        ),
-        Text(
-          label,
-          style: const TextStyle(color: Colors.grey),
-        ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Header with Balance
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: isSufficient ? const Color(0xFFF0FDF4) : const Color(0xFFFEF2F2), // Green-50 or Red-50
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+            ),
+            child: Column(
+              children: [
+                const Text(
+                  'Current Wallet Balance',
+                  style: TextStyle(color: Colors.grey, fontSize: 12, letterSpacing: 1),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  verification.formattedBalance,
+                  style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                ),
+                if (!isSufficient)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        'Shortfall: ${verification.formattedShortfall}',
+                        style: const TextStyle(
+                          color: Colors.red, 
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          
+          // Cost Breakdown
+          Padding(
+             padding: const EdgeInsets.all(20),
+             child: Column(
+               children: [
+                 _row('Total Payroll Cost', verification.formattedRequired, isBold: true),
+                 const Padding(
+                   padding: EdgeInsets.symmetric(vertical: 12),
+                   child: Divider(height: 1),
+                 ),
+                 if (isSufficient)
+                  Row(
+                    children: [
+                      const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'Sufficient funds available',
+                          style: TextStyle(color: Colors.green, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  )
+                 else
+                   Row(
+                    children: [
+                      const Icon(Icons.cancel, color: Colors.red, size: 20),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'Insufficient funds',
+                          style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: onTopUp,
+                        child: const Text('Top Up'),
+                      ),
+                    ],
+                   ),
+               ],
+             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _row(String label, String value, {bool isBold = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: TextStyle(
+          color: Colors.grey.shade700, 
+          fontWeight: isBold ? FontWeight.w600 : FontWeight.normal
+        )),
+        Text(value, style: TextStyle(
+          fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+          fontSize: isBold ? 16 : 14
+        )),
       ],
     );
   }

@@ -82,14 +82,14 @@ class ReportTotals {
 
   factory ReportTotals.fromJson(Map<String, dynamic> json) {
     return ReportTotals(
-      grossPay: (json['grossPay'] as num).toDouble(),
+      grossPay: (json['grossPay'] as num?)?.toDouble() ?? 0,
       netPay: (json['netPay'] as num?)?.toDouble() ?? 0,
-      paye: (json['paye'] as num).toDouble(),
-      nssf: (json['nssf'] as num).toDouble(),
-      nhif: (json['nhif'] as num).toDouble(),
-      housingLevy: (json['housingLevy'] as num).toDouble(),
+      paye: (json['paye'] as num?)?.toDouble() ?? 0,
+      nssf: (json['nssf'] as num?)?.toDouble() ?? 0,
+      nhif: (json['nhif'] as num?)?.toDouble() ?? 0,
+      housingLevy: (json['housingLevy'] as num?)?.toDouble() ?? 0,
       totalDeductions: (json['totalDeductions'] as num?)?.toDouble() ?? 0,
-      workerCount: json['workerCount'],
+      workerCount: json['workerCount'] as int?,
     );
   }
 }

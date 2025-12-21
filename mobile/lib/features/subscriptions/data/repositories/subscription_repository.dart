@@ -380,4 +380,96 @@ class SubscriptionRepository {
       throw Exception('Failed to initiate subscription: $e');
     }
   }
+
+  /// Initiate M-Pesa STK Push for subscription payment
+  Future<MpesaSubscriptionResult> subscribeWithMpesa(String planId, String phoneNumber) async {
+    try {
+      final response = await _apiService.dio.post(
+        '/subscriptions/mpesa-subscribe',
+        data: {
+          'planId': planId,
+          'phoneNumber': phoneNumber,
+        },
+      );
+      
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        return MpesaSubscriptionResult(
+          success: data['success'] ?? false,
+          message: data['message']?.toString() ?? 'Unknown response',
+          paymentId: data['paymentId']?.toString(),
+          checkoutRequestId: data['checkoutRequestId']?.toString(),
+          subscriptionId: data['subscriptionId']?.toString(),
+        );
+      }
+      throw Exception('Invalid response from server');
+    } on DioException catch (e) {
+      throw Exception(_apiService.getErrorMessage(e));
+    } catch (e) {
+      throw Exception('Failed to initiate M-Pesa subscription: $e');
+    }
+  }
+
+  /// Check M-Pesa payment status
+  Future<MpesaPaymentStatus> checkMpesaPaymentStatus(String paymentId) async {
+    try {
+      final response = await _apiService.dio.get(
+        '/subscriptions/mpesa-payment-status/$paymentId',
+      );
+      
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        return MpesaPaymentStatus(
+          paymentId: data['paymentId']?.toString() ?? '',
+          status: data['status']?.toString() ?? 'PENDING',
+          amount: double.tryParse(data['amount']?.toString() ?? '0') ?? 0,
+          currency: data['currency']?.toString() ?? 'KES',
+          paidDate: data['paidDate'] != null ? DateTime.tryParse(data['paidDate'].toString()) : null,
+        );
+      }
+      throw Exception('Invalid response from server');
+    } on DioException catch (e) {
+      throw Exception(_apiService.getErrorMessage(e));
+    } catch (e) {
+      throw Exception('Failed to check payment status: $e');
+    }
+  }
+}
+
+/// Result of initiating M-Pesa subscription
+class MpesaSubscriptionResult {
+  final bool success;
+  final String message;
+  final String? paymentId;
+  final String? checkoutRequestId;
+  final String? subscriptionId;
+
+  MpesaSubscriptionResult({
+    required this.success,
+    required this.message,
+    this.paymentId,
+    this.checkoutRequestId,
+    this.subscriptionId,
+  });
+}
+
+/// Status of M-Pesa payment
+class MpesaPaymentStatus {
+  final String paymentId;
+  final String status;
+  final double amount;
+  final String currency;
+  final DateTime? paidDate;
+
+  MpesaPaymentStatus({
+    required this.paymentId,
+    required this.status,
+    required this.amount,
+    required this.currency,
+    this.paidDate,
+  });
+
+  bool get isCompleted => status == 'COMPLETED';
+  bool get isPending => status == 'PENDING';
+  bool get isFailed => status == 'FAILED';
 }

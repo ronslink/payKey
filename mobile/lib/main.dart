@@ -16,6 +16,7 @@ import 'features/payroll/presentation/pages/payroll_page.dart';
 import 'features/payroll/presentation/pages/run_payroll_page.dart';
 import 'features/payroll/presentation/pages/payroll_review_page.dart';
 import 'features/payroll/presentation/pages/payslip_page.dart';
+import 'features/payroll/presentation/pages/payroll_confirm_page.dart';
 import 'features/payroll/data/models/payroll_model.dart';
 import 'features/finance/presentation/pages/finance_page.dart';
 import 'features/finance/presentation/pages/accounting_page.dart';
@@ -432,6 +433,18 @@ final _payrollRoutes = <RouteBase>[
       final id = state.pathParameters['id']!;
       final calculation = state.extra as PayrollCalculation?;
       return PayslipPage(payslipId: id, calculation: calculation);
+    },
+  ),
+  GoRoute(
+    path: '/payroll/confirm/:id',
+    name: 'payrollConfirm',
+    builder: (_, state) {
+      final id = state.pathParameters['id']!;
+      final extraData = state.extra;
+      final workerIds = extraData is List 
+          ? extraData.map((e) => e.toString()).toList()
+          : <String>[];
+      return PayrollConfirmPage(payPeriodId: id, workerIds: workerIds);
     },
   ),
 ];

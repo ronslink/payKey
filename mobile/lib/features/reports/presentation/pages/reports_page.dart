@@ -191,14 +191,8 @@ class ReportsPage extends ConsumerWidget {
                 );
               }
 
-              // Auto-select first if none selected
-              if (reportParams.payPeriodId == null && sortedPeriods.isNotEmpty) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  ref.read(reportParamsProvider.notifier).update(
-                      reportParams.copyWith(payPeriodId: sortedPeriods.first.id));
-                });
-              }
-
+              // Auto-select removed to prevent loops
+              
               return Card(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

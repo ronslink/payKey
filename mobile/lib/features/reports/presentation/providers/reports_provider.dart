@@ -27,6 +27,18 @@ class ReportParams {
       year: year ?? this.year,
     );
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is ReportParams &&
+        other.type == type &&
+        other.payPeriodId == payPeriodId &&
+        other.year == year;
+  }
+
+  @override
+  int get hashCode => Object.hash(type, payPeriodId, year);
 }
 
 class ReportParamsNotifier extends Notifier<ReportParams> {

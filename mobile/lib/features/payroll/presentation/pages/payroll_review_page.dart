@@ -316,7 +316,6 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
     setState(() => _isLoading = true);
     try {
       final repository = ref.read(payPeriodRepositoryProvider);
-      final payrollRepo = ref.read(payrollRepositoryProvider);
       PayPeriod updatedPeriod;
 
       switch (_payPeriod!.status) {
@@ -383,11 +382,15 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
             if (confirmed != true) return;
           }
 
-          // IMPORTANT: Finalize payroll records before completing the period
-          await payrollRepo.finalizePayroll(widget.payPeriodId);
-          await repository.completePayPeriod(widget.payPeriodId);
-          updatedPeriod = await repository.getPayPeriod(widget.payPeriodId);
-          break;
+          // Navigate to confirmation page which handles M-Pesa payments
+          // and shows results dialog
+          if (!mounted) return;
+          final workerIds = _payrollItems.map((e) => e.workerId).toList();
+          context.push(
+            '/payroll/confirm/${widget.payPeriodId}',
+            extra: workerIds,
+          );
+          return; // Exit early, confirm page handles the rest
         case PayPeriodStatus.completed:
           await repository.closePayPeriod(widget.payPeriodId);
           updatedPeriod = await repository.getPayPeriod(widget.payPeriodId);

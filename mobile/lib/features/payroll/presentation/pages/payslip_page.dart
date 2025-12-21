@@ -30,146 +30,290 @@ class PayslipPage extends ConsumerWidget {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF111827),
-        elevation: 0,
-        title: const Text(
-          'Payslip Details',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => context.pop(),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.download),
-            onPressed: () => _downloadPdf(context, item),
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: CustomScrollView(
+        slivers: [
+          // Gradient App Bar with worker info
+          SliverAppBar(
+            expandedHeight: 220,
+            pinned: true,
+            backgroundColor: const Color(0xFF6366F1),
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+              onPressed: () => context.pop(),
+            ),
+            actions: [
+              IconButton(
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.download, color: Colors.white, size: 20),
+                ),
+                onPressed: () => _downloadPdf(context, item),
+              ),
+              const SizedBox(width: 8),
+            ],
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 60, 24, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 28,
+                              backgroundColor: Colors.white.withValues(alpha: 0.2),
+                              child: Text(
+                                item.workerName.isNotEmpty ? item.workerName[0].toUpperCase() : 'E',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.workerName,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Payslip #${item.id ?? "Draft"}',
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(alpha: 0.9),
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        // Net Pay highlight
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Net Pay',
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(alpha: 0.8),
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'KES ${NumberFormat('#,###.00').format(item.netPay)}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.shade400,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Icon(Icons.check_circle, color: Colors.white, size: 16),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      'PAID',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // Content
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  // Earnings Card
+                  _buildSectionCard(
+                    'Earnings',
+                    Icons.trending_up,
+                    Colors.green,
+                    [
+                      _buildAmountRow('Basic Salary', item.grossSalary),
+                      if (item.bonuses > 0) _buildAmountRow('Bonuses', item.bonuses),
+                      if (item.otherEarnings > 0) _buildAmountRow('Other Earnings', item.otherEarnings),
+                      const Divider(height: 24),
+                      _buildAmountRow('Gross Pay', item.totalGrossEarnings, isBold: true, color: Colors.green.shade700),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Statutory Deductions Card
+                  _buildSectionCard(
+                    'Statutory Deductions',
+                    Icons.account_balance,
+                    Colors.orange,
+                    [
+                      _buildAmountRow('PAYE (Income Tax)', item.taxBreakdown.paye, isDeduction: true),
+                      _buildAmountRow('NSSF (Pension)', item.taxBreakdown.nssf, isDeduction: true),
+                      _buildAmountRow('SHIF (Health)', item.taxBreakdown.nhif, isDeduction: true),
+                      _buildAmountRow('Housing Levy', item.taxBreakdown.housingLevy, isDeduction: true),
+                      if (item.otherDeductions > 0)
+                        _buildAmountRow('Other Deductions', item.otherDeductions, isDeduction: true),
+                      const Divider(height: 24),
+                      _buildAmountRow('Total Deductions', item.totalDeductions, isBold: true, color: Colors.red.shade700),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  // Legal Notice
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, color: Colors.grey.shade600, size: 20),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'This payslip complies with Kenya Employment Act 2007, Section 31.',
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                ],
+              ),
+            ),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            // Header Card
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+    );
+  }
+
+  Widget _buildSectionCard(String title, IconData icon, Color color, List<Widget> children) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, size: 18, color: color),
               ),
-              child: Column(
-                children: [
-                  Text(
-                    item.workerName,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF111827),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Payslip #${item.id ?? "N/A"}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Color(0xFF6B7280),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  const Divider(),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Net Pay',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF111827),
-                        ),
-                      ),
-                      Text(
-                        'KES ${NumberFormat('#,###.00').format(item.netPay)}',
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF10B981),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAmountRow(String label, double amount, {bool isBold = false, bool isDeduction = false, Color? color}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: isBold ? Colors.grey.shade800 : Colors.grey.shade600,
+              fontWeight: isBold ? FontWeight.w600 : FontWeight.normal,
             ),
-            const SizedBox(height: 24),
-
-            // Details Card
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Earnings',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF111827),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildRow('Basic Salary', item.grossSalary),
-                  if (item.bonuses > 0) _buildRow('Bonuses', item.bonuses),
-                  if (item.otherEarnings > 0) _buildRow('Other Earnings', item.otherEarnings),
-                  const Divider(height: 32),
-                  _buildRow('Gross Pay', item.totalGrossEarnings, isBold: true),
-
-                  const SizedBox(height: 32),
-
-                  const Text(
-                    'Deductions',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF111827),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildRow('NSSF', item.taxBreakdown.nssf),
-                  _buildRow('NHIF', item.taxBreakdown.nhif),
-                  _buildRow('Housing Levy', item.taxBreakdown.housingLevy),
-                  _buildRow('PAYE', item.taxBreakdown.paye),
-                  if (item.otherDeductions > 0) _buildRow('Other Deductions', item.otherDeductions),
-                  const Divider(height: 32),
-                  _buildRow('Total Deductions', item.totalDeductions, isBold: true),
-                ],
-              ),
+          ),
+          Text(
+            '${isDeduction ? "- " : ""}KES ${NumberFormat('#,###.00').format(amount)}',
+            style: TextStyle(
+              fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
+              color: color ?? (isDeduction ? Colors.red.shade600 : Colors.grey.shade800),
+              fontSize: isBold ? 16 : 14,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -214,32 +358,5 @@ class PayslipPage extends ConsumerWidget {
         );
       }
     }
-  }
-
-  Widget _buildRow(String label, double amount, {bool isBold = false}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-              color: isBold ? const Color(0xFF111827) : const Color(0xFF6B7280),
-            ),
-          ),
-          Text(
-            'KES ${amount.toStringAsFixed(2)}',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-              color: const Color(0xFF111827),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }

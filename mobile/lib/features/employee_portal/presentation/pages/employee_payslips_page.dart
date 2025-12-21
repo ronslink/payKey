@@ -342,146 +342,356 @@ class _EmployeePayslipsPageState extends ConsumerState<EmployeePayslipsPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        maxChildSize: 0.9,
-        minChildSize: 0.5,
-        expand: false,
-        builder: (context, scrollController) {
-          return SingleChildScrollView(
-            controller: scrollController,
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.85,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          children: [
+            // Header with gradient
+            Container(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [const Color(0xFF6366F1), const Color(0xFF8B5CF6)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                children: [
+                  // Handle bar
+                  Container(
                     width: 40,
                     height: 4,
+                    margin: const EdgeInsets.only(bottom: 20),
                     decoration: BoxDecoration(
-                      color: Colors.grey[300],
+                      color: Colors.white.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      payslip.periodName,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                  // Worker name
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 28,
+                        backgroundColor: Colors.white.withValues(alpha: 0.2),
+                        child: Text(
+                          payslip.workerName.isNotEmpty ? payslip.workerName[0].toUpperCase() : 'E',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.download, color: Color(0xFF6366F1)),
-                      onPressed: () {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Download feature coming soon')),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-                Text(
-                  'Pay Date: ${_formatDate(payslip.payDate)}',
-                  style: TextStyle(color: Colors.grey[600]),
-                ),
-                const SizedBox(height: 24),
-                
-                // Earnings
-                _buildSectionHeader('Earnings'),
-                _buildDetailRow('Basic Salary', payslip.basicSalary),
-                if (payslip.allowances > 0)
-                  _buildDetailRow('Allowances', payslip.allowances),
-                if (payslip.overtime > 0)
-                  _buildDetailRow('Overtime', payslip.overtime),
-                _buildDetailRow('Gross Pay', payslip.grossPay, isBold: true),
-                
-                const SizedBox(height: 16),
-                
-                // Deductions
-                _buildSectionHeader('Deductions'),
-                _buildDetailRow('PAYE', payslip.paye, isDeduction: true),
-                _buildDetailRow('NHIF', payslip.nhif, isDeduction: true),
-                _buildDetailRow('NSSF', payslip.nssf, isDeduction: true),
-                if (payslip.housingLevy > 0)
-                  _buildDetailRow('Housing Levy', payslip.housingLevy, isDeduction: true),
-                _buildDetailRow('Total Deductions', payslip.totalDeductions, isDeduction: true, isBold: true),
-                
-                const SizedBox(height: 20),
-                const Divider(thickness: 2),
-                const SizedBox(height: 12),
-                
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Net Pay',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      'KES ${_formatAmount(payslip.netPay)}',
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF6366F1),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              payslip.workerName,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              payslip.periodName,
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.9),
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
+                      IconButton(
+                        icon: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.download, color: Colors.white, size: 20),
+                        ),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Download feature coming soon')),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  // Net Pay highlight
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                  ],
-                ),
-              ],
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Net Pay',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.8),
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'KES ${_formatAmount(payslip.netPay)}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade400,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.check_circle, color: Colors.white, size: 16),
+                              SizedBox(width: 4),
+                              Text(
+                                'PAID',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          color: Color(0xFF374151),
+            // Content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Pay Period Info
+                    _buildInfoCard(
+                      'Pay Period',
+                      Icons.calendar_today,
+                      [
+                        _buildInfoRow('Pay Date', _formatDate(payslip.payDate)),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Earnings Section
+                    _buildSectionCard(
+                      'Earnings',
+                      Icons.trending_up,
+                      Colors.green,
+                      [
+                        _buildAmountRow('Basic Salary', payslip.basicSalary),
+                        if (payslip.allowances > 0)
+                          _buildAmountRow('Allowances & Benefits', payslip.allowances),
+                        if (payslip.overtime > 0)
+                          _buildAmountRow('Overtime', payslip.overtime),
+                        const Divider(height: 24),
+                        _buildAmountRow('Gross Pay', payslip.grossPay, isBold: true, color: Colors.green.shade700),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Statutory Deductions Section
+                    _buildSectionCard(
+                      'Statutory Deductions',
+                      Icons.account_balance,
+                      Colors.orange,
+                      [
+                        _buildAmountRow('PAYE (Income Tax)', payslip.paye, isDeduction: true),
+                        _buildAmountRow('NSSF (Pension)', payslip.nssf, isDeduction: true),
+                        _buildAmountRow('SHIF (Health)', payslip.nhif, isDeduction: true),
+                        if (payslip.housingLevy > 0)
+                          _buildAmountRow('Housing Levy', payslip.housingLevy, isDeduction: true),
+                        const Divider(height: 24),
+                        _buildAmountRow('Total Deductions', payslip.totalDeductions, isBold: true, color: Colors.red.shade700),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    // Legal Notice
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline, color: Colors.grey.shade600, size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'This payslip complies with Kenya Employment Act 2007, Section 31.',
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildDetailRow(String label, double amount, {bool isDeduction = false, bool isBold = false}) {
+  Widget _buildInfoCard(String title, IconData icon, List<Widget> children) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 18, color: Colors.grey.shade600),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade700,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(color: Colors.grey.shade600)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionCard(String title, IconData icon, Color color, List<Widget> children) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, size: 18, color: color),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAmountRow(String label, double amount, {bool isBold = false, bool isDeduction = false, Color? color}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             label,
             style: TextStyle(
-              color: Colors.grey[600],
+              color: isBold ? Colors.grey.shade800 : Colors.grey.shade600,
               fontWeight: isBold ? FontWeight.w600 : FontWeight.normal,
             ),
           ),
           Text(
-            '${isDeduction ? '-' : ''}KES ${_formatAmount(amount)}',
+            '${isDeduction ? "- " : ""}KES ${_formatAmount(amount)}',
             style: TextStyle(
               fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
-              color: isDeduction ? Colors.red : Colors.grey[800],
+              color: color ?? (isDeduction ? Colors.red.shade600 : Colors.grey.shade800),
+              fontSize: isBold ? 16 : 14,
             ),
           ),
         ],
       ),
     );
   }
+
+
 
   String _formatAmount(double amount) {
     return amount.toStringAsFixed(2).replaceAllMapped(

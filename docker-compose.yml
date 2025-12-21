@@ -45,6 +45,10 @@ services:
       - DB_NAME=paykey
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      # M-Pesa API Configuration
+      # Sandbox (default): https://sandbox.safaricom.co.ke
+      # Live/Production:   https://api.safaricom.co.ke
+      - MPESA_BASE_URL=https://sandbox.safaricom.co.ke
       # M-Pesa Sandbox Credentials
       - MPESA_CONSUMER_KEY=UyNcT5SZGGdCBAyzJdcpTR53Lujxyu2rW5kcJ9IVqFjGdqLh
       - MPESA_CONSUMER_SECRET=gPTUyt9gyzTUyRLGhdkNEpFwFFpjsIVIPunuqhI6rR4yolL6Y1yFURnOkq1d3wMv

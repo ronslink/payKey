@@ -299,8 +299,12 @@ class EmployeeLeaveRequest {
 class EmployeePayslip {
   final String id;
   final String workerId;
+  final String workerName;
+  final String? employerName;
   final String periodName;
   final DateTime payDate;
+  final DateTime? periodStart;
+  final DateTime? periodEnd;
   final double basicSalary;
   final double allowances;
   final double overtime;
@@ -315,8 +319,12 @@ class EmployeePayslip {
   const EmployeePayslip({
     required this.id,
     required this.workerId,
+    required this.workerName,
+    this.employerName,
     required this.periodName,
     required this.payDate,
+    this.periodStart,
+    this.periodEnd,
     required this.basicSalary,
     required this.allowances,
     required this.overtime,
@@ -334,13 +342,18 @@ class EmployeePayslip {
     final payPeriod = json['payPeriod'] as Map<String, dynamic>?;
     final taxBreakdown = json['taxBreakdown'] as Map<String, dynamic>?;
     final deductions = json['deductions'] as Map<String, dynamic>?;
+    final worker = json['worker'] as Map<String, dynamic>?;
 
     return EmployeePayslip(
       id: json['id'] as String,
       workerId: json['workerId'] as String,
+      workerName: worker?['name'] as String? ?? json['workerName'] as String? ?? 'Employee',
+      employerName: json['employerName'] as String?,
       periodName: payPeriod?['name'] as String? ?? json['periodName'] as String? ?? 'Pay Period',
       payDate: DateTime.parse(json['payDate'] as String? ?? payPeriod?['paymentDate'] as String? ?? DateTime.now().toIso8601String()),
-      basicSalary: parseDouble(json['grossSalary']), // Using grossSalary as basic for now if basic not separate
+      periodStart: json['periodStart'] != null ? DateTime.parse(json['periodStart'] as String) : null,
+      periodEnd: json['periodEnd'] != null ? DateTime.parse(json['periodEnd'] as String) : null,
+      basicSalary: parseDouble(json['grossSalary']),
       allowances: parseDouble(json['bonuses']) + parseDouble(json['otherEarnings']),
       overtime: parseDouble(json['overtimePay']),
       grossPay: parseDouble(json['grossSalary']),
