@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { Worker } from '../../workers/entities/worker.entity';
 import { PayPeriod } from './pay-period.entity';
+import { User } from '../../users/entities/user.entity';
 
 export enum PayrollStatus {
   DRAFT = 'draft',
@@ -27,6 +28,10 @@ export class PayrollRecord {
 
   @Column({ type: 'uuid' })
   userId: string;
+
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'userId' })
+  user: User;
 
   @Column({ type: 'uuid' })
   workerId: string;

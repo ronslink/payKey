@@ -10,13 +10,14 @@ import {
   Request,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PlatinumGuard } from '../auth/platinum.guard';
 import { TimeTrackingService } from './time-tracking.service';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 
 @ApiTags('Time Tracking')
 @ApiBearerAuth()
 @Controller('time-tracking')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PlatinumGuard)
 export class TimeTrackingController {
   constructor(private readonly timeTrackingService: TimeTrackingService) { }
 

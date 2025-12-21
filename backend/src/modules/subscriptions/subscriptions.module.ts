@@ -7,6 +7,7 @@ import { SubscriptionPayment } from './entities/subscription-payment.entity';
 import { FeatureAccessService } from './feature-access.service';
 import { MockDataService } from './mock-data.service';
 import { UsersModule } from '../users/users.module';
+import { PaymentsModule } from '../payments/payments.module';
 
 import { SubscriptionCallbackController } from './subscription-callback.controller';
 
@@ -14,6 +15,7 @@ import { SubscriptionCallbackController } from './subscription-callback.controll
   imports: [
     TypeOrmModule.forFeature([Subscription, SubscriptionPayment]),
     forwardRef(() => UsersModule),
+    forwardRef(() => PaymentsModule),
   ],
   controllers: [SubscriptionsController, FeatureAccessController, SubscriptionCallbackController],
   providers: [FeatureAccessService, MockDataService],

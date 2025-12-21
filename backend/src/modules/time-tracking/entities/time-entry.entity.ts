@@ -9,6 +9,7 @@ import {
   Index,
 } from 'typeorm';
 import { Worker } from '../../workers/entities/worker.entity';
+import { Property } from '../../properties/entities/property.entity';
 
 export enum TimeEntryStatus {
   ACTIVE = 'ACTIVE', // Currently clocked in
@@ -33,6 +34,13 @@ export class TimeEntry {
 
   @Column({ type: 'uuid' })
   userId: string; // Employer ID
+
+  @ManyToOne(() => Property, { nullable: true })
+  @JoinColumn({ name: 'propertyId' })
+  property: Property;
+
+  @Column({ type: 'uuid', nullable: true })
+  propertyId: string;
 
   @Column({ type: 'uuid', nullable: true })
   recordedById: string; // Who logged it (worker's user ID or employer)

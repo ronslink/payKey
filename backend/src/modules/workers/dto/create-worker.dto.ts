@@ -45,6 +45,10 @@ export class CreateWorkerDto {
   @IsNotEmpty()
   startDate: string;
 
+  @IsDateString()
+  @IsOptional()
+  dateOfBirth?: string;
+
   @IsString()
   @IsOptional()
   email?: string;

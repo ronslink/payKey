@@ -38,6 +38,9 @@ export class Property {
   @Column({ type: 'int', default: 100 }) // Geofence radius in meters
   geofenceRadius: number;
 
+  @Column({ type: 'varchar', nullable: true })
+  what3words: string;
+
   @Column({ default: true })
   isActive: boolean;
 

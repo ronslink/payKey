@@ -29,10 +29,20 @@ export class TimeTrackingService {
     // Check if worker exists and belongs to employer
     const worker = await this.workersRepository.findOne({
       where: { id: workerId, userId },
+      relations: ['property', 'user'],
     });
 
     if (!worker) {
       throw new NotFoundException('Worker not found');
+    }
+
+    // Geofencing Validation
+    // Logic: If Employer is PLATINUM AND Property has Coordinates -> Validate
+    if (worker.user?.tier === 'PLATINUM' && worker.property?.latitude && worker.property?.longitude) {
+      if (!location) {
+        throw new BadRequestException('Location is required for clock-in at this property');
+      }
+      this.validateGeofence(worker, location);
     }
 
     // Check if already clocked in
@@ -58,6 +68,29 @@ export class TimeTrackingService {
     });
 
     return this.timeEntryRepository.save(entry);
+  }
+
+  private validateGeofence(worker: Worker, location: { lat: number; lng: number }) {
+    const { latitude, longitude, geofenceRadius } = worker.property;
+
+    // Haversine Formula
+    const R = 6371e3; // Earth radius in meters
+    const lat1 = (Number(location.lat) * Math.PI) / 180;
+    const lat2 = (Number(latitude) * Math.PI) / 180;
+    const deltaLat = ((Number(latitude) - Number(location.lat)) * Math.PI) / 180;
+    const deltaLng = ((Number(longitude) - Number(location.lng)) * Math.PI) / 180;
+
+    const a =
+      Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+      Math.cos(lat1) * Math.cos(lat2) *
+      Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = R * c; // in meters
+
+    if (distance > (geofenceRadius || 100)) {
+      throw new BadRequestException(`Clock-in rejected: You are ${Math.round(distance)}m away from the property location. Allowed radius: ${geofenceRadius || 100}m.`);
+    }
   }
 
   /**

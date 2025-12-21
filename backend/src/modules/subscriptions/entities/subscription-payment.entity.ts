@@ -21,6 +21,7 @@ export enum PaymentMethod {
   BANK_TRANSFER = 'Bank Transfer',
   PAYPAL = 'PayPal',
   STRIPE = 'stripe',
+  MPESA = 'mpesa',
 }
 
 // Transformer to convert decimal strings to numbers

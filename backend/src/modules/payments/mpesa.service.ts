@@ -13,14 +13,20 @@ import {
 @Injectable()
 export class MpesaService {
   private readonly logger = new Logger(MpesaService.name);
-  private readonly baseUrl = 'https://sandbox.safaricom.co.ke'; // Use env for prod
+  private readonly baseUrl: string;
 
   constructor(
     private configService: ConfigService,
     private httpService: HttpService,
     @InjectRepository(Transaction)
     private transactionsRepository: Repository<Transaction>,
-  ) { }
+  ) {
+    // Use MPESA_BASE_URL env var, fallback to sandbox for development
+    this.baseUrl = this.configService.get('MPESA_BASE_URL')
+      || 'https://sandbox.safaricom.co.ke';
+
+    this.logger.log(`M-Pesa API configured for: ${this.baseUrl}`);
+  }
 
   async getAccessToken(): Promise<string> {
     const consumerKey = this.configService.get('MPESA_CONSUMER_KEY');

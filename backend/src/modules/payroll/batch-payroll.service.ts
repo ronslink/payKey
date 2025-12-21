@@ -24,7 +24,7 @@ export class BatchPayrollService {
     private mpesaService: MpesaService,
     private taxesService: TaxesService,
     private taxPaymentsService: TaxPaymentsService,
-  ) {}
+  ) { }
 
   async processBatchPayroll(
     userId: string,
@@ -50,11 +50,19 @@ export class BatchPayrollService {
     // Process each worker's payroll
     for (const worker of selectedWorkers) {
       try {
-        // Calculate payroll
+        const processDate = new Date(batchRequest.processDate);
+        // Calculate adjusted salary based on leave
+        const { adjustedGross, deduction, leaveDays } =
+          await this.payrollService.calculateAdjustedSalary(worker, {
+            year: processDate.getFullYear(),
+            month: processDate.getMonth() + 1,
+          });
+
+        // Calculate payroll taxes on ADJUSTED gross
         const taxBreakdown = await this.taxesService.calculateTaxes(
-          worker.salaryGross,
+          adjustedGross,
         );
-        const netPay = worker.salaryGross - taxBreakdown.totalDeductions;
+        const netPay = adjustedGross - taxBreakdown.totalDeductions;
 
         // Create transaction record
         const transaction = this.transactionsRepository.create({

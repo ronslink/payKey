@@ -14,6 +14,7 @@ import type { Response } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PayrollRecord } from './entities/payroll-record.entity';
+import { User } from '../users/entities/user.entity';
 import type { AuthenticatedRequest } from '../../common/interfaces/user.interface';
 import { PayrollService } from './payroll.service';
 import { PayslipService } from './payslip.service';
@@ -29,7 +30,17 @@ export class PayrollController {
     private readonly taxesService: TaxesService,
     @InjectRepository(PayrollRecord)
     private payrollRepository: Repository<PayrollRecord>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
   ) { }
+
+  // Helper method to get employer name (fetch once, use for all payslips)
+  private async getEmployerName(userId: string): Promise<string> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    return user?.businessName
+      || [user?.firstName, user?.lastName].filter(Boolean).join(' ')
+      || 'Employer';
+  }
 
   // ... existing methods ...
 
@@ -38,6 +49,9 @@ export class PayrollController {
     @Request() req: AuthenticatedRequest,
     @Param('payPeriodId') payPeriodId: string,
   ) {
+    // Fetch employer name ONCE for all payslips
+    const employerName = await this.getEmployerName(req.user.userId);
+
     // 1. Fetch all finalized records for this period
     const records = await this.payrollRepository.find({
       where: {
@@ -52,8 +66,8 @@ export class PayrollController {
       throw new Error('No finalized payroll records found for this period. Please verify the period is completed.');
     }
 
-    // 2. Generate Payslips
-    const payslips = await this.payslipService.generatePayslipsBatch(records);
+    // 2. Generate Payslips (employer name passed once for all)
+    const payslips = await this.payslipService.generatePayslipsBatch(records, employerName);
 
     // 3. Generate Tax Submission
     const taxSubmission = await this.taxesService.generateTaxSubmission(
@@ -233,14 +247,19 @@ export class PayrollController {
   ) {
     const record = await this.payrollRepository.findOne({
       where: { id: payrollRecordId, userId: req.user.userId },
-      relations: ['worker', 'payPeriod'],
+      relations: ['worker', 'payPeriod', 'user'],
     });
 
     if (!record) {
       throw new Error('Payroll record not found');
     }
 
-    const buffer = await this.payslipService.generatePayslip(record);
+    // Get employer name: prefer businessName, fallback to fullName
+    const employerName = record.user?.businessName
+      || [record.user?.firstName, record.user?.lastName].filter(Boolean).join(' ')
+      || 'Employer';
+
+    const buffer = await this.payslipService.generatePayslip(record, employerName);
 
     res.set({
       'Content-Type': 'application/pdf',
@@ -257,6 +276,9 @@ export class PayrollController {
     @Param('payPeriodId') payPeriodId: string,
     @Res() res: Response,
   ) {
+    // Fetch employer name ONCE
+    const employerName = await this.getEmployerName(req.user.userId);
+
     // Fetch all finalized payroll records for the pay period
     const records = await this.payrollRepository.find({
       where: {
@@ -271,8 +293,8 @@ export class PayrollController {
       throw new Error('No payroll records found for this pay period');
     }
 
-    // Generate ZIP file with all payslips
-    const { stream, filename } = await this.payslipService.generatePayslipsZip(records);
+    // Generate ZIP file with all payslips (employer name passed once)
+    const { stream, filename } = await this.payslipService.generatePayslipsZip(records, employerName);
 
     res.set({
       'Content-Type': 'application/zip',
@@ -288,6 +310,9 @@ export class PayrollController {
     @Body() body: { payrollRecordIds: string[] },
     @Res() res: Response,
   ) {
+    // Fetch employer name ONCE
+    const employerName = await this.getEmployerName(req.user.userId);
+
     // Fetch selected payroll records
     const records = await this.payrollRepository.find({
       where: {
@@ -302,8 +327,8 @@ export class PayrollController {
       throw new Error('No payroll records found');
     }
 
-    // Generate ZIP file with selected payslips
-    const { stream, filename } = await this.payslipService.generatePayslipsZip(selectedRecords);
+    // Generate ZIP file with selected payslips (employer name passed once)
+    const { stream, filename } = await this.payslipService.generatePayslipsZip(selectedRecords, employerName);
 
     res.set({
       'Content-Type': 'application/zip',

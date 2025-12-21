@@ -147,6 +147,7 @@ export class ReportsService {
   }
 
   async getPayrollSummaryByPeriod(userId: string, payPeriodId: string) {
+    console.log(`Getting payroll summary for user ${userId} and period ${payPeriodId}`);
     const payPeriod = await this.payPeriodRepository.findOne({
       where: { id: payPeriodId, userId },
     });
@@ -160,53 +161,57 @@ export class ReportsService {
       relations: ['worker'],
     });
 
+    const totals = {
+      grossPay: 0,
+      netPay: 0,
+      paye: 0,
+      nssf: 0,
+      nhif: 0,
+      housingLevy: 0,
+      totalDeductions: 0,
+      workerCount: records.length,
+    };
+
+    const mappedRecords = records.map(record => {
+      const gross = Number(record.grossSalary);
+      const net = Number(record.netSalary);
+      const paye = Number(record.taxBreakdown?.paye || 0);
+      const nssf = Number(record.taxBreakdown?.nssf || 0);
+      const nhif = Number(record.taxBreakdown?.nhif || 0);
+      const housingLevy = Number(record.taxBreakdown?.housingLevy || 0);
+      const totalDeductions = Number(record.taxBreakdown?.totalDeductions || 0);
+
+      totals.grossPay += gross;
+      totals.netPay += net;
+      totals.paye += paye;
+      totals.nssf += nssf;
+      totals.nhif += nhif;
+      totals.housingLevy += housingLevy;
+      totals.totalDeductions += totalDeductions;
+
+      return {
+        workerName: record.worker?.name || 'Unknown',
+        workerId: record.workerId,
+        grossPay: gross,
+        netPay: net,
+        taxBreakdown: {
+          paye,
+          nssf,
+          nhif,
+          housingLevy,
+          total: totalDeductions
+        }
+      };
+    });
+
     const summary = {
       payPeriod: {
         id: payPeriod.id,
         startDate: payPeriod.startDate,
         endDate: payPeriod.endDate,
       },
-      totals: {
-        grossPay: 0,
-        netPay: 0,
-        paye: 0,
-        nssf: 0,
-        nhif: 0,
-        housingLevy: 0,
-        totalDeductions: 0,
-        workerCount: records.length,
-      },
-      records: records.map(record => {
-        const gross = Number(record.grossSalary);
-        const net = Number(record.netSalary);
-        const paye = Number(record.taxBreakdown?.paye || 0);
-        const nssf = Number(record.taxBreakdown?.nssf || 0);
-        const nhif = Number(record.taxBreakdown?.nhif || 0);
-        const housingLevy = Number(record.taxBreakdown?.housingLevy || 0);
-        const totalDeductions = Number(record.taxBreakdown?.totalDeductions || 0);
-
-        summary.totals.grossPay += gross;
-        summary.totals.netPay += net;
-        summary.totals.paye += paye;
-        summary.totals.nssf += nssf;
-        summary.totals.nhif += nhif;
-        summary.totals.housingLevy += housingLevy;
-        summary.totals.totalDeductions += totalDeductions;
-
-        return {
-          workerName: record.worker?.name || 'Unknown',
-          workerId: record.workerId,
-          grossPay: gross,
-          netPay: net,
-          taxBreakdown: {
-            paye,
-            nssf,
-            nhif,
-            housingLevy,
-            total: totalDeductions
-          }
-        };
-      }),
+      totals: totals,
+      records: mappedRecords,
     };
 
     // Round totals
@@ -228,10 +233,14 @@ export class ReportsService {
     return {
       payPeriod: summary.payPeriod,
       totals: {
+        grossPay: summary.totals.grossPay,
+        netPay: summary.totals.netPay,
         paye: summary.totals.paye,
-        nssf: summary.totals.nssf, // In reality, this should be Employer + Employee
+        nssf: summary.totals.nssf,
         nhif: summary.totals.nhif,
-        housingLevy: summary.totals.housingLevy, // Employer + Employee (1.5% * 2) usually
+        housingLevy: summary.totals.housingLevy,
+        totalDeductions: summary.totals.totalDeductions,
+        workerCount: summary.totals.workerCount,
       },
       employees: summary.records.map(r => ({
         name: r.workerName,
@@ -308,6 +317,7 @@ export class ReportsService {
     };
   }
   async getP9Report(userId: string, year: number, workerId?: string) {
+    console.log(`Getting P9 report for user ${userId}, year ${year}, worker ${workerId || 'ALL'}`);
     const startDate = new Date(year, 0, 1);
     const endDate = new Date(year, 11, 31, 23, 59, 59);
 

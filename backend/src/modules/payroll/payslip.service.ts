@@ -14,7 +14,7 @@ export class PayslipService {
    * Generate a single payslip PDF
    * Uses caching to avoid regenerating identical payslips
    */
-  async generatePayslip(record: PayrollRecord, useCache = true): Promise<Buffer> {
+  async generatePayslip(record: PayrollRecord, employerName?: string, useCache = true): Promise<Buffer> {
     const cacheKey = `${record.id}-${record.updatedAt.getTime()}`;
 
     // Check cache
@@ -48,7 +48,7 @@ export class PayslipService {
 
       doc
         .fontSize(10)
-        .text(`Employer: ${'My Company'}`, { align: 'left' }) // TODO: dynamic
+        .text(`Employer: ${employerName || 'Employer'}`, { align: 'left' })
         .text(`Worker: ${record.worker.name}`, { align: 'left' })
         .text(`KRA PIN: ${record.worker.kraPin || 'N/A'}`, { align: 'left' })
         .moveDown(0.5)
@@ -148,6 +148,7 @@ export class PayslipService {
    */
   async generatePayslipsBatch(
     records: PayrollRecord[],
+    employerName?: string,
     maxConcurrent = 10,
   ): Promise<Buffer[]> {
     const startTime = Date.now();
@@ -159,7 +160,7 @@ export class PayslipService {
     for (let i = 0; i < records.length; i += maxConcurrent) {
       const chunk = records.slice(i, i + maxConcurrent);
       const chunkResults = await Promise.all(
-        chunk.map((record) => this.generatePayslip(record, true)),
+        chunk.map((record) => this.generatePayslip(record, employerName, true)),
       );
       results.push(...chunkResults);
 
@@ -183,11 +184,12 @@ export class PayslipService {
    */
   async generatePayslipsZip(
     records: PayrollRecord[],
+    employerName?: string,
   ): Promise<{ stream: Readable; filename: string }> {
     this.logger.log(`Generating ZIP archive for ${records.length} payslips`);
 
-    // Generate all PDFs in parallel
-    const pdfs = await this.generatePayslipsBatch(records);
+    // Generate all PDFs in parallel (single employer name for all)
+    const pdfs = await this.generatePayslipsBatch(records, employerName);
 
     // Create ZIP archive
     const archive = archiver('zip', {

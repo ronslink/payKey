@@ -146,6 +146,113 @@ export class StripeService {
   }
 
   /**
+   * Upgrade an existing Stripe subscription with proration
+   * Stripe automatically prorates the charge when switching plans
+   */
+  async upgradeSubscription(
+    userId: string,
+    newPlanTier: string,
+  ): Promise<{
+    success: boolean;
+    message: string;
+    subscriptionId?: string;
+    prorationAmount?: number;
+  }> {
+    const stripe = this.ensureStripeConfigured();
+    const normalizedTier = newPlanTier.toUpperCase();
+
+    // Get current subscription
+    const subscription = await this.subscriptionRepository.findOne({
+      where: { userId, status: SubscriptionStatus.ACTIVE },
+    });
+
+    if (!subscription || !subscription.stripeSubscriptionId) {
+      return {
+        success: false,
+        message: 'No active Stripe subscription found. Please use checkout instead.',
+      };
+    }
+
+    try {
+      // Fetch the Stripe subscription
+      const stripeSubscription = await stripe.subscriptions.retrieve(
+        subscription.stripeSubscriptionId,
+      );
+
+      if (!stripeSubscription || stripeSubscription.status !== 'active') {
+        return {
+          success: false,
+          message: 'Stripe subscription is not active',
+        };
+      }
+
+      // Get the current subscription item
+      const subscriptionItem = stripeSubscription.items.data[0];
+      if (!subscriptionItem) {
+        return {
+          success: false,
+          message: 'Could not find subscription item to upgrade',
+        };
+      }
+
+      // Create a new price for the upgraded plan
+      const newPrice = await stripe.prices.create({
+        currency: 'usd',
+        product_data: {
+          name: `${normalizedTier} Plan - PayKey Payroll`,
+        },
+        recurring: { interval: 'month' },
+        unit_amount: this.getPlanPrice(normalizedTier),
+      });
+
+      // Update the subscription with proration
+      const updatedStripeSubscription = await stripe.subscriptions.update(
+        subscription.stripeSubscriptionId,
+        {
+          items: [
+            {
+              id: subscriptionItem.id,
+              price: newPrice.id,
+            },
+          ],
+          proration_behavior: 'create_prorations',
+          metadata: {
+            planTier: normalizedTier,
+            upgradedAt: new Date().toISOString(),
+          },
+        },
+      );
+
+      // Get the latest invoice to see proration amount
+      const invoices = await stripe.invoices.list({
+        subscription: subscription.stripeSubscriptionId,
+        limit: 1,
+      });
+      const latestInvoice = invoices.data[0];
+
+      // Update local subscription record
+      subscription.tier = normalizedTier as SubscriptionTier;
+      subscription.updatedAt = new Date();
+      await this.subscriptionRepository.save(subscription);
+
+      this.logger.log(`Upgraded Stripe subscription for user ${userId} to ${normalizedTier}`);
+
+      return {
+        success: true,
+        message: `Successfully upgraded to ${normalizedTier} plan. Proration applied.`,
+        subscriptionId: updatedStripeSubscription.id,
+        prorationAmount: latestInvoice ? (latestInvoice.amount_due || 0) / 100 : undefined,
+      };
+    } catch (error) {
+      this.logger.error('Failed to upgrade Stripe subscription', error);
+      return {
+        success: false,
+        message: `Failed to upgrade: ${error.message}`,
+      };
+    }
+  }
+
+  /**
    * Handle Stripe webhook events
    */
   async handleWebhook(event: Stripe.Event): Promise<void> {

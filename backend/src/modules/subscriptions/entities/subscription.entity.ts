@@ -11,6 +11,7 @@ import { User } from '../../users/entities/user.entity';
 
 export enum SubscriptionStatus {
   ACTIVE = 'ACTIVE',
+  PENDING = 'PENDING',
   CANCELLED = 'CANCELLED',
   EXPIRED = 'EXPIRED',
   PAST_DUE = 'PAST_DUE',

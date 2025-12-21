@@ -23,6 +23,7 @@ import { LeaveManagementService } from './services/leave-management.service';
 import type { AuthenticatedRequest } from '../../common/interfaces/user.interface';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { SubscriptionGuard } from '../subscriptions/subscription.guard';
+import { PlatinumGuard } from '../auth/platinum.guard'; // Import
 import type { Response } from 'express';
 
 @Controller('workers')
@@ -34,6 +35,24 @@ export class WorkersController {
     private readonly leaveManagementService: LeaveManagementService,
   ) { }
 
+  // ======================================================================================
+  // STATIC ROUTES (MUST BE BEFORE DYNAMIC ROUTES)
+  // ======================================================================================
+
+  @Get()
+  async findAll(@Request() req: AuthenticatedRequest, @Res() res: Response) {
+    const workers = await this.workersService.findAll(req.user.userId);
+
+    // Explicitly prevent caching to avoid 304 responses
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    res.setHeader('ETag', `"workers-${Date.now()}-${workers.length}"`);
+    res.setHeader('Last-Modified', new Date().toUTCString());
+
+    return res.json(workers);
+  }
+
   @Post()
   @UseGuards(SubscriptionGuard)
   create(
@@ -41,6 +60,75 @@ export class WorkersController {
     @Body() createWorkerDto: CreateWorkerDto,
   ) {
     return this.workersService.create(req.user.userId, createWorkerDto);
+  }
+
+  @Get('stats')
+  getStats(@Request() req: AuthenticatedRequest) {
+    return this.workersService.getWorkerStats(req.user.userId);
+  }
+
+  @Get('terminated/history')
+  getTerminationHistory(@Request() req: AuthenticatedRequest) {
+    return this.terminationService.getTerminationHistory(req.user.userId);
+  }
+
+  // --- Leave Management Static Routes ---
+
+  @Get('leave-requests')
+  @UseGuards(SubscriptionGuard, PlatinumGuard)
+  getLeaveRequests(@Request() req: AuthenticatedRequest) {
+    return this.leaveManagementService.getLeaveRequestsForUser(req.user.userId);
+  }
+
+  @Patch('leave-requests/:requestId/approve')
+  @UseGuards(SubscriptionGuard, PlatinumGuard)
+  approveLeaveRequest(
+    @Request() req: AuthenticatedRequest,
+    @Param('requestId') requestId: string,
+    @Body() approveLeaveRequestDto: ApproveLeaveRequestDto,
+  ) {
+    return this.leaveManagementService.approveLeaveRequest(
+      req.user.userId,
+      requestId,
+      approveLeaveRequestDto,
+    );
+  }
+
+  @Patch('leave-requests/:requestId')
+  @UseGuards(SubscriptionGuard, PlatinumGuard)
+  updateLeaveRequest(
+    @Request() req: AuthenticatedRequest,
+    @Param('requestId') requestId: string,
+    @Body() updateLeaveRequestDto: UpdateLeaveRequestDto,
+  ) {
+    return this.leaveManagementService.updateLeaveRequest(
+      req.user.userId,
+      requestId,
+      updateLeaveRequestDto,
+    );
+  }
+
+
+
+  @Delete('leave-requests/:requestId')
+  @UseGuards(SubscriptionGuard, PlatinumGuard)
+  deleteLeaveRequest(
+    @Request() req: AuthenticatedRequest,
+    @Param('requestId') requestId: string,
+  ) {
+    return this.leaveManagementService.cancelLeaveRequest(
+      req.user.userId,
+      requestId,
+    );
+  }
+
+  // ======================================================================================
+  // DYNAMIC ROUTES (WITH :id PARAMETER) - MUST BE AFTER STATIC ROUTES
+  // ======================================================================================
+
+  @Get(':id')
+  findOne(@Request() req: AuthenticatedRequest, @Param('id') id: string) {
+    return this.workersService.findOne(id, req.user.userId);
   }
 
   @Patch(':id')
@@ -57,31 +145,6 @@ export class WorkersController {
     return this.workersService.remove(id, req.user.userId);
   }
 
-  @Get()
-  async findAll(@Request() req: AuthenticatedRequest, @Res() res: Response) {
-    const workers = await this.workersService.findAll(req.user.userId);
-
-    // Explicitly prevent caching to avoid 304 responses
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-    res.setHeader('ETag', `"workers-${Date.now()}-${workers.length}"`);
-    res.setHeader('Last-Modified', new Date().toUTCString());
-
-    return res.json(workers);
-  }
-
-  @Get('stats')
-  getStats(@Request() req: AuthenticatedRequest) {
-    return this.workersService.getWorkerStats(req.user.userId);
-  }
-
-  @Get(':id')
-  findOne(@Request() req: AuthenticatedRequest, @Param('id') id: string) {
-    return this.workersService.findOne(id, req.user.userId);
-  }
-
-  // Termination endpoints
   @Post(':id/calculate-final-payment')
   calculateFinalPayment(
     @Request() req: AuthenticatedRequest,
@@ -104,14 +167,8 @@ export class WorkersController {
     return this.terminationService.terminateWorker(id, req.user.userId, dto);
   }
 
-  @Get('terminated/history')
-  getTerminationHistory(@Request() req: AuthenticatedRequest) {
-    return this.terminationService.getTerminationHistory(req.user.userId);
-  }
-
-  // Leave Management endpoints
   @Post(':id/leave-requests')
-  @UseGuards(SubscriptionGuard)
+  @UseGuards(SubscriptionGuard, PlatinumGuard)
   createLeaveRequest(
     @Request() req: AuthenticatedRequest,
     @Param('id') workerId: string,
@@ -124,14 +181,8 @@ export class WorkersController {
     );
   }
 
-  @Get('leave-requests')
-  @UseGuards(SubscriptionGuard)
-  getLeaveRequests(@Request() req: AuthenticatedRequest) {
-    return this.leaveManagementService.getLeaveRequestsForUser(req.user.userId);
-  }
-
   @Get(':id/leave-requests')
-  @UseGuards(SubscriptionGuard)
+  @UseGuards(SubscriptionGuard, PlatinumGuard)
   getWorkerLeaveRequests(
     @Request() req: AuthenticatedRequest,
     @Param('id') workerId: string,
@@ -142,48 +193,8 @@ export class WorkersController {
     );
   }
 
-  @Patch('leave-requests/:requestId/approve')
-  @UseGuards(SubscriptionGuard)
-  approveLeaveRequest(
-    @Request() req: AuthenticatedRequest,
-    @Param('requestId') requestId: string,
-    @Body() approveLeaveRequestDto: ApproveLeaveRequestDto,
-  ) {
-    return this.leaveManagementService.approveLeaveRequest(
-      req.user.userId,
-      requestId,
-      approveLeaveRequestDto,
-    );
-  }
-
-  @Patch('leave-requests/:requestId')
-  @UseGuards(SubscriptionGuard)
-  updateLeaveRequest(
-    @Request() req: AuthenticatedRequest,
-    @Param('requestId') requestId: string,
-    @Body() updateLeaveRequestDto: UpdateLeaveRequestDto,
-  ) {
-    return this.leaveManagementService.updateLeaveRequest(
-      req.user.userId,
-      requestId,
-      updateLeaveRequestDto,
-    );
-  }
-
-  @Delete('leave-requests/:requestId')
-  @UseGuards(SubscriptionGuard)
-  cancelLeaveRequest(
-    @Request() req: AuthenticatedRequest,
-    @Param('requestId') requestId: string,
-  ) {
-    return this.leaveManagementService.cancelLeaveRequest(
-      req.user.userId,
-      requestId,
-    );
-  }
-
   @Get(':id/leave-balance')
-  @UseGuards(SubscriptionGuard)
+  @UseGuards(SubscriptionGuard, PlatinumGuard)
   getLeaveBalance(
     @Request() req: AuthenticatedRequest,
     @Param('id') workerId: string,
