@@ -90,7 +90,7 @@ export class ReportsController {
 
   @Get('my-p9')
   async getEmployeeP9Report(@Request() req: any, @Query('year') year: string) {
-    return this.reportsService.getEmployeeP9Report(req.user.userId, parseInt(year));
+    return this.reportsService.getEmployeeP9Report(req.user.userId, parseInt(year), req.user.workerId);
   }
 
   @Get('my-p9/pdf')
@@ -102,7 +102,13 @@ export class ReportsController {
     const reports = await this.reportsService.getEmployeeP9Report(
       req.user.userId,
       parseInt(year),
+      req.user.workerId, // Ensure workerId is passed here too if needed, though getEmployeeP9Report uses it
     );
+
+    if (!reports || reports.length === 0) {
+      throw new Error('No P9 report data found for this year');
+    }
+
     const buffer = await this.reportsService.generateP9Pdf(reports[0]);
 
     res.set({

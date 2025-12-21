@@ -34,7 +34,7 @@ class TransactionModel {
       amount: double.parse(json['amount'].toString()),
       currency: json['currency'] ?? 'USD',
       status: json['status'] ?? 'pending',
-      paymentMethod: json['paymentMethod'] ?? 'unknown',
+      paymentMethod: json['paymentMethod'] ?? json['provider'] ?? 'unknown',
       createdAt: json['createdAt'],
       succeededAt: json['succeeded_at'],
       invoiceUrl: json['invoice_url'],

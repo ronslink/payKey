@@ -25,4 +25,11 @@ final propertiesProvider = FutureProvider<List<Property>>((ref) async {
   return [];
 });
 
-final selectedPropertyProvider = StateProvider<Property?>((ref) => null);
+class SelectedPropertyNotifier extends Notifier<Property?> {
+  @override
+  Property? build() => null;
+  
+  void set(Property? value) => state = value;
+}
+
+final selectedPropertyProvider = NotifierProvider<SelectedPropertyNotifier, Property?>(SelectedPropertyNotifier.new);

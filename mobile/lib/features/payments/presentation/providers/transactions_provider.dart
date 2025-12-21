@@ -1,25 +1,27 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/repositories/transactions_repository.dart';
 
 final transactionsRepositoryProvider = Provider((ref) => TransactionsRepository());
 
-final transactionsProvider = StateNotifierProvider<TransactionsNotifier, AsyncValue<List<dynamic>>>((ref) {
-  final repository = ref.read(transactionsRepositoryProvider);
-  return TransactionsNotifier(repository);
-});
+class TransactionsNotifier extends AsyncNotifier<List<dynamic>> {
+  late final TransactionsRepository _repository;
 
-class TransactionsNotifier extends StateNotifier<AsyncValue<List<dynamic>>> {
-  final TransactionsRepository _repository;
+  @override
+  FutureOr<List<dynamic>> build() {
+    _repository = ref.watch(transactionsRepositoryProvider);
+    return _fetchTransactions();
+  }
 
-  TransactionsNotifier(this._repository) : super(const AsyncValue.data([]));
+  Future<List<dynamic>> _fetchTransactions() async {
+    final transactions = await _repository.getTransactions();
+    return List<dynamic>.from(transactions);
+  }
 
   Future<void> fetchTransactions() async {
-    try {
-      state = const AsyncValue.loading();
-      final transactions = await _repository.getTransactions();
-      state = AsyncValue.data(List<dynamic>.from(transactions));
-    } catch (error, stackTrace) {
-      state = AsyncValue.error(error.toString(), stackTrace);
-    }
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => _fetchTransactions());
   }
 }
+
+final transactionsProvider = AsyncNotifierProvider<TransactionsNotifier, List<dynamic>>(TransactionsNotifier.new);

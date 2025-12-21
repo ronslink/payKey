@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_service.dart';
 import '../../data/models/pay_period_model.dart';
@@ -5,49 +6,40 @@ import '../../data/repositories/pay_period_repository.dart';
 
 final payPeriodRepositoryProvider = Provider((ref) => PayPeriodRepository(ApiService()));
 
-final payPeriodsProvider = StateNotifierProvider<PayPeriodsNotifier, AsyncValue<List<PayPeriod>>>((ref) {
-  final repository = ref.read(payPeriodRepositoryProvider);
-  return PayPeriodsNotifier(repository);
-});
+final payPeriodsProvider = AsyncNotifierProvider<PayPeriodsNotifier, List<PayPeriod>>(PayPeriodsNotifier.new);
 
-class PayPeriodsNotifier extends StateNotifier<AsyncValue<List<PayPeriod>>> {
-  final PayPeriodRepository _repository;
+class PayPeriodsNotifier extends AsyncNotifier<List<PayPeriod>> {
+  late final PayPeriodRepository _repository;
 
-  PayPeriodsNotifier(this._repository) : super(const AsyncValue.loading()) {
-    loadPayPeriods();
+  @override
+  FutureOr<List<PayPeriod>> build() {
+    _repository = ref.watch(payPeriodRepositoryProvider);
+    return _loadPayPeriods();
+  }
+
+  Future<List<PayPeriod>> _loadPayPeriods() {
+    return _repository.getPayPeriods();
   }
 
   /// Loads all pay periods (no status filter).
   /// Use for admin/overview screens.
   Future<void> loadPayPeriods() async {
-    try {
-      state = const AsyncValue.loading();
-      final payPeriods = await _repository.getPayPeriods();
-      state = AsyncValue.data(payPeriods);
-    } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-    }
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => _loadPayPeriods());
   }
 
   /// Loads pay periods filtered by status.
   /// Use for dashboards or filtered views.
   Future<void> loadPayPeriodsByStatus(PayPeriodStatus status) async {
-    try {
-      state = const AsyncValue.loading();
-      final payPeriods = await _repository.getPayPeriodsByStatus(status);
-      state = AsyncValue.data(payPeriods);
-    } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-    }
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => _repository.getPayPeriodsByStatus(status));
   }
 
   Future<void> createPayPeriod(CreatePayPeriodRequest request) async {
     try {
       final newPayPeriod = await _repository.createPayPeriod(request);
-      state = AsyncValue.data([
-        ...?state.value,
-        newPayPeriod,
-      ]);
+      final currentList = state.value ?? [];
+      state = AsyncValue.data([...currentList, newPayPeriod]);
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
       rethrow;

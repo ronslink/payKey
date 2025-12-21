@@ -16,6 +16,7 @@ import { TaxesModule } from '../taxes/taxes.module';
 import { PayPeriod } from '../payroll/entities/pay-period.entity';
 import { PayrollRecord } from '../payroll/entities/payroll-record.entity';
 import { TaxSubmission } from '../taxes/entities/tax-submission.entity';
+import { User } from '../users/entities/user.entity';
 import { TimeTrackingModule } from '../time-tracking/time-tracking.module';
 import { TaxPaymentsModule } from '../tax-payments/tax-payments.module';
 
@@ -31,6 +32,7 @@ import { HttpModule } from '@nestjs/axios';
       TaxSubmission,
       Subscription,
       SubscriptionPayment,
+      User,
     ]),
     TaxesModule,
     TimeTrackingModule,
@@ -51,4 +53,4 @@ import { HttpModule } from '@nestjs/axios';
   ],
   exports: [MpesaService, StripeService, PayrollPaymentService, PayrollService],
 })
-export class PaymentsModule {}
+export class PaymentsModule { }

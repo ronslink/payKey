@@ -2,7 +2,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'providers/countries_provider.dart';
+import '../providers/countries_provider.dart';
+import '../../data/models/country_model.dart';
 import '../../../../core/network/api_service.dart';
 
 class OnboardingPage extends ConsumerStatefulWidget {
@@ -49,6 +50,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
   final _businessNameController = TextEditingController();
   final _bankNameController = TextEditingController();
   final _bankAccountController = TextEditingController();
+  final _mpesaPhoneController = TextEditingController();
   final _mpesaPaybillController = TextEditingController();
   final _mpesaTillController = TextEditingController();
 
@@ -80,6 +82,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
     _businessNameController.dispose();
     _bankNameController.dispose();
     _bankAccountController.dispose();
+    _mpesaPhoneController.dispose();
     _mpesaPaybillController.dispose();
     _mpesaTillController.dispose();
     _pageController.dispose();
@@ -115,6 +118,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
           'bankName': _bankNameController.text.trim(),
         if (_bankAccountController.text.isNotEmpty)
           'bankAccount': _bankAccountController.text.trim(),
+        if (_mpesaPhoneController.text.isNotEmpty)
+          'phoneNumber': _mpesaPhoneController.text.trim(),
         if (_mpesaPaybillController.text.isNotEmpty)
           'mpesaPaybill': _mpesaPaybillController.text.trim(),
         if (_mpesaTillController.text.isNotEmpty)
@@ -584,7 +589,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
     );
   }
 
-  Widget _buildIdentificationStep(List<dynamic> countries) {
+  Widget _buildIdentificationStep(AsyncValue<List<CountryModel>> countriesState) {
     return _buildStepCard(
       children: [
         _buildSectionHeader(
@@ -614,22 +619,29 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
           icon: Icons.credit_card_rounded,
         ),
         const SizedBox(height: 20),
-        _buildDropdown(
-          value: _selectedNationalityId,
-          label: 'Nationality',
-          hint: 'Select your nationality',
-          icon: Icons.public_rounded,
-          items: countries.map<DropdownMenuItem<String>>((c) => DropdownMenuItem<String>(
-            value: c.id as String,
-            child: Text(c.name as String),
-          )).toList(),
-          onChanged: (value) => setState(() => _selectedNationalityId = value),
+        countriesState.when(
+          data: (countries) => _buildDropdown(
+            value: _selectedNationalityId,
+            label: 'Nationality',
+            hint: 'Select your nationality',
+            icon: Icons.public_rounded,
+            items: countries.map((c) => DropdownMenuItem<String>(
+              value: c.id,
+              child: Text(c.name),
+            )).toList(),
+            onChanged: (value) => setState(() => _selectedNationalityId = value),
+          ),
+          loading: () => const Center(child: Padding(
+            padding: EdgeInsets.all(16.0),
+            child: CircularProgressIndicator(),
+          )),
+          error: (err, stack) => const Text('Failed to load countries', style: TextStyle(color: Colors.red)),
         ),
       ],
     );
   }
 
-  Widget _buildTaxComplianceStep(List<dynamic> countries) {
+  Widget _buildTaxComplianceStep(AsyncValue<List<CountryModel>> countriesState) {
     return _buildStepCard(
       children: [
         _buildSectionHeader(
@@ -722,16 +734,23 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
         ),
         if (!_isResident) ...[
           const SizedBox(height: 20),
-          _buildDropdown(
-            value: _countryOfOrigin,
-            label: 'Country of Origin',
-            hint: 'Select your country',
-            icon: Icons.flag_rounded,
-            items: countries.map<DropdownMenuItem<String>>((c) => DropdownMenuItem<String>(
-              value: c.id as String,
-              child: Text(c.name as String),
-            )).toList(),
-            onChanged: (value) => setState(() => _countryOfOrigin = value),
+            countriesState.when(
+            data: (countries) => _buildDropdown(
+              value: _countryOfOrigin,
+              label: 'Country of Origin',
+              hint: 'Select your country',
+              icon: Icons.flag_rounded,
+              items: countries.map((c) => DropdownMenuItem<String>(
+                value: c.id,
+                child: Text(c.name),
+              )).toList(),
+              onChanged: (value) => setState(() => _countryOfOrigin = value),
+            ),
+            loading: () => const Center(child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: CircularProgressIndicator(),
+            )),
+            error: (err, stack) => const SizedBox(),
           ),
         ],
         const SizedBox(height: 20),
@@ -754,7 +773,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
     );
   }
 
-  Widget _buildLocationStep(List<dynamic> countries) {
+  Widget _buildLocationStep(AsyncValue<List<CountryModel>> countriesState) {
     return _buildStepCard(
       children: [
         _buildSectionHeader(
@@ -763,16 +782,23 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
           subtitle: 'Where are you based & how to pay?',
         ),
         const SizedBox(height: 32),
-        _buildDropdown(
-          value: _selectedCountryId,
-          label: 'Country of Residence',
-          hint: 'Select your country',
-          icon: Icons.public_rounded,
-          items: countries.map<DropdownMenuItem<String>>((c) => DropdownMenuItem<String>(
-            value: c.id as String,
-            child: Text(c.name as String),
-          )).toList(),
-          onChanged: (value) => setState(() => _selectedCountryId = value),
+        countriesState.when(
+          data: (countries) => _buildDropdown(
+            value: _selectedCountryId,
+            label: 'Country of Residence',
+            hint: 'Select your country',
+            icon: Icons.public_rounded,
+            items: countries.map((c) => DropdownMenuItem<String>(
+              value: c.id,
+              child: Text(c.name),
+            )).toList(),
+            onChanged: (value) => setState(() => _selectedCountryId = value),
+          ),
+          loading: () => const Center(child: Padding(
+            padding: EdgeInsets.all(16.0),
+            child: CircularProgressIndicator(),
+          )),
+          error: (err, stack) => const SizedBox(),
         ),
         const SizedBox(height: 20),
         _buildTextField(
@@ -813,21 +839,29 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
           icon: Icons.numbers_rounded,
         ),
         const SizedBox(height: 16),
+        _buildTextField(
+          _mpesaPhoneController,
+          'M-Pesa Phone Number',
+          'e.g. 0712345678',
+          icon: Icons.phone_android_rounded,
+          helperText: 'Your M-Pesa registered phone for receiving payments',
+        ),
+        const SizedBox(height: 16),
         Row(
           children: [
             Expanded(
               child: _buildTextField(
                 _mpesaPaybillController,
-                'M-Pesa Paybill',
+                'Paybill (Business)',
                 'Paybill No.',
-                icon: Icons.phone_android_rounded,
+                icon: Icons.payment_rounded,
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _buildTextField(
                 _mpesaTillController,
-                'M-Pesa Till',
+                'Till (Business)',
                 'Till No.',
                 icon: Icons.store_rounded,
               ),

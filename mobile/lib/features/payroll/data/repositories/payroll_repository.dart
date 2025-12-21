@@ -92,6 +92,37 @@ class PayrollRepository {
     );
   }
 
+  /// Verify if user has sufficient wallet balance for payroll.
+  ///
+  /// Returns fund verification result with available balance, required amount,
+  /// and whether payroll can proceed.
+  Future<FundVerificationResult> verifyFunds(String payPeriodId) async {
+    return _executeRequest(
+      operation: 'verify funds',
+      request: () async {
+        final response = await _authenticatedGet(
+          '/payroll/verify-funds/$payPeriodId',
+        );
+        return FundVerificationResult.fromJson(response.data);
+      },
+    );
+  }
+
+  /// DEV ONLY: Manually top up wallet balance for testing.
+  /// Only works in development mode.
+  Future<Map<String, dynamic>> devTopup(double amount) async {
+    return _executeRequest(
+      operation: 'dev topup',
+      request: () async {
+        final response = await _authenticatedPost(
+          '/payments/dev/topup',
+          data: {'amount': amount},
+        );
+        return response.data as Map<String, dynamic>;
+      },
+    );
+  }
+
   // ---------------------------------------------------------------------------
   // Public Methods: Draft Management
   // ---------------------------------------------------------------------------

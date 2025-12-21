@@ -84,7 +84,7 @@ class PropertiesPage extends ConsumerWidget {
                   ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
-                    ref.read(selectedPropertyProvider.notifier).state = property;
+                    ref.read(selectedPropertyProvider.notifier).set(property);
                     context.push('/properties/${property.id}');
                   },
                 ),

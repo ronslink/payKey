@@ -112,7 +112,7 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
 
   Future<void> _showAddWorkersDialog() async {
     final workersAsync = ref.read(workersProvider);
-    final workers = workersAsync.valueOrNull ?? <WorkerModel>[];
+    final workers = workersAsync.value ?? <WorkerModel>[];
 
     // Filter out workers already in payroll
     final existingWorkerIds = _payrollItems.map((item) => item.workerId).toSet();

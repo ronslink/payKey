@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/repositories/transactions_repository.dart';
 import '../../../../core/network/api_service.dart';
@@ -28,15 +29,15 @@ final taxPaymentSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) asy
   return response.data;
 });
 
-final paymentsProvider = StateNotifierProvider<PaymentsNotifier, AsyncValue<void>>((ref) {
-  final apiService = ref.read(apiServiceProvider);
-  return PaymentsNotifier(apiService);
-});
+final paymentsProvider = AsyncNotifierProvider<PaymentsNotifier, void>(PaymentsNotifier.new);
 
-class PaymentsNotifier extends StateNotifier<AsyncValue<void>> {
-  final ApiService _apiService;
+class PaymentsNotifier extends AsyncNotifier<void> {
+  late final ApiService _apiService;
 
-  PaymentsNotifier(this._apiService) : super(const AsyncValue.data(null));
+  @override
+  FutureOr<void> build() {
+    _apiService = ref.watch(apiServiceProvider);
+  }
 
   Future<Map<String, dynamic>> initiatePayment(
     String phoneNumber, 

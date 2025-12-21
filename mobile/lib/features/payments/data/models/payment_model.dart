@@ -22,7 +22,8 @@ enum TransactionStatus {
 }
 
 @freezed
-class Transaction with _$Transaction {
+@freezed
+abstract class Transaction with _$Transaction {
   const factory Transaction({
     required String id,
     required String userId,
@@ -41,7 +42,7 @@ class Transaction with _$Transaction {
 }
 
 @freezed
-class TopupRequest with _$TopupRequest {
+abstract class TopupRequest with _$TopupRequest {
   const factory TopupRequest({
     required String phoneNumber,
     required double amount,
@@ -52,7 +53,7 @@ class TopupRequest with _$TopupRequest {
 }
 
 @freezed
-class PaymentResponse with _$PaymentResponse {
+abstract class PaymentResponse with _$PaymentResponse {
   const factory PaymentResponse({
     required String message,
     String? checkoutRequestId,

@@ -4,7 +4,7 @@ part 'journal_entry_model.freezed.dart';
 part 'journal_entry_model.g.dart';
 
 @freezed
-class JournalEntry with _$JournalEntry {
+abstract class JournalEntry with _$JournalEntry {
   const factory JournalEntry({
     required String id,
     required String accountCode,
@@ -19,7 +19,7 @@ class JournalEntry with _$JournalEntry {
 }
 
 @freezed
-class JournalEntrySet with _$JournalEntrySet {
+abstract class JournalEntrySet with _$JournalEntrySet {
   const factory JournalEntrySet({
     required List<JournalEntry> entries,
   }) = _JournalEntrySet;

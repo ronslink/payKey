@@ -25,7 +25,19 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   final _bankAccountCtrl = TextEditingController();
   final _paybillCtrl = TextEditingController();
   final _tillCtrl = TextEditingController();
-  final _firstNameCtrl = TextEditingController(); // Read-only or separate update?
+  final _firstNameCtrl = TextEditingController();
+  final _lastNameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+
+  // Identity & Location
+  final _idTypeCtrl = TextEditingController();
+  final _idNumberCtrl = TextEditingController();
+  final _nationalityCtrl = TextEditingController();
+  final _addressCtrl = TextEditingController();
+  final _cityCtrl = TextEditingController();
+  final _countryCtrl = TextEditingController();
+  final _residentStatusCtrl = TextEditingController();
 
   ProfileModel? _loadedProfile;
 
@@ -61,7 +73,18 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     _bankAccountCtrl.text = p.bankAccount ?? '';
     _paybillCtrl.text = p.mpesaPaybill ?? '';
     _tillCtrl.text = p.mpesaTill ?? '';
-    _firstNameCtrl.text = '${p.firstName ?? ''} ${p.lastName ?? ''}'.trim();
+    _firstNameCtrl.text = p.firstName ?? '';
+    _lastNameCtrl.text = p.lastName ?? '';
+    _emailCtrl.text = p.email;
+    _phoneCtrl.text = p.phoneNumber ?? '';
+    
+    _idTypeCtrl.text = p.idType ?? '';
+    _idNumberCtrl.text = p.idNumber ?? '';
+    _nationalityCtrl.text = p.nationalityId ?? '';
+    _addressCtrl.text = p.address ?? '';
+    _cityCtrl.text = p.city ?? '';
+    _countryCtrl.text = p.countryId ?? '';
+    _residentStatusCtrl.text = p.residentStatus ?? '';
   }
 
   Future<void> _save() async {
@@ -73,6 +96,19 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
       final repo = ref.read(profileRepositoryProvider);
       
       final data = {
+        'firstName': _firstNameCtrl.text,
+        'lastName': _lastNameCtrl.text,
+        'email': _emailCtrl.text,
+        'phoneNumber': _phoneCtrl.text.isEmpty ? null : _phoneCtrl.text,
+        
+        'idType': _idTypeCtrl.text,
+        'idNumber': _idNumberCtrl.text,
+        'nationalityId': _nationalityCtrl.text.isEmpty ? null : _nationalityCtrl.text,
+        'address': _addressCtrl.text.isEmpty ? null : _addressCtrl.text,
+        'city': _cityCtrl.text.isEmpty ? null : _cityCtrl.text,
+        'countryId': _countryCtrl.text.isEmpty ? null : _countryCtrl.text,
+        'residentStatus': _residentStatusCtrl.text.isEmpty ? null : _residentStatusCtrl.text,
+
         'kraPin': _kraPinCtrl.text,
         'nssfNumber': _nssfCtrl.text,
         'shifNumber': _shifCtrl.text,
@@ -81,28 +117,9 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         'bankAccount': _bankAccountCtrl.text.isEmpty ? null : _bankAccountCtrl.text,
         'mpesaPaybill': _paybillCtrl.text.isEmpty ? null : _paybillCtrl.text,
         'mpesaTill': _tillCtrl.text.isEmpty ? null : _tillCtrl.text,
-        
-        // Preserve required fields
-        'idType': _loadedProfile!.idType,
-        'idNumber': _loadedProfile!.idNumber,
-        'address': _loadedProfile!.address,
-        'city': _loadedProfile!.city,
-        'countryId': _loadedProfile!.countryId,
-        'nationalityId': _loadedProfile!.nationalityId,
       };
       
-      // Update: I'll need to fetch the profile again or use state to get missing required fields 
-      // like idType/idNumber/address/city/countryId.
-      // But for this immediate task, I assume the user HAS these set (from onboarding) 
-      // and I just need to add the new ones.
-      // I'll implement a merge logic or assume backend allows partial update if I change DTO to Optional?
-      // I changed the NEW fields to Optional. The OLD fields are still Required.
-      // So I MUST send the old fields back.
-      
-      // I'll handle this by storing the fetched profile and merging.
-      
-      // ... implementation detail ...
-      await repo.updateComplianceProfile(data); // This will fail if I don't provide idType etc.
+      await repo.updateComplianceProfile(data);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -139,8 +156,84 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
               controller: _businessNameCtrl,
               decoration: const InputDecoration(labelText: 'Business Name (Optional)'),
             ),
+            _buildSectionHeader('Personal Details'),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _firstNameCtrl,
+                    decoration: const InputDecoration(labelText: 'First Name'),
+                    validator: (v) => v?.isEmpty == true ? 'Required' : null,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: TextFormField(
+                    controller: _lastNameCtrl,
+                    decoration: const InputDecoration(labelText: 'Last Name'),
+                    validator: (v) => v?.isEmpty == true ? 'Required' : null,
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 16),
+            TextFormField(
+              controller: _emailCtrl,
+              decoration: const InputDecoration(labelText: 'Email Address'),
+              validator: (v) => v?.isEmpty == true ? 'Required' : null,
+              keyboardType: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _phoneCtrl,
+              decoration: const InputDecoration(labelText: 'Phone Number (Optional)'),
+              keyboardType: TextInputType.phone,
+            ),
             
+            _buildSectionHeader('Identity Details'),
+            // TODO: Use Dropdowns for ID Type/Nationality if list available
+            TextFormField(
+              controller: _idTypeCtrl,
+              decoration: const InputDecoration(labelText: 'ID Type (e.g., NATIONAL_ID, PASSPORT)'),
+               // validator: (v) => v?.isEmpty == true ? 'Required' : null, 
+            ),
+            TextFormField(
+              controller: _idNumberCtrl,
+              decoration: const InputDecoration(labelText: 'ID Number'),
+              validator: (v) => v?.isEmpty == true ? 'Required' : null,
+            ),
+            TextFormField(
+              controller: _nationalityCtrl,
+              decoration: const InputDecoration(labelText: 'Nationality (ID)'),
+            ),
+             TextFormField(
+              controller: _residentStatusCtrl,
+              decoration: const InputDecoration(labelText: 'Resident Status'),
+            ),
+
+            _buildSectionHeader('Location Details'),
+            TextFormField(
+              controller: _addressCtrl,
+              decoration: const InputDecoration(labelText: 'Address'),
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: _cityCtrl,
+                    decoration: const InputDecoration(labelText: 'City'),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: TextFormField(
+                    controller: _countryCtrl,
+                    decoration: const InputDecoration(labelText: 'Country (ID)'),
+                  ),
+                ),
+              ],
+            ),
+
             _buildSectionHeader('Statutory IDs'),
             TextFormField(
               controller: _kraPinCtrl,

@@ -137,8 +137,8 @@ class ReportsPage extends ConsumerWidget {
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           onTap: () {
-            ref.read(reportParamsProvider.notifier).state =
-                ref.read(reportParamsProvider).copyWith(type: type);
+            ref.read(reportParamsProvider.notifier).update(
+                ref.read(reportParamsProvider).copyWith(type: type));
           },
           borderRadius: BorderRadius.circular(12),
           child: Padding(
@@ -194,8 +194,8 @@ class ReportsPage extends ConsumerWidget {
               // Auto-select first if none selected
               if (reportParams.payPeriodId == null && sortedPeriods.isNotEmpty) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
-                  ref.read(reportParamsProvider.notifier).state =
-                      reportParams.copyWith(payPeriodId: sortedPeriods.first.id);
+                  ref.read(reportParamsProvider.notifier).update(
+                      reportParams.copyWith(payPeriodId: sortedPeriods.first.id));
                 });
               }
 
@@ -223,8 +223,8 @@ class ReportsPage extends ConsumerWidget {
                       );
                     }).toList(),
                     onChanged: (value) {
-                      ref.read(reportParamsProvider.notifier).state =
-                          reportParams.copyWith(payPeriodId: value);
+                      ref.read(reportParamsProvider.notifier).update(
+                          reportParams.copyWith(payPeriodId: value));
                     },
                   ),
                 ),
@@ -326,7 +326,7 @@ class _P9ReportView extends ConsumerWidget {
               ? _P9WorkerDetailView(
                   report: selectedWorker,
                   onBack: () =>
-                      ref.read(selectedP9WorkerProvider.notifier).state = null,
+                      ref.read(selectedP9WorkerProvider.notifier).set(null),
                 )
               : p9ReportsAsync.when(
                   data: (reports) => _buildP9List(context, ref, reports),
@@ -362,8 +362,8 @@ class _P9ReportView extends ConsumerWidget {
                     .toList(),
                 onChanged: (value) {
                   if (value != null) {
-                    ref.read(selectedP9YearProvider.notifier).state = value;
-                    ref.read(selectedP9WorkerProvider.notifier).state = null;
+                    ref.read(selectedP9YearProvider.notifier).set(value);
+                    ref.read(selectedP9WorkerProvider.notifier).set(null);
                   }
                 },
               ),
@@ -616,7 +616,7 @@ class _P9ReportView extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
         onTap: () {
-          ref.read(selectedP9WorkerProvider.notifier).state = report;
+          ref.read(selectedP9WorkerProvider.notifier).set(report);
         },
         borderRadius: BorderRadius.circular(12),
         child: Padding(

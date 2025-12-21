@@ -27,6 +27,7 @@ import 'package:mockito/mockito.dart' as _i1;
 // ignore_for_file: unnecessary_parenthesis
 // ignore_for_file: camel_case_types
 // ignore_for_file: subtype_of_sealed_class
+// ignore_for_file: invalid_use_of_internal_member
 
 class _FakePayPeriod_0 extends _i1.SmartFake implements _i2.PayPeriod {
   _FakePayPeriod_0(Object parent, Invocation parentInvocation)
@@ -45,21 +46,27 @@ class _FakePayrollProcessingResult_2 extends _i1.SmartFake
     : super(parent, parentInvocation);
 }
 
-class _FakePayrollCalculation_3 extends _i1.SmartFake
+class _FakeFundVerificationResult_3 extends _i1.SmartFake
+    implements _i5.FundVerificationResult {
+  _FakeFundVerificationResult_3(Object parent, Invocation parentInvocation)
+    : super(parent, parentInvocation);
+}
+
+class _FakePayrollCalculation_4 extends _i1.SmartFake
     implements _i5.PayrollCalculation {
-  _FakePayrollCalculation_3(Object parent, Invocation parentInvocation)
+  _FakePayrollCalculation_4(Object parent, Invocation parentInvocation)
     : super(parent, parentInvocation);
 }
 
-class _FakePayslipPreview_4 extends _i1.SmartFake
+class _FakePayslipPreview_5 extends _i1.SmartFake
     implements _i4.PayslipPreview {
-  _FakePayslipPreview_4(Object parent, Invocation parentInvocation)
+  _FakePayslipPreview_5(Object parent, Invocation parentInvocation)
     : super(parent, parentInvocation);
 }
 
-class _FakePayrollSummary_5 extends _i1.SmartFake
+class _FakePayrollSummary_6 extends _i1.SmartFake
     implements _i5.PayrollSummary {
-  _FakePayrollSummary_5(Object parent, Invocation parentInvocation)
+  _FakePayrollSummary_6(Object parent, Invocation parentInvocation)
     : super(parent, parentInvocation);
 }
 
@@ -340,6 +347,29 @@ class MockPayrollRepository extends _i1.Mock implements _i4.PayrollRepository {
           as _i6.Future<_i4.PayrollProcessingResult>);
 
   @override
+  _i6.Future<_i5.FundVerificationResult> verifyFunds(String? payPeriodId) =>
+      (super.noSuchMethod(
+            Invocation.method(#verifyFunds, [payPeriodId]),
+            returnValue: _i6.Future<_i5.FundVerificationResult>.value(
+              _FakeFundVerificationResult_3(
+                this,
+                Invocation.method(#verifyFunds, [payPeriodId]),
+              ),
+            ),
+          )
+          as _i6.Future<_i5.FundVerificationResult>);
+
+  @override
+  _i6.Future<Map<String, dynamic>> devTopup(double? amount) =>
+      (super.noSuchMethod(
+            Invocation.method(#devTopup, [amount]),
+            returnValue: _i6.Future<Map<String, dynamic>>.value(
+              <String, dynamic>{},
+            ),
+          )
+          as _i6.Future<Map<String, dynamic>>);
+
+  @override
   _i6.Future<List<_i5.PayrollCalculation>> saveDraftPayroll(
     String? payPeriodId,
     List<Map<String, dynamic>>? items,
@@ -384,7 +414,7 @@ class MockPayrollRepository extends _i1.Mock implements _i4.PayrollRepository {
       (super.noSuchMethod(
             Invocation.method(#updatePayrollItem, [payrollRecordId, updates]),
             returnValue: _i6.Future<_i5.PayrollCalculation>.value(
-              _FakePayrollCalculation_3(
+              _FakePayrollCalculation_4(
                 this,
                 Invocation.method(#updatePayrollItem, [
                   payrollRecordId,
@@ -426,7 +456,7 @@ class MockPayrollRepository extends _i1.Mock implements _i4.PayrollRepository {
       (super.noSuchMethod(
             Invocation.method(#getPayslipPreview, [payrollRecordId]),
             returnValue: _i6.Future<_i4.PayslipPreview>.value(
-              _FakePayslipPreview_4(
+              _FakePayslipPreview_5(
                 this,
                 Invocation.method(#getPayslipPreview, [payrollRecordId]),
               ),
@@ -439,7 +469,7 @@ class MockPayrollRepository extends _i1.Mock implements _i4.PayrollRepository {
       (super.noSuchMethod(
             Invocation.method(#getPayrollSummary, [payPeriodId]),
             returnValue: _i6.Future<_i5.PayrollSummary>.value(
-              _FakePayrollSummary_5(
+              _FakePayrollSummary_6(
                 this,
                 Invocation.method(#getPayrollSummary, [payPeriodId]),
               ),

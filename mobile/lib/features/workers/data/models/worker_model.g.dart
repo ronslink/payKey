@@ -6,9 +6,7 @@ part of 'worker_model.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$WorkerModelImpl _$$WorkerModelImplFromJson(
-  Map<String, dynamic> json,
-) => _$WorkerModelImpl(
+_WorkerModel _$WorkerModelFromJson(Map<String, dynamic> json) => _WorkerModel(
   id: json['id'] as String,
   name: json['name'] as String,
   phoneNumber: json['phoneNumber'] as String,
@@ -46,7 +44,7 @@ _$WorkerModelImpl _$$WorkerModelImplFromJson(
       : DateTime.parse(json['updatedAt'] as String),
 );
 
-Map<String, dynamic> _$$WorkerModelImplToJson(_$WorkerModelImpl instance) =>
+Map<String, dynamic> _$WorkerModelToJson(_WorkerModel instance) =>
     <String, dynamic>{
       'id': instance.id,
       'name': instance.name,
@@ -79,37 +77,37 @@ Map<String, dynamic> _$$WorkerModelImplToJson(_$WorkerModelImpl instance) =>
       'updatedAt': instance.updatedAt?.toIso8601String(),
     };
 
-_$CreateWorkerRequestImpl _$$CreateWorkerRequestImplFromJson(
-  Map<String, dynamic> json,
-) => _$CreateWorkerRequestImpl(
-  name: json['name'] as String,
-  phoneNumber: json['phoneNumber'] as String,
-  salaryGross: (json['salaryGross'] as num).toDouble(),
-  startDate: DateTime.parse(json['startDate'] as String),
-  employmentType: json['employmentType'] as String? ?? 'FIXED',
-  hourlyRate: (json['hourlyRate'] as num?)?.toDouble(),
-  propertyId: json['propertyId'] as String?,
-  email: json['email'] as String?,
-  idNumber: json['idNumber'] as String?,
-  kraPin: json['kraPin'] as String?,
-  nssfNumber: json['nssfNumber'] as String?,
-  nhifNumber: json['nhifNumber'] as String?,
-  jobTitle: json['jobTitle'] as String?,
-  housingAllowance: (json['housingAllowance'] as num?)?.toDouble(),
-  transportAllowance: (json['transportAllowance'] as num?)?.toDouble(),
-  paymentFrequency: json['paymentFrequency'] as String?,
-  paymentMethod: json['paymentMethod'] as String?,
-  mpesaNumber: json['mpesaNumber'] as String?,
-  bankName: json['bankName'] as String?,
-  bankAccount: json['bankAccount'] as String?,
-  notes: json['notes'] as String?,
-  emergencyContactName: json['emergencyContactName'] as String?,
-  emergencyContactPhone: json['emergencyContactPhone'] as String?,
-  emergencyContactRelationship: json['emergencyContactRelationship'] as String?,
-);
+_CreateWorkerRequest _$CreateWorkerRequestFromJson(Map<String, dynamic> json) =>
+    _CreateWorkerRequest(
+      name: json['name'] as String,
+      phoneNumber: json['phoneNumber'] as String,
+      salaryGross: (json['salaryGross'] as num).toDouble(),
+      startDate: DateTime.parse(json['startDate'] as String),
+      employmentType: json['employmentType'] as String? ?? 'FIXED',
+      hourlyRate: (json['hourlyRate'] as num?)?.toDouble(),
+      propertyId: json['propertyId'] as String?,
+      email: json['email'] as String?,
+      idNumber: json['idNumber'] as String?,
+      kraPin: json['kraPin'] as String?,
+      nssfNumber: json['nssfNumber'] as String?,
+      nhifNumber: json['nhifNumber'] as String?,
+      jobTitle: json['jobTitle'] as String?,
+      housingAllowance: (json['housingAllowance'] as num?)?.toDouble(),
+      transportAllowance: (json['transportAllowance'] as num?)?.toDouble(),
+      paymentFrequency: json['paymentFrequency'] as String?,
+      paymentMethod: json['paymentMethod'] as String?,
+      mpesaNumber: json['mpesaNumber'] as String?,
+      bankName: json['bankName'] as String?,
+      bankAccount: json['bankAccount'] as String?,
+      notes: json['notes'] as String?,
+      emergencyContactName: json['emergencyContactName'] as String?,
+      emergencyContactPhone: json['emergencyContactPhone'] as String?,
+      emergencyContactRelationship:
+          json['emergencyContactRelationship'] as String?,
+    );
 
-Map<String, dynamic> _$$CreateWorkerRequestImplToJson(
-  _$CreateWorkerRequestImpl instance,
+Map<String, dynamic> _$CreateWorkerRequestToJson(
+  _CreateWorkerRequest instance,
 ) => <String, dynamic>{
   'name': instance.name,
   'phoneNumber': instance.phoneNumber,
@@ -137,40 +135,40 @@ Map<String, dynamic> _$$CreateWorkerRequestImplToJson(
   'emergencyContactRelationship': instance.emergencyContactRelationship,
 };
 
-_$UpdateWorkerRequestImpl _$$UpdateWorkerRequestImplFromJson(
-  Map<String, dynamic> json,
-) => _$UpdateWorkerRequestImpl(
-  name: json['name'] as String?,
-  phoneNumber: json['phoneNumber'] as String?,
-  salaryGross: (json['salaryGross'] as num?)?.toDouble(),
-  startDate: json['startDate'] == null
-      ? null
-      : DateTime.parse(json['startDate'] as String),
-  employmentType: json['employmentType'] as String?,
-  hourlyRate: (json['hourlyRate'] as num?)?.toDouble(),
-  propertyId: json['propertyId'] as String?,
-  isActive: json['isActive'] as bool?,
-  email: json['email'] as String?,
-  idNumber: json['idNumber'] as String?,
-  kraPin: json['kraPin'] as String?,
-  nssfNumber: json['nssfNumber'] as String?,
-  nhifNumber: json['nhifNumber'] as String?,
-  jobTitle: json['jobTitle'] as String?,
-  housingAllowance: (json['housingAllowance'] as num?)?.toDouble(),
-  transportAllowance: (json['transportAllowance'] as num?)?.toDouble(),
-  paymentFrequency: json['paymentFrequency'] as String?,
-  paymentMethod: json['paymentMethod'] as String?,
-  mpesaNumber: json['mpesaNumber'] as String?,
-  bankName: json['bankName'] as String?,
-  bankAccount: json['bankAccount'] as String?,
-  notes: json['notes'] as String?,
-  emergencyContactName: json['emergencyContactName'] as String?,
-  emergencyContactPhone: json['emergencyContactPhone'] as String?,
-  emergencyContactRelationship: json['emergencyContactRelationship'] as String?,
-);
+_UpdateWorkerRequest _$UpdateWorkerRequestFromJson(Map<String, dynamic> json) =>
+    _UpdateWorkerRequest(
+      name: json['name'] as String?,
+      phoneNumber: json['phoneNumber'] as String?,
+      salaryGross: (json['salaryGross'] as num?)?.toDouble(),
+      startDate: json['startDate'] == null
+          ? null
+          : DateTime.parse(json['startDate'] as String),
+      employmentType: json['employmentType'] as String?,
+      hourlyRate: (json['hourlyRate'] as num?)?.toDouble(),
+      propertyId: json['propertyId'] as String?,
+      isActive: json['isActive'] as bool?,
+      email: json['email'] as String?,
+      idNumber: json['idNumber'] as String?,
+      kraPin: json['kraPin'] as String?,
+      nssfNumber: json['nssfNumber'] as String?,
+      nhifNumber: json['nhifNumber'] as String?,
+      jobTitle: json['jobTitle'] as String?,
+      housingAllowance: (json['housingAllowance'] as num?)?.toDouble(),
+      transportAllowance: (json['transportAllowance'] as num?)?.toDouble(),
+      paymentFrequency: json['paymentFrequency'] as String?,
+      paymentMethod: json['paymentMethod'] as String?,
+      mpesaNumber: json['mpesaNumber'] as String?,
+      bankName: json['bankName'] as String?,
+      bankAccount: json['bankAccount'] as String?,
+      notes: json['notes'] as String?,
+      emergencyContactName: json['emergencyContactName'] as String?,
+      emergencyContactPhone: json['emergencyContactPhone'] as String?,
+      emergencyContactRelationship:
+          json['emergencyContactRelationship'] as String?,
+    );
 
-Map<String, dynamic> _$$UpdateWorkerRequestImplToJson(
-  _$UpdateWorkerRequestImpl instance,
+Map<String, dynamic> _$UpdateWorkerRequestToJson(
+  _UpdateWorkerRequest instance,
 ) => <String, dynamic>{
   'name': instance.name,
   'phoneNumber': instance.phoneNumber,

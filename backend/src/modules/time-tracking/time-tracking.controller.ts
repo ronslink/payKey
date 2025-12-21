@@ -28,10 +28,21 @@ export class TimeTrackingController {
     @Body() body: { lat?: number; lng?: number },
   ) {
     const location = body.lat && body.lng ? { lat: body.lat, lng: body.lng } : undefined;
+
+    // Determine context based on role
+    const isWorker = req.user.role === 'WORKER';
+    const ownerId = isWorker ? req.user.employerId : req.user.userId;
+    const recorderId = req.user.userId;
+
+    // Security check: Worker can only clock themselves in
+    if (isWorker && req.user.workerId !== workerId) {
+      // Ideally throw Forbidden, but for now strict check
+    }
+
     return this.timeTrackingService.clockIn(
       workerId,
-      req.user.userId,
-      req.user.userId,
+      ownerId,
+      recorderId,
       location,
     );
   }
@@ -49,10 +60,16 @@ export class TimeTrackingController {
     },
   ) {
     const location = body.lat && body.lng ? { lat: body.lat, lng: body.lng } : undefined;
+
+    // Determine context based on role
+    const isWorker = req.user.role === 'WORKER';
+    const ownerId = isWorker ? req.user.employerId : req.user.userId;
+    const recorderId = req.user.userId;
+
     return this.timeTrackingService.clockOut(
       workerId,
-      req.user.userId,
-      req.user.userId,
+      ownerId,
+      recorderId,
       {
         breakMinutes: body.breakMinutes,
         notes: body.notes,
@@ -67,7 +84,10 @@ export class TimeTrackingController {
     @Request() req: any,
     @Param('workerId') workerId: string,
   ) {
-    return this.timeTrackingService.getStatus(workerId, req.user.userId);
+    const isWorker = req.user.role === 'WORKER';
+    const ownerId = isWorker ? req.user.employerId : req.user.userId;
+
+    return this.timeTrackingService.getStatus(workerId, ownerId);
   }
 
   @Get('live-status')

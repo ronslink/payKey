@@ -390,7 +390,7 @@ class _PricingPageState extends ConsumerState<PricingPage> {
     
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Text('Upgrade to ${plan.name}'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -413,14 +413,14 @@ class _PricingPageState extends ConsumerState<PricingPage> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () async {
               if (phoneController.text.isEmpty) return;
               
-              Navigator.of(context).pop();
+              Navigator.of(dialogContext).pop();
               
               try {
                 // Initiate M-Pesa STK Push
@@ -431,7 +431,8 @@ class _PricingPageState extends ConsumerState<PricingPage> {
                   transactionDesc: 'Subscription Upgrade',
                 );
 
-                if (mounted) {
+                if (!mounted) return;
+                
                   showDialog(
                     context: context,
                     builder: (context) => AlertDialog(
@@ -447,16 +448,14 @@ class _PricingPageState extends ConsumerState<PricingPage> {
                       ],
                     ),
                   );
-                }
               } catch (e) {
-                if (mounted) {
+                if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Payment initiation failed: $e'),
                       backgroundColor: Colors.red,
                     ),
                   );
-                }
               }
             },
             style: ElevatedButton.styleFrom(

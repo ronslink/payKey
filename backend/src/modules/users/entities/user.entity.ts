@@ -142,6 +142,10 @@ export class User {
   @Column({ nullable: true })
   pin: string; // Hashed PIN for employee login
 
+  // Wallet for payroll payments
+  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
+  walletBalance: number;
+
   @CreateDateColumn()
   createdAt: Date;
 

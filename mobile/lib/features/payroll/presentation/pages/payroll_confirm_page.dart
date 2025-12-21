@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/payroll_provider.dart';
 import '../../../payments/presentation/providers/transactions_provider.dart';
+import '../../data/repositories/payroll_repository.dart';
+import '../../data/models/payroll_model.dart';
 
 class PayrollConfirmPage extends ConsumerStatefulWidget {
   final String payPeriodId;
@@ -20,8 +22,162 @@ class PayrollConfirmPage extends ConsumerStatefulWidget {
 
 class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
   bool _isProcessing = false;
+  bool _isVerifying = true;
   Map<String, dynamic>? _batchResult;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _verifyFunds();
+  }
+
+  Future<void> _verifyFunds() async {
+    setState(() => _isVerifying = true);
+    try {
+      final repo = ref.read(payrollRepositoryProvider);
+      final result = await repo.verifyFunds(widget.payPeriodId);
+      setState(() {
+        _isVerifying = false;
+      });
+      
+      // Show dialog if insufficient funds
+      if (!result.canProceed && mounted) {
+        _showInsufficientFundsDialog(result);
+      }
+    } catch (e) {
+      setState(() {
+        _isVerifying = false;
+        _error = 'Failed to verify funds: $e';
+      });
+    }
+  }
+
+  void _showInsufficientFundsDialog(FundVerificationResult result) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+            SizedBox(width: 8),
+            Text('Insufficient Funds'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('You don\'t have enough funds to process payroll.'),
+            SizedBox(height: 16),
+            _buildFundRow('Required:', result.formattedRequired, Colors.red),
+            _buildFundRow('Available:', result.formattedBalance, Colors.green),
+            Divider(),
+            _buildFundRow('Shortfall:', result.formattedShortfall, Colors.orange),
+            SizedBox(height: 16),
+            Text(
+              'Please top up your wallet before proceeding.',
+              style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.pop(); // Go back to previous page
+            },
+            child: Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // Navigate to top-up page or show top-up dialog
+              _showDevTopupDialog(result.shortfall);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            child: Text('Top Up Wallet'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFundRow(String label, String value, Color color) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(fontWeight: FontWeight.w500)),
+          Text(value, style: TextStyle(fontWeight: FontWeight.bold, color: color)),
+        ],
+      ),
+    );
+  }
+
+  void _showDevTopupDialog(double suggestedAmount) {
+    final controller = TextEditingController(text: suggestedAmount.toStringAsFixed(0));
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('DEV: Top Up Wallet'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('This is a development feature. Enter amount to add to wallet:'),
+            SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Amount (KES)',
+                border: OutlineInputBorder(),
+                prefixText: 'KES ',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              await _performDevTopup(double.tryParse(controller.text) ?? suggestedAmount);
+            },
+            child: Text('Top Up'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _performDevTopup(double amount) async {
+    try {
+      final repo = ref.read(payrollRepositoryProvider);
+      final result = await repo.devTopup(amount);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('DEV: Topped up KES ${amount.toStringAsFixed(0)}. New balance: ${result['newBalance']}'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        // Re-verify funds after topup
+        await _verifyFunds();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
 
   Future<void> _processPayroll() async {
     setState(() {
@@ -52,7 +208,7 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
         
         if (mounted) {
           ref.read(payrollProvider.notifier).reset();
-          ref.read(selectedWorkersProvider.notifier).state = {};
+          ref.read(selectedWorkersProvider.notifier).set({});
           context.go('/home');
         }
       }
@@ -66,6 +222,21 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isVerifying) {
+      return const Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Verifying wallet balance...'),
+            ],
+          ),
+        ),
+      );
+    }
+
     if (_batchResult != null) {
       return _buildResultsPage();
     }
@@ -204,7 +375,7 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
                 icon: const Icon(Icons.close),
                 onPressed: () {
                   ref.read(payrollProvider.notifier).reset();
-                  ref.read(selectedWorkersProvider.notifier).state = {};
+                  ref.read(selectedWorkersProvider.notifier).set({});
                   context.go('/home');
                 },
               ),
@@ -304,7 +475,7 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
                 child: ElevatedButton(
                   onPressed: () {
                     ref.read(payrollProvider.notifier).reset();
-                    ref.read(selectedWorkersProvider.notifier).state = {};
+                    ref.read(selectedWorkersProvider.notifier).set({});
                     context.go('/home');
                   },
                   style: ElevatedButton.styleFrom(

@@ -8,7 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { User, UserRole } from '../../users/entities/user.entity';
+import { User, UserRole, UserTier } from '../../users/entities/user.entity';
 import { Worker } from '../entities/worker.entity';
 
 @Injectable()
@@ -133,6 +133,11 @@ export class EmployeePortalService {
         worker.inviteCodeExpiry = undefined as any;
         await this.workersRepository.save(worker);
 
+        // Get employer info to inherit their subscription tier
+        const employer = await this.usersRepository.findOne({
+            where: { id: worker.userId },
+        });
+
         // Generate JWT
         const payload = {
             sub: savedUser.id,
@@ -153,6 +158,7 @@ export class EmployeePortalService {
                 lastName: savedUser.lastName,
                 role: savedUser.role,
                 linkedWorkerId: savedUser.linkedWorkerId,
+                tier: employer ? employer.tier : UserTier.FREE,
             },
         };
     }
@@ -193,6 +199,11 @@ export class EmployeePortalService {
             where: { id: user.linkedWorkerId },
         });
 
+        // Get employer info to inherit their subscription tier
+        const employer = await this.usersRepository.findOne({
+            where: { id: user.employerId },
+        });
+
         // Generate JWT
         const payload = {
             sub: user.id,
@@ -214,6 +225,8 @@ export class EmployeePortalService {
                 role: user.role,
                 linkedWorkerId: user.linkedWorkerId,
                 employerId: user.employerId,
+                // Vital: Return employer's tier so mobile app enables features like Time Tracking
+                tier: employer ? employer.tier : UserTier.FREE,
             },
         };
     }

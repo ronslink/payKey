@@ -123,6 +123,33 @@ export class MpesaService {
     amount: number,
     remarks: string,
   ): Promise<any> {
+    // DEV MODE: Simulate success without calling actual M-Pesa API
+    if (process.env.NODE_ENV !== 'production') {
+      this.logger.log(`DEV MODE: Simulating B2C payment success for ${phoneNumber}, amount: ${amount}`);
+
+      // Simulate a short delay like real API
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Update transaction as successful
+      await this.transactionsRepository.update(transactionId, {
+        status: TransactionStatus.SUCCESS,
+        providerRef: `DEV_SIM_${Date.now()}`,
+        metadata: {
+          simulated: true,
+          phoneNumber,
+          amount,
+          timestamp: new Date().toISOString(),
+        } as any,
+      });
+
+      return {
+        ConversationID: `DEV_${Date.now()}`,
+        OriginatorConversationID: `DEV_ORIG_${Date.now()}`,
+        ResponseCode: '0',
+        ResponseDescription: 'DEV: Simulated success',
+      };
+    }
+
     const token = await this.getAccessToken();
     const shortCode = this.configService.get('MPESA_B2C_SHORTCODE') || '600981'; // Sandbox default
     const initiatorName =

@@ -1,0 +1,80 @@
+# Production Docker Compose Configuration for PayKey
+# Usage: docker-compose -f docker-compose.prod.yml up -d
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: paykey_db_prod
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-paykey}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - paykey-network-prod
+
+  redis:
+    image: redis:7-alpine
+    container_name: paykey_redis_prod
+    restart: always
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data_prod:/data
+    networks:
+      - paykey-network-prod
+
+  backend:
+    image: node:20-alpine
+    container_name: paykey_backend_prod
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME:-paykey}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-7d}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+      - /app/node_modules # Prevent overwriting node_modules
+    command: sh -c "npm ci --only=production && npm run build && npm run typeorm:migration:run && npm run start:prod"
+    networks:
+      - paykey-network-prod
+    healthcheck:
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:3000/api" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  postgres_data_prod:
+  redis_data_prod:
+
+
+networks:
+  paykey-network-prod:
+    driver: bridge

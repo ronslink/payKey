@@ -25,19 +25,43 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
       final repo = ref.read(subscriptionRepositoryProvider);
       final checkoutUrl = await repo.subscribeWithStripe(widget.plan.tier);
       
-      final  uri = Uri.parse(checkoutUrl);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-        
+      if (checkoutUrl.isEmpty) {
+        throw Exception('Empty checkout URL received from server');
+      }
+      
+      final uri = Uri.parse(checkoutUrl);
+      debugPrint('Launching Stripe checkout URL: $checkoutUrl');
+      
+      // Try to launch the URL directly - don't rely on canLaunchUrl
+      // as it can fail on some Android versions with package visibility restrictions
+      final launched = await launchUrl(
+        uri, 
+        mode: LaunchMode.externalApplication,
+      );
+      
+      if (launched) {
         // In a real app with deep linking, we would handle the return.
         // For now, we show a dialog explaining what to do.
         if (mounted) {
-           _showInstructionsDialog();
+          _showInstructionsDialog();
         }
       } else {
-        throw Exception('Could not launch payment URL');
+        // If external browser fails, try in-app browser
+        final launchedInApp = await launchUrl(
+          uri,
+          mode: LaunchMode.inAppBrowserView,
+        );
+        
+        if (!launchedInApp) {
+          throw Exception('Could not launch payment URL: $checkoutUrl');
+        }
+        
+        if (mounted) {
+          _showInstructionsDialog();
+        }
       }
     } catch (e) {
+      debugPrint('Stripe payment error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),

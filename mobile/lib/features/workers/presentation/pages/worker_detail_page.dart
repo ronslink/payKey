@@ -9,6 +9,7 @@ import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../../payroll/data/repositories/payroll_repository.dart';
 import '../../../employee_portal/presentation/widgets/invite_worker_dialog.dart';
+import '../../../subscriptions/presentation/providers/feature_access_provider.dart';
 
 // =============================================================================
 // CONSTANTS
@@ -200,6 +201,7 @@ class _WorkerDetailPageState extends ConsumerState<WorkerDetailPage> {
   @override
   Widget build(BuildContext context) {
     final workersState = ref.watch(workersProvider);
+    final portalAccess = ref.watch(featureAccessProvider('employee_portal'));
 
     // Get worker for app bar actions
     final worker = workersState.whenOrNull(
@@ -218,6 +220,9 @@ class _WorkerDetailPageState extends ConsumerState<WorkerDetailPage> {
           return _WorkerDetailContent(
             worker: workerData,
             onEdit: () => _navigateToEdit(workerData),
+            onInvite: portalAccess.value?.hasAccess == true 
+                ? () => _handleMenuAction('invite', workerData) 
+                : null,
             onTerminate: _navigateToTerminate,
             history: _history,
             onDownloadPayslip: _downloadPayslip,
@@ -288,11 +293,13 @@ class _WorkerDetailPageState extends ConsumerState<WorkerDetailPage> {
 class _WorkerDetailContent extends StatelessWidget {
   final WorkerModel worker;
   final VoidCallback onEdit;
+  final VoidCallback? onInvite;
   final VoidCallback onTerminate;
 
   const _WorkerDetailContent({
     required this.worker,
     required this.onEdit,
+    this.onInvite,
     required this.onTerminate,
     required this.history,
     required this.onDownloadPayslip,
@@ -309,6 +316,25 @@ class _WorkerDetailContent extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _WorkerHeader(worker: worker),
+          if (onInvite != null) ...[
+            const SizedBox(height: _Spacing.lg),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: onInvite,
+                icon: const Icon(Icons.person_add),
+                label: const Text('Invite to App'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6366F1), // Indigo
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.all(16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: _Spacing.xl),
           _ContactSection(worker: worker),
           const SizedBox(height: _Spacing.xl),
@@ -503,7 +529,7 @@ class _TaxSection extends StatelessWidget {
         if (worker.nssfNumber?.isNotEmpty == true)
           _DetailRowData('NSSF Number', worker.nssfNumber!, Icons.security),
         if (worker.nhifNumber?.isNotEmpty == true)
-          _DetailRowData('NHIF Number', worker.nhifNumber!, Icons.health_and_safety),
+          _DetailRowData('SHIF Number', worker.nhifNumber!, Icons.health_and_safety),
       ],
     );
   }

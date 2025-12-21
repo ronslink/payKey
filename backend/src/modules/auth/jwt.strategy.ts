@@ -7,6 +7,9 @@ interface JwtUser {
   userId: string;
   email: string;
   tier: string;
+  role: string;
+  employerId?: string; // For WORKER role: ID of the employer User
+  workerId?: string;   // For WORKER role: ID of the Worker profile
 }
 
 interface JwtPayload {
@@ -14,6 +17,9 @@ interface JwtPayload {
   sub: string;
   tier: string;
   role: string;
+  employerId?: string;
+  workerId?: string;
+  userId?: string; // Sometimes used redundantly
 }
 
 @Injectable()
@@ -28,9 +34,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   validate(payload: JwtPayload): JwtUser {
     return {
-      userId: payload.sub,
+      userId: payload.sub, // 'sub' is standard, but we also put 'userId' in payload
       email: payload.email,
       tier: payload.tier,
+      role: payload.role,
+      employerId: payload.employerId,
+      workerId: payload.workerId,
     };
   }
 }

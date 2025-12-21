@@ -207,7 +207,7 @@ class ClockStatus {
       currentEntry: json['currentEntry'] != null
           ? EmployeeTimeEntry.fromJson(json['currentEntry'] as Map<String, dynamic>)
           : null,
-      todayTotal: (json['todayTotal'] as num?)?.toDouble() ?? 0,
+      todayTotal: parseDouble(json['todayTotal']),
     );
   }
 
@@ -246,7 +246,7 @@ class EmployeeTimeEntry {
       workerId: json['workerId'] as String,
       clockIn: DateTime.parse(json['clockIn'] as String),
       clockOut: json['clockOut'] != null ? DateTime.parse(json['clockOut'] as String) : null,
-      totalHours: (json['totalHours'] as num?)?.toDouble(),
+      totalHours: json['totalHours'] != null ? parseDouble(json['totalHours']) : null,
       breakMinutes: json['breakMinutes'] as int?,
       notes: json['notes'] as String?,
       status: json['status'] as String? ?? 'ACTIVE',
@@ -329,24 +329,34 @@ class EmployeePayslip {
     required this.netPay,
   });
 
+
   factory EmployeePayslip.fromJson(Map<String, dynamic> json) {
     final payPeriod = json['payPeriod'] as Map<String, dynamic>?;
+    final taxBreakdown = json['taxBreakdown'] as Map<String, dynamic>?;
+    final deductions = json['deductions'] as Map<String, dynamic>?;
+
     return EmployeePayslip(
       id: json['id'] as String,
       workerId: json['workerId'] as String,
       periodName: payPeriod?['name'] as String? ?? json['periodName'] as String? ?? 'Pay Period',
       payDate: DateTime.parse(json['payDate'] as String? ?? payPeriod?['paymentDate'] as String? ?? DateTime.now().toIso8601String()),
-      basicSalary: (json['basicSalary'] as num?)?.toDouble() ?? 0,
-      allowances: (json['allowances'] as num?)?.toDouble() ?? 0,
-      overtime: (json['overtimePay'] as num?)?.toDouble() ?? (json['overtime'] as num?)?.toDouble() ?? 0,
-      grossPay: (json['grossPay'] as num?)?.toDouble() ?? 0,
-      paye: (json['paye'] as num?)?.toDouble() ?? 0,
-      nhif: (json['nhif'] as num?)?.toDouble() ?? 0,
-      nssf: (json['nssf'] as num?)?.toDouble() ?? 0,
-      housingLevy: (json['housingLevy'] as num?)?.toDouble() ?? 0,
-      totalDeductions: (json['totalDeductions'] as num?)?.toDouble() ?? 0,
-      netPay: (json['netPay'] as num?)?.toDouble() ?? 0,
+      basicSalary: parseDouble(json['grossSalary']), // Using grossSalary as basic for now if basic not separate
+      allowances: parseDouble(json['bonuses']) + parseDouble(json['otherEarnings']),
+      overtime: parseDouble(json['overtimePay']),
+      grossPay: parseDouble(json['grossSalary']),
+      paye: parseDouble(taxBreakdown?['paye']),
+      nhif: parseDouble(taxBreakdown?['nhif']) + parseDouble(taxBreakdown?['shif']),
+      nssf: parseDouble(taxBreakdown?['nssf']),
+      housingLevy: parseDouble(taxBreakdown?['housingLevy']),
+      totalDeductions: parseDouble(taxBreakdown?['totalTax']) + parseDouble(deductions?['totalDeductions']),
+      netPay: parseDouble(json['netSalary']),
     );
   }
 }
 
+double parseDouble(dynamic value) {
+  if (value == null) return 0.0;
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value) ?? 0.0;
+  return 0.0;
+}

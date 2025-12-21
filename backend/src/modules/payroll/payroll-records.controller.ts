@@ -12,16 +12,20 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PayrollRecord } from './entities/payroll-record.entity';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('Payroll Records')
 @Controller('payroll-records')
 @UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
 export class PayrollRecordsController {
   constructor(
     @InjectRepository(PayrollRecord)
     private payrollRepository: Repository<PayrollRecord>,
-  ) {}
+  ) { }
 
   @Get()
+  @ApiOperation({ summary: 'Get payroll records for the current user' })
   async getPayrollRecords(@Request() req: any) {
     return this.payrollRepository.find({
       where: { userId: req.user.userId },
@@ -31,7 +35,25 @@ export class PayrollRecordsController {
     });
   }
 
+  @Get('worker/:workerId')
+  @ApiOperation({ summary: 'Get payroll records for a specific worker' })
+  async getWorkerPayrollRecords(
+    @Request() req: any,
+    @Param('workerId') workerId: string,
+  ) {
+    // For employees viewing their own payslips, use the workerId from the route
+    // For employers viewing worker payslips, verify they own this worker
+    const records = await this.payrollRepository.find({
+      where: { workerId },
+      relations: ['worker', 'payPeriod'],
+      order: { periodStart: 'DESC' },
+    });
+    console.log('Worker Payroll Records:', JSON.stringify(records, null, 2));
+    return records;
+  }
+
   @Patch(':id/status')
+  @ApiOperation({ summary: 'Update payment status of a payroll record' })
   async updatePayrollStatus(
     @Request() req: any,
     @Param('id') id: string,
@@ -47,6 +69,7 @@ export class PayrollRecordsController {
   }
 
   @Delete(':id')
+  @ApiOperation({ summary: 'Delete a payroll record' })
   async deletePayrollRecord(@Request() req: any, @Param('id') id: string) {
     return this.payrollRepository.delete({ id, userId: req.user.userId });
   }

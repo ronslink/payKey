@@ -118,10 +118,10 @@ export class StripeService {
         },
         success_url:
           successUrl ||
-          `${this.configService.get<string>('FRONTEND_URL')}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
+          `${this.configService.get<string>('FRONTEND_URL')}/payments/subscriptions/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url:
           cancelUrl ||
-          `${this.configService.get<string>('FRONTEND_URL')}/subscription/cancel`,
+          `${this.configService.get<string>('FRONTEND_URL')}/payments/subscriptions/cancel`,
         allow_promotion_codes: true,
       });
 
@@ -212,6 +212,11 @@ export class StripeService {
     }
 
     await this.subscriptionRepository.save(subscription);
+
+    // Sync tier to User entity
+    // We need to inject UsersRepository or use QueryBuilder to update the user table directly
+    await this.subscriptionRepository.manager.update('users', { id: userId }, { tier: planTier });
+
     this.logger.log(`Subscription activated for user ${userId} with plan ${planTier}`);
   }
 
@@ -410,6 +415,10 @@ export class StripeService {
       subscription.startDate = new Date();
 
       await this.subscriptionRepository.save(subscription);
+
+      // Sync tier to User entity
+      await this.subscriptionRepository.manager.update('users', { id: userId }, { tier: normalizedTier });
+
       this.logger.log(
         `Subscription updated for user ${userId} to ${normalizedTier}`,
       );

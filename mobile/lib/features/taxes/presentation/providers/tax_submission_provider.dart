@@ -1,12 +1,24 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/repositories/tax_repository.dart';
 import '../../data/models/tax_submission_model.dart';
 
-class TaxSubmissionNotifier extends StateNotifier<AsyncValue<List<TaxSubmissionModel>>> {
-  final TaxRepository _repository;
+class TaxSubmissionNotifier extends AsyncNotifier<List<TaxSubmissionModel>> {
+  late final TaxRepository _repository;
 
-  TaxSubmissionNotifier(this._repository) : super(const AsyncValue.loading()) {
-    loadSubmissions();
+  @override
+  FutureOr<List<TaxSubmissionModel>> build() {
+    _repository = ref.watch(taxRepositoryProvider);
+    return _loadSubmissions();
+  }
+
+  Future<List<TaxSubmissionModel>> _loadSubmissions({
+    String? taxYear,
+    String? status,
+    int page = 1,
+    int limit = 50,
+  }) {
+    return _repository.getIndividualTaxSubmissions();
   }
 
   Future<void> loadSubmissions({
@@ -15,13 +27,13 @@ class TaxSubmissionNotifier extends StateNotifier<AsyncValue<List<TaxSubmissionM
     int page = 1,
     int limit = 50,
   }) async {
-    try {
-      state = const AsyncValue.loading();
-      final result = await _repository.getIndividualTaxSubmissions();
-      state = AsyncValue.data(result);
-    } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-    }
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => _loadSubmissions(
+      taxYear: taxYear,
+      status: status,
+      page: page,
+      limit: limit,
+    ));
   }
 
   Future<void> submitTaxReturn(TaxSubmissionModel submission) async {
@@ -86,10 +98,7 @@ class TaxSubmissionNotifier extends StateNotifier<AsyncValue<List<TaxSubmissionM
 
 // Provider for individual tax submissions (NOT payroll-related)
 final taxSubmissionProvider =
-    StateNotifierProvider<TaxSubmissionNotifier, AsyncValue<List<TaxSubmissionModel>>>((ref) {
-  final repository = ref.read(taxRepositoryProvider);
-  return TaxSubmissionNotifier(repository);
-});
+    AsyncNotifierProvider<TaxSubmissionNotifier, List<TaxSubmissionModel>>(TaxSubmissionNotifier.new);
 
 // Helper provider for tax calculations
 final taxCalculatorProvider =

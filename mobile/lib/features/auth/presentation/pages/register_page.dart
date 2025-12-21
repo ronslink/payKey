@@ -146,20 +146,16 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     ref.listen(authStateProvider, (previous, next) {
-      next.whenOrNull(
-        error: (error, stack) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(error.toString()),
-              backgroundColor: Colors.red,
-            ),
-          );
-        },
-        data: (_) {
-          // New users should complete onboarding first
-          context.go('/onboarding');
-        },
-      );
+      if (next.hasError) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(next.error.toString()),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } else if (previous?.isLoading == true && !next.isLoading && !next.hasError) {
+        context.go('/onboarding');
+      }
     });
 
     final authState = ref.watch(authStateProvider);

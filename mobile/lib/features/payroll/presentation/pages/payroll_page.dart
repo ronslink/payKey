@@ -806,25 +806,26 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
-          _isInitializing
-              ? const CircularProgressIndicator()
-              : ElevatedButton.icon(
-                  onPressed: _initializeYear,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6366F1),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 14,
+          if (_selectedStatus == null) // Only show initialize button when viewing all
+            _isInitializing
+                ? const CircularProgressIndicator()
+                : ElevatedButton.icon(
+                    onPressed: _initializeYear,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6366F1),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 14,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
+                    icon: const Icon(Icons.add_rounded),
+                    label: Text('Initialize ${DateTime.now().year}'),
                   ),
-                  icon: const Icon(Icons.add_rounded),
-                  label: Text('Initialize ${DateTime.now().year}'),
-                ),
         ],
       ),
     );

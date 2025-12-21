@@ -6,8 +6,8 @@ part of 'journal_entry_model.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$JournalEntryImpl _$$JournalEntryImplFromJson(Map<String, dynamic> json) =>
-    _$JournalEntryImpl(
+_JournalEntry _$JournalEntryFromJson(Map<String, dynamic> json) =>
+    _JournalEntry(
       id: json['id'] as String,
       accountCode: json['accountCode'] as String,
       accountName: json['accountName'] as String,
@@ -16,7 +16,7 @@ _$JournalEntryImpl _$$JournalEntryImplFromJson(Map<String, dynamic> json) =>
       description: json['description'] as String?,
     );
 
-Map<String, dynamic> _$$JournalEntryImplToJson(_$JournalEntryImpl instance) =>
+Map<String, dynamic> _$JournalEntryToJson(_JournalEntry instance) =>
     <String, dynamic>{
       'id': instance.id,
       'accountCode': instance.accountCode,
@@ -26,14 +26,12 @@ Map<String, dynamic> _$$JournalEntryImplToJson(_$JournalEntryImpl instance) =>
       'description': instance.description,
     };
 
-_$JournalEntrySetImpl _$$JournalEntrySetImplFromJson(
-  Map<String, dynamic> json,
-) => _$JournalEntrySetImpl(
-  entries: (json['entries'] as List<dynamic>)
-      .map((e) => JournalEntry.fromJson(e as Map<String, dynamic>))
-      .toList(),
-);
+_JournalEntrySet _$JournalEntrySetFromJson(Map<String, dynamic> json) =>
+    _JournalEntrySet(
+      entries: (json['entries'] as List<dynamic>)
+          .map((e) => JournalEntry.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
 
-Map<String, dynamic> _$$JournalEntrySetImplToJson(
-  _$JournalEntrySetImpl instance,
-) => <String, dynamic>{'entries': instance.entries};
+Map<String, dynamic> _$JournalEntrySetToJson(_JournalEntrySet instance) =>
+    <String, dynamic>{'entries': instance.entries};

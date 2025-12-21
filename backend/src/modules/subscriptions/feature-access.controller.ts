@@ -26,10 +26,12 @@ export class FeatureAccessController {
             isTrialActive: summary.isTrialActive,
             trialDaysRemaining: summary.trialDaysRemaining,
             workerLimit: summary.workerLimit,
+            currentWorkerCount: summary.currentWorkerCount,
             features: {
-                accessible: summary.accessibleFeatures,
-                preview: summary.previewFeatures,
-                locked: summary.lockedFeatures,
+                // Return just the keys for mobile app compatibility
+                accessible: summary.accessibleFeatures.map(f => f.key),
+                preview: summary.previewFeatures.map(f => f.key),
+                locked: summary.lockedFeatures.map(f => f.key),
             },
             allFeatures: FEATURE_ACCESS_MATRIX,
         };

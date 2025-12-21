@@ -1,21 +1,44 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_filex/open_filex.dart';
-import '../../data/models/payroll_model.dart';
+import '../../data/models/payroll_model.dart' hide PayrollProcessingResult;
 import '../../data/repositories/payroll_repository.dart';
 
 final payrollProvider =
-    StateNotifierProvider<PayrollNotifier, AsyncValue<List<PayrollCalculation>>>((ref) {
-  return PayrollNotifier(ref.read(payrollRepositoryProvider));
-});
+    AsyncNotifierProvider<PayrollNotifier, List<PayrollCalculation>>(PayrollNotifier.new);
 
-final selectedWorkersProvider = StateProvider<Set<String>>((ref) => {});
+final selectedWorkersProvider = NotifierProvider<SelectedWorkersNotifier, Set<String>>(SelectedWorkersNotifier.new);
 
-class PayrollNotifier extends StateNotifier<AsyncValue<List<PayrollCalculation>>> {
-  final PayrollRepository _repository;
+class SelectedWorkersNotifier extends Notifier<Set<String>> {
+  @override
+  Set<String> build() => {};
 
-  PayrollNotifier(this._repository) : super(const AsyncValue.data([]));
+  void toggle(String id) {
+    if (state.contains(id)) {
+      state = {...state}..remove(id);
+    } else {
+      state = {...state, id};
+    }
+  }
+  
+  void clear() => state = {};
+  
+  void set(Set<String> ids) => state = ids;
+}
+
+class PayrollNotifier extends AsyncNotifier<List<PayrollCalculation>> {
+  late final PayrollRepository _repository;
+
+  @override
+  FutureOr<List<PayrollCalculation>> build() {
+    _repository = ref.watch(payrollRepositoryProvider);
+    return []; // Initial empty state
+    // Or if we want to load existing drafts etc automatically:
+    // return _repository.getDraftPayroll(currentPeriodId); 
+    // But usage seems to call specific methods.
+  }
 
   Future<void> calculatePayroll(
     List<String> workerIds, {
@@ -23,16 +46,11 @@ class PayrollNotifier extends StateNotifier<AsyncValue<List<PayrollCalculation>>
     DateTime? endDate,
   }) async {
     state = const AsyncValue.loading();
-    try {
-      final calculations = await _repository.calculatePayroll(
+    state = await AsyncValue.guard(() => _repository.calculatePayroll(
         workerIds,
         startDate: startDate,
         endDate: endDate,
-      );
-      state = AsyncValue.data(calculations);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
+      ));
   }
 
   Future<PayrollProcessingResult> processPayroll(
@@ -113,12 +131,7 @@ class PayrollNotifier extends StateNotifier<AsyncValue<List<PayrollCalculation>>
 
   Future<void> getDraftPayroll(String payPeriodId) async {
     state = const AsyncValue.loading();
-    try {
-      final calculations = await _repository.getDraftPayroll(payPeriodId);
-      state = AsyncValue.data(calculations);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
+    state = await AsyncValue.guard(() => _repository.getDraftPayroll(payPeriodId));
   }
 
   Future<void> finalizePayroll(String payPeriodId) async {

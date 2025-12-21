@@ -14,9 +14,11 @@ class EmployeePayslipsPage extends ConsumerStatefulWidget {
 }
 
 class _EmployeePayslipsPageState extends ConsumerState<EmployeePayslipsPage> {
-  List<EmployeePayslip>? _payslips;
+  int _selectedYear = DateTime.now().year;
+  Set<int> _availableYears = {};
   bool _isLoading = true;
   String? _error;
+  List<EmployeePayslip>? _payslips;
 
   @override
   void initState() {
@@ -31,18 +33,12 @@ class _EmployeePayslipsPageState extends ConsumerState<EmployeePayslipsPage> {
     });
 
     try {
-      // Get profile first to get workerId
       final profileResponse = await ApiService().employeePortal.getMyProfile();
-      if (profileResponse.statusCode != 200) {
-        throw Exception('Failed to get profile');
-      }
+      if (profileResponse.statusCode != 200) throw Exception('Failed to get profile');
 
       final profile = EmployeeProfile.fromJson(profileResponse.data);
-      if (profile.workerId == null) {
-        throw Exception('Worker ID not found');
-      }
+      if (profile.workerId == null) throw Exception('Worker ID not found');
 
-      // Get payslips for this worker
       final response = await ApiService().payroll.getPayslipsForWorker(profile.workerId!);
       
       if (response.statusCode == 200 && response.data != null) {
@@ -50,6 +46,17 @@ class _EmployeePayslipsPageState extends ConsumerState<EmployeePayslipsPage> {
         setState(() {
           _payslips = data.map((e) => EmployeePayslip.fromJson(e)).toList();
           _payslips!.sort((a, b) => b.payDate.compareTo(a.payDate));
+          
+          // Extract available years
+          _availableYears = _payslips!.map((p) => p.payDate.year).toSet();
+          if (_availableYears.isEmpty) {
+            _availableYears.add(DateTime.now().year);
+          }
+          // Ensure selected year is available
+          if (!_availableYears.contains(_selectedYear) && _availableYears.isNotEmpty) {
+            _selectedYear = _availableYears.first; // Default to most recent (sorted)
+          }
+          
           _isLoading = false;
         });
       } else {
@@ -73,15 +80,17 @@ class _EmployeePayslipsPageState extends ConsumerState<EmployeePayslipsPage> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF1E293B)),
+          icon: const Icon(Icons.arrow_back_ios_new, size: 20, color: Color(0xFF1E293B)),
           onPressed: () => context.pop(),
         ),
         title: const Text(
-          'My Payslips',
+          'Payslips',
           style: TextStyle(
             color: Color(0xFF1E293B),
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
+            fontSize: 20,
           ),
         ),
         actions: [
@@ -108,169 +117,226 @@ class _EmployeePayslipsPageState extends ConsumerState<EmployeePayslipsPage> {
             const Icon(Icons.error_outline, size: 48, color: Colors.red),
             const SizedBox(height: 16),
             Text('Error: $_error'),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _loadPayslips,
-              child: const Text('Retry'),
-            ),
+            ElevatedButton(onPressed: _loadPayslips, child: const Text('Retry')),
           ],
         ),
       );
     }
 
     if (_payslips == null || _payslips!.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.receipt_long, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              'No Payslips Found',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Your payslips will appear here after payroll is processed',
-              style: TextStyle(color: Colors.grey[500]),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      );
+      return _buildEmptyState();
     }
 
-    return RefreshIndicator(
-      onRefresh: _loadPayslips,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: _payslips!.length,
-        itemBuilder: (context, index) => _buildPayslipCard(_payslips![index]),
+    // Filter payslips by selected year
+    final filteredPayslips = _payslips!.where((p) => p.payDate.year == _selectedYear).toList();
+
+    return Column(
+      children: [
+        _buildYearSelector(),
+        Expanded(
+          child: filteredPayslips.isEmpty
+              ? _buildEmptyState(message: 'No payslips for $_selectedYear')
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  itemCount: filteredPayslips.length,
+                  itemBuilder: (context, index) => _buildPayslipCard(filteredPayslips[index]),
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyState({String message = 'No Payslips Found'}) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.receipt_long, size: 64, color: Colors.grey[300]),
+          const SizedBox(height: 16),
+          Text(
+            message,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[600],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildYearSelector() {
+    final years = _availableYears.toList()..sort((a, b) => b.compareTo(a));
+    return Container(
+      height: 60,
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: years.length,
+        separatorBuilder: (context, index) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final year = years[index];
+          final isSelected = year == _selectedYear;
+          return ChoiceChip(
+            label: Text(year.toString()),
+            selected: isSelected,
+            onSelected: (selected) {
+              if (selected) setState(() => _selectedYear = year);
+            },
+            selectedColor: const Color(0xFF6366F1),
+            labelStyle: TextStyle(
+              color: isSelected ? Colors.white : Colors.grey[700],
+              fontWeight: FontWeight.w600,
+            ),
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(
+                color: isSelected ? Colors.transparent : Colors.grey[300]!,
+              ),
+            ),
+          );
+        },
       ),
     );
   }
 
   Widget _buildPayslipCard(EmployeePayslip payslip) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: () => _showPayslipDetails(payslip),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    payslip.periodName,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                    ),
+    final monthName = _getMonthAbbr(payslip.payDate);
+    final day = payslip.payDate.day.toString();
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: () => _showPayslipDetails(payslip),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                // Date Box
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEEF2FF),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Text(
-                      'PAID',
-                      style: TextStyle(
-                        color: Colors.green,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Net Pay',
-                          style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'KES ${_formatAmount(payslip.netPay)}',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF6366F1),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'Pay Date',
-                        style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                        monthName,
+                        style: const TextStyle(
+                          color: Color(0xFF6366F1),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
-                      const SizedBox(height: 4),
                       Text(
-                        _formatDate(payslip.payDate),
-                        style: const TextStyle(fontWeight: FontWeight.w500),
+                        day,
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                          fontSize: 12,
+                        ),
                       ),
                     ],
                   ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              const Divider(),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildStatItem('Gross', payslip.grossPay),
-                  _buildStatItem('Deductions', payslip.totalDeductions, isDeduction: true),
-                  IconButton(
-                    icon: const Icon(Icons.chevron_right, color: Color(0xFF6366F1)),
-                    onPressed: () => _showPayslipDetails(payslip),
+                ),
+                const SizedBox(width: 16),
+                // Details
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        payslip.periodName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(Icons.check_circle, size: 14, color: Colors.green[600]),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Paid',
+                            style: TextStyle(
+                              color: Colors.green[600],
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '•  Gross: ${_formatAmountSimplified(payslip.grossPay)}',
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ],
+                ),
+                // Amount
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'KES ${_formatAmountSimplified(payslip.netPay)}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Color(0xFF1E293B),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildStatItem(String label, double amount, {bool isDeduction = false}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(color: Colors.grey[500], fontSize: 11),
-        ),
-        Text(
-          '${isDeduction ? '-' : ''}KES ${_formatAmount(amount)}',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: isDeduction ? Colors.red : Colors.grey[800],
-          ),
-        ),
-      ],
-    );
+  String _getMonthAbbr(DateTime date) {
+    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    return months[date.month - 1];
   }
+  
+  String _formatAmountSimplified(double amount) {
+    if (amount >= 1000) {
+      return '${(amount / 1000).toStringAsFixed(1)}k';
+    }
+    return amount.toStringAsFixed(0);
+  }
+
+
 
   void _showPayslipDetails(EmployeePayslip payslip) {
     showModalBottomSheet(

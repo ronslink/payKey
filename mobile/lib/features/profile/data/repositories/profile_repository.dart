@@ -34,7 +34,7 @@ class ProfileRepository {
   Future<void> updateComplianceProfile(Map<String, dynamic> data) async {
     final token = await _getToken();
     await _dio.patch(
-      '/users/compliance',
+      '/users/profile',
       data: data,
       options: Options(headers: {'Authorization': 'Bearer $token'}),
     );

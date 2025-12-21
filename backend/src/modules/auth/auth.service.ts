@@ -10,6 +10,8 @@ interface JwtPayload {
   sub: string;
   tier: string;
   role: string;
+  employerId?: string;
+  workerId?: string;
 }
 
 @Injectable()
@@ -17,7 +19,7 @@ export class AuthService {
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
   async validateUser(
     email: string,
@@ -37,6 +39,9 @@ export class AuthService {
       sub: user.id,
       tier: user.tier,
       role: user.role,
+      // Include employerId and workerId for WORKER role
+      employerId: user.employerId,
+      workerId: user.linkedWorkerId, // This comes from the User entity for workers
     };
     return {
       access_token: this.jwtService.sign(payload),

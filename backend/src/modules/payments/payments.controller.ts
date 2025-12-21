@@ -13,6 +13,7 @@ import type { AuthenticatedRequest } from '../../common/interfaces/user.interfac
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Transaction } from './entities/transaction.entity';
+import { User } from '../users/entities/user.entity';
 
 interface MpesaCallbackData {
   Body: {
@@ -60,7 +61,9 @@ export class PaymentsController {
     private mpesaService: MpesaService,
     @InjectRepository(Transaction)
     private transactionsRepository: Repository<Transaction>,
-  ) {}
+    @InjectRepository(User)
+    private usersRepository: Repository<User>,
+  ) { }
 
   @Post('callback')
   async handleStkCallback(@Body() callbackData: MpesaCallbackData) {
@@ -92,6 +95,14 @@ export class PaymentsController {
           transaction.status = 'SUCCESS' as any;
           transaction.metadata = metadata;
           await this.transactionsRepository.save(transaction);
+
+          // Credit user's wallet balance with the topup amount
+          await this.usersRepository.increment(
+            { id: transaction.userId },
+            'walletBalance',
+            transaction.amount,
+          );
+          console.log(`Credited wallet for user ${transaction.userId}: +${transaction.amount}`);
         }
       }
     } else {
@@ -139,6 +150,14 @@ export class PaymentsController {
           resultCode: Result.ResultCode,
         };
         await this.transactionsRepository.save(transaction);
+
+        // Deduct from user's wallet balance after successful B2C payment
+        await this.usersRepository.decrement(
+          { id: transaction.userId },
+          'walletBalance',
+          transaction.amount,
+        );
+        console.log(`Debited wallet for user ${transaction.userId}: -${transaction.amount}`);
       }
     } else {
       // B2C payment failed
@@ -200,5 +219,39 @@ export class PaymentsController {
       body.amount,
       body.remarks,
     );
+  }
+
+  /**
+   * DEV ONLY: Manually top up wallet balance for testing.
+   * This bypasses M-Pesa and directly credits the user's wallet.
+   */
+  @Post('dev/topup')
+  @UseGuards(JwtAuthGuard)
+  async devTopup(
+    @Request() req: AuthenticatedRequest,
+    @Body() body: { amount: number },
+  ) {
+    // Only allow in development mode
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('This endpoint is only available in development mode');
+    }
+
+    const result = await this.usersRepository.increment(
+      { id: req.user.userId },
+      'walletBalance',
+      body.amount,
+    );
+
+    // Get updated balance
+    const user = await this.usersRepository.findOne({
+      where: { id: req.user.userId },
+      select: ['id', 'walletBalance'],
+    });
+
+    return {
+      success: true,
+      message: `DEV: Topped up wallet by KES ${body.amount}`,
+      newBalance: user?.walletBalance ?? 0,
+    };
   }
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_service.dart';
 import '../../data/models/worker_model.dart';
@@ -5,79 +6,67 @@ import '../../data/repositories/workers_repository.dart';
 
 final workersRepositoryProvider = Provider((ref) => WorkersRepository(ApiService()));
 
-final workersProvider = StateNotifierProvider<WorkersNotifier, AsyncValue<List<WorkerModel>>>((ref) {
-  return WorkersNotifier(
-    ref.read(workersRepositoryProvider),
-  );
-});
+final workersProvider = AsyncNotifierProvider<WorkersNotifier, List<WorkerModel>>(WorkersNotifier.new);
 
-class WorkersNotifier extends StateNotifier<AsyncValue<List<WorkerModel>>> {
-  final WorkersRepository _repository;
+class WorkersNotifier extends AsyncNotifier<List<WorkerModel>> {
+  late final WorkersRepository _repository;
 
-  WorkersNotifier(this._repository) : super(const AsyncValue.loading()) {
-    loadWorkers();
+  @override
+  FutureOr<List<WorkerModel>> build() {
+    _repository = ref.watch(workersRepositoryProvider);
+    return _loadWorkers();
   }
 
-  Future<void> loadWorkers() async {
-    state = const AsyncValue.loading();
-    try {
-      final workers = await _repository.getWorkers();
-      state = AsyncValue.data(workers);
-    } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-    }
+  Future<List<WorkerModel>> _loadWorkers() {
+    return _repository.getWorkers();
   }
 
   // Alias for fetchWorkers to maintain compatibility
   Future<void> fetchWorkers() async {
-    return loadWorkers();
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => _loadWorkers());
   }
 
+  // Alias for backward compatibility
+  Future<void> loadWorkers() => fetchWorkers();
+
   Future<void> createWorker(CreateWorkerRequest request) async {
+    final prevState = state.value;
     state = const AsyncValue.loading();
-    try {
+    
+    state = await AsyncValue.guard(() async {
       final newWorker = await _repository.createWorker(request);
-      final currentState = state.value ?? [];
-      state = AsyncValue.data([...currentState, newWorker]);
-    } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-      rethrow; // Re-throw to handle in UI
-    }
+      return [...?prevState, newWorker];
+    });
   }
 
   Future<void> updateWorker(String workerId, UpdateWorkerRequest request) async {
+    final prevState = state.value;
     state = const AsyncValue.loading();
-    try {
+    
+    state = await AsyncValue.guard(() async {
       final updatedWorker = await _repository.updateWorker(workerId, request);
-      final currentState = state.value ?? [];
-      final updatedList = currentState.map((worker) {
-        return worker.id == workerId ? updatedWorker : worker;
-      }).toList();
-      state = AsyncValue.data(updatedList);
-    } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-      rethrow; // Re-throw to handle in UI
-    }
+      return [
+        for (final worker in prevState ?? [])
+          if (worker.id == workerId) updatedWorker else worker
+      ];
+    });
   }
 
   Future<void> deleteWorker(String workerId) async {
+    final prevState = state.value;
     state = const AsyncValue.loading();
-    try {
+    
+    state = await AsyncValue.guard(() async {
       await _repository.deleteWorker(workerId);
-      final currentState = state.value ?? [];
-      final updatedList = currentState.where((worker) => worker.id != workerId).toList();
-      state = AsyncValue.data(updatedList);
-    } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-      rethrow; // Re-throw to handle in UI
-    }
+      return [
+        for (final worker in prevState ?? [])
+          if (worker.id != workerId) worker
+      ];
+    });
   }
 
   Future<int> getWorkerCount() async {
-    try {
-      return await _repository.getWorkerCount();
-    } catch (error) {
-      rethrow;
-    }
+    return _repository.getWorkerCount();
   }
 }

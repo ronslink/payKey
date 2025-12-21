@@ -29,9 +29,20 @@ class ReportParams {
   }
 }
 
-final reportParamsProvider = StateProvider<ReportParams>((ref) => ReportParams(
+class ReportParamsNotifier extends Notifier<ReportParams> {
+  @override
+  ReportParams build() {
+    return ReportParams(
       year: DateTime.now().year,
-    ));
+    );
+  }
+
+  void update(ReportParams params) {
+    state = params;
+  }
+}
+
+final reportParamsProvider = NotifierProvider<ReportParamsNotifier, ReportParams>(ReportParamsNotifier.new);
 
 final reportDataProvider = FutureProvider.autoDispose<dynamic>((ref) async {
   final params = ref.watch(reportParamsProvider);
@@ -77,11 +88,32 @@ final p9ReportsProvider = FutureProvider.family<List<P9Report>, int>((ref, year)
   return data.map((e) => P9Report.fromJson(e)).toList();
 });
 
+class SelectedP9WorkerIdNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
+  
+  void set(String? value) => state = value;
+}
+
 /// Selected worker ID for filtering P9 reports
-final selectedP9WorkerIdProvider = StateProvider<String?>((ref) => null);
+final selectedP9WorkerIdProvider = NotifierProvider<SelectedP9WorkerIdNotifier, String?>(SelectedP9WorkerIdNotifier.new);
+
+class SelectedP9YearNotifier extends Notifier<int> {
+  @override
+  int build() => DateTime.now().year;
+  
+  void set(int value) => state = value;
+}
 
 /// Selected year for P9 reports
-final selectedP9YearProvider = StateProvider<int>((ref) => DateTime.now().year);
+final selectedP9YearProvider = NotifierProvider<SelectedP9YearNotifier, int>(SelectedP9YearNotifier.new);
+
+class SelectedP9WorkerNotifier extends Notifier<P9Report?> {
+  @override
+  P9Report? build() => null;
+  
+  void set(P9Report? value) => state = value;
+}
 
 /// Selected worker for P9 detail view
-final selectedP9WorkerProvider = StateProvider<P9Report?>((ref) => null);
+final selectedP9WorkerProvider = NotifierProvider<SelectedP9WorkerNotifier, P9Report?>(SelectedP9WorkerNotifier.new);

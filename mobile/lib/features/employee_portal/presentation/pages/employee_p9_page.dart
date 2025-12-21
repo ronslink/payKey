@@ -110,7 +110,7 @@ class _EmployeeP9PageState extends ConsumerState<EmployeeP9Page> {
       final bytes = await ApiService().employeePortal.downloadMyP9Pdf(_selectedYear);
 
       if (bytes.isNotEmpty && context.mounted) {
-        final filename = 'P9_${_selectedYear}.pdf';
+        final filename = 'P9_$_selectedYear.pdf';
         
         if (kIsWeb) {
           // Trigger browser download

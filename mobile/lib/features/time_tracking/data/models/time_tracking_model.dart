@@ -11,7 +11,7 @@ enum TimeEntryStatus {
 }
 
 @freezed
-class TimeEntry with _$TimeEntry {
+abstract class TimeEntry with _$TimeEntry {
   const factory TimeEntry({
     required String id,
     required String userId,
@@ -34,7 +34,7 @@ class TimeEntry with _$TimeEntry {
 }
 
 @freezed
-class ClockInRequest with _$ClockInRequest {
+abstract class ClockInRequest with _$ClockInRequest {
   const factory ClockInRequest({
     required String workerId,
     required double latitude,
@@ -47,7 +47,7 @@ class ClockInRequest with _$ClockInRequest {
 }
 
 @freezed
-class ClockOutRequest with _$ClockOutRequest {
+abstract class ClockOutRequest with _$ClockOutRequest {
   const factory ClockOutRequest({
     required String timeEntryId,
     required double latitude,

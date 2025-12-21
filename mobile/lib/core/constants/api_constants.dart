@@ -5,6 +5,7 @@ class ApiConstants {
     if (kIsWeb) {
       return 'http://localhost:3000';
     }
+    // Android Emulator uses 10.0.2.2 to reach host machine
     return 'http://10.0.2.2:3000';
   }
   static const String loginEndpoint = '/auth/login';

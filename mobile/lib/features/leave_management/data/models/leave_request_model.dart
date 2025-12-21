@@ -4,7 +4,7 @@ part 'leave_request_model.freezed.dart';
 part 'leave_request_model.g.dart';
 
 @freezed
-class LeaveRequestModel with _$LeaveRequestModel {
+abstract class LeaveRequestModel with _$LeaveRequestModel {
   const LeaveRequestModel._();
   
   const factory LeaveRequestModel({
@@ -74,7 +74,7 @@ class LeaveRequestModel with _$LeaveRequestModel {
 }
 
 @freezed
-class LeaveBalanceModel with _$LeaveBalanceModel {
+abstract class LeaveBalanceModel with _$LeaveBalanceModel {
   const factory LeaveBalanceModel({
     required String workerId,
     required String workerName,

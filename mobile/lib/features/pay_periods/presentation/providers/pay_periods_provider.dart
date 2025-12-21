@@ -1,12 +1,31 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/pay_period_model.dart';
 import '../../data/repositories/pay_periods_repository.dart';
 
-class PayPeriodsNotifier extends StateNotifier<AsyncValue<List<PayPeriodModel>>> {
-  final PayPeriodsRepositoryImpl _repository;
+final payPeriodsProvider = AsyncNotifierProvider<PayPeriodsNotifier, List<PayPeriodModel>>(PayPeriodsNotifier.new);
 
-  PayPeriodsNotifier(this._repository) : super(const AsyncValue.loading()) {
-    loadPayPeriods();
+class PayPeriodsNotifier extends AsyncNotifier<List<PayPeriodModel>> {
+  late final PayPeriodsRepositoryImpl _repository;
+
+  @override
+  FutureOr<List<PayPeriodModel>> build() {
+    _repository = ref.watch(payPeriodsRepositoryProvider);
+    return _loadPayPeriods();
+  }
+
+  Future<List<PayPeriodModel>> _loadPayPeriods({
+    int page = 1,
+    int limit = 10,
+    PayPeriodStatus? status,
+    PayPeriodFrequency? frequency,
+  }) async {
+    return _repository.getPayPeriods(
+      page: page,
+      limit: limit,
+      status: status,
+      frequency: frequency,
+    );
   }
 
   Future<void> loadPayPeriods({
@@ -15,18 +34,13 @@ class PayPeriodsNotifier extends StateNotifier<AsyncValue<List<PayPeriodModel>>>
     PayPeriodStatus? status,
     PayPeriodFrequency? frequency,
   }) async {
-    try {
-      state = const AsyncValue.loading();
-      final payPeriods = await _repository.getPayPeriods(
-        page: page,
-        limit: limit,
-        status: status,
-        frequency: frequency,
-      );
-      state = AsyncValue.data(payPeriods);
-    } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-    }
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => _loadPayPeriods(
+      page: page,
+      limit: limit,
+      status: status,
+      frequency: frequency,
+    ));
   }
 
   Future<PayPeriodModel?> createPayPeriod({
@@ -37,6 +51,7 @@ class PayPeriodsNotifier extends StateNotifier<AsyncValue<List<PayPeriodModel>>>
     required PayPeriodFrequency frequency,
     Map<String, dynamic>? notes,
   }) async {
+    state = const AsyncValue.loading();
     try {
       final newPayPeriod = await _repository.createPayPeriod(
         name: name,
@@ -48,10 +63,10 @@ class PayPeriodsNotifier extends StateNotifier<AsyncValue<List<PayPeriodModel>>>
       );
 
       // Refresh the list after creation
-      state = state.whenData((payPeriods) => [newPayPeriod, ...payPeriods]);
+      state = AsyncValue.data([newPayPeriod, ...?state.value]);
       return newPayPeriod;
-    } catch (error) {
-      // Handle error (could show snackbar, etc.)
+    } catch (error, stack) {
+      state = AsyncValue.error(error, stack);
       return null;
     }
   }
@@ -79,9 +94,11 @@ class PayPeriodsNotifier extends StateNotifier<AsyncValue<List<PayPeriodModel>>>
       );
 
       // Update the list with the modified pay period
-      state = state.whenData((payPeriods) => payPeriods.map((pp) {
-        return pp.id == id ? updatedPayPeriod : pp;
-      }).toList());
+      if (state.hasValue) {
+        state = AsyncValue.data(state.value!.map((pp) {
+          return pp.id == id ? updatedPayPeriod : pp;
+        }).toList());
+      }
       return true;
     } catch (error) {
       return false;
@@ -93,8 +110,9 @@ class PayPeriodsNotifier extends StateNotifier<AsyncValue<List<PayPeriodModel>>>
       await _repository.deletePayPeriod(id);
       
       // Remove from the list
-      state = state.whenData((payPeriods) => 
-          payPeriods.where((pp) => pp.id != id).toList());
+      if (state.hasValue) {
+        state = AsyncValue.data(state.value!.where((pp) => pp.id != id).toList());
+      }
       return true;
     } catch (error) {
       return false;
@@ -104,9 +122,11 @@ class PayPeriodsNotifier extends StateNotifier<AsyncValue<List<PayPeriodModel>>>
   Future<bool> activatePayPeriod(String id) async {
     try {
       final updatedPayPeriod = await _repository.activatePayPeriod(id);
-      state = state.whenData((payPeriods) => payPeriods.map((pp) {
-        return pp.id == id ? updatedPayPeriod : pp;
-      }).toList());
+      if (state.hasValue) {
+         state = AsyncValue.data(state.value!.map((pp) {
+           return pp.id == id ? updatedPayPeriod : pp;
+         }).toList());
+      }
       return true;
     } catch (error) {
       return false;
@@ -116,9 +136,11 @@ class PayPeriodsNotifier extends StateNotifier<AsyncValue<List<PayPeriodModel>>>
   Future<bool> processPayPeriod(String id) async {
     try {
       final updatedPayPeriod = await _repository.processPayPeriod(id);
-      state = state.whenData((payPeriods) => payPeriods.map((pp) {
-        return pp.id == id ? updatedPayPeriod : pp;
-      }).toList());
+      if (state.hasValue) {
+         state = AsyncValue.data(state.value!.map((pp) {
+           return pp.id == id ? updatedPayPeriod : pp;
+         }).toList());
+      }
       return true;
     } catch (error) {
       return false;
@@ -128,9 +150,11 @@ class PayPeriodsNotifier extends StateNotifier<AsyncValue<List<PayPeriodModel>>>
   Future<bool> completePayPeriod(String id) async {
     try {
       final updatedPayPeriod = await _repository.completePayPeriod(id);
-      state = state.whenData((payPeriods) => payPeriods.map((pp) {
-        return pp.id == id ? updatedPayPeriod : pp;
-      }).toList());
+      if (state.hasValue) {
+         state = AsyncValue.data(state.value!.map((pp) {
+           return pp.id == id ? updatedPayPeriod : pp;
+         }).toList());
+      }
       return true;
     } catch (error) {
       return false;
@@ -140,21 +164,17 @@ class PayPeriodsNotifier extends StateNotifier<AsyncValue<List<PayPeriodModel>>>
   Future<bool> closePayPeriod(String id) async {
     try {
       final updatedPayPeriod = await _repository.closePayPeriod(id);
-      state = state.whenData((payPeriods) => payPeriods.map((pp) {
-        return pp.id == id ? updatedPayPeriod : pp;
-      }).toList());
+      if (state.hasValue) {
+         state = AsyncValue.data(state.value!.map((pp) {
+           return pp.id == id ? updatedPayPeriod : pp;
+         }).toList());
+      }
       return true;
     } catch (error) {
       return false;
     }
   }
 }
-
-// Provider for the notifier
-final payPeriodsProvider = StateNotifierProvider<PayPeriodsNotifier, AsyncValue<List<PayPeriodModel>>>((ref) {
-  final repository = ref.watch(payPeriodsRepositoryProvider);
-  return PayPeriodsNotifier(repository);
-});
 
 // Helper provider for filtered pay periods
 final filteredPayPeriodsProvider = Provider<AsyncValue<List<PayPeriodModel>>>((ref) {

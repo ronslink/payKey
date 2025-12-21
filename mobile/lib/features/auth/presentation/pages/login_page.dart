@@ -138,19 +138,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   Widget build(BuildContext context) {
     ref.listen(authStateProvider, (previous, next) {
-      next.whenOrNull(
-        error: (error, stack) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(error.toString()),
-              backgroundColor: Colors.red,
-            ),
-          );
-        },
-        data: (_) {
-          context.go('/home');
-        },
-      );
+      if (next.hasError) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(next.error.toString()),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } else if (!next.isLoading && !next.hasError && previous?.isLoading == true) {
+         context.go('/home');
+      }
     });
 
     final authState = ref.watch(authStateProvider);

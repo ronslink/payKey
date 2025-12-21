@@ -19,6 +19,8 @@ class ProfileModel {
   final String? city;
   final String? countryId;
   final String? nationalityId;
+  final String? residentStatus;
+  final String? phoneNumber;
 
   ProfileModel({
     required this.id,
@@ -39,6 +41,8 @@ class ProfileModel {
     this.city,
     this.countryId,
     this.nationalityId,
+    this.residentStatus,
+    this.phoneNumber,
   });
 
   factory ProfileModel.fromJson(Map<String, dynamic> json) {
@@ -62,6 +66,8 @@ class ProfileModel {
       city: json['city'],
       countryId: json['countryId'],
       nationalityId: json['nationalityId'],
+      residentStatus: json['residentStatus'],
+      phoneNumber: json['phoneNumber'],
     );
   }
 

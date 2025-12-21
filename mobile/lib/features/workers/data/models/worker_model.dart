@@ -4,7 +4,7 @@ part 'worker_model.freezed.dart';
 part 'worker_model.g.dart';
 
 @freezed
-class WorkerModel with _$WorkerModel {
+abstract class WorkerModel with _$WorkerModel {
   const factory WorkerModel({
     required String id,
     required String name,
@@ -42,7 +42,7 @@ class WorkerModel with _$WorkerModel {
 }
 
 @freezed
-class CreateWorkerRequest with _$CreateWorkerRequest {
+abstract class CreateWorkerRequest with _$CreateWorkerRequest {
   const factory CreateWorkerRequest({
     required String name,
     required String phoneNumber,
@@ -75,7 +75,7 @@ class CreateWorkerRequest with _$CreateWorkerRequest {
 }
 
 @freezed
-class UpdateWorkerRequest with _$UpdateWorkerRequest {
+abstract class UpdateWorkerRequest with _$UpdateWorkerRequest {
   const factory UpdateWorkerRequest({
     String? name,
     String? phoneNumber,

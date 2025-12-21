@@ -6,33 +6,32 @@ part of 'pay_period_model.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$PayPeriodImpl _$$PayPeriodImplFromJson(Map<String, dynamic> json) =>
-    _$PayPeriodImpl(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      startDate: DateTime.parse(json['startDate'] as String),
-      endDate: DateTime.parse(json['endDate'] as String),
-      frequency: $enumDecode(_$PayPeriodFrequencyEnumMap, json['frequency']),
-      status: $enumDecode(_$PayPeriodStatusEnumMap, json['status']),
-      totalWorkers: _intFromJson(json['totalWorkers']),
-      totalGrossAmount: _doubleFromJson(json['totalGrossAmount']),
-      totalNetAmount: _doubleFromJson(json['totalNetAmount']),
-      totalTaxAmount: _doubleFromJson(json['totalTaxAmount']),
-      processedWorkers: _intFromJson(json['processedWorkers']),
-      createdAt: json['createdAt'] == null
-          ? null
-          : DateTime.parse(json['createdAt'] as String),
-      updatedAt: json['updatedAt'] == null
-          ? null
-          : DateTime.parse(json['updatedAt'] as String),
-      notes: json['notes'] as String?,
-      userId: json['userId'] as String?,
-      payDate: json['payDate'] == null
-          ? null
-          : DateTime.parse(json['payDate'] as String),
-    );
+_PayPeriod _$PayPeriodFromJson(Map<String, dynamic> json) => _PayPeriod(
+  id: json['id'] as String,
+  name: json['name'] as String,
+  startDate: DateTime.parse(json['startDate'] as String),
+  endDate: DateTime.parse(json['endDate'] as String),
+  frequency: $enumDecode(_$PayPeriodFrequencyEnumMap, json['frequency']),
+  status: $enumDecode(_$PayPeriodStatusEnumMap, json['status']),
+  totalWorkers: _intFromJson(json['totalWorkers']),
+  totalGrossAmount: _doubleFromJson(json['totalGrossAmount']),
+  totalNetAmount: _doubleFromJson(json['totalNetAmount']),
+  totalTaxAmount: _doubleFromJson(json['totalTaxAmount']),
+  processedWorkers: _intFromJson(json['processedWorkers']),
+  createdAt: json['createdAt'] == null
+      ? null
+      : DateTime.parse(json['createdAt'] as String),
+  updatedAt: json['updatedAt'] == null
+      ? null
+      : DateTime.parse(json['updatedAt'] as String),
+  notes: json['notes'] as String?,
+  userId: json['userId'] as String?,
+  payDate: json['payDate'] == null
+      ? null
+      : DateTime.parse(json['payDate'] as String),
+);
 
-Map<String, dynamic> _$$PayPeriodImplToJson(_$PayPeriodImpl instance) =>
+Map<String, dynamic> _$PayPeriodToJson(_PayPeriod instance) =>
     <String, dynamic>{
       'id': instance.id,
       'name': instance.name,
@@ -69,9 +68,9 @@ const _$PayPeriodStatusEnumMap = {
   PayPeriodStatus.cancelled: 'CANCELLED',
 };
 
-_$CreatePayPeriodRequestImpl _$$CreatePayPeriodRequestImplFromJson(
+_CreatePayPeriodRequest _$CreatePayPeriodRequestFromJson(
   Map<String, dynamic> json,
-) => _$CreatePayPeriodRequestImpl(
+) => _CreatePayPeriodRequest(
   name: json['name'] as String,
   startDate: DateTime.parse(json['startDate'] as String),
   endDate: DateTime.parse(json['endDate'] as String),
@@ -80,8 +79,8 @@ _$CreatePayPeriodRequestImpl _$$CreatePayPeriodRequestImplFromJson(
   isOffCycle: json['isOffCycle'] as bool? ?? false,
 );
 
-Map<String, dynamic> _$$CreatePayPeriodRequestImplToJson(
-  _$CreatePayPeriodRequestImpl instance,
+Map<String, dynamic> _$CreatePayPeriodRequestToJson(
+  _CreatePayPeriodRequest instance,
 ) => <String, dynamic>{
   'name': instance.name,
   'startDate': instance.startDate.toIso8601String(),
@@ -91,9 +90,9 @@ Map<String, dynamic> _$$CreatePayPeriodRequestImplToJson(
   'isOffCycle': instance.isOffCycle,
 };
 
-_$UpdatePayPeriodRequestImpl _$$UpdatePayPeriodRequestImplFromJson(
+_UpdatePayPeriodRequest _$UpdatePayPeriodRequestFromJson(
   Map<String, dynamic> json,
-) => _$UpdatePayPeriodRequestImpl(
+) => _UpdatePayPeriodRequest(
   name: json['name'] as String?,
   startDate: json['startDate'] == null
       ? null
@@ -109,8 +108,8 @@ _$UpdatePayPeriodRequestImpl _$$UpdatePayPeriodRequestImplFromJson(
   notes: json['notes'] as String?,
 );
 
-Map<String, dynamic> _$$UpdatePayPeriodRequestImplToJson(
-  _$UpdatePayPeriodRequestImpl instance,
+Map<String, dynamic> _$UpdatePayPeriodRequestToJson(
+  _UpdatePayPeriodRequest instance,
 ) => <String, dynamic>{
   'name': instance.name,
   'startDate': instance.startDate?.toIso8601String(),

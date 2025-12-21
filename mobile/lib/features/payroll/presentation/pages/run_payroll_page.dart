@@ -6,8 +6,7 @@ import '../../data/models/pay_period_model.dart';
 import '../../data/repositories/payroll_repository.dart';
 import 'payroll_review_page.dart';
 
-// Simple provider for selected workers
-final selectedWorkersProvider = StateProvider<Set<String>>((ref) => {});
+import '../providers/payroll_provider.dart';
 
 class RunPayrollPage extends ConsumerStatefulWidget {
   final String? payPeriodId;
@@ -425,9 +424,9 @@ class _RunPayrollPageState extends ConsumerState<RunPayrollPage> {
                   workersState.whenData((workers) {
                     final allIds = workers.where((w) => w.isActive).map((w) => w.id).toSet();
                     if (selectedWorkers.length == allIds.length) {
-                      ref.read(selectedWorkersProvider.notifier).state = {};
+                      ref.read(selectedWorkersProvider.notifier).clear();
                     } else {
-                      ref.read(selectedWorkersProvider.notifier).state = allIds;
+                      ref.read(selectedWorkersProvider.notifier).set(allIds);
                     }
                   });
                 },
@@ -460,11 +459,10 @@ class _RunPayrollPageState extends ConsumerState<RunPayrollPage> {
                       child: CheckboxListTile(
                         value: isSelected,
                         onChanged: (value) {
-                          final currentSelected = ref.read(selectedWorkersProvider);
                           if (value == true) {
-                            ref.read(selectedWorkersProvider.notifier).state = {...currentSelected, worker.id};
+                            ref.read(selectedWorkersProvider.notifier).toggle(worker.id);
                           } else {
-                            ref.read(selectedWorkersProvider.notifier).state = {...currentSelected}..remove(worker.id);
+                            ref.read(selectedWorkersProvider.notifier).toggle(worker.id);
                           }
                         },
                         title: Text(worker.name),

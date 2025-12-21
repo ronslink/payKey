@@ -238,6 +238,53 @@ CREATE INDEX IF NOT EXISTS idx_transactions_userId ON transactions("userId");
 CREATE INDEX IF NOT EXISTS idx_transactions_workerId ON transactions("workerId");
 CREATE INDEX IF NOT EXISTS idx_transactions_payPeriodId ON transactions("payPeriodId");
 
+-- Activities enum type
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'activities_type_enum') THEN
+        CREATE TYPE activities_type_enum AS ENUM ('payroll', 'worker', 'tax', 'leave', 'time_tracking', 'accounting');
+    END IF;
+END$$;
+
+-- Activities table
+CREATE TABLE IF NOT EXISTS activities (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    "userId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    type activities_type_enum NOT NULL,
+    title VARCHAR NOT NULL,
+    description VARCHAR NOT NULL,
+    metadata JSONB,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Activities indexes
+CREATE INDEX IF NOT EXISTS "IDX_activities_userId_timestamp" ON activities("userId", timestamp DESC);
+
+-- Migrations table (tracks which TypeORM migrations have been applied)
+CREATE TABLE IF NOT EXISTS migrations (
+    id SERIAL PRIMARY KEY,
+    "timestamp" BIGINT NOT NULL,
+    name VARCHAR NOT NULL
+);
+
+-- Mark all existing migrations as applied (prevents re-running on already-initialized DBs)
+INSERT INTO migrations ("timestamp", name) VALUES
+(1700000000000, 'InitialSchema1700000000000'),
+(1732960000000, 'CreateActivitiesTable1732960000000'),
+(1733220000000, 'CreateAccountingTables1733220000000'),
+(1733300000000, 'AddMissingPayrollRecordColumns1733300000000'),
+(1733420000000, 'CreateTaxConfigsTable1733420000000'),
+(1733560000000, 'RecreateTaxPaymentsTable1733560000000'),
+(1733570000000, 'CreateTaxSubmissionsTable1733570000000'),
+(1733600000000, 'CreateTerminationTable1733600000000'),
+(1733700000000, 'AddEmployeePortalAndTimeTracking1733700000000'),
+(1733800000000, 'AddEmployerComplianceFields1733800000000'),
+(1733900000000, 'AddWorkerEmergencyContact1733900000000'),
+(1734000000000, 'CreateLeaveRequestsTable1734000000000'),
+(1734100000000, 'AddPerformanceIndexes1734100000000'),
+(1734200000000, 'AddPayrollImprovements1734200000000')
+ON CONFLICT DO NOTHING;
+
 -- 4. Seed Data
 
 -- Countries

@@ -365,7 +365,8 @@ export class ReportsService {
         };
       }
 
-      const monthIndex = record.periodStart.getMonth(); // 0-11
+      const start = new Date(record.periodStart);
+      const monthIndex = start.getMonth(); // 0-11
       const report = workerReports[record.workerId];
 
       const basicSalary = Number(record.grossSalary || 0);
@@ -455,13 +456,18 @@ export class ReportsService {
     };
   }
 
-  async getEmployeeP9Report(userId: string, year: number) {
+  async getEmployeeP9Report(userId: string, year: number, workerId?: string) {
     const startDate = new Date(year, 0, 1);
     const endDate = new Date(year, 11, 31, 23, 59, 59);
 
-    const worker = await this.workersRepository.findOne({
-      where: { linkedUserId: userId },
-    });
+    let worker;
+    if (workerId) {
+      worker = await this.workersRepository.findOne({ where: { id: workerId } }); // Need full object here for name etc
+    } else {
+      worker = await this.workersRepository.findOne({
+        where: { linkedUserId: userId },
+      });
+    }
 
     if (!worker) {
       throw new NotFoundException('No worker profile linked to this account');
@@ -508,7 +514,8 @@ export class ReportsService {
     };
 
     for (const record of records) {
-      const monthIndex = record.periodStart.getMonth(); // 0-11
+      const start = new Date(record.periodStart);
+      const monthIndex = start.getMonth(); // 0-11
 
       const basicSalary = Number(record.grossSalary);
       const benefits = Number(record.bonuses) + Number(record.otherEarnings);

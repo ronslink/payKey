@@ -356,7 +356,10 @@ export class PayrollController {
 
   @Get('me')
   async getMyPayslips(@Request() req: AuthenticatedRequest) {
-    return this.payrollService.getEmployeePayslips(req.user.userId);
+    // If workerId is available (from JWT), pass it directly (requires service update to accept optional workerId)
+    // Or just pass userId and let service resolve it.
+    // Ideally we update service to support workerId lookup directly.
+    return this.payrollService.getEmployeePayslips(req.user.userId, req.user.workerId);
   }
 
   @Get('me/:recordId/pdf')
@@ -368,6 +371,7 @@ export class PayrollController {
     const buffer = await this.payrollService.getEmployeePayslipPdf(
       req.user.userId,
       recordId,
+      req.user.workerId,
     );
 
     res.set({
@@ -376,5 +380,16 @@ export class PayrollController {
     });
 
     return new StreamableFile(buffer);
+  }
+
+  /**
+   * Verify if user has sufficient wallet balance to process payroll for a period
+   */
+  @Get('verify-funds/:payPeriodId')
+  async verifyPayrollFunds(
+    @Request() req: AuthenticatedRequest,
+    @Param('payPeriodId') payPeriodId: string,
+  ) {
+    return this.payrollService.verifyFundsForPeriod(req.user.userId, payPeriodId);
   }
 }

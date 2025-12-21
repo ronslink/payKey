@@ -211,7 +211,7 @@ const Map<PayPeriodStatus, List<PayPeriodStatusAction>> payPeriodActions = {
 /// A pay period defines a date range for which workers are paid,
 /// tracks processing status, and aggregates financial totals.
 @freezed
-class PayPeriod with _$PayPeriod {
+abstract class PayPeriod with _$PayPeriod {
   const PayPeriod._();
 
   const factory PayPeriod({
@@ -448,7 +448,7 @@ class PayPeriod with _$PayPeriod {
 
 /// Request payload for creating a new pay period.
 @freezed
-class CreatePayPeriodRequest with _$CreatePayPeriodRequest {
+abstract class CreatePayPeriodRequest with _$CreatePayPeriodRequest {
   const CreatePayPeriodRequest._();
 
   const factory CreatePayPeriodRequest({
@@ -527,7 +527,7 @@ class CreatePayPeriodRequest with _$CreatePayPeriodRequest {
 
 /// Request payload for updating an existing pay period.
 @freezed
-class UpdatePayPeriodRequest with _$UpdatePayPeriodRequest {
+abstract class UpdatePayPeriodRequest with _$UpdatePayPeriodRequest {
   const UpdatePayPeriodRequest._();
 
   const factory UpdatePayPeriodRequest({

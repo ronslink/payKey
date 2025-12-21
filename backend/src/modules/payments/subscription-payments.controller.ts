@@ -8,7 +8,9 @@ import {
   Query,
   Request,
   UseGuards,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -18,7 +20,6 @@ import { SubscriptionPayment } from '../subscriptions/entities/subscription-paym
 import { SUBSCRIPTION_PLANS } from '../subscriptions/subscription-plans.config';
 
 @Controller('payments/subscriptions')
-@UseGuards(JwtAuthGuard)
 export class SubscriptionPaymentsController {
   constructor(
     private stripeService: StripeService,
@@ -26,7 +27,7 @@ export class SubscriptionPaymentsController {
     private subscriptionRepository: Repository<Subscription>,
     @InjectRepository(SubscriptionPayment)
     private paymentRepository: Repository<SubscriptionPayment>,
-  ) {}
+  ) { }
 
   @Get('plans')
   getPlans() {
@@ -199,5 +200,66 @@ export class SubscriptionPaymentsController {
     } catch (error) {
       return { error: error.message };
     }
+  }
+
+  @Get('success')
+  async handleSuccess(@Query('session_id') sessionId: string, @Res() res: Response) {
+    // Return simple HTML success page that deep links back to app or tells user to close browser
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Payment Successful</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; text-align: center; padding: 40px 20px; background-color: #f7f9fc; }
+            .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 500px; margin: 0 auto; }
+            .icon { color: #4CAF50; font-size: 64px; margin-bottom: 20px; }
+            h1 { margin: 0 0 16px; color: #333; }
+            p { color: #666; line-height: 1.5; margin-bottom: 24px; }
+            .button { display: inline-block; background: #635BFF; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 500; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="icon">✅</div>
+            <h1>Payment Successful!</h1>
+            <p>Your subscription has been activated successfully. You can now return to the PayKey app.</p>
+            <p><small>Close using the 'X' or 'Done' button in the browser.</small></p>
+          </div>
+        </body>
+      </html>
+    `;
+    res.send(html);
+  }
+
+  @Get('cancel')
+  async handleCancel(@Res() res: Response) {
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Payment Cancelled</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; text-align: center; padding: 40px 20px; background-color: #f7f9fc; }
+            .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 500px; margin: 0 auto; }
+            .icon { color: #757575; font-size: 64px; margin-bottom: 20px; }
+            h1 { margin: 0 0 16px; color: #333; }
+            p { color: #666; line-height: 1.5; margin-bottom: 24px; }
+            .button { display: inline-block; background: #333; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 500; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="icon">❌</div>
+            <h1>Payment Cancelled</h1>
+            <p>You have cancelled the payment process. No charges were made.</p>
+            <p><small>You can return to the PayKey app now.</small></p>
+          </div>
+        </body>
+      </html>
+    `;
+    res.send(html);
   }
 }

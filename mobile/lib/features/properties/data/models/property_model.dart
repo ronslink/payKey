@@ -3,8 +3,9 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'property_model.freezed.dart';
 part 'property_model.g.dart';
 
+/// Represents a property/location where workers can be assigned.
 @freezed
-class Property with _$Property {
+abstract class Property with _$Property {
   const factory Property({
     required String id,
     required String userId,
@@ -23,8 +24,9 @@ class Property with _$Property {
       _$PropertyFromJson(json);
 }
 
+/// Lightweight summary of a property for list views.
 @freezed
-class PropertySummary with _$PropertySummary {
+abstract class PropertySummary with _$PropertySummary {
   const factory PropertySummary({
     required String id,
     required String name,
@@ -37,8 +39,9 @@ class PropertySummary with _$PropertySummary {
       _$PropertySummaryFromJson(json);
 }
 
+/// Request payload for creating a new property.
 @freezed
-class CreatePropertyRequest with _$CreatePropertyRequest {
+abstract class CreatePropertyRequest with _$CreatePropertyRequest {
   const factory CreatePropertyRequest({
     required String name,
     required String address,
@@ -51,8 +54,9 @@ class CreatePropertyRequest with _$CreatePropertyRequest {
       _$CreatePropertyRequestFromJson(json);
 }
 
+/// Request payload for updating an existing property.
 @freezed
-class UpdatePropertyRequest with _$UpdatePropertyRequest {
+abstract class UpdatePropertyRequest with _$UpdatePropertyRequest {
   const factory UpdatePropertyRequest({
     String? name,
     String? address,

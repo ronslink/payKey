@@ -1,32 +1,29 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/repositories/tax_repository.dart';
 
-class TaxPaymentsNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>>> {
-  final TaxRepository _repository;
+class TaxPaymentsNotifier extends AsyncNotifier<Map<String, dynamic>> {
+  late final TaxRepository _repository;
   
-  TaxPaymentsNotifier(this._repository) : super(const AsyncValue.loading()) {
-    loadCurrentMonthSummary();
+  @override
+  FutureOr<Map<String, dynamic>> build() {
+    _repository = ref.watch(taxRepositoryProvider);
+    return _loadInitialSummary();
+  }
+
+  Future<Map<String, dynamic>> _loadInitialSummary() async {
+      final now = DateTime.now();
+      return _repository.getMonthlyTaxSummary(now.year, now.month);
   }
 
   Future<void> loadCurrentMonthSummary() async {
-    try {
-      state = const AsyncValue.loading();
-      final now = DateTime.now();
-      final summary = await _repository.getMonthlyTaxSummary(now.year, now.month);
-      state = AsyncValue.data(summary);
-    } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-    }
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => _loadInitialSummary());
   }
 
   Future<void> loadMonthlySummary(int year, int month) async {
-    try {
-      state = const AsyncValue.loading();
-      final summary = await _repository.getMonthlyTaxSummary(year, month);
-      state = AsyncValue.data(summary);
-    } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-    }
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => _repository.getMonthlyTaxSummary(year, month));
   }
 
   Future<void> recordPayment(Map<String, dynamic> paymentData) async {
@@ -58,10 +55,7 @@ class TaxPaymentsNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>>
   }
 }
 
-final taxPaymentsProvider = StateNotifierProvider<TaxPaymentsNotifier, AsyncValue<Map<String, dynamic>>>((ref) {
-  final repository = ref.read(taxRepositoryProvider);
-  return TaxPaymentsNotifier(repository);
-});
+final taxPaymentsProvider = AsyncNotifierProvider<TaxPaymentsNotifier, Map<String, dynamic>>(TaxPaymentsNotifier.new);
 
 final taxPaymentHistoryProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final repository = ref.read(taxRepositoryProvider);

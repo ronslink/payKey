@@ -1,6 +1,6 @@
 import { Injectable, Logger, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, MoreThanOrEqual, Between, DataSource } from 'typeorm';
+import { Repository, MoreThanOrEqual, Between, DataSource, In } from 'typeorm';
 import { Worker } from '../workers/entities/worker.entity';
 import { TaxesService } from '../taxes/taxes.service';
 import { PayrollRecord, PayrollStatus } from './entities/payroll-record.entity';
@@ -689,13 +689,18 @@ export class PayrollService {
       processedCount: thisMonthRecords.length,
     };
   }
-  async getEmployeePayslips(userId: string) {
-    const worker = await this.workersRepository.findOne({
-      where: { linkedUserId: userId },
-    });
+  async getEmployeePayslips(userId: string, workerId?: string) {
+    let worker;
+    if (workerId) {
+      worker = { id: workerId }; // Min object needed for query
+    } else {
+      worker = await this.workersRepository.findOne({
+        where: { linkedUserId: userId },
+      });
 
-    if (!worker) {
-      throw new NotFoundException('Worker profile not found');
+      if (!worker) {
+        throw new NotFoundException('Worker profile not found');
+      }
     }
 
     return this.payrollRepository.find({
@@ -708,13 +713,18 @@ export class PayrollService {
     });
   }
 
-  async getEmployeePayslipPdf(userId: string, recordId: string) {
-    const worker = await this.workersRepository.findOne({
-      where: { linkedUserId: userId },
-    });
+  async getEmployeePayslipPdf(userId: string, recordId: string, workerId?: string) {
+    let worker;
+    if (workerId) {
+      worker = { id: workerId };
+    } else {
+      worker = await this.workersRepository.findOne({
+        where: { linkedUserId: userId },
+      });
 
-    if (!worker) {
-      throw new NotFoundException('Worker profile not found');
+      if (!worker) {
+        throw new NotFoundException('Worker profile not found');
+      }
     }
 
     const record = await this.payrollRepository.findOne({
@@ -745,10 +755,55 @@ export class PayrollService {
     return this.payrollRepository.find({
       where: {
         workerId: worker.id,
-        status: PayrollStatus.FINALIZED,
+        status: In([PayrollStatus.FINALIZED, PayrollStatus.PAID]),
       },
       relations: ['payPeriod'],
       order: { periodStart: 'DESC' },
     });
+  }
+
+  /**
+   * Verify if user has sufficient wallet balance to process payroll for a pay period
+   */
+  async verifyFundsForPeriod(userId: string, payPeriodId: string) {
+    // Get user with wallet balance
+    const userResult = await this.dataSource
+      .createQueryBuilder()
+      .select(['id', '"walletBalance"'])
+      .from('users', 'u')
+      .where('u.id = :userId', { userId })
+      .getRawOne();
+
+    if (!userResult) {
+      throw new NotFoundException('User not found');
+    }
+
+    const walletBalance = parseFloat(userResult.walletBalance) || 0;
+
+    // Get all payroll records for this period (any status that contribute to payout)
+    const records = await this.payrollRepository.find({
+      where: {
+        payPeriodId,
+        userId,
+        status: In([PayrollStatus.FINALIZED, PayrollStatus.DRAFT]),
+      },
+    });
+
+    // Calculate total net pay required
+    const totalNetPay = records.reduce(
+      (sum, r) => sum + (parseFloat(r.netSalary as any) || 0),
+      0,
+    );
+
+    const canProceed = walletBalance >= totalNetPay;
+    const shortfall = Math.max(0, totalNetPay - walletBalance);
+
+    return {
+      requiredAmount: totalNetPay,
+      availableBalance: walletBalance,
+      canProceed,
+      shortfall,
+      workerCount: records.length,
+    };
   }
 }

@@ -5,26 +5,27 @@ export class AddWorkerEmergencyContact1733900000000
     name = 'AddWorkerEmergencyContact1733900000000';
 
     public async up(queryRunner: QueryRunner): Promise<void> {
+        // Use IF NOT EXISTS for idempotency
         await queryRunner.query(
-            `ALTER TABLE "workers" ADD "emergencyContactName" character varying`,
+            `ALTER TABLE "workers" ADD COLUMN IF NOT EXISTS "emergencyContactName" character varying`,
         );
         await queryRunner.query(
-            `ALTER TABLE "workers" ADD "emergencyContactPhone" character varying`,
+            `ALTER TABLE "workers" ADD COLUMN IF NOT EXISTS "emergencyContactPhone" character varying`,
         );
         await queryRunner.query(
-            `ALTER TABLE "workers" ADD "emergencyContactRelationship" character varying`,
+            `ALTER TABLE "workers" ADD COLUMN IF NOT EXISTS "emergencyContactRelationship" character varying`,
         );
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(
-            `ALTER TABLE "workers" DROP COLUMN "emergencyContactRelationship"`,
+            `ALTER TABLE "workers" DROP COLUMN IF EXISTS "emergencyContactRelationship"`,
         );
         await queryRunner.query(
-            `ALTER TABLE "workers" DROP COLUMN "emergencyContactPhone"`,
+            `ALTER TABLE "workers" DROP COLUMN IF EXISTS "emergencyContactPhone"`,
         );
         await queryRunner.query(
-            `ALTER TABLE "workers" DROP COLUMN "emergencyContactName"`,
+            `ALTER TABLE "workers" DROP COLUMN IF EXISTS "emergencyContactName"`,
         );
     }
 }

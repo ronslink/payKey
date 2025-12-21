@@ -1,5 +1,5 @@
-// coverage:ignore-file
 // GENERATED CODE - DO NOT MODIFY BY HAND
+// coverage:ignore-file
 // ignore_for_file: type=lint
 // ignore_for_file: unused_element, deprecated_member_use, deprecated_member_use_from_same_package, use_function_type_syntax_for_parameters, unnecessary_const, avoid_init_to_null, invalid_override_different_default_values_named, prefer_expression_function_bodies, annotate_overrides, invalid_annotation_target, unnecessary_question_mark
 
@@ -9,915 +9,852 @@ part of 'time_tracking_model.dart';
 // FreezedGenerator
 // **************************************************************************
 
+// dart format off
 T _$identity<T>(T value) => value;
-
-final _privateConstructorUsedError = UnsupportedError(
-  'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models',
-);
-
-TimeEntry _$TimeEntryFromJson(Map<String, dynamic> json) {
-  return _TimeEntry.fromJson(json);
-}
 
 /// @nodoc
 mixin _$TimeEntry {
-  String get id => throw _privateConstructorUsedError;
-  String get userId => throw _privateConstructorUsedError;
-  String get workerId => throw _privateConstructorUsedError;
-  String get clockInTime => throw _privateConstructorUsedError;
-  String? get clockOutTime => throw _privateConstructorUsedError;
-  double? get clockInLatitude => throw _privateConstructorUsedError;
-  double? get clockInLongitude => throw _privateConstructorUsedError;
-  double? get clockOutLatitude => throw _privateConstructorUsedError;
-  double? get clockOutLongitude => throw _privateConstructorUsedError;
-  double? get totalHours => throw _privateConstructorUsedError;
-  TimeEntryStatus get status => throw _privateConstructorUsedError;
-  String? get notes => throw _privateConstructorUsedError;
-  String get createdAt => throw _privateConstructorUsedError;
-  String? get propertyId => throw _privateConstructorUsedError;
+
+ String get id; String get userId; String get workerId; String get clockInTime; String? get clockOutTime; double? get clockInLatitude; double? get clockInLongitude; double? get clockOutLatitude; double? get clockOutLongitude; double? get totalHours; TimeEntryStatus get status; String? get notes; String get createdAt; String? get propertyId;
+/// Create a copy of TimeEntry
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$TimeEntryCopyWith<TimeEntry> get copyWith => _$TimeEntryCopyWithImpl<TimeEntry>(this as TimeEntry, _$identity);
 
   /// Serializes this TimeEntry to a JSON map.
-  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
+  Map<String, dynamic> toJson();
 
-  /// Create a copy of TimeEntry
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  $TimeEntryCopyWith<TimeEntry> get copyWith =>
-      throw _privateConstructorUsedError;
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TimeEntry&&(identical(other.id, id) || other.id == id)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.workerId, workerId) || other.workerId == workerId)&&(identical(other.clockInTime, clockInTime) || other.clockInTime == clockInTime)&&(identical(other.clockOutTime, clockOutTime) || other.clockOutTime == clockOutTime)&&(identical(other.clockInLatitude, clockInLatitude) || other.clockInLatitude == clockInLatitude)&&(identical(other.clockInLongitude, clockInLongitude) || other.clockInLongitude == clockInLongitude)&&(identical(other.clockOutLatitude, clockOutLatitude) || other.clockOutLatitude == clockOutLatitude)&&(identical(other.clockOutLongitude, clockOutLongitude) || other.clockOutLongitude == clockOutLongitude)&&(identical(other.totalHours, totalHours) || other.totalHours == totalHours)&&(identical(other.status, status) || other.status == status)&&(identical(other.notes, notes) || other.notes == notes)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.propertyId, propertyId) || other.propertyId == propertyId));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,userId,workerId,clockInTime,clockOutTime,clockInLatitude,clockInLongitude,clockOutLatitude,clockOutLongitude,totalHours,status,notes,createdAt,propertyId);
+
+@override
+String toString() {
+  return 'TimeEntry(id: $id, userId: $userId, workerId: $workerId, clockInTime: $clockInTime, clockOutTime: $clockOutTime, clockInLatitude: $clockInLatitude, clockInLongitude: $clockInLongitude, clockOutLatitude: $clockOutLatitude, clockOutLongitude: $clockOutLongitude, totalHours: $totalHours, status: $status, notes: $notes, createdAt: $createdAt, propertyId: $propertyId)';
+}
+
+
 }
 
 /// @nodoc
-abstract class $TimeEntryCopyWith<$Res> {
-  factory $TimeEntryCopyWith(TimeEntry value, $Res Function(TimeEntry) then) =
-      _$TimeEntryCopyWithImpl<$Res, TimeEntry>;
-  @useResult
-  $Res call({
-    String id,
-    String userId,
-    String workerId,
-    String clockInTime,
-    String? clockOutTime,
-    double? clockInLatitude,
-    double? clockInLongitude,
-    double? clockOutLatitude,
-    double? clockOutLongitude,
-    double? totalHours,
-    TimeEntryStatus status,
-    String? notes,
-    String createdAt,
-    String? propertyId,
-  });
-}
+abstract mixin class $TimeEntryCopyWith<$Res>  {
+  factory $TimeEntryCopyWith(TimeEntry value, $Res Function(TimeEntry) _then) = _$TimeEntryCopyWithImpl;
+@useResult
+$Res call({
+ String id, String userId, String workerId, String clockInTime, String? clockOutTime, double? clockInLatitude, double? clockInLongitude, double? clockOutLatitude, double? clockOutLongitude, double? totalHours, TimeEntryStatus status, String? notes, String createdAt, String? propertyId
+});
 
+
+
+
+}
 /// @nodoc
-class _$TimeEntryCopyWithImpl<$Res, $Val extends TimeEntry>
+class _$TimeEntryCopyWithImpl<$Res>
     implements $TimeEntryCopyWith<$Res> {
-  _$TimeEntryCopyWithImpl(this._value, this._then);
+  _$TimeEntryCopyWithImpl(this._self, this._then);
 
-  // ignore: unused_field
-  final $Val _value;
-  // ignore: unused_field
-  final $Res Function($Val) _then;
+  final TimeEntry _self;
+  final $Res Function(TimeEntry) _then;
 
-  /// Create a copy of TimeEntry
-  /// with the given fields replaced by the non-null parameter values.
-  @pragma('vm:prefer-inline')
-  @override
-  $Res call({
-    Object? id = null,
-    Object? userId = null,
-    Object? workerId = null,
-    Object? clockInTime = null,
-    Object? clockOutTime = freezed,
-    Object? clockInLatitude = freezed,
-    Object? clockInLongitude = freezed,
-    Object? clockOutLatitude = freezed,
-    Object? clockOutLongitude = freezed,
-    Object? totalHours = freezed,
-    Object? status = null,
-    Object? notes = freezed,
-    Object? createdAt = null,
-    Object? propertyId = freezed,
-  }) {
-    return _then(
-      _value.copyWith(
-            id: null == id
-                ? _value.id
-                : id // ignore: cast_nullable_to_non_nullable
-                      as String,
-            userId: null == userId
-                ? _value.userId
-                : userId // ignore: cast_nullable_to_non_nullable
-                      as String,
-            workerId: null == workerId
-                ? _value.workerId
-                : workerId // ignore: cast_nullable_to_non_nullable
-                      as String,
-            clockInTime: null == clockInTime
-                ? _value.clockInTime
-                : clockInTime // ignore: cast_nullable_to_non_nullable
-                      as String,
-            clockOutTime: freezed == clockOutTime
-                ? _value.clockOutTime
-                : clockOutTime // ignore: cast_nullable_to_non_nullable
-                      as String?,
-            clockInLatitude: freezed == clockInLatitude
-                ? _value.clockInLatitude
-                : clockInLatitude // ignore: cast_nullable_to_non_nullable
-                      as double?,
-            clockInLongitude: freezed == clockInLongitude
-                ? _value.clockInLongitude
-                : clockInLongitude // ignore: cast_nullable_to_non_nullable
-                      as double?,
-            clockOutLatitude: freezed == clockOutLatitude
-                ? _value.clockOutLatitude
-                : clockOutLatitude // ignore: cast_nullable_to_non_nullable
-                      as double?,
-            clockOutLongitude: freezed == clockOutLongitude
-                ? _value.clockOutLongitude
-                : clockOutLongitude // ignore: cast_nullable_to_non_nullable
-                      as double?,
-            totalHours: freezed == totalHours
-                ? _value.totalHours
-                : totalHours // ignore: cast_nullable_to_non_nullable
-                      as double?,
-            status: null == status
-                ? _value.status
-                : status // ignore: cast_nullable_to_non_nullable
-                      as TimeEntryStatus,
-            notes: freezed == notes
-                ? _value.notes
-                : notes // ignore: cast_nullable_to_non_nullable
-                      as String?,
-            createdAt: null == createdAt
-                ? _value.createdAt
-                : createdAt // ignore: cast_nullable_to_non_nullable
-                      as String,
-            propertyId: freezed == propertyId
-                ? _value.propertyId
-                : propertyId // ignore: cast_nullable_to_non_nullable
-                      as String?,
-          )
-          as $Val,
-    );
-  }
+/// Create a copy of TimeEntry
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? userId = null,Object? workerId = null,Object? clockInTime = null,Object? clockOutTime = freezed,Object? clockInLatitude = freezed,Object? clockInLongitude = freezed,Object? clockOutLatitude = freezed,Object? clockOutLongitude = freezed,Object? totalHours = freezed,Object? status = null,Object? notes = freezed,Object? createdAt = null,Object? propertyId = freezed,}) {
+  return _then(_self.copyWith(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
+as String,workerId: null == workerId ? _self.workerId : workerId // ignore: cast_nullable_to_non_nullable
+as String,clockInTime: null == clockInTime ? _self.clockInTime : clockInTime // ignore: cast_nullable_to_non_nullable
+as String,clockOutTime: freezed == clockOutTime ? _self.clockOutTime : clockOutTime // ignore: cast_nullable_to_non_nullable
+as String?,clockInLatitude: freezed == clockInLatitude ? _self.clockInLatitude : clockInLatitude // ignore: cast_nullable_to_non_nullable
+as double?,clockInLongitude: freezed == clockInLongitude ? _self.clockInLongitude : clockInLongitude // ignore: cast_nullable_to_non_nullable
+as double?,clockOutLatitude: freezed == clockOutLatitude ? _self.clockOutLatitude : clockOutLatitude // ignore: cast_nullable_to_non_nullable
+as double?,clockOutLongitude: freezed == clockOutLongitude ? _self.clockOutLongitude : clockOutLongitude // ignore: cast_nullable_to_non_nullable
+as double?,totalHours: freezed == totalHours ? _self.totalHours : totalHours // ignore: cast_nullable_to_non_nullable
+as double?,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as TimeEntryStatus,notes: freezed == notes ? _self.notes : notes // ignore: cast_nullable_to_non_nullable
+as String?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,propertyId: freezed == propertyId ? _self.propertyId : propertyId // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
 }
 
-/// @nodoc
-abstract class _$$TimeEntryImplCopyWith<$Res>
-    implements $TimeEntryCopyWith<$Res> {
-  factory _$$TimeEntryImplCopyWith(
-    _$TimeEntryImpl value,
-    $Res Function(_$TimeEntryImpl) then,
-  ) = __$$TimeEntryImplCopyWithImpl<$Res>;
-  @override
-  @useResult
-  $Res call({
-    String id,
-    String userId,
-    String workerId,
-    String clockInTime,
-    String? clockOutTime,
-    double? clockInLatitude,
-    double? clockInLongitude,
-    double? clockOutLatitude,
-    double? clockOutLongitude,
-    double? totalHours,
-    TimeEntryStatus status,
-    String? notes,
-    String createdAt,
-    String? propertyId,
-  });
 }
 
-/// @nodoc
-class __$$TimeEntryImplCopyWithImpl<$Res>
-    extends _$TimeEntryCopyWithImpl<$Res, _$TimeEntryImpl>
-    implements _$$TimeEntryImplCopyWith<$Res> {
-  __$$TimeEntryImplCopyWithImpl(
-    _$TimeEntryImpl _value,
-    $Res Function(_$TimeEntryImpl) _then,
-  ) : super(_value, _then);
 
-  /// Create a copy of TimeEntry
-  /// with the given fields replaced by the non-null parameter values.
-  @pragma('vm:prefer-inline')
-  @override
-  $Res call({
-    Object? id = null,
-    Object? userId = null,
-    Object? workerId = null,
-    Object? clockInTime = null,
-    Object? clockOutTime = freezed,
-    Object? clockInLatitude = freezed,
-    Object? clockInLongitude = freezed,
-    Object? clockOutLatitude = freezed,
-    Object? clockOutLongitude = freezed,
-    Object? totalHours = freezed,
-    Object? status = null,
-    Object? notes = freezed,
-    Object? createdAt = null,
-    Object? propertyId = freezed,
-  }) {
-    return _then(
-      _$TimeEntryImpl(
-        id: null == id
-            ? _value.id
-            : id // ignore: cast_nullable_to_non_nullable
-                  as String,
-        userId: null == userId
-            ? _value.userId
-            : userId // ignore: cast_nullable_to_non_nullable
-                  as String,
-        workerId: null == workerId
-            ? _value.workerId
-            : workerId // ignore: cast_nullable_to_non_nullable
-                  as String,
-        clockInTime: null == clockInTime
-            ? _value.clockInTime
-            : clockInTime // ignore: cast_nullable_to_non_nullable
-                  as String,
-        clockOutTime: freezed == clockOutTime
-            ? _value.clockOutTime
-            : clockOutTime // ignore: cast_nullable_to_non_nullable
-                  as String?,
-        clockInLatitude: freezed == clockInLatitude
-            ? _value.clockInLatitude
-            : clockInLatitude // ignore: cast_nullable_to_non_nullable
-                  as double?,
-        clockInLongitude: freezed == clockInLongitude
-            ? _value.clockInLongitude
-            : clockInLongitude // ignore: cast_nullable_to_non_nullable
-                  as double?,
-        clockOutLatitude: freezed == clockOutLatitude
-            ? _value.clockOutLatitude
-            : clockOutLatitude // ignore: cast_nullable_to_non_nullable
-                  as double?,
-        clockOutLongitude: freezed == clockOutLongitude
-            ? _value.clockOutLongitude
-            : clockOutLongitude // ignore: cast_nullable_to_non_nullable
-                  as double?,
-        totalHours: freezed == totalHours
-            ? _value.totalHours
-            : totalHours // ignore: cast_nullable_to_non_nullable
-                  as double?,
-        status: null == status
-            ? _value.status
-            : status // ignore: cast_nullable_to_non_nullable
-                  as TimeEntryStatus,
-        notes: freezed == notes
-            ? _value.notes
-            : notes // ignore: cast_nullable_to_non_nullable
-                  as String?,
-        createdAt: null == createdAt
-            ? _value.createdAt
-            : createdAt // ignore: cast_nullable_to_non_nullable
-                  as String,
-        propertyId: freezed == propertyId
-            ? _value.propertyId
-            : propertyId // ignore: cast_nullable_to_non_nullable
-                  as String?,
-      ),
-    );
-  }
+/// Adds pattern-matching-related methods to [TimeEntry].
+extension TimeEntryPatterns on TimeEntry {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _TimeEntry value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _TimeEntry() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _TimeEntry value)  $default,){
+final _that = this;
+switch (_that) {
+case _TimeEntry():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _TimeEntry value)?  $default,){
+final _that = this;
+switch (_that) {
+case _TimeEntry() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String userId,  String workerId,  String clockInTime,  String? clockOutTime,  double? clockInLatitude,  double? clockInLongitude,  double? clockOutLatitude,  double? clockOutLongitude,  double? totalHours,  TimeEntryStatus status,  String? notes,  String createdAt,  String? propertyId)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _TimeEntry() when $default != null:
+return $default(_that.id,_that.userId,_that.workerId,_that.clockInTime,_that.clockOutTime,_that.clockInLatitude,_that.clockInLongitude,_that.clockOutLatitude,_that.clockOutLongitude,_that.totalHours,_that.status,_that.notes,_that.createdAt,_that.propertyId);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String userId,  String workerId,  String clockInTime,  String? clockOutTime,  double? clockInLatitude,  double? clockInLongitude,  double? clockOutLatitude,  double? clockOutLongitude,  double? totalHours,  TimeEntryStatus status,  String? notes,  String createdAt,  String? propertyId)  $default,) {final _that = this;
+switch (_that) {
+case _TimeEntry():
+return $default(_that.id,_that.userId,_that.workerId,_that.clockInTime,_that.clockOutTime,_that.clockInLatitude,_that.clockInLongitude,_that.clockOutLatitude,_that.clockOutLongitude,_that.totalHours,_that.status,_that.notes,_that.createdAt,_that.propertyId);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String userId,  String workerId,  String clockInTime,  String? clockOutTime,  double? clockInLatitude,  double? clockInLongitude,  double? clockOutLatitude,  double? clockOutLongitude,  double? totalHours,  TimeEntryStatus status,  String? notes,  String createdAt,  String? propertyId)?  $default,) {final _that = this;
+switch (_that) {
+case _TimeEntry() when $default != null:
+return $default(_that.id,_that.userId,_that.workerId,_that.clockInTime,_that.clockOutTime,_that.clockInLatitude,_that.clockInLongitude,_that.clockOutLatitude,_that.clockOutLongitude,_that.totalHours,_that.status,_that.notes,_that.createdAt,_that.propertyId);case _:
+  return null;
+
+}
+}
+
 }
 
 /// @nodoc
 @JsonSerializable()
-class _$TimeEntryImpl implements _TimeEntry {
-  const _$TimeEntryImpl({
-    required this.id,
-    required this.userId,
-    required this.workerId,
-    required this.clockInTime,
-    this.clockOutTime,
-    this.clockInLatitude,
-    this.clockInLongitude,
-    this.clockOutLatitude,
-    this.clockOutLongitude,
-    this.totalHours,
-    required this.status,
-    this.notes,
-    required this.createdAt,
-    this.propertyId,
-  });
 
-  factory _$TimeEntryImpl.fromJson(Map<String, dynamic> json) =>
-      _$$TimeEntryImplFromJson(json);
+class _TimeEntry implements TimeEntry {
+  const _TimeEntry({required this.id, required this.userId, required this.workerId, required this.clockInTime, this.clockOutTime, this.clockInLatitude, this.clockInLongitude, this.clockOutLatitude, this.clockOutLongitude, this.totalHours, required this.status, this.notes, required this.createdAt, this.propertyId});
+  factory _TimeEntry.fromJson(Map<String, dynamic> json) => _$TimeEntryFromJson(json);
 
-  @override
-  final String id;
-  @override
-  final String userId;
-  @override
-  final String workerId;
-  @override
-  final String clockInTime;
-  @override
-  final String? clockOutTime;
-  @override
-  final double? clockInLatitude;
-  @override
-  final double? clockInLongitude;
-  @override
-  final double? clockOutLatitude;
-  @override
-  final double? clockOutLongitude;
-  @override
-  final double? totalHours;
-  @override
-  final TimeEntryStatus status;
-  @override
-  final String? notes;
-  @override
-  final String createdAt;
-  @override
-  final String? propertyId;
+@override final  String id;
+@override final  String userId;
+@override final  String workerId;
+@override final  String clockInTime;
+@override final  String? clockOutTime;
+@override final  double? clockInLatitude;
+@override final  double? clockInLongitude;
+@override final  double? clockOutLatitude;
+@override final  double? clockOutLongitude;
+@override final  double? totalHours;
+@override final  TimeEntryStatus status;
+@override final  String? notes;
+@override final  String createdAt;
+@override final  String? propertyId;
 
-  @override
-  String toString() {
-    return 'TimeEntry(id: $id, userId: $userId, workerId: $workerId, clockInTime: $clockInTime, clockOutTime: $clockOutTime, clockInLatitude: $clockInLatitude, clockInLongitude: $clockInLongitude, clockOutLatitude: $clockOutLatitude, clockOutLongitude: $clockOutLongitude, totalHours: $totalHours, status: $status, notes: $notes, createdAt: $createdAt, propertyId: $propertyId)';
-  }
+/// Create a copy of TimeEntry
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$TimeEntryCopyWith<_TimeEntry> get copyWith => __$TimeEntryCopyWithImpl<_TimeEntry>(this, _$identity);
 
-  @override
-  bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is _$TimeEntryImpl &&
-            (identical(other.id, id) || other.id == id) &&
-            (identical(other.userId, userId) || other.userId == userId) &&
-            (identical(other.workerId, workerId) ||
-                other.workerId == workerId) &&
-            (identical(other.clockInTime, clockInTime) ||
-                other.clockInTime == clockInTime) &&
-            (identical(other.clockOutTime, clockOutTime) ||
-                other.clockOutTime == clockOutTime) &&
-            (identical(other.clockInLatitude, clockInLatitude) ||
-                other.clockInLatitude == clockInLatitude) &&
-            (identical(other.clockInLongitude, clockInLongitude) ||
-                other.clockInLongitude == clockInLongitude) &&
-            (identical(other.clockOutLatitude, clockOutLatitude) ||
-                other.clockOutLatitude == clockOutLatitude) &&
-            (identical(other.clockOutLongitude, clockOutLongitude) ||
-                other.clockOutLongitude == clockOutLongitude) &&
-            (identical(other.totalHours, totalHours) ||
-                other.totalHours == totalHours) &&
-            (identical(other.status, status) || other.status == status) &&
-            (identical(other.notes, notes) || other.notes == notes) &&
-            (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt) &&
-            (identical(other.propertyId, propertyId) ||
-                other.propertyId == propertyId));
-  }
-
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  @override
-  int get hashCode => Object.hash(
-    runtimeType,
-    id,
-    userId,
-    workerId,
-    clockInTime,
-    clockOutTime,
-    clockInLatitude,
-    clockInLongitude,
-    clockOutLatitude,
-    clockOutLongitude,
-    totalHours,
-    status,
-    notes,
-    createdAt,
-    propertyId,
-  );
-
-  /// Create a copy of TimeEntry
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  @override
-  @pragma('vm:prefer-inline')
-  _$$TimeEntryImplCopyWith<_$TimeEntryImpl> get copyWith =>
-      __$$TimeEntryImplCopyWithImpl<_$TimeEntryImpl>(this, _$identity);
-
-  @override
-  Map<String, dynamic> toJson() {
-    return _$$TimeEntryImplToJson(this);
-  }
+@override
+Map<String, dynamic> toJson() {
+  return _$TimeEntryToJson(this, );
 }
 
-abstract class _TimeEntry implements TimeEntry {
-  const factory _TimeEntry({
-    required final String id,
-    required final String userId,
-    required final String workerId,
-    required final String clockInTime,
-    final String? clockOutTime,
-    final double? clockInLatitude,
-    final double? clockInLongitude,
-    final double? clockOutLatitude,
-    final double? clockOutLongitude,
-    final double? totalHours,
-    required final TimeEntryStatus status,
-    final String? notes,
-    required final String createdAt,
-    final String? propertyId,
-  }) = _$TimeEntryImpl;
-
-  factory _TimeEntry.fromJson(Map<String, dynamic> json) =
-      _$TimeEntryImpl.fromJson;
-
-  @override
-  String get id;
-  @override
-  String get userId;
-  @override
-  String get workerId;
-  @override
-  String get clockInTime;
-  @override
-  String? get clockOutTime;
-  @override
-  double? get clockInLatitude;
-  @override
-  double? get clockInLongitude;
-  @override
-  double? get clockOutLatitude;
-  @override
-  double? get clockOutLongitude;
-  @override
-  double? get totalHours;
-  @override
-  TimeEntryStatus get status;
-  @override
-  String? get notes;
-  @override
-  String get createdAt;
-  @override
-  String? get propertyId;
-
-  /// Create a copy of TimeEntry
-  /// with the given fields replaced by the non-null parameter values.
-  @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  _$$TimeEntryImplCopyWith<_$TimeEntryImpl> get copyWith =>
-      throw _privateConstructorUsedError;
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _TimeEntry&&(identical(other.id, id) || other.id == id)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.workerId, workerId) || other.workerId == workerId)&&(identical(other.clockInTime, clockInTime) || other.clockInTime == clockInTime)&&(identical(other.clockOutTime, clockOutTime) || other.clockOutTime == clockOutTime)&&(identical(other.clockInLatitude, clockInLatitude) || other.clockInLatitude == clockInLatitude)&&(identical(other.clockInLongitude, clockInLongitude) || other.clockInLongitude == clockInLongitude)&&(identical(other.clockOutLatitude, clockOutLatitude) || other.clockOutLatitude == clockOutLatitude)&&(identical(other.clockOutLongitude, clockOutLongitude) || other.clockOutLongitude == clockOutLongitude)&&(identical(other.totalHours, totalHours) || other.totalHours == totalHours)&&(identical(other.status, status) || other.status == status)&&(identical(other.notes, notes) || other.notes == notes)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.propertyId, propertyId) || other.propertyId == propertyId));
 }
 
-ClockInRequest _$ClockInRequestFromJson(Map<String, dynamic> json) {
-  return _ClockInRequest.fromJson(json);
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,id,userId,workerId,clockInTime,clockOutTime,clockInLatitude,clockInLongitude,clockOutLatitude,clockOutLongitude,totalHours,status,notes,createdAt,propertyId);
+
+@override
+String toString() {
+  return 'TimeEntry(id: $id, userId: $userId, workerId: $workerId, clockInTime: $clockInTime, clockOutTime: $clockOutTime, clockInLatitude: $clockInLatitude, clockInLongitude: $clockInLongitude, clockOutLatitude: $clockOutLatitude, clockOutLongitude: $clockOutLongitude, totalHours: $totalHours, status: $status, notes: $notes, createdAt: $createdAt, propertyId: $propertyId)';
 }
+
+
+}
+
+/// @nodoc
+abstract mixin class _$TimeEntryCopyWith<$Res> implements $TimeEntryCopyWith<$Res> {
+  factory _$TimeEntryCopyWith(_TimeEntry value, $Res Function(_TimeEntry) _then) = __$TimeEntryCopyWithImpl;
+@override @useResult
+$Res call({
+ String id, String userId, String workerId, String clockInTime, String? clockOutTime, double? clockInLatitude, double? clockInLongitude, double? clockOutLatitude, double? clockOutLongitude, double? totalHours, TimeEntryStatus status, String? notes, String createdAt, String? propertyId
+});
+
+
+
+
+}
+/// @nodoc
+class __$TimeEntryCopyWithImpl<$Res>
+    implements _$TimeEntryCopyWith<$Res> {
+  __$TimeEntryCopyWithImpl(this._self, this._then);
+
+  final _TimeEntry _self;
+  final $Res Function(_TimeEntry) _then;
+
+/// Create a copy of TimeEntry
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? userId = null,Object? workerId = null,Object? clockInTime = null,Object? clockOutTime = freezed,Object? clockInLatitude = freezed,Object? clockInLongitude = freezed,Object? clockOutLatitude = freezed,Object? clockOutLongitude = freezed,Object? totalHours = freezed,Object? status = null,Object? notes = freezed,Object? createdAt = null,Object? propertyId = freezed,}) {
+  return _then(_TimeEntry(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
+as String,workerId: null == workerId ? _self.workerId : workerId // ignore: cast_nullable_to_non_nullable
+as String,clockInTime: null == clockInTime ? _self.clockInTime : clockInTime // ignore: cast_nullable_to_non_nullable
+as String,clockOutTime: freezed == clockOutTime ? _self.clockOutTime : clockOutTime // ignore: cast_nullable_to_non_nullable
+as String?,clockInLatitude: freezed == clockInLatitude ? _self.clockInLatitude : clockInLatitude // ignore: cast_nullable_to_non_nullable
+as double?,clockInLongitude: freezed == clockInLongitude ? _self.clockInLongitude : clockInLongitude // ignore: cast_nullable_to_non_nullable
+as double?,clockOutLatitude: freezed == clockOutLatitude ? _self.clockOutLatitude : clockOutLatitude // ignore: cast_nullable_to_non_nullable
+as double?,clockOutLongitude: freezed == clockOutLongitude ? _self.clockOutLongitude : clockOutLongitude // ignore: cast_nullable_to_non_nullable
+as double?,totalHours: freezed == totalHours ? _self.totalHours : totalHours // ignore: cast_nullable_to_non_nullable
+as double?,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as TimeEntryStatus,notes: freezed == notes ? _self.notes : notes // ignore: cast_nullable_to_non_nullable
+as String?,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,propertyId: freezed == propertyId ? _self.propertyId : propertyId // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
+
 
 /// @nodoc
 mixin _$ClockInRequest {
-  String get workerId => throw _privateConstructorUsedError;
-  double get latitude => throw _privateConstructorUsedError;
-  double get longitude => throw _privateConstructorUsedError;
-  String? get notes => throw _privateConstructorUsedError;
+
+ String get workerId; double get latitude; double get longitude; String? get notes;
+/// Create a copy of ClockInRequest
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$ClockInRequestCopyWith<ClockInRequest> get copyWith => _$ClockInRequestCopyWithImpl<ClockInRequest>(this as ClockInRequest, _$identity);
 
   /// Serializes this ClockInRequest to a JSON map.
-  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
+  Map<String, dynamic> toJson();
 
-  /// Create a copy of ClockInRequest
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  $ClockInRequestCopyWith<ClockInRequest> get copyWith =>
-      throw _privateConstructorUsedError;
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ClockInRequest&&(identical(other.workerId, workerId) || other.workerId == workerId)&&(identical(other.latitude, latitude) || other.latitude == latitude)&&(identical(other.longitude, longitude) || other.longitude == longitude)&&(identical(other.notes, notes) || other.notes == notes));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,workerId,latitude,longitude,notes);
+
+@override
+String toString() {
+  return 'ClockInRequest(workerId: $workerId, latitude: $latitude, longitude: $longitude, notes: $notes)';
+}
+
+
 }
 
 /// @nodoc
-abstract class $ClockInRequestCopyWith<$Res> {
-  factory $ClockInRequestCopyWith(
-    ClockInRequest value,
-    $Res Function(ClockInRequest) then,
-  ) = _$ClockInRequestCopyWithImpl<$Res, ClockInRequest>;
-  @useResult
-  $Res call({
-    String workerId,
-    double latitude,
-    double longitude,
-    String? notes,
-  });
-}
+abstract mixin class $ClockInRequestCopyWith<$Res>  {
+  factory $ClockInRequestCopyWith(ClockInRequest value, $Res Function(ClockInRequest) _then) = _$ClockInRequestCopyWithImpl;
+@useResult
+$Res call({
+ String workerId, double latitude, double longitude, String? notes
+});
 
+
+
+
+}
 /// @nodoc
-class _$ClockInRequestCopyWithImpl<$Res, $Val extends ClockInRequest>
+class _$ClockInRequestCopyWithImpl<$Res>
     implements $ClockInRequestCopyWith<$Res> {
-  _$ClockInRequestCopyWithImpl(this._value, this._then);
+  _$ClockInRequestCopyWithImpl(this._self, this._then);
 
-  // ignore: unused_field
-  final $Val _value;
-  // ignore: unused_field
-  final $Res Function($Val) _then;
+  final ClockInRequest _self;
+  final $Res Function(ClockInRequest) _then;
 
-  /// Create a copy of ClockInRequest
-  /// with the given fields replaced by the non-null parameter values.
-  @pragma('vm:prefer-inline')
-  @override
-  $Res call({
-    Object? workerId = null,
-    Object? latitude = null,
-    Object? longitude = null,
-    Object? notes = freezed,
-  }) {
-    return _then(
-      _value.copyWith(
-            workerId: null == workerId
-                ? _value.workerId
-                : workerId // ignore: cast_nullable_to_non_nullable
-                      as String,
-            latitude: null == latitude
-                ? _value.latitude
-                : latitude // ignore: cast_nullable_to_non_nullable
-                      as double,
-            longitude: null == longitude
-                ? _value.longitude
-                : longitude // ignore: cast_nullable_to_non_nullable
-                      as double,
-            notes: freezed == notes
-                ? _value.notes
-                : notes // ignore: cast_nullable_to_non_nullable
-                      as String?,
-          )
-          as $Val,
-    );
-  }
+/// Create a copy of ClockInRequest
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? workerId = null,Object? latitude = null,Object? longitude = null,Object? notes = freezed,}) {
+  return _then(_self.copyWith(
+workerId: null == workerId ? _self.workerId : workerId // ignore: cast_nullable_to_non_nullable
+as String,latitude: null == latitude ? _self.latitude : latitude // ignore: cast_nullable_to_non_nullable
+as double,longitude: null == longitude ? _self.longitude : longitude // ignore: cast_nullable_to_non_nullable
+as double,notes: freezed == notes ? _self.notes : notes // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
 }
 
-/// @nodoc
-abstract class _$$ClockInRequestImplCopyWith<$Res>
-    implements $ClockInRequestCopyWith<$Res> {
-  factory _$$ClockInRequestImplCopyWith(
-    _$ClockInRequestImpl value,
-    $Res Function(_$ClockInRequestImpl) then,
-  ) = __$$ClockInRequestImplCopyWithImpl<$Res>;
-  @override
-  @useResult
-  $Res call({
-    String workerId,
-    double latitude,
-    double longitude,
-    String? notes,
-  });
 }
 
-/// @nodoc
-class __$$ClockInRequestImplCopyWithImpl<$Res>
-    extends _$ClockInRequestCopyWithImpl<$Res, _$ClockInRequestImpl>
-    implements _$$ClockInRequestImplCopyWith<$Res> {
-  __$$ClockInRequestImplCopyWithImpl(
-    _$ClockInRequestImpl _value,
-    $Res Function(_$ClockInRequestImpl) _then,
-  ) : super(_value, _then);
 
-  /// Create a copy of ClockInRequest
-  /// with the given fields replaced by the non-null parameter values.
-  @pragma('vm:prefer-inline')
-  @override
-  $Res call({
-    Object? workerId = null,
-    Object? latitude = null,
-    Object? longitude = null,
-    Object? notes = freezed,
-  }) {
-    return _then(
-      _$ClockInRequestImpl(
-        workerId: null == workerId
-            ? _value.workerId
-            : workerId // ignore: cast_nullable_to_non_nullable
-                  as String,
-        latitude: null == latitude
-            ? _value.latitude
-            : latitude // ignore: cast_nullable_to_non_nullable
-                  as double,
-        longitude: null == longitude
-            ? _value.longitude
-            : longitude // ignore: cast_nullable_to_non_nullable
-                  as double,
-        notes: freezed == notes
-            ? _value.notes
-            : notes // ignore: cast_nullable_to_non_nullable
-                  as String?,
-      ),
-    );
-  }
+/// Adds pattern-matching-related methods to [ClockInRequest].
+extension ClockInRequestPatterns on ClockInRequest {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _ClockInRequest value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _ClockInRequest() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _ClockInRequest value)  $default,){
+final _that = this;
+switch (_that) {
+case _ClockInRequest():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _ClockInRequest value)?  $default,){
+final _that = this;
+switch (_that) {
+case _ClockInRequest() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String workerId,  double latitude,  double longitude,  String? notes)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _ClockInRequest() when $default != null:
+return $default(_that.workerId,_that.latitude,_that.longitude,_that.notes);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String workerId,  double latitude,  double longitude,  String? notes)  $default,) {final _that = this;
+switch (_that) {
+case _ClockInRequest():
+return $default(_that.workerId,_that.latitude,_that.longitude,_that.notes);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String workerId,  double latitude,  double longitude,  String? notes)?  $default,) {final _that = this;
+switch (_that) {
+case _ClockInRequest() when $default != null:
+return $default(_that.workerId,_that.latitude,_that.longitude,_that.notes);case _:
+  return null;
+
+}
+}
+
 }
 
 /// @nodoc
 @JsonSerializable()
-class _$ClockInRequestImpl implements _ClockInRequest {
-  const _$ClockInRequestImpl({
-    required this.workerId,
-    required this.latitude,
-    required this.longitude,
-    this.notes,
-  });
 
-  factory _$ClockInRequestImpl.fromJson(Map<String, dynamic> json) =>
-      _$$ClockInRequestImplFromJson(json);
+class _ClockInRequest implements ClockInRequest {
+  const _ClockInRequest({required this.workerId, required this.latitude, required this.longitude, this.notes});
+  factory _ClockInRequest.fromJson(Map<String, dynamic> json) => _$ClockInRequestFromJson(json);
 
-  @override
-  final String workerId;
-  @override
-  final double latitude;
-  @override
-  final double longitude;
-  @override
-  final String? notes;
+@override final  String workerId;
+@override final  double latitude;
+@override final  double longitude;
+@override final  String? notes;
 
-  @override
-  String toString() {
-    return 'ClockInRequest(workerId: $workerId, latitude: $latitude, longitude: $longitude, notes: $notes)';
-  }
+/// Create a copy of ClockInRequest
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$ClockInRequestCopyWith<_ClockInRequest> get copyWith => __$ClockInRequestCopyWithImpl<_ClockInRequest>(this, _$identity);
 
-  @override
-  bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is _$ClockInRequestImpl &&
-            (identical(other.workerId, workerId) ||
-                other.workerId == workerId) &&
-            (identical(other.latitude, latitude) ||
-                other.latitude == latitude) &&
-            (identical(other.longitude, longitude) ||
-                other.longitude == longitude) &&
-            (identical(other.notes, notes) || other.notes == notes));
-  }
-
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  @override
-  int get hashCode =>
-      Object.hash(runtimeType, workerId, latitude, longitude, notes);
-
-  /// Create a copy of ClockInRequest
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  @override
-  @pragma('vm:prefer-inline')
-  _$$ClockInRequestImplCopyWith<_$ClockInRequestImpl> get copyWith =>
-      __$$ClockInRequestImplCopyWithImpl<_$ClockInRequestImpl>(
-        this,
-        _$identity,
-      );
-
-  @override
-  Map<String, dynamic> toJson() {
-    return _$$ClockInRequestImplToJson(this);
-  }
+@override
+Map<String, dynamic> toJson() {
+  return _$ClockInRequestToJson(this, );
 }
 
-abstract class _ClockInRequest implements ClockInRequest {
-  const factory _ClockInRequest({
-    required final String workerId,
-    required final double latitude,
-    required final double longitude,
-    final String? notes,
-  }) = _$ClockInRequestImpl;
-
-  factory _ClockInRequest.fromJson(Map<String, dynamic> json) =
-      _$ClockInRequestImpl.fromJson;
-
-  @override
-  String get workerId;
-  @override
-  double get latitude;
-  @override
-  double get longitude;
-  @override
-  String? get notes;
-
-  /// Create a copy of ClockInRequest
-  /// with the given fields replaced by the non-null parameter values.
-  @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  _$$ClockInRequestImplCopyWith<_$ClockInRequestImpl> get copyWith =>
-      throw _privateConstructorUsedError;
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ClockInRequest&&(identical(other.workerId, workerId) || other.workerId == workerId)&&(identical(other.latitude, latitude) || other.latitude == latitude)&&(identical(other.longitude, longitude) || other.longitude == longitude)&&(identical(other.notes, notes) || other.notes == notes));
 }
 
-ClockOutRequest _$ClockOutRequestFromJson(Map<String, dynamic> json) {
-  return _ClockOutRequest.fromJson(json);
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,workerId,latitude,longitude,notes);
+
+@override
+String toString() {
+  return 'ClockInRequest(workerId: $workerId, latitude: $latitude, longitude: $longitude, notes: $notes)';
 }
+
+
+}
+
+/// @nodoc
+abstract mixin class _$ClockInRequestCopyWith<$Res> implements $ClockInRequestCopyWith<$Res> {
+  factory _$ClockInRequestCopyWith(_ClockInRequest value, $Res Function(_ClockInRequest) _then) = __$ClockInRequestCopyWithImpl;
+@override @useResult
+$Res call({
+ String workerId, double latitude, double longitude, String? notes
+});
+
+
+
+
+}
+/// @nodoc
+class __$ClockInRequestCopyWithImpl<$Res>
+    implements _$ClockInRequestCopyWith<$Res> {
+  __$ClockInRequestCopyWithImpl(this._self, this._then);
+
+  final _ClockInRequest _self;
+  final $Res Function(_ClockInRequest) _then;
+
+/// Create a copy of ClockInRequest
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? workerId = null,Object? latitude = null,Object? longitude = null,Object? notes = freezed,}) {
+  return _then(_ClockInRequest(
+workerId: null == workerId ? _self.workerId : workerId // ignore: cast_nullable_to_non_nullable
+as String,latitude: null == latitude ? _self.latitude : latitude // ignore: cast_nullable_to_non_nullable
+as double,longitude: null == longitude ? _self.longitude : longitude // ignore: cast_nullable_to_non_nullable
+as double,notes: freezed == notes ? _self.notes : notes // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
+
 
 /// @nodoc
 mixin _$ClockOutRequest {
-  String get timeEntryId => throw _privateConstructorUsedError;
-  double get latitude => throw _privateConstructorUsedError;
-  double get longitude => throw _privateConstructorUsedError;
-  String? get notes => throw _privateConstructorUsedError;
+
+ String get timeEntryId; double get latitude; double get longitude; String? get notes;
+/// Create a copy of ClockOutRequest
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$ClockOutRequestCopyWith<ClockOutRequest> get copyWith => _$ClockOutRequestCopyWithImpl<ClockOutRequest>(this as ClockOutRequest, _$identity);
 
   /// Serializes this ClockOutRequest to a JSON map.
-  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
+  Map<String, dynamic> toJson();
 
-  /// Create a copy of ClockOutRequest
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  $ClockOutRequestCopyWith<ClockOutRequest> get copyWith =>
-      throw _privateConstructorUsedError;
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ClockOutRequest&&(identical(other.timeEntryId, timeEntryId) || other.timeEntryId == timeEntryId)&&(identical(other.latitude, latitude) || other.latitude == latitude)&&(identical(other.longitude, longitude) || other.longitude == longitude)&&(identical(other.notes, notes) || other.notes == notes));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,timeEntryId,latitude,longitude,notes);
+
+@override
+String toString() {
+  return 'ClockOutRequest(timeEntryId: $timeEntryId, latitude: $latitude, longitude: $longitude, notes: $notes)';
+}
+
+
 }
 
 /// @nodoc
-abstract class $ClockOutRequestCopyWith<$Res> {
-  factory $ClockOutRequestCopyWith(
-    ClockOutRequest value,
-    $Res Function(ClockOutRequest) then,
-  ) = _$ClockOutRequestCopyWithImpl<$Res, ClockOutRequest>;
-  @useResult
-  $Res call({
-    String timeEntryId,
-    double latitude,
-    double longitude,
-    String? notes,
-  });
-}
+abstract mixin class $ClockOutRequestCopyWith<$Res>  {
+  factory $ClockOutRequestCopyWith(ClockOutRequest value, $Res Function(ClockOutRequest) _then) = _$ClockOutRequestCopyWithImpl;
+@useResult
+$Res call({
+ String timeEntryId, double latitude, double longitude, String? notes
+});
 
+
+
+
+}
 /// @nodoc
-class _$ClockOutRequestCopyWithImpl<$Res, $Val extends ClockOutRequest>
+class _$ClockOutRequestCopyWithImpl<$Res>
     implements $ClockOutRequestCopyWith<$Res> {
-  _$ClockOutRequestCopyWithImpl(this._value, this._then);
+  _$ClockOutRequestCopyWithImpl(this._self, this._then);
 
-  // ignore: unused_field
-  final $Val _value;
-  // ignore: unused_field
-  final $Res Function($Val) _then;
+  final ClockOutRequest _self;
+  final $Res Function(ClockOutRequest) _then;
 
-  /// Create a copy of ClockOutRequest
-  /// with the given fields replaced by the non-null parameter values.
-  @pragma('vm:prefer-inline')
-  @override
-  $Res call({
-    Object? timeEntryId = null,
-    Object? latitude = null,
-    Object? longitude = null,
-    Object? notes = freezed,
-  }) {
-    return _then(
-      _value.copyWith(
-            timeEntryId: null == timeEntryId
-                ? _value.timeEntryId
-                : timeEntryId // ignore: cast_nullable_to_non_nullable
-                      as String,
-            latitude: null == latitude
-                ? _value.latitude
-                : latitude // ignore: cast_nullable_to_non_nullable
-                      as double,
-            longitude: null == longitude
-                ? _value.longitude
-                : longitude // ignore: cast_nullable_to_non_nullable
-                      as double,
-            notes: freezed == notes
-                ? _value.notes
-                : notes // ignore: cast_nullable_to_non_nullable
-                      as String?,
-          )
-          as $Val,
-    );
-  }
+/// Create a copy of ClockOutRequest
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? timeEntryId = null,Object? latitude = null,Object? longitude = null,Object? notes = freezed,}) {
+  return _then(_self.copyWith(
+timeEntryId: null == timeEntryId ? _self.timeEntryId : timeEntryId // ignore: cast_nullable_to_non_nullable
+as String,latitude: null == latitude ? _self.latitude : latitude // ignore: cast_nullable_to_non_nullable
+as double,longitude: null == longitude ? _self.longitude : longitude // ignore: cast_nullable_to_non_nullable
+as double,notes: freezed == notes ? _self.notes : notes // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
 }
 
-/// @nodoc
-abstract class _$$ClockOutRequestImplCopyWith<$Res>
-    implements $ClockOutRequestCopyWith<$Res> {
-  factory _$$ClockOutRequestImplCopyWith(
-    _$ClockOutRequestImpl value,
-    $Res Function(_$ClockOutRequestImpl) then,
-  ) = __$$ClockOutRequestImplCopyWithImpl<$Res>;
-  @override
-  @useResult
-  $Res call({
-    String timeEntryId,
-    double latitude,
-    double longitude,
-    String? notes,
-  });
 }
 
-/// @nodoc
-class __$$ClockOutRequestImplCopyWithImpl<$Res>
-    extends _$ClockOutRequestCopyWithImpl<$Res, _$ClockOutRequestImpl>
-    implements _$$ClockOutRequestImplCopyWith<$Res> {
-  __$$ClockOutRequestImplCopyWithImpl(
-    _$ClockOutRequestImpl _value,
-    $Res Function(_$ClockOutRequestImpl) _then,
-  ) : super(_value, _then);
 
-  /// Create a copy of ClockOutRequest
-  /// with the given fields replaced by the non-null parameter values.
-  @pragma('vm:prefer-inline')
-  @override
-  $Res call({
-    Object? timeEntryId = null,
-    Object? latitude = null,
-    Object? longitude = null,
-    Object? notes = freezed,
-  }) {
-    return _then(
-      _$ClockOutRequestImpl(
-        timeEntryId: null == timeEntryId
-            ? _value.timeEntryId
-            : timeEntryId // ignore: cast_nullable_to_non_nullable
-                  as String,
-        latitude: null == latitude
-            ? _value.latitude
-            : latitude // ignore: cast_nullable_to_non_nullable
-                  as double,
-        longitude: null == longitude
-            ? _value.longitude
-            : longitude // ignore: cast_nullable_to_non_nullable
-                  as double,
-        notes: freezed == notes
-            ? _value.notes
-            : notes // ignore: cast_nullable_to_non_nullable
-                  as String?,
-      ),
-    );
-  }
+/// Adds pattern-matching-related methods to [ClockOutRequest].
+extension ClockOutRequestPatterns on ClockOutRequest {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _ClockOutRequest value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _ClockOutRequest() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _ClockOutRequest value)  $default,){
+final _that = this;
+switch (_that) {
+case _ClockOutRequest():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _ClockOutRequest value)?  $default,){
+final _that = this;
+switch (_that) {
+case _ClockOutRequest() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String timeEntryId,  double latitude,  double longitude,  String? notes)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _ClockOutRequest() when $default != null:
+return $default(_that.timeEntryId,_that.latitude,_that.longitude,_that.notes);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String timeEntryId,  double latitude,  double longitude,  String? notes)  $default,) {final _that = this;
+switch (_that) {
+case _ClockOutRequest():
+return $default(_that.timeEntryId,_that.latitude,_that.longitude,_that.notes);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String timeEntryId,  double latitude,  double longitude,  String? notes)?  $default,) {final _that = this;
+switch (_that) {
+case _ClockOutRequest() when $default != null:
+return $default(_that.timeEntryId,_that.latitude,_that.longitude,_that.notes);case _:
+  return null;
+
+}
+}
+
 }
 
 /// @nodoc
 @JsonSerializable()
-class _$ClockOutRequestImpl implements _ClockOutRequest {
-  const _$ClockOutRequestImpl({
-    required this.timeEntryId,
-    required this.latitude,
-    required this.longitude,
-    this.notes,
-  });
 
-  factory _$ClockOutRequestImpl.fromJson(Map<String, dynamic> json) =>
-      _$$ClockOutRequestImplFromJson(json);
+class _ClockOutRequest implements ClockOutRequest {
+  const _ClockOutRequest({required this.timeEntryId, required this.latitude, required this.longitude, this.notes});
+  factory _ClockOutRequest.fromJson(Map<String, dynamic> json) => _$ClockOutRequestFromJson(json);
 
-  @override
-  final String timeEntryId;
-  @override
-  final double latitude;
-  @override
-  final double longitude;
-  @override
-  final String? notes;
+@override final  String timeEntryId;
+@override final  double latitude;
+@override final  double longitude;
+@override final  String? notes;
 
-  @override
-  String toString() {
-    return 'ClockOutRequest(timeEntryId: $timeEntryId, latitude: $latitude, longitude: $longitude, notes: $notes)';
-  }
+/// Create a copy of ClockOutRequest
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$ClockOutRequestCopyWith<_ClockOutRequest> get copyWith => __$ClockOutRequestCopyWithImpl<_ClockOutRequest>(this, _$identity);
 
-  @override
-  bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is _$ClockOutRequestImpl &&
-            (identical(other.timeEntryId, timeEntryId) ||
-                other.timeEntryId == timeEntryId) &&
-            (identical(other.latitude, latitude) ||
-                other.latitude == latitude) &&
-            (identical(other.longitude, longitude) ||
-                other.longitude == longitude) &&
-            (identical(other.notes, notes) || other.notes == notes));
-  }
-
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  @override
-  int get hashCode =>
-      Object.hash(runtimeType, timeEntryId, latitude, longitude, notes);
-
-  /// Create a copy of ClockOutRequest
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  @override
-  @pragma('vm:prefer-inline')
-  _$$ClockOutRequestImplCopyWith<_$ClockOutRequestImpl> get copyWith =>
-      __$$ClockOutRequestImplCopyWithImpl<_$ClockOutRequestImpl>(
-        this,
-        _$identity,
-      );
-
-  @override
-  Map<String, dynamic> toJson() {
-    return _$$ClockOutRequestImplToJson(this);
-  }
+@override
+Map<String, dynamic> toJson() {
+  return _$ClockOutRequestToJson(this, );
 }
 
-abstract class _ClockOutRequest implements ClockOutRequest {
-  const factory _ClockOutRequest({
-    required final String timeEntryId,
-    required final double latitude,
-    required final double longitude,
-    final String? notes,
-  }) = _$ClockOutRequestImpl;
-
-  factory _ClockOutRequest.fromJson(Map<String, dynamic> json) =
-      _$ClockOutRequestImpl.fromJson;
-
-  @override
-  String get timeEntryId;
-  @override
-  double get latitude;
-  @override
-  double get longitude;
-  @override
-  String? get notes;
-
-  /// Create a copy of ClockOutRequest
-  /// with the given fields replaced by the non-null parameter values.
-  @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  _$$ClockOutRequestImplCopyWith<_$ClockOutRequestImpl> get copyWith =>
-      throw _privateConstructorUsedError;
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ClockOutRequest&&(identical(other.timeEntryId, timeEntryId) || other.timeEntryId == timeEntryId)&&(identical(other.latitude, latitude) || other.latitude == latitude)&&(identical(other.longitude, longitude) || other.longitude == longitude)&&(identical(other.notes, notes) || other.notes == notes));
 }
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,timeEntryId,latitude,longitude,notes);
+
+@override
+String toString() {
+  return 'ClockOutRequest(timeEntryId: $timeEntryId, latitude: $latitude, longitude: $longitude, notes: $notes)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$ClockOutRequestCopyWith<$Res> implements $ClockOutRequestCopyWith<$Res> {
+  factory _$ClockOutRequestCopyWith(_ClockOutRequest value, $Res Function(_ClockOutRequest) _then) = __$ClockOutRequestCopyWithImpl;
+@override @useResult
+$Res call({
+ String timeEntryId, double latitude, double longitude, String? notes
+});
+
+
+
+
+}
+/// @nodoc
+class __$ClockOutRequestCopyWithImpl<$Res>
+    implements _$ClockOutRequestCopyWith<$Res> {
+  __$ClockOutRequestCopyWithImpl(this._self, this._then);
+
+  final _ClockOutRequest _self;
+  final $Res Function(_ClockOutRequest) _then;
+
+/// Create a copy of ClockOutRequest
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? timeEntryId = null,Object? latitude = null,Object? longitude = null,Object? notes = freezed,}) {
+  return _then(_ClockOutRequest(
+timeEntryId: null == timeEntryId ? _self.timeEntryId : timeEntryId // ignore: cast_nullable_to_non_nullable
+as String,latitude: null == latitude ? _self.latitude : latitude // ignore: cast_nullable_to_non_nullable
+as double,longitude: null == longitude ? _self.longitude : longitude // ignore: cast_nullable_to_non_nullable
+as double,notes: freezed == notes ? _self.notes : notes // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
+
+// dart format on

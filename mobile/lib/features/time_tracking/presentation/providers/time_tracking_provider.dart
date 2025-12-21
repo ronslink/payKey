@@ -1,97 +1,71 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../data/models/time_tracking_model.dart';
 import '../../data/repositories/time_tracking_repository.dart';
 
 final timeTrackingProvider =
-    StateNotifierProvider<TimeTrackingNotifier, AsyncValue<TimeEntry?>>((ref) {
-  return TimeTrackingNotifier(ref.read(timeTrackingRepositoryProvider));
-});
+    AsyncNotifierProvider<TimeTrackingNotifier, TimeEntry?>(TimeTrackingNotifier.new);
 
 // Provider for all time entries (Dashboard Overview)
 final allTimeEntriesProvider =
-    StateNotifierProvider<TimeEntriesNotifier, AsyncValue<List<TimeEntry>>>((ref) {
-  return TimeEntriesNotifier(ref.read(timeTrackingRepositoryProvider));
-});
+    AsyncNotifierProvider<TimeEntriesNotifier, List<TimeEntry>>(TimeEntriesNotifier.new);
 
 // Provider for specific worker entries (Drill Down)
 final workerTimeEntriesProvider =
-    StateNotifierProvider<TimeEntriesNotifier, AsyncValue<List<TimeEntry>>>((ref) {
-  return TimeEntriesNotifier(ref.read(timeTrackingRepositoryProvider));
-});
+    AsyncNotifierProvider<TimeEntriesNotifier, List<TimeEntry>>(TimeEntriesNotifier.new);
 
 // Legacy provider (keep for backward compatibility if needed, or deprecate)
 final timeEntriesProvider =
-    StateNotifierProvider<TimeEntriesNotifier, AsyncValue<List<TimeEntry>>>((ref) {
-  return TimeEntriesNotifier(ref.read(timeTrackingRepositoryProvider));
-});
+    AsyncNotifierProvider<TimeEntriesNotifier, List<TimeEntry>>(TimeEntriesNotifier.new);
 
-class TimeTrackingNotifier extends StateNotifier<AsyncValue<TimeEntry?>> {
-  final TimeTrackingRepository _repository;
+class TimeTrackingNotifier extends AsyncNotifier<TimeEntry?> {
+  late final TimeTrackingRepository _repository;
 
-  TimeTrackingNotifier(this._repository) : super(const AsyncValue.data(null));
+  @override
+  FutureOr<TimeEntry?> build() {
+    _repository = ref.watch(timeTrackingRepositoryProvider);
+    return null;
+  }
 
   Future<void> getActiveEntry(String workerId) async {
     state = const AsyncValue.loading();
-    try {
-      final entry = await _repository.getActiveEntry(workerId);
-      state = AsyncValue.data(entry);
-    } on TimeTrackingException catch (e, st) {
-      // Handle network errors gracefully - show no active entry
-      if (e.isNetworkError) {
-        state = const AsyncValue.data(null);
-      } else {
-        state = AsyncValue.error(e, st);
+    state = await AsyncValue.guard(() async {
+      try {
+        return await _repository.getActiveEntry(workerId);
+      } on TimeTrackingException catch (e) {
+        if (e.isNetworkError) return null;
+        rethrow;
       }
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
+    });
   }
 
   Future<void> clockIn(String workerId, {String? notes}) async {
     state = const AsyncValue.loading();
-    try {
+    state = await AsyncValue.guard(() async {
       final position = await _getCurrentLocation();
-
       final request = ClockInRequest(
         workerId: workerId,
         latitude: position.latitude,
         longitude: position.longitude,
         notes: notes,
       );
-
-      final entry = await _repository.clockIn(request);
-      state = AsyncValue.data(entry);
-    } on TimeTrackingException catch (e, st) {
-      state = AsyncValue.error(e, st);
-    } on LocationException catch (e, st) {
-      state = AsyncValue.error(e, st);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
+      return _repository.clockIn(request);
+    });
   }
 
   Future<void> clockOut(String timeEntryId, {String? notes}) async {
     state = const AsyncValue.loading();
-    try {
+    state = await AsyncValue.guard(() async {
       final position = await _getCurrentLocation();
-
       final request = ClockOutRequest(
         timeEntryId: timeEntryId,
         latitude: position.latitude,
         longitude: position.longitude,
         notes: notes,
       );
-
-      final entry = await _repository.clockOut(request);
-      state = AsyncValue.data(entry);
-    } on TimeTrackingException catch (e, st) {
-      state = AsyncValue.error(e, st);
-    } on LocationException catch (e, st) {
-      state = AsyncValue.error(e, st);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
+      return _repository.clockOut(request);
+    });
   }
 
   Future<Position> _getCurrentLocation() async {
@@ -118,7 +92,7 @@ class TimeTrackingNotifier extends StateNotifier<AsyncValue<TimeEntry?>> {
 
     // Get current position
     return await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
     );
   }
 
@@ -127,10 +101,14 @@ class TimeTrackingNotifier extends StateNotifier<AsyncValue<TimeEntry?>> {
   }
 }
 
-class TimeEntriesNotifier extends StateNotifier<AsyncValue<List<TimeEntry>>> {
-  final TimeTrackingRepository _repository;
+class TimeEntriesNotifier extends AsyncNotifier<List<TimeEntry>> {
+  late final TimeTrackingRepository _repository;
 
-  TimeEntriesNotifier(this._repository) : super(const AsyncValue.data([]));
+  @override
+  FutureOr<List<TimeEntry>> build() {
+    _repository = ref.watch(timeTrackingRepositoryProvider);
+    return [];
+  }
 
   Future<void> fetchTimeEntries({
     String? workerId,
@@ -138,23 +116,18 @@ class TimeEntriesNotifier extends StateNotifier<AsyncValue<List<TimeEntry>>> {
     DateTime? endDate,
   }) async {
     state = const AsyncValue.loading();
-    try {
-      final entries = await _repository.getTimeEntries(
-        workerId: workerId,
-        startDate: startDate,
-        endDate: endDate,
-      );
-      state = AsyncValue.data(entries);
-    } on TimeTrackingException catch (e, st) {
-      // Handle network errors gracefully - show empty list
-      if (e.isNetworkError) {
-        state = const AsyncValue.data([]);
-      } else {
-        state = AsyncValue.error(e, st);
+    state = await AsyncValue.guard(() async {
+      try {
+        return await _repository.getTimeEntries(
+          workerId: workerId,
+          startDate: startDate,
+          endDate: endDate,
+        );
+      } on TimeTrackingException catch (e) {
+        if (e.isNetworkError) return [];
+        rethrow;
       }
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
+    });
   }
 
   void reset() {

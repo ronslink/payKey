@@ -12,7 +12,7 @@ import {
 } from './entities/pay-period.entity';
 import { CreatePayPeriodDto } from './dto/create-pay-period.dto';
 import { UpdatePayPeriodDto } from './dto/update-pay-period.dto';
-import { PayrollRecord } from './entities/payroll-record.entity';
+import { PayrollRecord, PayrollStatus } from './entities/payroll-record.entity';
 import { TaxPaymentsService } from '../tax-payments/services/tax-payments.service';
 import { TaxType } from '../tax-config/entities/tax-config.entity';
 import { InjectRepository as InjectTaxRepository } from '@nestjs/typeorm';
@@ -216,10 +216,22 @@ export class PayPeriodsService {
     if (
       payPeriod.status !== PayPeriodStatus.ACTIVE &&
       payPeriod.status !== PayPeriodStatus.DRAFT &&
-      payPeriod.status !== PayPeriodStatus.COMPLETED // Allow reopening from COMPLETED
+      payPeriod.status !== PayPeriodStatus.COMPLETED && // Allow reopening from COMPLETED
+      payPeriod.status !== PayPeriodStatus.CLOSED // Allow reopening from CLOSED
     ) {
       throw new BadRequestException(
         'Only draft, active, or completed pay periods can be processed',
+      );
+    }
+
+    // If reopening from COMPLETED or CLOSED, we must revert records to DRAFT to allow editing
+    if (
+      payPeriod.status === PayPeriodStatus.COMPLETED ||
+      payPeriod.status === PayPeriodStatus.CLOSED
+    ) {
+      await this.payrollRecordRepository.update(
+        { payPeriodId: id },
+        { status: PayrollStatus.DRAFT }
       );
     }
 
@@ -278,17 +290,22 @@ export class PayPeriodsService {
     );
 
     // Generate tax submission data automatically
-    await this.generateTaxSubmissionData(id);
+    const adjustments = await this.generateTaxSubmissionData(id);
 
     // Update status to completed
-    return this.update(id, { status: PayPeriodStatus.COMPLETED });
+    const updatedPeriod = await this.update(id, { status: PayPeriodStatus.COMPLETED });
+
+    return {
+      ...updatedPeriod,
+      adjustments
+    } as any;
   }
 
   /**
    * Generate tax submission data for completed pay period
    * Automatically creates TaxPayment entries for all tax types
    */
-  async generateTaxSubmissionData(payPeriodId: string): Promise<void> {
+  async generateTaxSubmissionData(payPeriodId: string): Promise<any> {
     const payPeriod = await this.findOne(payPeriodId);
 
     // Get all payroll records for this pay period
@@ -346,7 +363,23 @@ export class PayPeriodsService {
       where: { payPeriodId: payPeriodId },
     });
 
-    if (!submission) {
+    let adjustments = null;
+
+    if (submission) {
+      // Calculate differences if submission already exists (reopening case)
+      const payeDifference = totals[TaxType.PAYE] - Number(submission.totalPaye);
+      const shifDifference = totals[TaxType.SHIF] - Number(submission.totalNhif);
+      const housingLevyDifference = totals[TaxType.HOUSING_LEVY] - Number(submission.totalHousingLevy);
+      const nssfDifference = (totals[TaxType.NSSF_TIER1] + (totals[TaxType.NSSF_TIER2] || 0)) - Number(submission.totalNssf);
+
+      adjustments = {
+        payeDifference,
+        shifDifference,
+        housingLevyDifference,
+        nssfDifference,
+        totalTaxDifference: payeDifference + shifDifference + housingLevyDifference + nssfDifference
+      };
+    } else {
       submission = this.taxSubmissionRepository.create({
         userId,
         payPeriodId,
@@ -365,6 +398,7 @@ export class PayPeriodsService {
     await this.taxSubmissionRepository.save(submission);
 
     console.log(`Tax submission data generated for payPeriod ${payPeriodId}`);
+    return adjustments;
   }
 
   async close(id: string): Promise<PayPeriod> {
@@ -389,7 +423,11 @@ export class PayPeriodsService {
         PayPeriodStatus.CLOSED,
         PayPeriodStatus.PROCESSING, // Allow reopening
       ],
-      [PayPeriodStatus.CLOSED]: [], // No transitions from closed
+      [PayPeriodStatus.CLOSED]: [
+        PayPeriodStatus.DRAFT, // Allow reopen to DRAFT
+        PayPeriodStatus.ACTIVE, // Allow reopen to ACTIVE
+        PayPeriodStatus.PROCESSING, // Allow reopening from CLOSED
+      ],
     };
 
     if (!validTransitions[currentStatus]?.includes(newStatus)) {

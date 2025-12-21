@@ -81,8 +81,9 @@ export class FeatureAccessService {
         }
 
         const subscription = await this.getCurrentSubscription(userId);
-        const userTier = (subscription?.tier || user.tier || 'FREE') as SubscriptionTier;
-        const hasDirectAccess = tierHasFeature(userTier, featureKey);
+        let userTier = (subscription?.tier || user.tier || 'FREE') as string;
+        userTier = userTier.toUpperCase(); // Normalize
+        const hasDirectAccess = tierHasFeature(userTier as SubscriptionTier, featureKey);
 
         if (hasDirectAccess) {
             return {
@@ -182,7 +183,9 @@ export class FeatureAccessService {
         }
 
         const subscription = await this.getCurrentSubscription(userId);
-        const tier = (subscription?.tier || user.tier || 'FREE') as SubscriptionTier;
+        let tier = (subscription?.tier || user.tier || 'FREE') as string;
+        tier = tier.toUpperCase(); // Normalize to handle case mismatch
+        const activeTier = tier as SubscriptionTier;
         const trialStatus = this.calculateTrialStatus(user.createdAt);
 
         // Get worker count (would need WorkersService injection)
@@ -194,7 +197,7 @@ export class FeatureAccessService {
         const lockedFeatures: FeatureDefinition[] = [];
 
         for (const feature of FEATURE_ACCESS_MATRIX) {
-            if (tierHasFeature(tier, feature.key)) {
+            if (tierHasFeature(activeTier, feature.key)) {
                 accessibleFeatures.push(feature);
             } else if (trialStatus.isActive && feature.mockDataAvailable) {
                 previewFeatures.push(feature);
@@ -204,10 +207,10 @@ export class FeatureAccessService {
         }
 
         return {
-            tier,
+            tier: activeTier,
             isTrialActive: trialStatus.isActive,
             trialDaysRemaining: trialStatus.daysRemaining,
-            workerLimit: TIER_LIMITS[tier].workerLimit,
+            workerLimit: TIER_LIMITS[activeTier].workerLimit,
             currentWorkerCount,
             accessibleFeatures,
             previewFeatures,

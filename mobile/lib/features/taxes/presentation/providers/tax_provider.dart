@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/payroll_tax_submission.dart';
 import '../../data/models/tax_submission_model.dart';
@@ -19,126 +20,39 @@ final payrollTaxSubmissionsProvider = FutureProvider<List<PayrollTaxSubmission>>
   return repository.getPayrollTaxSubmissions();
 });
 
-class IndividualTaxNotifier extends StateNotifier<AsyncValue<List<TaxSubmissionModel>>> {
-  final TaxRepository _repository;
 
-  IndividualTaxNotifier(this._repository) : super(const AsyncValue.loading()) {
-    loadSubmissions();
+// Removed unused IndividualTaxNotifier and PayrollTaxNotifier
+
+final monthlyTaxSummariesProvider = AsyncNotifierProvider<MonthlyTaxNotifier, List<MonthlyTaxSummary>>(MonthlyTaxNotifier.new);
+
+class MonthlyTaxNotifier extends AsyncNotifier<List<MonthlyTaxSummary>> {
+  late final TaxRepository _repository;
+
+  @override
+  FutureOr<List<MonthlyTaxSummary>> build() {
+    _repository = ref.watch(taxRepositoryProvider);
+    return _loadSummaries();
   }
 
-  Future<void> loadSubmissions() async {
+  Future<List<MonthlyTaxSummary>> _loadSummaries() {
+    return _repository.getMonthlyTaxSummaries();
+  }
+
+  Future<void> markMonthAsFiled(int year, int month) async {
     state = const AsyncValue.loading();
-    try {
-      final submissions = await _repository.getIndividualTaxSubmissions();
-      state = AsyncValue.data(submissions);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
-  }
-
-  Future<void> markAsFiled(String id) async {
-    try {
-      await _repository.markAsFiled(id);
-      await loadSubmissions(); // Reload data
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
-  }
-}
-
-class PayrollTaxNotifier extends StateNotifier<AsyncValue<List<PayrollTaxSubmission>>> {
-  final TaxRepository _repository;
-
-  PayrollTaxNotifier(this._repository) : super(const AsyncValue.loading()) {
-    loadSubmissions();
-  }
-
-  Future<void> loadSubmissions() async {
-    state = const AsyncValue.loading();
-    try {
-      final submissions = await _repository.getPayrollTaxSubmissions();
-      state = AsyncValue.data(submissions);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
-  }
-
-  Future<void> markAsFiled(String id) async {
-    try {
-      await _repository.markPayrollTaxAsFiled(id);
-      await loadSubmissions(); // Refresh the list
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
-  }
-
-  Future<Map<String, double>> calculateTax(double grossSalary) async {
-    try {
-      return await _repository.calculateTax(grossSalary, 0); // Simplified with no deductions
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  Future<Map<String, dynamic>> getCurrentTaxTable() async {
-    try {
-      return await _repository.getCurrentTaxTable();
-    } catch (e) {
-      rethrow;
-    }
-  }
-  
-  Future<Map<String, dynamic>> getComplianceStatus() async {
-    try {
-      return await _repository.getComplianceStatus();
-    } catch (e) {
-      rethrow;
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> getTaxDeadlines() async {
-    try {
-      return await _repository.getTaxDeadlines();
-    } catch (e) {
-      rethrow;
-    }
-  }
-}
-
-final monthlyTaxSummariesProvider = StateNotifierProvider<MonthlyTaxNotifier, AsyncValue<List<MonthlyTaxSummary>>>((ref) {
-  final repository = ref.read(taxRepositoryProvider);
-  return MonthlyTaxNotifier(repository);
-});
-
-class MonthlyTaxNotifier extends StateNotifier<AsyncValue<List<MonthlyTaxSummary>>> {
-  final TaxRepository _repository;
-
-  MonthlyTaxNotifier(this._repository) : super(const AsyncValue.loading()) {
-    loadSummaries();
+    state = await AsyncValue.guard(() async {
+      await _repository.markMonthAsFiled(year, month);
+      return _loadSummaries();
+    });
   }
 
   Future<void> loadSummaries() async {
     state = const AsyncValue.loading();
-    try {
-      final summaries = await _repository.getMonthlyTaxSummaries();
-      state = AsyncValue.data(summaries);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
-  }
-
-  Future<void> markMonthAsFiled(int year, int month) async {
-    try {
-      await _repository.markMonthAsFiled(year, month);
-      await loadSummaries(); // Refresh
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
+    state = await AsyncValue.guard(() => _loadSummaries());
   }
 
   Future<List<int>> downloadReturn(String exportType, int year, int month) async {
     try {
-      // Create dates for the full month
       final startDate = DateTime(year, month, 1);
       final daysInMonth = DateUtils.getDaysInMonth(year, month);
       final endDate = DateTime(year, month, daysInMonth, 23, 59, 59);
@@ -147,79 +61,67 @@ class MonthlyTaxNotifier extends StateNotifier<AsyncValue<List<MonthlyTaxSummary
       final bytes = await _repository.getExportFile(exportId);
       return bytes;
     } catch (e) {
+      // Don't update state here as this is a download action
       rethrow;
     }
   }
 }
 
 // Backward compatibility notifier
-class TaxNotifier extends StateNotifier<AsyncValue<List<dynamic>>> {
-  final TaxRepository _repository;
+class TaxNotifier extends AsyncNotifier<List<dynamic>> {
+  late final TaxRepository _repository;
 
-  TaxNotifier(this._repository) : super(const AsyncValue.loading()) {
-    loadSubmissions();
+  @override
+  FutureOr<List<dynamic>> build() {
+    _repository = ref.watch(taxRepositoryProvider);
+    return _loadSubmissions();
   }
 
-  Future<void> loadSubmissions() async {
-    state = const AsyncValue.loading();
-    try {
-      // Load payroll tax submissions
-      final submissions = await _repository.getPayrollTaxSubmissions();
-      state = AsyncValue.data(submissions);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
+  Future<List<dynamic>> _loadSubmissions() {
+    return _repository.getPayrollTaxSubmissions();
   }
 
   Future<void> markAsFiled(String id) async {
-    try {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
       await _repository.markIndividualTaxAsFiled(id);
-      await loadSubmissions();
+      return _loadSubmissions();
+    });
+  }
+
+  Future<List<TaxSubmissionModel>> calculateTax(double grossSalary) async {
+    try {
+      final taxCalculation = await _repository.calculatePayrollTax(grossSalary);
+      
+      final result = TaxSubmissionModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        userId: 'current-user',
+        taxYear: DateTime.now().year.toString(),
+        income: grossSalary,
+        deductions: taxCalculation['totalDeductions'] ?? 0.0,
+        taxableIncome: grossSalary - (taxCalculation['totalDeductions'] ?? 0.0),
+        taxDue: taxCalculation['paye'] ?? 0.0,
+        status: 'draft',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      return [result];
     } catch (e, st) {
       state = AsyncValue.error(e, st);
+      rethrow;
     }
   }
-Future<List<TaxSubmissionModel>> calculateTax(double grossSalary) async {
-  try {
-    // Use backend API for proper tax calculations (PAYE, NSSF, SHIF, Housing Levy)
-    final taxCalculation = await _repository.calculatePayrollTax(grossSalary);
-    
-    final result = TaxSubmissionModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      userId: 'current-user',
-      taxYear: DateTime.now().year.toString(),
-      income: grossSalary,
-      deductions: taxCalculation['totalDeductions'] ?? 0.0,
-      taxableIncome: grossSalary - (taxCalculation['totalDeductions'] ?? 0.0),
-      taxDue: taxCalculation['paye'] ?? 0.0, // Use PAYE from backend
-      status: 'draft',
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-    );
-    return [result];
-  } catch (e, st) {
-    state = AsyncValue.error(e, st);
-    rethrow;
-  }
-}
 
   Future<Map<String, dynamic>> getComplianceStatus() async {
-    return {
-      'kraPin': true,
-      'nssf': true,
-      'nhif': true,
-      'status': 'compliant',
-      'nextFilingDate': '2024-04-30',
-    };
+    return await _repository.getComplianceStatus();
   }
 
   Future<void> generateTaxSubmission(String payPeriodId) async {
-    try {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
       await _repository.generateTaxSubmission(payPeriodId);
-      await loadSubmissions();
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
+      return _loadSubmissions();
+    });
   }
 
   Future<List<Map<String, dynamic>>> getTaxDeadlines() async {
@@ -233,10 +135,7 @@ Future<List<TaxSubmissionModel>> calculateTax(double grossSalary) async {
   }
 }
 
-final taxNotifierProvider = StateNotifierProvider<TaxNotifier, AsyncValue<List<dynamic>>>((ref) {
-  final repository = ref.read(taxRepositoryProvider);
-  return TaxNotifier(repository);
-});
+final taxNotifierProvider = AsyncNotifierProvider<TaxNotifier, List<dynamic>>(TaxNotifier.new);
 
 // Tax calculator provider
 final taxCalculatorProvider = Provider<Future<List<TaxSubmissionModel>> Function(double, double)>((ref) {

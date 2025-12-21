@@ -6,48 +6,46 @@ part of 'subscription_model.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$SubscriptionPlanImpl _$$SubscriptionPlanImplFromJson(
-  Map<String, dynamic> json,
-) => _$SubscriptionPlanImpl(
-  id: json['id'] as String,
-  tier: json['tier'] as String,
-  name: json['name'] as String,
-  description: json['description'] as String,
-  priceUSD: (json['priceUSD'] as num).toDouble(),
-  priceKES: (json['priceKES'] as num).toDouble(),
-  workerLimit: (json['workerLimit'] as num).toInt(),
-  features: (json['features'] as List<dynamic>)
-      .map((e) => e as String)
-      .toList(),
-  isPopular: json['isPopular'] as bool? ?? false,
-  isActive: json['isActive'] as bool? ?? true,
-  createdAt: json['createdAt'] == null
-      ? null
-      : DateTime.parse(json['createdAt'] as String),
-  updatedAt: json['updatedAt'] == null
-      ? null
-      : DateTime.parse(json['updatedAt'] as String),
-);
+_SubscriptionPlan _$SubscriptionPlanFromJson(Map<String, dynamic> json) =>
+    _SubscriptionPlan(
+      id: json['id'] as String,
+      tier: json['tier'] as String,
+      name: json['name'] as String,
+      description: json['description'] as String,
+      priceUSD: (json['priceUSD'] as num).toDouble(),
+      priceKES: (json['priceKES'] as num).toDouble(),
+      workerLimit: (json['workerLimit'] as num).toInt(),
+      features: (json['features'] as List<dynamic>)
+          .map((e) => e as String)
+          .toList(),
+      isPopular: json['isPopular'] as bool? ?? false,
+      isActive: json['isActive'] as bool? ?? true,
+      createdAt: json['createdAt'] == null
+          ? null
+          : DateTime.parse(json['createdAt'] as String),
+      updatedAt: json['updatedAt'] == null
+          ? null
+          : DateTime.parse(json['updatedAt'] as String),
+    );
 
-Map<String, dynamic> _$$SubscriptionPlanImplToJson(
-  _$SubscriptionPlanImpl instance,
-) => <String, dynamic>{
-  'id': instance.id,
-  'tier': instance.tier,
-  'name': instance.name,
-  'description': instance.description,
-  'priceUSD': instance.priceUSD,
-  'priceKES': instance.priceKES,
-  'workerLimit': instance.workerLimit,
-  'features': instance.features,
-  'isPopular': instance.isPopular,
-  'isActive': instance.isActive,
-  'createdAt': instance.createdAt?.toIso8601String(),
-  'updatedAt': instance.updatedAt?.toIso8601String(),
-};
+Map<String, dynamic> _$SubscriptionPlanToJson(_SubscriptionPlan instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'tier': instance.tier,
+      'name': instance.name,
+      'description': instance.description,
+      'priceUSD': instance.priceUSD,
+      'priceKES': instance.priceKES,
+      'workerLimit': instance.workerLimit,
+      'features': instance.features,
+      'isPopular': instance.isPopular,
+      'isActive': instance.isActive,
+      'createdAt': instance.createdAt?.toIso8601String(),
+      'updatedAt': instance.updatedAt?.toIso8601String(),
+    };
 
-_$SubscriptionImpl _$$SubscriptionImplFromJson(Map<String, dynamic> json) =>
-    _$SubscriptionImpl(
+_Subscription _$SubscriptionFromJson(Map<String, dynamic> json) =>
+    _Subscription(
       id: json['id'] as String,
       userId: json['userId'] as String,
       planId: json['planId'] as String,
@@ -71,7 +69,7 @@ _$SubscriptionImpl _$$SubscriptionImplFromJson(Map<String, dynamic> json) =>
           : DateTime.parse(json['updatedAt'] as String),
     );
 
-Map<String, dynamic> _$$SubscriptionImplToJson(_$SubscriptionImpl instance) =>
+Map<String, dynamic> _$SubscriptionToJson(_Subscription instance) =>
     <String, dynamic>{
       'id': instance.id,
       'userId': instance.userId,
@@ -90,33 +88,32 @@ Map<String, dynamic> _$$SubscriptionImplToJson(_$SubscriptionImpl instance) =>
       'updatedAt': instance.updatedAt?.toIso8601String(),
     };
 
-_$SubscriptionPaymentImpl _$$SubscriptionPaymentImplFromJson(
-  Map<String, dynamic> json,
-) => _$SubscriptionPaymentImpl(
-  id: json['id'] as String,
-  subscriptionId: json['subscriptionId'] as String,
-  userId: json['userId'] as String,
-  amount: (json['amount'] as num).toDouble(),
-  currency: json['currency'] as String,
-  status: json['status'] as String,
-  paymentMethod: json['paymentMethod'] as String,
-  provider: json['provider'] as String,
-  providerTransactionId: json['providerTransactionId'] as String,
-  processedAt: json['processedAt'] == null
-      ? null
-      : DateTime.parse(json['processedAt'] as String),
-  failureReason: json['failureReason'] as String?,
-  metadata: json['metadata'] as Map<String, dynamic>?,
-  createdAt: json['createdAt'] == null
-      ? null
-      : DateTime.parse(json['createdAt'] as String),
-  updatedAt: json['updatedAt'] == null
-      ? null
-      : DateTime.parse(json['updatedAt'] as String),
-);
+_SubscriptionPayment _$SubscriptionPaymentFromJson(Map<String, dynamic> json) =>
+    _SubscriptionPayment(
+      id: json['id'] as String,
+      subscriptionId: json['subscriptionId'] as String,
+      userId: json['userId'] as String,
+      amount: (json['amount'] as num).toDouble(),
+      currency: json['currency'] as String,
+      status: json['status'] as String,
+      paymentMethod: json['paymentMethod'] as String,
+      provider: json['provider'] as String,
+      providerTransactionId: json['providerTransactionId'] as String,
+      processedAt: json['processedAt'] == null
+          ? null
+          : DateTime.parse(json['processedAt'] as String),
+      failureReason: json['failureReason'] as String?,
+      metadata: json['metadata'] as Map<String, dynamic>?,
+      createdAt: json['createdAt'] == null
+          ? null
+          : DateTime.parse(json['createdAt'] as String),
+      updatedAt: json['updatedAt'] == null
+          ? null
+          : DateTime.parse(json['updatedAt'] as String),
+    );
 
-Map<String, dynamic> _$$SubscriptionPaymentImplToJson(
-  _$SubscriptionPaymentImpl instance,
+Map<String, dynamic> _$SubscriptionPaymentToJson(
+  _SubscriptionPayment instance,
 ) => <String, dynamic>{
   'id': instance.id,
   'subscriptionId': instance.subscriptionId,
@@ -134,30 +131,28 @@ Map<String, dynamic> _$$SubscriptionPaymentImplToJson(
   'updatedAt': instance.updatedAt?.toIso8601String(),
 };
 
-_$SubscriptionUsageImpl _$$SubscriptionUsageImplFromJson(
-  Map<String, dynamic> json,
-) => _$SubscriptionUsageImpl(
-  id: json['id'] as String,
-  subscriptionId: json['subscriptionId'] as String,
-  userId: json['userId'] as String,
-  currentWorkers: (json['currentWorkers'] as num).toInt(),
-  maxWorkers: (json['maxWorkers'] as num).toInt(),
-  usagePercentage: (json['usagePercentage'] as num).toDouble(),
-  lastUpdated: json['lastUpdated'] == null
-      ? null
-      : DateTime.parse(json['lastUpdated'] as String),
-  breakdown: json['breakdown'] as Map<String, dynamic>?,
-);
+_SubscriptionUsage _$SubscriptionUsageFromJson(Map<String, dynamic> json) =>
+    _SubscriptionUsage(
+      id: json['id'] as String,
+      subscriptionId: json['subscriptionId'] as String,
+      userId: json['userId'] as String,
+      currentWorkers: (json['currentWorkers'] as num).toInt(),
+      maxWorkers: (json['maxWorkers'] as num).toInt(),
+      usagePercentage: (json['usagePercentage'] as num).toDouble(),
+      lastUpdated: json['lastUpdated'] == null
+          ? null
+          : DateTime.parse(json['lastUpdated'] as String),
+      breakdown: json['breakdown'] as Map<String, dynamic>?,
+    );
 
-Map<String, dynamic> _$$SubscriptionUsageImplToJson(
-  _$SubscriptionUsageImpl instance,
-) => <String, dynamic>{
-  'id': instance.id,
-  'subscriptionId': instance.subscriptionId,
-  'userId': instance.userId,
-  'currentWorkers': instance.currentWorkers,
-  'maxWorkers': instance.maxWorkers,
-  'usagePercentage': instance.usagePercentage,
-  'lastUpdated': instance.lastUpdated?.toIso8601String(),
-  'breakdown': instance.breakdown,
-};
+Map<String, dynamic> _$SubscriptionUsageToJson(_SubscriptionUsage instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'subscriptionId': instance.subscriptionId,
+      'userId': instance.userId,
+      'currentWorkers': instance.currentWorkers,
+      'maxWorkers': instance.maxWorkers,
+      'usagePercentage': instance.usagePercentage,
+      'lastUpdated': instance.lastUpdated?.toIso8601String(),
+      'breakdown': instance.breakdown,
+    };

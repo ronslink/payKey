@@ -16,11 +16,6 @@ class TourKeys {
   static const String tipReports = 'tip_reports';
 }
 
-/// Provider for tour progress state
-final tourProgressProvider = StateNotifierProvider<TourProgressNotifier, TourProgress>((ref) {
-  return TourProgressNotifier();
-});
-
 /// Model for tracking tour and tip completion status
 class TourProgress {
   final Set<String> completedTours;
@@ -59,9 +54,11 @@ class TourProgress {
 }
 
 /// Notifier for managing tour progress
-class TourProgressNotifier extends StateNotifier<TourProgress> {
-  TourProgressNotifier() : super(const TourProgress()) {
+class TourProgressNotifier extends Notifier<TourProgress> {
+  @override
+  TourProgress build() {
     _loadProgress();
+    return const TourProgress();
   }
 
   static const String _completedToursKey = 'completed_tours';
@@ -106,6 +103,9 @@ class TourProgressNotifier extends StateNotifier<TourProgress> {
     await prefs.remove(_dismissedTipsKey);
   }
 }
+
+/// Provider for tour progress state
+final tourProgressProvider = NotifierProvider<TourProgressNotifier, TourProgress>(TourProgressNotifier.new);
 
 /// A single step in a guided tour
 class TourStep {

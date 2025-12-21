@@ -4,7 +4,7 @@ part 'batch_payroll_model.freezed.dart';
 part 'batch_payroll_model.g.dart';
 
 @freezed
-class WorkerPayrollResult with _$WorkerPayrollResult {
+abstract class WorkerPayrollResult with _$WorkerPayrollResult {
   const factory WorkerPayrollResult({
     required String workerId,
     required String workerName,
@@ -20,7 +20,7 @@ class WorkerPayrollResult with _$WorkerPayrollResult {
 }
 
 @freezed
-class BatchPayrollResult with _$BatchPayrollResult {
+abstract class BatchPayrollResult with _$BatchPayrollResult {
   const factory BatchPayrollResult({
     required int totalWorkers,
     required int successCount,

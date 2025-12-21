@@ -4,7 +4,7 @@ part 'payroll_record_model.freezed.dart';
 part 'payroll_record_model.g.dart';
 
 @freezed
-class PayrollRecordModel with _$PayrollRecordModel {
+abstract class PayrollRecordModel with _$PayrollRecordModel {
   const factory PayrollRecordModel({
     required String id,
     required String workerId,

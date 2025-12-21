@@ -11,7 +11,7 @@ part 'payroll_model.g.dart';
 /// 
 /// All values are in KES (Kenyan Shillings).
 @freezed
-class TaxBreakdown with _$TaxBreakdown {
+abstract class TaxBreakdown with _$TaxBreakdown {
   const TaxBreakdown._();
 
   const factory TaxBreakdown({
@@ -86,7 +86,7 @@ abstract class PayrollStatus {
 /// 
 /// Contains gross earnings, deductions breakdown, and net pay.
 @freezed
-class PayrollCalculation with _$PayrollCalculation {
+abstract class PayrollCalculation with _$PayrollCalculation {
   const PayrollCalculation._();
 
   const factory PayrollCalculation({
@@ -167,7 +167,7 @@ class PayrollCalculation with _$PayrollCalculation {
 
 /// Request payload for calculating payroll for multiple workers.
 @freezed
-class PayrollRequest with _$PayrollRequest {
+abstract class PayrollRequest with _$PayrollRequest {
   const PayrollRequest._();
 
   const factory PayrollRequest({
@@ -191,7 +191,7 @@ class PayrollRequest with _$PayrollRequest {
 
 /// Aggregated summary of payroll calculations for a pay period.
 @freezed
-class PayrollSummary with _$PayrollSummary {
+abstract class PayrollSummary with _$PayrollSummary {
   const PayrollSummary._();
 
   const factory PayrollSummary({
@@ -302,5 +302,131 @@ class PayrollSummary with _$PayrollSummary {
 
     return (totalGross - calculatedGross).abs() < 0.01 &&
         (totalNet - calculatedNet).abs() < 0.01;
+  }
+}
+
+// =============================================================================
+// FUND VERIFICATION RESULT
+// =============================================================================
+
+/// Result of pre-payroll fund verification check.
+class FundVerificationResult {
+  /// Total amount required to process payroll (sum of net pay for all workers)
+  final double requiredAmount;
+
+  /// User's current available wallet balance
+  final double availableBalance;
+
+  /// Whether the user can proceed with payroll (balance >= required)
+  final bool canProceed;
+
+  /// Shortfall amount if insufficient funds (0 if sufficient)
+  final double shortfall;
+
+  /// Number of workers included in this calculation
+  final int workerCount;
+
+  const FundVerificationResult({
+    required this.requiredAmount,
+    required this.availableBalance,
+    required this.canProceed,
+    required this.shortfall,
+    required this.workerCount,
+  });
+
+  factory FundVerificationResult.fromJson(Map<String, dynamic> json) {
+    return FundVerificationResult(
+      requiredAmount: (json['requiredAmount'] as num?)?.toDouble() ?? 0,
+      availableBalance: (json['availableBalance'] as num?)?.toDouble() ?? 0,
+      canProceed: json['canProceed'] as bool? ?? false,
+      shortfall: (json['shortfall'] as num?)?.toDouble() ?? 0,
+      workerCount: json['workerCount'] as int? ?? 0,
+    );
+  }
+
+  /// Returns true if user has sufficient funds
+  bool get hasSufficientFunds => canProceed;
+
+  /// Returns formatted shortfall for display
+  String get formattedShortfall => 'KES ${shortfall.toStringAsFixed(2)}';
+
+  /// Returns formatted required amount for display
+  String get formattedRequired => 'KES ${requiredAmount.toStringAsFixed(2)}';
+
+  /// Returns formatted balance for display
+  String get formattedBalance => 'KES ${availableBalance.toStringAsFixed(2)}';
+}
+
+// =============================================================================
+// PAYROLL PROCESSING RESULT
+// =============================================================================
+
+/// Result of batch payroll processing.
+class PayrollProcessingResult {
+  /// Number of successfully processed workers
+  final int successCount;
+
+  /// Number of failed worker payments
+  final int failureCount;
+
+  /// Individual results for each worker
+  final List<WorkerPaymentResult> results;
+
+  /// Bank file content for bank transfers (if applicable)
+  final String? bankFile;
+
+  const PayrollProcessingResult({
+    required this.successCount,
+    required this.failureCount,
+    required this.results,
+    this.bankFile,
+  });
+
+  factory PayrollProcessingResult.fromJson(Map<String, dynamic> json) {
+    return PayrollProcessingResult(
+      successCount: json['successCount'] as int? ?? 0,
+      failureCount: json['failureCount'] as int? ?? 0,
+      results: (json['results'] as List<dynamic>?)
+              ?.map((e) => WorkerPaymentResult.fromJson(e))
+              .toList() ??
+          [],
+      bankFile: json['bankFile'] as String?,
+    );
+  }
+
+  /// Returns true if all payments succeeded
+  bool get allSuccessful => failureCount == 0;
+
+  /// Total number of workers processed
+  int get totalCount => successCount + failureCount;
+}
+
+/// Result of a single worker's payment processing.
+class WorkerPaymentResult {
+  final String workerId;
+  final String workerName;
+  final bool success;
+  final double? netPay;
+  final String? transactionId;
+  final String? error;
+
+  const WorkerPaymentResult({
+    required this.workerId,
+    required this.workerName,
+    required this.success,
+    this.netPay,
+    this.transactionId,
+    this.error,
+  });
+
+  factory WorkerPaymentResult.fromJson(Map<String, dynamic> json) {
+    return WorkerPaymentResult(
+      workerId: json['workerId'] as String? ?? '',
+      workerName: json['workerName'] as String? ?? 'Unknown',
+      success: json['success'] as bool? ?? false,
+      netPay: (json['netPay'] as num?)?.toDouble(),
+      transactionId: json['transactionId'] as String?,
+      error: json['error'] as String?,
+    );
   }
 }

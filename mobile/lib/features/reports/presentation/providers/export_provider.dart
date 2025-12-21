@@ -31,10 +31,14 @@ class ExportState {
   }
 }
 
-class TaxExportNotifier extends StateNotifier<ExportState> {
-  final ApiService _api;
+class TaxExportNotifier extends Notifier<ExportState> {
+  late final ApiService _api;
 
-  TaxExportNotifier(this._api) : super(ExportState());
+  @override
+  ExportState build() {
+    _api = ApiService();
+    return ExportState();
+  }
 
   Future<void> downloadStatutoryReport({
     required String exportType,
@@ -118,6 +122,4 @@ class TaxExportNotifier extends StateNotifier<ExportState> {
   }
 }
 
-final taxExportProvider = StateNotifierProvider<TaxExportNotifier, ExportState>((ref) {
-  return TaxExportNotifier(ApiService());
-});
+final taxExportProvider = NotifierProvider<TaxExportNotifier, ExportState>(TaxExportNotifier.new);
