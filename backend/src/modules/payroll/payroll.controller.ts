@@ -16,7 +16,13 @@ import { Repository } from 'typeorm';
 import { PayrollRecord } from './entities/payroll-record.entity';
 import { User } from '../users/entities/user.entity';
 import type { AuthenticatedRequest } from '../../common/interfaces/user.interface';
-import { PayrollService } from './payroll.service';
+import {
+  PayrollService,
+  PayrollCalculationResult,
+  PayrollItem,
+  PayrollSummary,
+  FundsVerificationResult,
+} from './payroll.service';
 import { PayslipService } from './payslip.service';
 import { TaxesService } from '../taxes/taxes.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -87,7 +93,7 @@ export class PayrollController {
   }
 
   @Get('calculate')
-  async calculatePayroll(@Request() req: AuthenticatedRequest) {
+  async calculatePayroll(@Request() req: AuthenticatedRequest): Promise<PayrollCalculationResult> {
     return this.payrollService.calculatePayrollForUser(req.user.userId);
   }
 

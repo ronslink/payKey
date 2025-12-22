@@ -68,7 +68,7 @@ services:
     working_dir: /app
     volumes:
       - ./backend:/app
-    command: sh -c "npm install -g npm@latest && npm install && npm run build && npm run typeorm:migration:run && npm run start:dev"
+    command: sh -c "npm install -g npm@latest && npm install && npm run build && npm run typeorm:migration:run && npm run start:prod"
     networks:
       - paykey-network
 

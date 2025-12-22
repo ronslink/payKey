@@ -9,11 +9,10 @@ final workersRepositoryProvider = Provider((ref) => WorkersRepository(ApiService
 final workersProvider = AsyncNotifierProvider<WorkersNotifier, List<WorkerModel>>(WorkersNotifier.new);
 
 class WorkersNotifier extends AsyncNotifier<List<WorkerModel>> {
-  late final WorkersRepository _repository;
+  WorkersRepository get _repository => ref.read(workersRepositoryProvider);
 
   @override
   FutureOr<List<WorkerModel>> build() {
-    _repository = ref.watch(workersRepositoryProvider);
     return _loadWorkers();
   }
 

@@ -75,6 +75,7 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
   late PaymentMethod _paymentMethod;
   DateTime? _dateOfBirth;
   DateTime _startDate = DateTime.now();
+  String _employmentType = 'FIXED';
   bool _isSaving = false;
 
   // ---------------------------------------------------------------------------
@@ -102,11 +103,13 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
       _paymentFrequency = PaymentFrequency.fromValue(worker.paymentFrequency);
       _paymentMethod = PaymentMethod.fromValue(worker.paymentMethod);
       _dateOfBirth = worker.dateOfBirth;
-      _startDate = worker.startDate;
+      _startDate = worker.startDate ?? DateTime.now();
+      _employmentType = worker.employmentType;
     } else {
       _paymentFrequency = PaymentFrequency.monthly;
       _paymentMethod = PaymentMethod.mpesa;
       _startDate = DateTime.now();
+      _employmentType = 'FIXED';
     }
   }
 
@@ -161,6 +164,7 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
       nssfNumber: _controllers.nssf.nullableText,
       nhifNumber: _controllers.nhif.nullableText,
       jobTitle: _controllers.jobTitle.nullableText,
+      employmentType: _employmentType,
       housingAllowance: _controllers.housingAllowance.doubleValue,
       transportAllowance: _controllers.transportAllowance.doubleValue,
       paymentFrequency: _paymentFrequency.value,
@@ -188,6 +192,7 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
       nssfNumber: _controllers.nssf.nullableText,
       nhifNumber: _controllers.nhif.nullableText,
       jobTitle: _controllers.jobTitle.nullableText,
+      employmentType: _employmentType,
       housingAllowance: _controllers.housingAllowance.doubleValue,
       transportAllowance: _controllers.transportAllowance.doubleValue,
       paymentFrequency: _paymentFrequency.value,
@@ -257,6 +262,8 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
                 controllers: _controllers,
                 startDate: _startDate,
                 onStartDateChanged: (date) => setState(() => _startDate = date),
+                employmentType: _employmentType,
+                onEmploymentTypeChanged: (type) => setState(() => _employmentType = type),
               ),
               const SizedBox(height: 24),
               _PaymentDetailsSection(
@@ -591,11 +598,15 @@ class _EmploymentDetailsSection extends StatelessWidget {
   final _WorkerFormControllers controllers;
   final DateTime startDate;
   final ValueChanged<DateTime> onStartDateChanged;
+  final String employmentType;
+  final ValueChanged<String> onEmploymentTypeChanged;
 
   const _EmploymentDetailsSection({
     required this.controllers,
     required this.startDate,
     required this.onStartDateChanged,
+    required this.employmentType,
+    required this.onEmploymentTypeChanged,
   });
 
   @override
@@ -609,6 +620,23 @@ class _EmploymentDetailsSection extends StatelessWidget {
           hint: 'e.g. Housekeeper, Gardener',
         ),
         
+        // Employment Type Dropdown
+        DropdownButtonFormField<String>(
+          value: employmentType,
+          decoration: const InputDecoration(
+            labelText: 'Employment Type',
+            border: OutlineInputBorder(),
+            filled: true,
+            fillColor: _AppColors.background,
+          ),
+          items: const [
+            DropdownMenuItem(value: 'FIXED', child: Text('Fixed Salary')),
+            DropdownMenuItem(value: 'HOURLY', child: Text('Hourly Rate')),
+          ],
+          onChanged: (value) {
+            if (value != null) onEmploymentTypeChanged(value);
+          },
+        ),
         // Start Date Field
         InkWell(
           onTap: () async {

@@ -162,8 +162,12 @@ export class PayrollPaymentService {
         };
       }
 
-      record.paymentStatus = 'processing';
+      // In dev mode, B2C is simulated and succeeds immediately
+      // In production, status would be 'processing' until callback confirms
+      record.status = PayrollStatus.FINALIZED;  // Confirm finalized status
+      record.paymentStatus = process.env.NODE_ENV !== 'production' ? 'paid' : 'processing';
       record.paymentDate = new Date();
+      record.finalizedAt = record.finalizedAt || new Date();  // Ensure finalizedAt is set
       await this.payrollRecordRepository.save(record);
 
       return {

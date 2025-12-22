@@ -12,8 +12,10 @@ import type { AuthenticatedRequest } from '../../common/interfaces/user.interfac
 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Transaction } from './entities/transaction.entity';
+import { Transaction, TransactionStatus } from './entities/transaction.entity';
 import { User } from '../users/entities/user.entity';
+import { PayrollRecord, PayrollStatus } from '../payroll/entities/payroll-record.entity';
+import { PayPeriod, PayPeriodStatus } from '../payroll/entities/pay-period.entity';
 
 interface MpesaCallbackData {
   Body: {
@@ -63,6 +65,10 @@ export class PaymentsController {
     private transactionsRepository: Repository<Transaction>,
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    @InjectRepository(PayrollRecord)
+    private payrollRecordRepository: Repository<PayrollRecord>,
+    @InjectRepository(PayPeriod)
+    private payPeriodRepository: Repository<PayPeriod>,
   ) { }
 
   @Post('callback')
@@ -158,6 +164,38 @@ export class PaymentsController {
           transaction.amount,
         );
         console.log(`Debited wallet for user ${transaction.userId}: -${transaction.amount}`);
+
+        // Update linked PayrollRecord if this was a salary payout
+        const payrollRecordId = (transaction.metadata as any)?.payrollRecordId;
+        if (payrollRecordId) {
+          await this.payrollRecordRepository.update(payrollRecordId, {
+            status: PayrollStatus.FINALIZED,
+            paymentStatus: 'paid',
+            paymentDate: new Date(),
+          });
+          console.log(`Updated PayrollRecord ${payrollRecordId} to FINALIZED/paid`);
+        }
+
+        // Check if all payments for this pay period are complete
+        const payPeriodId = (transaction.metadata as any)?.payPeriodId;
+        if (payPeriodId) {
+          // Count pending payments for this pay period
+          const pendingCount = await this.transactionsRepository.count({
+            where: {
+              userId: transaction.userId,
+              type: 'SALARY_PAYOUT' as any,
+              status: TransactionStatus.PENDING,
+            },
+          });
+
+          // If no pending payments, mark pay period as COMPLETED
+          if (pendingCount === 0) {
+            await this.payPeriodRepository.update(payPeriodId, {
+              status: PayPeriodStatus.COMPLETED,
+            });
+            console.log(`PayPeriod ${payPeriodId} marked as COMPLETED (all payments successful)`);
+          }
+        }
       }
     } else {
       // B2C payment failed

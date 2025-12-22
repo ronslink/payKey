@@ -31,7 +31,7 @@ import { PayslipService } from './payslip.service';
 // Types & Interfaces
 // =============================================================================
 
-interface TaxBreakdown {
+export interface TaxBreakdown {
   nssf: number;
   nhif: number;
   housingLevy: number;
@@ -39,7 +39,7 @@ interface TaxBreakdown {
   totalDeductions: number;
 }
 
-interface PayrollItem {
+export interface PayrollItem {
   workerId: string;
   workerName: string;
   grossSalary: number;
@@ -52,25 +52,25 @@ interface PayrollItem {
   error?: string;
 }
 
-interface PayrollSummary {
+export interface PayrollSummary {
   totalGross: number;
   totalDeductions: number;
   totalNetPay: number;
   workerCount: number;
 }
 
-interface PayrollCalculationResult {
+export interface PayrollCalculationResult {
   payrollItems: PayrollItem[];
   summary: PayrollSummary;
 }
 
-interface AdjustedSalaryResult {
+export interface AdjustedSalaryResult {
   adjustedGross: number;
   deduction: number;
   leaveDays: number;
 }
 
-interface DraftPayrollItem {
+export interface DraftPayrollItem {
   workerId: string;
   grossSalary: number;
   bonuses?: number;
@@ -78,7 +78,7 @@ interface DraftPayrollItem {
   otherDeductions?: number;
 }
 
-interface DraftPayrollUpdateInput {
+export interface DraftPayrollUpdateInput {
   grossSalary?: number;
   bonuses?: number;
   otherEarnings?: number;
@@ -87,7 +87,7 @@ interface DraftPayrollUpdateInput {
   sundayHours?: number;
 }
 
-interface FundsVerificationResult {
+export interface FundsVerificationResult {
   requiredAmount: number;
   availableBalance: number;
   canProceed: boolean;
@@ -385,24 +385,64 @@ export class PayrollService {
     const startTime = Date.now();
     this.logger.log(`Finalizing payroll for period ${payPeriodId}`);
 
+    // Find records that need to be finalized (draft status)
     const records = await this.payrollRepository.find({
       where: { userId, payPeriodId, status: PayrollStatus.DRAFT },
       relations: ['worker', 'payPeriod'],
     });
 
     if (records.length === 0) {
-      throw new NotFoundException('No draft payroll records found for this period');
+      // Check if there are already finalized records (might be a retry)
+      const existingRecords = await this.payrollRepository.count({
+        where: { userId, payPeriodId }
+      });
+      if (existingRecords > 0) {
+        throw new BadRequestException('All payroll records for this period have already been finalized');
+      }
+      throw new NotFoundException('No payroll records found for this period. Please run payroll first.');
     }
 
     const employerName = await this.getEmployerName(userId);
+    // 1. Mark records as finalized (temporarily, to allow processing)
     const updatedRecords = await this.markRecordsAsFinalized(records);
 
-    const [payslipResults, payoutResults] = await Promise.all([
-      this.generatePayslipsAsync(updatedRecords, employerName),
-      this.processPayoutsAsync(updatedRecords),
-    ]);
+    // 2. Process Payouts FIRST (Critical Step)
+    const payoutResults = await this.processPayoutsAsync(updatedRecords);
 
+    // 3. Check for Payment Failures
+    if (payoutResults.failureCount > 0) {
+      this.logger.warn(`Payroll finalization halted due to ${payoutResults.failureCount} payment failures.`);
+
+      // Revert records to DRAFT to allow retry
+      await this.payrollRepository.update(
+        { payPeriodId, userId },
+        { status: PayrollStatus.DRAFT }
+      );
+
+      throw new BadRequestException({
+        message: 'Payroll finalization failed due to payment errors.',
+        details: payoutResults.results.filter(r => !r.success),
+        instructions: 'Please check your wallet balance or worker details and try again.'
+      });
+    }
+
+    // 4. Generate Documents (Only if payments succeeded)
+    const payslipResults = await this.generatePayslipsAsync(updatedRecords, employerName);
     await this.generateTaxSubmissionSafe(payPeriodId, userId);
+
+    // 5. Mark PayPeriod as COMPLETED (The Fix)
+    // Verify all records are finalized before closing period
+    const nonFinalizedCount = await this.payrollRepository.count({
+      where: { payPeriodId, status: PayrollStatus.DRAFT } // Should be 0
+    });
+
+    if (nonFinalizedCount === 0) {
+      await this.payPeriodRepository.update(
+        payPeriodId,
+        { status: PayPeriodStatus.COMPLETED }
+      );
+      this.logger.log(`PayPeriod ${payPeriodId} marked as COMPLETED.`);
+    }
 
     const totalAmount = this.sumNetSalaries(updatedRecords);
     const payslipsGenerated = payslipResults.success ? payslipResults.count : 0;
@@ -427,6 +467,7 @@ export class PayrollService {
       finalizedRecords: updatedRecords,
       payoutResults,
       payslipResults,
+      status: 'COMPLETED', // Explicit status for frontend
       summary: {
         totalRecords: updatedRecords.length,
         paymentsSuccessful: payoutResults.successCount,

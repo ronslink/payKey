@@ -13,6 +13,7 @@ import { User } from '../users/entities/user.entity';
 import { LeaveRequest } from '../workers/entities/leave-request.entity';
 import { Transaction } from '../payments/entities/transaction.entity';
 import { TaxSubmission } from '../taxes/entities/tax-submission.entity';
+import { TimeEntry } from '../time-tracking/entities/time-entry.entity';
 import { PayPeriodsService } from './pay-periods.service';
 import { PaymentsModule } from '../payments/payments.module';
 import { TaxesModule } from '../taxes/taxes.module';
@@ -30,6 +31,7 @@ import { ActivitiesModule } from '../activities/activities.module';
       LeaveRequest,
       Transaction,
       TaxSubmission,
+      TimeEntry,
     ]),
     PaymentsModule,
     TaxesModule,

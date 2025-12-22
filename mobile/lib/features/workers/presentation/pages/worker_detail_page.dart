@@ -480,7 +480,9 @@ class _EmploymentSection extends StatelessWidget {
         ),
         _DetailRowData(
           'Start Date',
-          WorkerFormatters.date(worker.startDate),
+          worker.startDate != null
+              ? WorkerFormatters.date(worker.startDate!)
+              : 'N/A',
           Icons.calendar_today,
         ),
       ],

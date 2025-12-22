@@ -7,6 +7,7 @@ import { PayrollService } from './payroll.service';
 import { MpesaService } from '../payments/mpesa.service';
 import { TaxesService } from '../taxes/taxes.service';
 import { TaxPaymentsService } from '../tax-payments/services/tax-payments.service';
+import { PayPeriod, PayPeriodStatus } from './entities/pay-period.entity';
 import {
   BatchPayrollRequest,
   PayrollPaymentResult,
@@ -20,6 +21,8 @@ export class BatchPayrollService {
     private workersRepository: Repository<Worker>,
     @InjectRepository(Transaction)
     private transactionsRepository: Repository<Transaction>,
+    @InjectRepository(PayPeriod)
+    private payPeriodRepository: Repository<PayPeriod>,
     private payrollService: PayrollService,
     private mpesaService: MpesaService,
     private taxesService: TaxesService,
@@ -75,6 +78,7 @@ export class BatchPayrollService {
             grossSalary: worker.salaryGross,
             taxBreakdown,
             batchId,
+            payPeriodId: batchRequest.payPeriodId,  // For B2C callback to update pay period
             processDate: batchRequest.processDate.toISOString(),
           },
         });
@@ -97,7 +101,9 @@ export class BatchPayrollService {
           paymentStatus = 'FAILED';
           errorMessage = paymentResult.error;
         } else {
-          paymentStatus = 'PENDING'; // Will be updated by callback
+          // In dev mode, B2C simulates immediate success
+          // In production, status stays PENDING until M-Pesa callback confirms
+          paymentStatus = process.env.NODE_ENV !== 'production' ? 'SUCCESS' : 'PENDING';
         }
 
         results.push({
@@ -136,6 +142,14 @@ export class BatchPayrollService {
         batchId,
         processDate.getFullYear(),
         processDate.getMonth() + 1, // JavaScript months are 0-indexed
+      );
+    }
+
+    // Update pay period status to COMPLETED if all workers paid successfully
+    if (successfulPayments > 0 && failedPayments === 0 && batchRequest.payPeriodId) {
+      await this.payPeriodRepository.update(
+        batchRequest.payPeriodId,
+        { status: PayPeriodStatus.COMPLETED }
       );
     }
 

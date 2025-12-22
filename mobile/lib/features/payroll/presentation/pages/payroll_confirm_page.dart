@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../providers/payroll_provider.dart';
+import '../providers/pay_period_provider.dart';
 import '../../../payments/presentation/providers/transactions_provider.dart';
 import '../../data/repositories/payroll_repository.dart';
 import '../../data/models/payroll_model.dart';
@@ -273,6 +274,9 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
       
       // Refresh transactions list
       await ref.read(transactionsProvider.notifier).fetchTransactions();
+      
+      // Refresh pay periods to show COMPLETED status immediately
+      ref.invalidate(payPeriodsProvider);
       
       if (mounted) {
         setState(() {

@@ -11,6 +11,7 @@ export interface PayrollPaymentResult {
 export interface BatchPayrollRequest {
   workerIds: string[];
   processDate: Date;
+  payPeriodId?: string;  // Optional: if provided, will update pay period status after success
 }
 
 export interface BatchPayrollResult {

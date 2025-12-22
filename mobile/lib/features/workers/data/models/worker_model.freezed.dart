@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$WorkerModel {
 
- String get id; String get name; String get phoneNumber; double get salaryGross; DateTime get startDate; DateTime? get dateOfBirth; bool get isActive; String get employmentType; double? get hourlyRate; String? get propertyId; String? get email; String? get idNumber; String? get kraPin; String? get nssfNumber; String? get nhifNumber; String? get jobTitle; double get housingAllowance; double get transportAllowance; String get paymentFrequency; String get paymentMethod; String? get mpesaNumber; String? get bankName; String? get bankAccount; String? get notes; String? get emergencyContactName; String? get emergencyContactPhone; String? get emergencyContactRelationship; DateTime? get terminatedAt; DateTime? get createdAt; DateTime? get updatedAt;
+ String get id; String get name; String get phoneNumber; double get salaryGross; DateTime? get startDate; DateTime? get dateOfBirth; bool get isActive; String get employmentType; double? get hourlyRate; String? get propertyId; String? get email; String? get idNumber; String? get kraPin; String? get nssfNumber; String? get nhifNumber; String? get jobTitle; double get housingAllowance; double get transportAllowance; String get paymentFrequency; String get paymentMethod; String? get mpesaNumber; String? get bankName; String? get bankAccount; String? get notes; String? get emergencyContactName; String? get emergencyContactPhone; String? get emergencyContactRelationship; DateTime? get terminatedAt; DateTime? get createdAt; DateTime? get updatedAt;
 /// Create a copy of WorkerModel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -48,7 +48,7 @@ abstract mixin class $WorkerModelCopyWith<$Res>  {
   factory $WorkerModelCopyWith(WorkerModel value, $Res Function(WorkerModel) _then) = _$WorkerModelCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String phoneNumber, double salaryGross, DateTime startDate, DateTime? dateOfBirth, bool isActive, String employmentType, double? hourlyRate, String? propertyId, String? email, String? idNumber, String? kraPin, String? nssfNumber, String? nhifNumber, String? jobTitle, double housingAllowance, double transportAllowance, String paymentFrequency, String paymentMethod, String? mpesaNumber, String? bankName, String? bankAccount, String? notes, String? emergencyContactName, String? emergencyContactPhone, String? emergencyContactRelationship, DateTime? terminatedAt, DateTime? createdAt, DateTime? updatedAt
+ String id, String name, String phoneNumber, double salaryGross, DateTime? startDate, DateTime? dateOfBirth, bool isActive, String employmentType, double? hourlyRate, String? propertyId, String? email, String? idNumber, String? kraPin, String? nssfNumber, String? nhifNumber, String? jobTitle, double housingAllowance, double transportAllowance, String paymentFrequency, String paymentMethod, String? mpesaNumber, String? bankName, String? bankAccount, String? notes, String? emergencyContactName, String? emergencyContactPhone, String? emergencyContactRelationship, DateTime? terminatedAt, DateTime? createdAt, DateTime? updatedAt
 });
 
 
@@ -65,14 +65,14 @@ class _$WorkerModelCopyWithImpl<$Res>
 
 /// Create a copy of WorkerModel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? phoneNumber = null,Object? salaryGross = null,Object? startDate = null,Object? dateOfBirth = freezed,Object? isActive = null,Object? employmentType = null,Object? hourlyRate = freezed,Object? propertyId = freezed,Object? email = freezed,Object? idNumber = freezed,Object? kraPin = freezed,Object? nssfNumber = freezed,Object? nhifNumber = freezed,Object? jobTitle = freezed,Object? housingAllowance = null,Object? transportAllowance = null,Object? paymentFrequency = null,Object? paymentMethod = null,Object? mpesaNumber = freezed,Object? bankName = freezed,Object? bankAccount = freezed,Object? notes = freezed,Object? emergencyContactName = freezed,Object? emergencyContactPhone = freezed,Object? emergencyContactRelationship = freezed,Object? terminatedAt = freezed,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? phoneNumber = null,Object? salaryGross = null,Object? startDate = freezed,Object? dateOfBirth = freezed,Object? isActive = null,Object? employmentType = null,Object? hourlyRate = freezed,Object? propertyId = freezed,Object? email = freezed,Object? idNumber = freezed,Object? kraPin = freezed,Object? nssfNumber = freezed,Object? nhifNumber = freezed,Object? jobTitle = freezed,Object? housingAllowance = null,Object? transportAllowance = null,Object? paymentFrequency = null,Object? paymentMethod = null,Object? mpesaNumber = freezed,Object? bankName = freezed,Object? bankAccount = freezed,Object? notes = freezed,Object? emergencyContactName = freezed,Object? emergencyContactPhone = freezed,Object? emergencyContactRelationship = freezed,Object? terminatedAt = freezed,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,phoneNumber: null == phoneNumber ? _self.phoneNumber : phoneNumber // ignore: cast_nullable_to_non_nullable
 as String,salaryGross: null == salaryGross ? _self.salaryGross : salaryGross // ignore: cast_nullable_to_non_nullable
-as double,startDate: null == startDate ? _self.startDate : startDate // ignore: cast_nullable_to_non_nullable
-as DateTime,dateOfBirth: freezed == dateOfBirth ? _self.dateOfBirth : dateOfBirth // ignore: cast_nullable_to_non_nullable
+as double,startDate: freezed == startDate ? _self.startDate : startDate // ignore: cast_nullable_to_non_nullable
+as DateTime?,dateOfBirth: freezed == dateOfBirth ? _self.dateOfBirth : dateOfBirth // ignore: cast_nullable_to_non_nullable
 as DateTime?,isActive: null == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
 as bool,employmentType: null == employmentType ? _self.employmentType : employmentType // ignore: cast_nullable_to_non_nullable
 as String,hourlyRate: freezed == hourlyRate ? _self.hourlyRate : hourlyRate // ignore: cast_nullable_to_non_nullable
@@ -182,7 +182,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String phoneNumber,  double salaryGross,  DateTime startDate,  DateTime? dateOfBirth,  bool isActive,  String employmentType,  double? hourlyRate,  String? propertyId,  String? email,  String? idNumber,  String? kraPin,  String? nssfNumber,  String? nhifNumber,  String? jobTitle,  double housingAllowance,  double transportAllowance,  String paymentFrequency,  String paymentMethod,  String? mpesaNumber,  String? bankName,  String? bankAccount,  String? notes,  String? emergencyContactName,  String? emergencyContactPhone,  String? emergencyContactRelationship,  DateTime? terminatedAt,  DateTime? createdAt,  DateTime? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String phoneNumber,  double salaryGross,  DateTime? startDate,  DateTime? dateOfBirth,  bool isActive,  String employmentType,  double? hourlyRate,  String? propertyId,  String? email,  String? idNumber,  String? kraPin,  String? nssfNumber,  String? nhifNumber,  String? jobTitle,  double housingAllowance,  double transportAllowance,  String paymentFrequency,  String paymentMethod,  String? mpesaNumber,  String? bankName,  String? bankAccount,  String? notes,  String? emergencyContactName,  String? emergencyContactPhone,  String? emergencyContactRelationship,  DateTime? terminatedAt,  DateTime? createdAt,  DateTime? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _WorkerModel() when $default != null:
 return $default(_that.id,_that.name,_that.phoneNumber,_that.salaryGross,_that.startDate,_that.dateOfBirth,_that.isActive,_that.employmentType,_that.hourlyRate,_that.propertyId,_that.email,_that.idNumber,_that.kraPin,_that.nssfNumber,_that.nhifNumber,_that.jobTitle,_that.housingAllowance,_that.transportAllowance,_that.paymentFrequency,_that.paymentMethod,_that.mpesaNumber,_that.bankName,_that.bankAccount,_that.notes,_that.emergencyContactName,_that.emergencyContactPhone,_that.emergencyContactRelationship,_that.terminatedAt,_that.createdAt,_that.updatedAt);case _:
@@ -203,7 +203,7 @@ return $default(_that.id,_that.name,_that.phoneNumber,_that.salaryGross,_that.st
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String phoneNumber,  double salaryGross,  DateTime startDate,  DateTime? dateOfBirth,  bool isActive,  String employmentType,  double? hourlyRate,  String? propertyId,  String? email,  String? idNumber,  String? kraPin,  String? nssfNumber,  String? nhifNumber,  String? jobTitle,  double housingAllowance,  double transportAllowance,  String paymentFrequency,  String paymentMethod,  String? mpesaNumber,  String? bankName,  String? bankAccount,  String? notes,  String? emergencyContactName,  String? emergencyContactPhone,  String? emergencyContactRelationship,  DateTime? terminatedAt,  DateTime? createdAt,  DateTime? updatedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String phoneNumber,  double salaryGross,  DateTime? startDate,  DateTime? dateOfBirth,  bool isActive,  String employmentType,  double? hourlyRate,  String? propertyId,  String? email,  String? idNumber,  String? kraPin,  String? nssfNumber,  String? nhifNumber,  String? jobTitle,  double housingAllowance,  double transportAllowance,  String paymentFrequency,  String paymentMethod,  String? mpesaNumber,  String? bankName,  String? bankAccount,  String? notes,  String? emergencyContactName,  String? emergencyContactPhone,  String? emergencyContactRelationship,  DateTime? terminatedAt,  DateTime? createdAt,  DateTime? updatedAt)  $default,) {final _that = this;
 switch (_that) {
 case _WorkerModel():
 return $default(_that.id,_that.name,_that.phoneNumber,_that.salaryGross,_that.startDate,_that.dateOfBirth,_that.isActive,_that.employmentType,_that.hourlyRate,_that.propertyId,_that.email,_that.idNumber,_that.kraPin,_that.nssfNumber,_that.nhifNumber,_that.jobTitle,_that.housingAllowance,_that.transportAllowance,_that.paymentFrequency,_that.paymentMethod,_that.mpesaNumber,_that.bankName,_that.bankAccount,_that.notes,_that.emergencyContactName,_that.emergencyContactPhone,_that.emergencyContactRelationship,_that.terminatedAt,_that.createdAt,_that.updatedAt);case _:
@@ -223,7 +223,7 @@ return $default(_that.id,_that.name,_that.phoneNumber,_that.salaryGross,_that.st
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String phoneNumber,  double salaryGross,  DateTime startDate,  DateTime? dateOfBirth,  bool isActive,  String employmentType,  double? hourlyRate,  String? propertyId,  String? email,  String? idNumber,  String? kraPin,  String? nssfNumber,  String? nhifNumber,  String? jobTitle,  double housingAllowance,  double transportAllowance,  String paymentFrequency,  String paymentMethod,  String? mpesaNumber,  String? bankName,  String? bankAccount,  String? notes,  String? emergencyContactName,  String? emergencyContactPhone,  String? emergencyContactRelationship,  DateTime? terminatedAt,  DateTime? createdAt,  DateTime? updatedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String phoneNumber,  double salaryGross,  DateTime? startDate,  DateTime? dateOfBirth,  bool isActive,  String employmentType,  double? hourlyRate,  String? propertyId,  String? email,  String? idNumber,  String? kraPin,  String? nssfNumber,  String? nhifNumber,  String? jobTitle,  double housingAllowance,  double transportAllowance,  String paymentFrequency,  String paymentMethod,  String? mpesaNumber,  String? bankName,  String? bankAccount,  String? notes,  String? emergencyContactName,  String? emergencyContactPhone,  String? emergencyContactRelationship,  DateTime? terminatedAt,  DateTime? createdAt,  DateTime? updatedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _WorkerModel() when $default != null:
 return $default(_that.id,_that.name,_that.phoneNumber,_that.salaryGross,_that.startDate,_that.dateOfBirth,_that.isActive,_that.employmentType,_that.hourlyRate,_that.propertyId,_that.email,_that.idNumber,_that.kraPin,_that.nssfNumber,_that.nhifNumber,_that.jobTitle,_that.housingAllowance,_that.transportAllowance,_that.paymentFrequency,_that.paymentMethod,_that.mpesaNumber,_that.bankName,_that.bankAccount,_that.notes,_that.emergencyContactName,_that.emergencyContactPhone,_that.emergencyContactRelationship,_that.terminatedAt,_that.createdAt,_that.updatedAt);case _:
@@ -238,14 +238,14 @@ return $default(_that.id,_that.name,_that.phoneNumber,_that.salaryGross,_that.st
 @JsonSerializable()
 
 class _WorkerModel implements WorkerModel {
-  const _WorkerModel({required this.id, required this.name, required this.phoneNumber, required this.salaryGross, required this.startDate, this.dateOfBirth, required this.isActive, this.employmentType = 'FIXED', this.hourlyRate, this.propertyId, this.email, this.idNumber, this.kraPin, this.nssfNumber, this.nhifNumber, this.jobTitle, this.housingAllowance = 0.0, this.transportAllowance = 0.0, this.paymentFrequency = 'MONTHLY', this.paymentMethod = 'MPESA', this.mpesaNumber, this.bankName, this.bankAccount, this.notes, this.emergencyContactName, this.emergencyContactPhone, this.emergencyContactRelationship, this.terminatedAt, this.createdAt, this.updatedAt});
+  const _WorkerModel({required this.id, required this.name, required this.phoneNumber, required this.salaryGross, this.startDate, this.dateOfBirth, required this.isActive, this.employmentType = 'FIXED', this.hourlyRate, this.propertyId, this.email, this.idNumber, this.kraPin, this.nssfNumber, this.nhifNumber, this.jobTitle, this.housingAllowance = 0.0, this.transportAllowance = 0.0, this.paymentFrequency = 'MONTHLY', this.paymentMethod = 'MPESA', this.mpesaNumber, this.bankName, this.bankAccount, this.notes, this.emergencyContactName, this.emergencyContactPhone, this.emergencyContactRelationship, this.terminatedAt, this.createdAt, this.updatedAt});
   factory _WorkerModel.fromJson(Map<String, dynamic> json) => _$WorkerModelFromJson(json);
 
 @override final  String id;
 @override final  String name;
 @override final  String phoneNumber;
 @override final  double salaryGross;
-@override final  DateTime startDate;
+@override final  DateTime? startDate;
 @override final  DateTime? dateOfBirth;
 @override final  bool isActive;
 @override@JsonKey() final  String employmentType;
@@ -305,7 +305,7 @@ abstract mixin class _$WorkerModelCopyWith<$Res> implements $WorkerModelCopyWith
   factory _$WorkerModelCopyWith(_WorkerModel value, $Res Function(_WorkerModel) _then) = __$WorkerModelCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String phoneNumber, double salaryGross, DateTime startDate, DateTime? dateOfBirth, bool isActive, String employmentType, double? hourlyRate, String? propertyId, String? email, String? idNumber, String? kraPin, String? nssfNumber, String? nhifNumber, String? jobTitle, double housingAllowance, double transportAllowance, String paymentFrequency, String paymentMethod, String? mpesaNumber, String? bankName, String? bankAccount, String? notes, String? emergencyContactName, String? emergencyContactPhone, String? emergencyContactRelationship, DateTime? terminatedAt, DateTime? createdAt, DateTime? updatedAt
+ String id, String name, String phoneNumber, double salaryGross, DateTime? startDate, DateTime? dateOfBirth, bool isActive, String employmentType, double? hourlyRate, String? propertyId, String? email, String? idNumber, String? kraPin, String? nssfNumber, String? nhifNumber, String? jobTitle, double housingAllowance, double transportAllowance, String paymentFrequency, String paymentMethod, String? mpesaNumber, String? bankName, String? bankAccount, String? notes, String? emergencyContactName, String? emergencyContactPhone, String? emergencyContactRelationship, DateTime? terminatedAt, DateTime? createdAt, DateTime? updatedAt
 });
 
 
@@ -322,14 +322,14 @@ class __$WorkerModelCopyWithImpl<$Res>
 
 /// Create a copy of WorkerModel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? phoneNumber = null,Object? salaryGross = null,Object? startDate = null,Object? dateOfBirth = freezed,Object? isActive = null,Object? employmentType = null,Object? hourlyRate = freezed,Object? propertyId = freezed,Object? email = freezed,Object? idNumber = freezed,Object? kraPin = freezed,Object? nssfNumber = freezed,Object? nhifNumber = freezed,Object? jobTitle = freezed,Object? housingAllowance = null,Object? transportAllowance = null,Object? paymentFrequency = null,Object? paymentMethod = null,Object? mpesaNumber = freezed,Object? bankName = freezed,Object? bankAccount = freezed,Object? notes = freezed,Object? emergencyContactName = freezed,Object? emergencyContactPhone = freezed,Object? emergencyContactRelationship = freezed,Object? terminatedAt = freezed,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? phoneNumber = null,Object? salaryGross = null,Object? startDate = freezed,Object? dateOfBirth = freezed,Object? isActive = null,Object? employmentType = null,Object? hourlyRate = freezed,Object? propertyId = freezed,Object? email = freezed,Object? idNumber = freezed,Object? kraPin = freezed,Object? nssfNumber = freezed,Object? nhifNumber = freezed,Object? jobTitle = freezed,Object? housingAllowance = null,Object? transportAllowance = null,Object? paymentFrequency = null,Object? paymentMethod = null,Object? mpesaNumber = freezed,Object? bankName = freezed,Object? bankAccount = freezed,Object? notes = freezed,Object? emergencyContactName = freezed,Object? emergencyContactPhone = freezed,Object? emergencyContactRelationship = freezed,Object? terminatedAt = freezed,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
   return _then(_WorkerModel(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,phoneNumber: null == phoneNumber ? _self.phoneNumber : phoneNumber // ignore: cast_nullable_to_non_nullable
 as String,salaryGross: null == salaryGross ? _self.salaryGross : salaryGross // ignore: cast_nullable_to_non_nullable
-as double,startDate: null == startDate ? _self.startDate : startDate // ignore: cast_nullable_to_non_nullable
-as DateTime,dateOfBirth: freezed == dateOfBirth ? _self.dateOfBirth : dateOfBirth // ignore: cast_nullable_to_non_nullable
+as double,startDate: freezed == startDate ? _self.startDate : startDate // ignore: cast_nullable_to_non_nullable
+as DateTime?,dateOfBirth: freezed == dateOfBirth ? _self.dateOfBirth : dateOfBirth // ignore: cast_nullable_to_non_nullable
 as DateTime?,isActive: null == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
 as bool,employmentType: null == employmentType ? _self.employmentType : employmentType // ignore: cast_nullable_to_non_nullable
 as String,hourlyRate: freezed == hourlyRate ? _self.hourlyRate : hourlyRate // ignore: cast_nullable_to_non_nullable
@@ -365,7 +365,7 @@ as DateTime?,
 /// @nodoc
 mixin _$CreateWorkerRequest {
 
- String get name; String get phoneNumber; double get salaryGross; DateTime get startDate; DateTime? get dateOfBirth; String get employmentType; double? get hourlyRate; String? get propertyId; String? get email; String? get idNumber; String? get kraPin; String? get nssfNumber; String? get nhifNumber; String? get jobTitle; double? get housingAllowance; double? get transportAllowance; String? get paymentFrequency; String? get paymentMethod; String? get mpesaNumber; String? get bankName; String? get bankAccount; String? get notes; String? get emergencyContactName; String? get emergencyContactPhone; String? get emergencyContactRelationship;
+ String get name; String get phoneNumber; double get salaryGross; DateTime? get startDate; DateTime? get dateOfBirth; String get employmentType; double? get hourlyRate; String? get propertyId; String? get email; String? get idNumber; String? get kraPin; String? get nssfNumber; String? get nhifNumber; String? get jobTitle; double? get housingAllowance; double? get transportAllowance; String? get paymentFrequency; String? get paymentMethod; String? get mpesaNumber; String? get bankName; String? get bankAccount; String? get notes; String? get emergencyContactName; String? get emergencyContactPhone; String? get emergencyContactRelationship;
 /// Create a copy of CreateWorkerRequest
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -398,7 +398,7 @@ abstract mixin class $CreateWorkerRequestCopyWith<$Res>  {
   factory $CreateWorkerRequestCopyWith(CreateWorkerRequest value, $Res Function(CreateWorkerRequest) _then) = _$CreateWorkerRequestCopyWithImpl;
 @useResult
 $Res call({
- String name, String phoneNumber, double salaryGross, DateTime startDate, DateTime? dateOfBirth, String employmentType, double? hourlyRate, String? propertyId, String? email, String? idNumber, String? kraPin, String? nssfNumber, String? nhifNumber, String? jobTitle, double? housingAllowance, double? transportAllowance, String? paymentFrequency, String? paymentMethod, String? mpesaNumber, String? bankName, String? bankAccount, String? notes, String? emergencyContactName, String? emergencyContactPhone, String? emergencyContactRelationship
+ String name, String phoneNumber, double salaryGross, DateTime? startDate, DateTime? dateOfBirth, String employmentType, double? hourlyRate, String? propertyId, String? email, String? idNumber, String? kraPin, String? nssfNumber, String? nhifNumber, String? jobTitle, double? housingAllowance, double? transportAllowance, String? paymentFrequency, String? paymentMethod, String? mpesaNumber, String? bankName, String? bankAccount, String? notes, String? emergencyContactName, String? emergencyContactPhone, String? emergencyContactRelationship
 });
 
 
@@ -415,13 +415,13 @@ class _$CreateWorkerRequestCopyWithImpl<$Res>
 
 /// Create a copy of CreateWorkerRequest
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? name = null,Object? phoneNumber = null,Object? salaryGross = null,Object? startDate = null,Object? dateOfBirth = freezed,Object? employmentType = null,Object? hourlyRate = freezed,Object? propertyId = freezed,Object? email = freezed,Object? idNumber = freezed,Object? kraPin = freezed,Object? nssfNumber = freezed,Object? nhifNumber = freezed,Object? jobTitle = freezed,Object? housingAllowance = freezed,Object? transportAllowance = freezed,Object? paymentFrequency = freezed,Object? paymentMethod = freezed,Object? mpesaNumber = freezed,Object? bankName = freezed,Object? bankAccount = freezed,Object? notes = freezed,Object? emergencyContactName = freezed,Object? emergencyContactPhone = freezed,Object? emergencyContactRelationship = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? name = null,Object? phoneNumber = null,Object? salaryGross = null,Object? startDate = freezed,Object? dateOfBirth = freezed,Object? employmentType = null,Object? hourlyRate = freezed,Object? propertyId = freezed,Object? email = freezed,Object? idNumber = freezed,Object? kraPin = freezed,Object? nssfNumber = freezed,Object? nhifNumber = freezed,Object? jobTitle = freezed,Object? housingAllowance = freezed,Object? transportAllowance = freezed,Object? paymentFrequency = freezed,Object? paymentMethod = freezed,Object? mpesaNumber = freezed,Object? bankName = freezed,Object? bankAccount = freezed,Object? notes = freezed,Object? emergencyContactName = freezed,Object? emergencyContactPhone = freezed,Object? emergencyContactRelationship = freezed,}) {
   return _then(_self.copyWith(
 name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,phoneNumber: null == phoneNumber ? _self.phoneNumber : phoneNumber // ignore: cast_nullable_to_non_nullable
 as String,salaryGross: null == salaryGross ? _self.salaryGross : salaryGross // ignore: cast_nullable_to_non_nullable
-as double,startDate: null == startDate ? _self.startDate : startDate // ignore: cast_nullable_to_non_nullable
-as DateTime,dateOfBirth: freezed == dateOfBirth ? _self.dateOfBirth : dateOfBirth // ignore: cast_nullable_to_non_nullable
+as double,startDate: freezed == startDate ? _self.startDate : startDate // ignore: cast_nullable_to_non_nullable
+as DateTime?,dateOfBirth: freezed == dateOfBirth ? _self.dateOfBirth : dateOfBirth // ignore: cast_nullable_to_non_nullable
 as DateTime?,employmentType: null == employmentType ? _self.employmentType : employmentType // ignore: cast_nullable_to_non_nullable
 as String,hourlyRate: freezed == hourlyRate ? _self.hourlyRate : hourlyRate // ignore: cast_nullable_to_non_nullable
 as double?,propertyId: freezed == propertyId ? _self.propertyId : propertyId // ignore: cast_nullable_to_non_nullable
@@ -527,7 +527,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String name,  String phoneNumber,  double salaryGross,  DateTime startDate,  DateTime? dateOfBirth,  String employmentType,  double? hourlyRate,  String? propertyId,  String? email,  String? idNumber,  String? kraPin,  String? nssfNumber,  String? nhifNumber,  String? jobTitle,  double? housingAllowance,  double? transportAllowance,  String? paymentFrequency,  String? paymentMethod,  String? mpesaNumber,  String? bankName,  String? bankAccount,  String? notes,  String? emergencyContactName,  String? emergencyContactPhone,  String? emergencyContactRelationship)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String name,  String phoneNumber,  double salaryGross,  DateTime? startDate,  DateTime? dateOfBirth,  String employmentType,  double? hourlyRate,  String? propertyId,  String? email,  String? idNumber,  String? kraPin,  String? nssfNumber,  String? nhifNumber,  String? jobTitle,  double? housingAllowance,  double? transportAllowance,  String? paymentFrequency,  String? paymentMethod,  String? mpesaNumber,  String? bankName,  String? bankAccount,  String? notes,  String? emergencyContactName,  String? emergencyContactPhone,  String? emergencyContactRelationship)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CreateWorkerRequest() when $default != null:
 return $default(_that.name,_that.phoneNumber,_that.salaryGross,_that.startDate,_that.dateOfBirth,_that.employmentType,_that.hourlyRate,_that.propertyId,_that.email,_that.idNumber,_that.kraPin,_that.nssfNumber,_that.nhifNumber,_that.jobTitle,_that.housingAllowance,_that.transportAllowance,_that.paymentFrequency,_that.paymentMethod,_that.mpesaNumber,_that.bankName,_that.bankAccount,_that.notes,_that.emergencyContactName,_that.emergencyContactPhone,_that.emergencyContactRelationship);case _:
@@ -548,7 +548,7 @@ return $default(_that.name,_that.phoneNumber,_that.salaryGross,_that.startDate,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String name,  String phoneNumber,  double salaryGross,  DateTime startDate,  DateTime? dateOfBirth,  String employmentType,  double? hourlyRate,  String? propertyId,  String? email,  String? idNumber,  String? kraPin,  String? nssfNumber,  String? nhifNumber,  String? jobTitle,  double? housingAllowance,  double? transportAllowance,  String? paymentFrequency,  String? paymentMethod,  String? mpesaNumber,  String? bankName,  String? bankAccount,  String? notes,  String? emergencyContactName,  String? emergencyContactPhone,  String? emergencyContactRelationship)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String name,  String phoneNumber,  double salaryGross,  DateTime? startDate,  DateTime? dateOfBirth,  String employmentType,  double? hourlyRate,  String? propertyId,  String? email,  String? idNumber,  String? kraPin,  String? nssfNumber,  String? nhifNumber,  String? jobTitle,  double? housingAllowance,  double? transportAllowance,  String? paymentFrequency,  String? paymentMethod,  String? mpesaNumber,  String? bankName,  String? bankAccount,  String? notes,  String? emergencyContactName,  String? emergencyContactPhone,  String? emergencyContactRelationship)  $default,) {final _that = this;
 switch (_that) {
 case _CreateWorkerRequest():
 return $default(_that.name,_that.phoneNumber,_that.salaryGross,_that.startDate,_that.dateOfBirth,_that.employmentType,_that.hourlyRate,_that.propertyId,_that.email,_that.idNumber,_that.kraPin,_that.nssfNumber,_that.nhifNumber,_that.jobTitle,_that.housingAllowance,_that.transportAllowance,_that.paymentFrequency,_that.paymentMethod,_that.mpesaNumber,_that.bankName,_that.bankAccount,_that.notes,_that.emergencyContactName,_that.emergencyContactPhone,_that.emergencyContactRelationship);case _:
@@ -568,7 +568,7 @@ return $default(_that.name,_that.phoneNumber,_that.salaryGross,_that.startDate,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String name,  String phoneNumber,  double salaryGross,  DateTime startDate,  DateTime? dateOfBirth,  String employmentType,  double? hourlyRate,  String? propertyId,  String? email,  String? idNumber,  String? kraPin,  String? nssfNumber,  String? nhifNumber,  String? jobTitle,  double? housingAllowance,  double? transportAllowance,  String? paymentFrequency,  String? paymentMethod,  String? mpesaNumber,  String? bankName,  String? bankAccount,  String? notes,  String? emergencyContactName,  String? emergencyContactPhone,  String? emergencyContactRelationship)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String name,  String phoneNumber,  double salaryGross,  DateTime? startDate,  DateTime? dateOfBirth,  String employmentType,  double? hourlyRate,  String? propertyId,  String? email,  String? idNumber,  String? kraPin,  String? nssfNumber,  String? nhifNumber,  String? jobTitle,  double? housingAllowance,  double? transportAllowance,  String? paymentFrequency,  String? paymentMethod,  String? mpesaNumber,  String? bankName,  String? bankAccount,  String? notes,  String? emergencyContactName,  String? emergencyContactPhone,  String? emergencyContactRelationship)?  $default,) {final _that = this;
 switch (_that) {
 case _CreateWorkerRequest() when $default != null:
 return $default(_that.name,_that.phoneNumber,_that.salaryGross,_that.startDate,_that.dateOfBirth,_that.employmentType,_that.hourlyRate,_that.propertyId,_that.email,_that.idNumber,_that.kraPin,_that.nssfNumber,_that.nhifNumber,_that.jobTitle,_that.housingAllowance,_that.transportAllowance,_that.paymentFrequency,_that.paymentMethod,_that.mpesaNumber,_that.bankName,_that.bankAccount,_that.notes,_that.emergencyContactName,_that.emergencyContactPhone,_that.emergencyContactRelationship);case _:
@@ -583,13 +583,13 @@ return $default(_that.name,_that.phoneNumber,_that.salaryGross,_that.startDate,_
 @JsonSerializable()
 
 class _CreateWorkerRequest implements CreateWorkerRequest {
-  const _CreateWorkerRequest({required this.name, required this.phoneNumber, required this.salaryGross, required this.startDate, this.dateOfBirth, this.employmentType = 'FIXED', this.hourlyRate, this.propertyId, this.email, this.idNumber, this.kraPin, this.nssfNumber, this.nhifNumber, this.jobTitle, this.housingAllowance, this.transportAllowance, this.paymentFrequency, this.paymentMethod, this.mpesaNumber, this.bankName, this.bankAccount, this.notes, this.emergencyContactName, this.emergencyContactPhone, this.emergencyContactRelationship});
+  const _CreateWorkerRequest({required this.name, required this.phoneNumber, required this.salaryGross, this.startDate, this.dateOfBirth, this.employmentType = 'FIXED', this.hourlyRate, this.propertyId, this.email, this.idNumber, this.kraPin, this.nssfNumber, this.nhifNumber, this.jobTitle, this.housingAllowance, this.transportAllowance, this.paymentFrequency, this.paymentMethod, this.mpesaNumber, this.bankName, this.bankAccount, this.notes, this.emergencyContactName, this.emergencyContactPhone, this.emergencyContactRelationship});
   factory _CreateWorkerRequest.fromJson(Map<String, dynamic> json) => _$CreateWorkerRequestFromJson(json);
 
 @override final  String name;
 @override final  String phoneNumber;
 @override final  double salaryGross;
-@override final  DateTime startDate;
+@override final  DateTime? startDate;
 @override final  DateTime? dateOfBirth;
 @override@JsonKey() final  String employmentType;
 @override final  double? hourlyRate;
@@ -645,7 +645,7 @@ abstract mixin class _$CreateWorkerRequestCopyWith<$Res> implements $CreateWorke
   factory _$CreateWorkerRequestCopyWith(_CreateWorkerRequest value, $Res Function(_CreateWorkerRequest) _then) = __$CreateWorkerRequestCopyWithImpl;
 @override @useResult
 $Res call({
- String name, String phoneNumber, double salaryGross, DateTime startDate, DateTime? dateOfBirth, String employmentType, double? hourlyRate, String? propertyId, String? email, String? idNumber, String? kraPin, String? nssfNumber, String? nhifNumber, String? jobTitle, double? housingAllowance, double? transportAllowance, String? paymentFrequency, String? paymentMethod, String? mpesaNumber, String? bankName, String? bankAccount, String? notes, String? emergencyContactName, String? emergencyContactPhone, String? emergencyContactRelationship
+ String name, String phoneNumber, double salaryGross, DateTime? startDate, DateTime? dateOfBirth, String employmentType, double? hourlyRate, String? propertyId, String? email, String? idNumber, String? kraPin, String? nssfNumber, String? nhifNumber, String? jobTitle, double? housingAllowance, double? transportAllowance, String? paymentFrequency, String? paymentMethod, String? mpesaNumber, String? bankName, String? bankAccount, String? notes, String? emergencyContactName, String? emergencyContactPhone, String? emergencyContactRelationship
 });
 
 
@@ -662,13 +662,13 @@ class __$CreateWorkerRequestCopyWithImpl<$Res>
 
 /// Create a copy of CreateWorkerRequest
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? name = null,Object? phoneNumber = null,Object? salaryGross = null,Object? startDate = null,Object? dateOfBirth = freezed,Object? employmentType = null,Object? hourlyRate = freezed,Object? propertyId = freezed,Object? email = freezed,Object? idNumber = freezed,Object? kraPin = freezed,Object? nssfNumber = freezed,Object? nhifNumber = freezed,Object? jobTitle = freezed,Object? housingAllowance = freezed,Object? transportAllowance = freezed,Object? paymentFrequency = freezed,Object? paymentMethod = freezed,Object? mpesaNumber = freezed,Object? bankName = freezed,Object? bankAccount = freezed,Object? notes = freezed,Object? emergencyContactName = freezed,Object? emergencyContactPhone = freezed,Object? emergencyContactRelationship = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? name = null,Object? phoneNumber = null,Object? salaryGross = null,Object? startDate = freezed,Object? dateOfBirth = freezed,Object? employmentType = null,Object? hourlyRate = freezed,Object? propertyId = freezed,Object? email = freezed,Object? idNumber = freezed,Object? kraPin = freezed,Object? nssfNumber = freezed,Object? nhifNumber = freezed,Object? jobTitle = freezed,Object? housingAllowance = freezed,Object? transportAllowance = freezed,Object? paymentFrequency = freezed,Object? paymentMethod = freezed,Object? mpesaNumber = freezed,Object? bankName = freezed,Object? bankAccount = freezed,Object? notes = freezed,Object? emergencyContactName = freezed,Object? emergencyContactPhone = freezed,Object? emergencyContactRelationship = freezed,}) {
   return _then(_CreateWorkerRequest(
 name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,phoneNumber: null == phoneNumber ? _self.phoneNumber : phoneNumber // ignore: cast_nullable_to_non_nullable
 as String,salaryGross: null == salaryGross ? _self.salaryGross : salaryGross // ignore: cast_nullable_to_non_nullable
-as double,startDate: null == startDate ? _self.startDate : startDate // ignore: cast_nullable_to_non_nullable
-as DateTime,dateOfBirth: freezed == dateOfBirth ? _self.dateOfBirth : dateOfBirth // ignore: cast_nullable_to_non_nullable
+as double,startDate: freezed == startDate ? _self.startDate : startDate // ignore: cast_nullable_to_non_nullable
+as DateTime?,dateOfBirth: freezed == dateOfBirth ? _self.dateOfBirth : dateOfBirth // ignore: cast_nullable_to_non_nullable
 as DateTime?,employmentType: null == employmentType ? _self.employmentType : employmentType // ignore: cast_nullable_to_non_nullable
 as String,hourlyRate: freezed == hourlyRate ? _self.hourlyRate : hourlyRate // ignore: cast_nullable_to_non_nullable
 as double?,propertyId: freezed == propertyId ? _self.propertyId : propertyId // ignore: cast_nullable_to_non_nullable

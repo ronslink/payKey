@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../../../workers/presentation/providers/workers_provider.dart';
 import '../../../payroll/presentation/providers/pay_period_provider.dart';
 import '../../../subscriptions/presentation/providers/feature_access_provider.dart';
@@ -10,6 +11,8 @@ import '../providers/activity_provider.dart';
 import '../data/models/activity_model.dart';
 import '../../../workers/data/models/worker_model.dart';
 import '../../../payroll/data/models/pay_period_model.dart';
+import '../../../holidays/data/models/holiday_model.dart';
+import '../../../holidays/presentation/providers/holidays_provider.dart';
 
 /// Home page with premium dashboard design
 class HomePage extends ConsumerStatefulWidget {
@@ -56,7 +59,9 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
     final payPeriodsAsync = ref.watch(payPeriodsProvider);
     final activitiesAsync = ref.watch(recentActivitiesProvider);
     final trialStatusAsync = ref.watch(trialStatusProvider);
+
     final tourProgress = ref.watch(tourProgressProvider);
+    final holidaysAsync = ref.watch(currentMonthHolidaysProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F6),
@@ -87,6 +92,8 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
               
               const SizedBox(height: 8),
               _buildBusinessSnapshot(workersAsync, payPeriodsAsync),
+              const SizedBox(height: 24),
+              _buildHolidaysCard(holidaysAsync),
               const SizedBox(height: 24),
               _buildQuickActionsGrid(context),
               const SizedBox(height: 24),
@@ -443,6 +450,48 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
     AsyncValue<List<WorkerModel>> workersAsync,
     AsyncValue<List<PayPeriod>> payPeriodsAsync,
   ) {
+    // Calculate Next Payroll Date
+    final nextPeriod = payPeriodsAsync.whenOrNull(
+      data: (periods) {
+        final active = periods.where((p) => 
+          p.status == PayPeriodStatus.active || 
+          p.status == PayPeriodStatus.draft || 
+          p.status == PayPeriodStatus.processing
+        ).toList();
+        
+        if (active.isEmpty) return null;
+        
+        // Sort by start date to get the earliest upcoming one
+        active.sort((a, b) => a.startDate.compareTo(b.startDate));
+        return active.first;
+      },
+    );
+
+    final nextPayrollDate = nextPeriod != null 
+        ? DateFormat('MMM d, y').format(nextPeriod.endDate)
+        : 'No active run';
+
+    // Calculate Estimated Cost
+    final totalCost = workersAsync.when(
+      data: (workers) {
+        double sum = 0;
+        final activeWorkers = workers.where((w) => w.isActive);
+        for (final w in activeWorkers) {
+          if (w.employmentType == 'HOURLY') {
+            // Estimate 160 hours for hourly workers if no timesheets
+            sum += (w.hourlyRate ?? 0) * 160;
+          } else {
+            sum += w.salaryGross;
+          }
+        }
+        return sum;
+      },
+      loading: () => 0.0,
+      error: (error, stackTrace) => 0.0,
+    );
+
+    final formattedCost = NumberFormat.currency(symbol: 'KES ', decimalDigits: 0).format(totalCost);
+
     return FadeTransition(
       opacity: _animationController,
       child: Container(
@@ -478,17 +527,17 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
                     color: Colors.white.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Text(
-                    'Due Soon',
-                    style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                  child: Text(
+                    nextPeriod != null ? 'Due in ${nextPeriod.daysUntilPayDate ?? 0} days' : 'No upcoming',
+                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Oct 30, 2025', // Dynamic date would go here
-              style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+            Text(
+              nextPayrollDate,
+              style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 24),
             Row(
@@ -508,7 +557,7 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
                 Expanded(
                   child: _buildSnapshotMetric(
                     'Total Cost (Est)',
-                    'KES 0', // Placeholder for actual calc
+                    formattedCost,
                     Icons.attach_money,
                   ),
                 ),
@@ -540,6 +589,114 @@ class _HomePageState extends ConsumerState<HomePage> with SingleTickerProviderSt
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildHolidaysCard(AsyncValue<List<HolidayModel>> holidaysAsync) {
+    return holidaysAsync.when(
+      data: (holidays) {
+        if (holidays.isEmpty) return const SizedBox.shrink();
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Holidays This Month',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF111827)),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.02),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                itemCount: holidays.length,
+                separatorBuilder: (context, index) => const Divider(height: 24),
+                itemBuilder: (context, index) {
+                  final holiday = holidays[index];
+                  final day = DateFormat('d').format(holiday.date);
+                  final weekday = DateFormat('EEE').format(holiday.date);
+                  
+                  return Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          children: [
+                            Text(
+                              weekday,
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red.shade700,
+                              ),
+                            ),
+                            Text(
+                              day,
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.red.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              holiday.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                                color: Color(0xFF111827),
+                              ),
+                            ),
+                            if (holiday.description != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text(
+                                  holiday.description!,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[500],
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (error, stackTrace) => const SizedBox.shrink(),
     );
   }
 
