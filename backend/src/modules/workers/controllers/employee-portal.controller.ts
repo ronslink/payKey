@@ -6,10 +6,12 @@ import {
   Param,
   UseGuards,
   Request,
+  ForbiddenException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 import { EmployeePortalService } from '../services/employee-portal.service';
 import { LeaveManagementService } from '../services/leave-management.service';
+import { FeatureAccessService } from '../../subscriptions/feature-access.service';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 
 @ApiTags('Employee Portal')
@@ -18,7 +20,8 @@ export class EmployeePortalController {
   constructor(
     private readonly employeePortalService: EmployeePortalService,
     private readonly leaveManagementService: LeaveManagementService,
-  ) {}
+    private readonly featureAccessService: FeatureAccessService,
+  ) { }
 
   // ============================================================
   // PUBLIC ENDPOINTS (No Auth Required)
@@ -92,6 +95,50 @@ export class EmployeePortalController {
       employerId: req.user.employerId,
       role: req.user.role,
     };
+  }
+
+  @Get('my-property')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get worker assigned property (Gold/Platinum only)',
+  })
+  async getMyProperty(@Request() req: any) {
+    // Check if employer has Gold/Platinum tier (geofencing feature)
+    const featureAccess = await this.featureAccessService.checkFeatureAccess(
+      req.user.employerId,
+      'geofencing',
+    );
+
+    if (!featureAccess.hasAccess) {
+      throw new ForbiddenException(
+        'Property details require Gold or Platinum subscription',
+      );
+    }
+
+    return this.employeePortalService.getWorkerProperty(req.user.workerId);
+  }
+
+  @Get('employer-properties')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get all employer properties for clock-in selection (Gold/Platinum only)',
+  })
+  async getEmployerProperties(@Request() req: any) {
+    // Check if employer has Gold/Platinum tier (geofencing feature)
+    const featureAccess = await this.featureAccessService.checkFeatureAccess(
+      req.user.employerId,
+      'geofencing',
+    );
+
+    if (!featureAccess.hasAccess) {
+      throw new ForbiddenException(
+        'Multi-property selection requires Gold or Platinum subscription',
+      );
+    }
+
+    return this.employeePortalService.getEmployerProperties(req.user.employerId);
   }
 
   @Get('my-leave-balance')

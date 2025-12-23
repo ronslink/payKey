@@ -6,50 +6,40 @@ part of 'property_model.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_Property _$PropertyFromJson(Map<String, dynamic> json) => _Property(
-  id: json['id'] as String,
-  userId: json['userId'] as String,
-  name: json['name'] as String,
-  address: json['address'] as String,
-  latitude: (json['latitude'] as num?)?.toDouble(),
-  longitude: (json['longitude'] as num?)?.toDouble(),
-  geofenceRadius: (json['geofenceRadius'] as num?)?.toInt() ?? 100,
-  isActive: json['isActive'] as bool? ?? true,
-  workerCount: (json['workerCount'] as num?)?.toInt() ?? 0,
-  createdAt: json['createdAt'] as String,
-  updatedAt: json['updatedAt'] as String,
-);
-
-Map<String, dynamic> _$PropertyToJson(_Property instance) => <String, dynamic>{
-  'id': instance.id,
-  'userId': instance.userId,
-  'name': instance.name,
-  'address': instance.address,
-  'latitude': instance.latitude,
-  'longitude': instance.longitude,
-  'geofenceRadius': instance.geofenceRadius,
-  'isActive': instance.isActive,
-  'workerCount': instance.workerCount,
-  'createdAt': instance.createdAt,
-  'updatedAt': instance.updatedAt,
-};
-
-_PropertySummary _$PropertySummaryFromJson(Map<String, dynamic> json) =>
-    _PropertySummary(
+_PropertyModel _$PropertyModelFromJson(Map<String, dynamic> json) =>
+    _PropertyModel(
       id: json['id'] as String,
       name: json['name'] as String,
       address: json['address'] as String,
-      workerCount: (json['workerCount'] as num).toInt(),
-      isActive: json['isActive'] as bool,
+      userId: json['userId'] as String,
+      geofenceRadius: (json['geofenceRadius'] as num?)?.toInt() ?? 100,
+      isActive: json['isActive'] as bool? ?? true,
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
+      what3words: json['what3words'] as String?,
+      workerCount: (json['workerCount'] as num?)?.toInt() ?? 0,
+      createdAt: json['createdAt'] == null
+          ? null
+          : DateTime.parse(json['createdAt'] as String),
+      updatedAt: json['updatedAt'] == null
+          ? null
+          : DateTime.parse(json['updatedAt'] as String),
     );
 
-Map<String, dynamic> _$PropertySummaryToJson(_PropertySummary instance) =>
+Map<String, dynamic> _$PropertyModelToJson(_PropertyModel instance) =>
     <String, dynamic>{
       'id': instance.id,
       'name': instance.name,
       'address': instance.address,
-      'workerCount': instance.workerCount,
+      'userId': instance.userId,
+      'geofenceRadius': instance.geofenceRadius,
       'isActive': instance.isActive,
+      'latitude': instance.latitude,
+      'longitude': instance.longitude,
+      'what3words': instance.what3words,
+      'workerCount': instance.workerCount,
+      'createdAt': instance.createdAt?.toIso8601String(),
+      'updatedAt': instance.updatedAt?.toIso8601String(),
     };
 
 _CreatePropertyRequest _$CreatePropertyRequestFromJson(
@@ -57,9 +47,10 @@ _CreatePropertyRequest _$CreatePropertyRequestFromJson(
 ) => _CreatePropertyRequest(
   name: json['name'] as String,
   address: json['address'] as String,
+  geofenceRadius: (json['geofenceRadius'] as num?)?.toInt() ?? 100,
   latitude: (json['latitude'] as num?)?.toDouble(),
   longitude: (json['longitude'] as num?)?.toDouble(),
-  geofenceRadius: (json['geofenceRadius'] as num?)?.toInt() ?? 100,
+  what3words: json['what3words'] as String?,
 );
 
 Map<String, dynamic> _$CreatePropertyRequestToJson(
@@ -67,9 +58,10 @@ Map<String, dynamic> _$CreatePropertyRequestToJson(
 ) => <String, dynamic>{
   'name': instance.name,
   'address': instance.address,
+  'geofenceRadius': instance.geofenceRadius,
   'latitude': instance.latitude,
   'longitude': instance.longitude,
-  'geofenceRadius': instance.geofenceRadius,
+  'what3words': instance.what3words,
 };
 
 _UpdatePropertyRequest _$UpdatePropertyRequestFromJson(
@@ -77,9 +69,10 @@ _UpdatePropertyRequest _$UpdatePropertyRequestFromJson(
 ) => _UpdatePropertyRequest(
   name: json['name'] as String?,
   address: json['address'] as String?,
+  geofenceRadius: (json['geofenceRadius'] as num?)?.toInt(),
   latitude: (json['latitude'] as num?)?.toDouble(),
   longitude: (json['longitude'] as num?)?.toDouble(),
-  geofenceRadius: (json['geofenceRadius'] as num?)?.toInt(),
+  what3words: json['what3words'] as String?,
   isActive: json['isActive'] as bool?,
 );
 
@@ -88,8 +81,9 @@ Map<String, dynamic> _$UpdatePropertyRequestToJson(
 ) => <String, dynamic>{
   'name': instance.name,
   'address': instance.address,
+  'geofenceRadius': instance.geofenceRadius,
   'latitude': instance.latitude,
   'longitude': instance.longitude,
-  'geofenceRadius': instance.geofenceRadius,
+  'what3words': instance.what3words,
   'isActive': instance.isActive,
 };

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:dio/dio.dart';
+import '../../../../core/network/api_service.dart';
 import '../providers/workers_provider.dart';
 import '../../data/models/worker_model.dart';
 
@@ -119,6 +122,64 @@ class _WorkersListPageState extends ConsumerState<WorkersListPage> {
     );
   }
 
+  Future<void> _importFromExcel() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['xlsx', 'xls'],
+      );
+      
+      if (result == null || result.files.isEmpty) return;
+      
+      final file = result.files.first;
+      if (file.bytes == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not read file')),
+        );
+        return;
+      }
+
+      // Show loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Importing workers...')),
+      );
+
+      final api = ref.read(apiServiceProvider);
+      final response = await api.dio.post(
+        '/workers/import',
+        data: FormData.fromMap({
+          'file': MultipartFile.fromBytes(
+            file.bytes!,
+            filename: file.name,
+          ),
+        }),
+      );
+
+      final data = response.data as Map<String, dynamic>;
+      final success = data['success'] ?? 0;
+      final failed = data['failed'] ?? 0;
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Imported $success workers. $failed failed.'),
+            backgroundColor: failed == 0 ? _AppColors.success : Colors.orange,
+          ),
+        );
+        _refreshWorkers();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Import failed: $e'),
+            backgroundColor: _AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Build
   // ---------------------------------------------------------------------------
@@ -174,9 +235,21 @@ class _WorkersListPageState extends ConsumerState<WorkersListPage> {
           onSelected: (value) {
             if (value == 'archived') {
               context.push('/workers/archived');
+            } else if (value == 'import') {
+              _importFromExcel();
             }
           },
           itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'import',
+              child: Row(
+                children: [
+                  Icon(Icons.upload_file, color: _AppColors.primary),
+                  SizedBox(width: 8),
+                  Text('Import from Excel'),
+                ],
+              ),
+            ),
             const PopupMenuItem(
               value: 'archived',
               child: Row(

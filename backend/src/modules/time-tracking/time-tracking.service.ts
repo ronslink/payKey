@@ -15,7 +15,7 @@ export class TimeTrackingService {
     private timeEntryRepository: Repository<TimeEntry>,
     @InjectRepository(Worker)
     private workersRepository: Repository<Worker>,
-  ) {}
+  ) { }
 
   /**
    * Clock in a worker
@@ -25,6 +25,7 @@ export class TimeTrackingService {
     userId: string,
     recordedById: string,
     location?: { lat: number; lng: number },
+    propertyId?: string,
   ): Promise<TimeEntry> {
     // Check if worker exists and belongs to employer
     const worker = await this.workersRepository.findOne({
@@ -36,19 +37,36 @@ export class TimeTrackingService {
       throw new NotFoundException('Worker not found');
     }
 
+    // Determine which property to use: explicit propertyId or worker's assigned property
+    let activeProperty = worker.property;
+    let activePropertyId = worker.propertyId;
+
+    if (propertyId) {
+      // Validate propertyId belongs to employer
+      const selectedProperty = await this.workersRepository.manager.findOne(
+        'properties',
+        { where: { id: propertyId, userId } },
+      );
+      if (!selectedProperty) {
+        throw new BadRequestException('Invalid property selected');
+      }
+      activeProperty = selectedProperty as any;
+      activePropertyId = propertyId;
+    }
+
     // Geofencing Validation
     // Logic: If Employer is PLATINUM AND Property has Coordinates -> Validate
     if (
       worker.user?.tier === 'PLATINUM' &&
-      worker.property?.latitude &&
-      worker.property?.longitude
+      activeProperty?.latitude &&
+      activeProperty?.longitude
     ) {
       if (!location) {
         throw new BadRequestException(
           'Location is required for clock-in at this property',
         );
       }
-      this.validateGeofence(worker, location);
+      this.validateGeofenceForProperty(activeProperty, location);
     }
 
     // Check if already clocked in
@@ -67,6 +85,7 @@ export class TimeTrackingService {
       workerId,
       userId,
       recordedById,
+      propertyId: activePropertyId,
       clockIn: new Date(),
       status: TimeEntryStatus.ACTIVE,
       clockInLat: location?.lat,
@@ -94,9 +113,9 @@ export class TimeTrackingService {
     const a =
       Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
       Math.cos(lat1) *
-        Math.cos(lat2) *
-        Math.sin(deltaLng / 2) *
-        Math.sin(deltaLng / 2);
+      Math.cos(lat2) *
+      Math.sin(deltaLng / 2) *
+      Math.sin(deltaLng / 2);
 
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const distance = R * c; // in meters
@@ -104,6 +123,38 @@ export class TimeTrackingService {
     if (distance > (geofenceRadius || 100)) {
       throw new BadRequestException(
         `Clock-in rejected: You are ${Math.round(distance)}m away from the property location. Allowed radius: ${geofenceRadius || 100}m.`,
+      );
+    }
+  }
+
+  private validateGeofenceForProperty(
+    property: { latitude: number | null; longitude: number | null; geofenceRadius?: number },
+    location: { lat: number; lng: number },
+  ) {
+    if (!property.latitude || !property.longitude) return;
+
+    // Haversine Formula
+    const R = 6371e3; // Earth radius in meters
+    const lat1 = (Number(location.lat) * Math.PI) / 180;
+    const lat2 = (Number(property.latitude) * Math.PI) / 180;
+    const deltaLat =
+      ((Number(property.latitude) - Number(location.lat)) * Math.PI) / 180;
+    const deltaLng =
+      ((Number(property.longitude) - Number(location.lng)) * Math.PI) / 180;
+
+    const a =
+      Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+      Math.cos(lat1) *
+      Math.cos(lat2) *
+      Math.sin(deltaLng / 2) *
+      Math.sin(deltaLng / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = R * c; // in meters
+
+    if (distance > (property.geofenceRadius || 100)) {
+      throw new BadRequestException(
+        `Clock-in rejected: You are ${Math.round(distance)}m away from the property location. Allowed radius: ${property.geofenceRadius || 100}m.`,
       );
     }
   }
@@ -149,6 +200,46 @@ export class TimeTrackingService {
     entry.notes = options?.notes ?? null;
     entry.clockOutLat = options?.location?.lat ?? null;
     entry.clockOutLng = options?.location?.lng ?? null;
+    entry.status = TimeEntryStatus.COMPLETED;
+
+    return this.timeEntryRepository.save(entry);
+  }
+
+  /**
+   * Auto clock-out when worker leaves geofence
+   */
+  async autoClockOut(
+    workerId: string,
+    userId: string,
+    recordedById: string,
+    location: { lat: number; lng: number },
+  ): Promise<TimeEntry> {
+    // Find active entry
+    const entry = await this.timeEntryRepository.findOne({
+      where: {
+        workerId,
+        userId,
+        status: TimeEntryStatus.ACTIVE,
+      },
+      relations: ['property'],
+    });
+
+    if (!entry) {
+      throw new BadRequestException('Worker is not clocked in');
+    }
+
+    const clockOut = new Date();
+    const clockIn = new Date(entry.clockIn);
+
+    // Calculate hours worked (no break for auto clock-out)
+    const diffMs = clockOut.getTime() - clockIn.getTime();
+    const totalHours = Math.round((diffMs / (1000 * 60 * 60)) * 100) / 100;
+
+    entry.clockOut = clockOut;
+    entry.totalHours = Math.max(0, totalHours);
+    entry.notes = 'Auto clock-out: left geofence area';
+    entry.clockOutLat = location.lat;
+    entry.clockOutLng = location.lng;
     entry.status = TimeEntryStatus.COMPLETED;
 
     return this.timeEntryRepository.save(entry);

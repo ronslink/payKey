@@ -3,7 +3,7 @@
 
 services:
   db:
-    image: postgres:15-alpine
+    image: postgres:17-alpine
     container_name: paykey_db_prod
     restart: always
     environment:

@@ -11,6 +11,7 @@ import 'features/workers/presentation/pages/worker_form_page.dart';
 import 'features/workers/presentation/pages/worker_detail_page.dart';
 import 'features/workers/presentation/pages/terminate_worker_page.dart';
 import 'features/workers/presentation/pages/archived_workers_page.dart';
+import 'features/workers/presentation/pages/workers_import_page.dart';
 import 'features/workers/data/models/worker_model.dart';
 import 'features/payroll/presentation/pages/payroll_page.dart';
 import 'features/payroll/presentation/pages/run_payroll_page.dart';
@@ -45,6 +46,7 @@ import 'features/profile/presentation/pages/edit_profile_page.dart';
 // Core
 import 'core/network/api_service.dart';
 import 'core/widgets/feature_gate.dart';
+import 'core/theme/app_theme.dart';
 import 'main_layout.dart';
 
 // =============================================================================
@@ -87,53 +89,6 @@ abstract class AppConfig {
   static const String initialRoute = AppRoutes.login;
 }
 
-// =============================================================================
-// THEME
-// =============================================================================
-
-abstract class AppTheme {
-  static const _seedColor = Colors.deepPurple;
-
-  static final light = ThemeData(
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: _seedColor,
-      brightness: Brightness.light,
-    ),
-    useMaterial3: true,
-    appBarTheme: const AppBarTheme(
-      centerTitle: false,
-      elevation: 0,
-    ),
-    cardTheme: CardThemeData(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-    ),
-    elevatedButtonTheme: ElevatedButtonThemeData(
-      style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-      ),
-    ),
-    inputDecorationTheme: InputDecorationTheme(
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
-      filled: true,
-    ),
-  );
-
-  static final dark = ThemeData(
-    colorScheme: ColorScheme.fromSeed(
-      seedColor: _seedColor,
-      brightness: Brightness.dark,
-    ),
-    useMaterial3: true,
-  );
-}
 
 // =============================================================================
 // ROUTES
@@ -397,6 +352,11 @@ final _workerRoutes = <RouteBase>[
       final workerId = state.pathParameters['id']!;
       return TerminateWorkerPage(workerId: workerId);
     },
+  ),
+  GoRoute(
+    path: '/workers/import',
+    name: 'workersImport',
+    builder: (_, _) => const WorkersImportPage(),
   ),
 ];
 

@@ -91,7 +91,7 @@ services:
         condition: service_started
 
   db:
-    image: postgres:15-alpine
+    image: postgres:17-alpine
     restart: unless-stopped
     environment:
       - POSTGRES_USER=paykey

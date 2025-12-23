@@ -79,15 +79,26 @@ class PayrollRepository {
       operation: 'process payroll',
       request: () async {
         final response = await _authenticatedPost(
-          '/payroll/batch/process',
-          data: {
-            'workerIds': workerIds,
-            'payPeriodId': payPeriodId,
-            'processDate': DateTime.now().toIso8601String(),
-          },
+          '/payroll/finalize/$payPeriodId',
+          // Backend finalize uses stored drafts, so we don't need to send workerIds
+          // but we can send them for validation if needed in future.
+          // For now, the backend ignores body for finalize.
         );
 
-        return PayrollProcessingResult.fromJson(response.data);
+        final data = response.data;
+        // Backend returns: { payoutResults: { successCount, failureCount, ... }, ... }
+        final payoutResults = data['payoutResults'] as Map<String, dynamic>? ?? {};
+        final successCount = payoutResults['successCount'] as int? ?? 0;
+        final failureCount = payoutResults['failureCount'] as int? ?? 0;
+        
+        return PayrollProcessingResult(
+          totalProcessed: successCount + failureCount,
+          successCount: successCount,
+          failureCount: failureCount,
+          // Extract failed IDs if available, logic might need adjustment based on backend structure
+          failedWorkerIds: [], 
+          batchId: '', // No batch ID in finalize response currently
+        );
       },
     );
   }

@@ -10,6 +10,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { User, UserRole, UserTier } from '../../users/entities/user.entity';
 import { Worker } from '../entities/worker.entity';
+import { Property } from '../../properties/entities/property.entity';
 
 @Injectable()
 export class EmployeePortalService {
@@ -18,8 +19,10 @@ export class EmployeePortalService {
     private usersRepository: Repository<User>,
     @InjectRepository(Worker)
     private workersRepository: Repository<Worker>,
+    @InjectRepository(Property)
+    private propertyRepository: Repository<Property>,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
   /**
    * Generate an invite code for a worker
@@ -258,6 +261,67 @@ export class EmployeePortalService {
       hasInvite: !!worker.inviteCode,
       inviteExpiry: worker.inviteCodeExpiry,
     };
+  }
+
+  /**
+   * Get the property assigned to a worker (for clock-in display)
+   * Returns null if worker has no assigned property
+   */
+  async getWorkerProperty(
+    workerId: string,
+  ): Promise<{
+    id: string;
+    name: string;
+    address: string;
+    latitude: number | null;
+    longitude: number | null;
+    geofenceRadius: number;
+  } | null> {
+    const worker = await this.workersRepository.findOne({
+      where: { id: workerId },
+      relations: ['property'],
+    });
+
+    if (!worker || !worker.property) {
+      return null;
+    }
+
+    return {
+      id: worker.property.id,
+      name: worker.property.name,
+      address: worker.property.address,
+      latitude: worker.property.latitude,
+      longitude: worker.property.longitude,
+      geofenceRadius: worker.property.geofenceRadius || 100,
+    };
+  }
+
+  /**
+   * Get all active properties for an employer (for worker to select at clock-in)
+   */
+  async getEmployerProperties(
+    employerId: string,
+  ): Promise<Array<{
+    id: string;
+    name: string;
+    address: string;
+    latitude: number | null;
+    longitude: number | null;
+    geofenceRadius: number;
+  }>> {
+    const properties = await this.propertyRepository.find({
+      where: { userId: employerId, isActive: true },
+      order: { name: 'ASC' },
+    });
+
+    return properties.map(p => ({
+      id: p.id,
+      name: p.name,
+      address: p.address,
+      latitude: p.latitude,
+      longitude: p.longitude,
+      geofenceRadius: p.geofenceRadius || 100,
+    }));
   }
 
   private normalizePhoneNumber(phone: string): string {

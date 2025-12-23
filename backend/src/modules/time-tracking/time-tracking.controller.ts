@@ -19,14 +19,14 @@ import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 @Controller('time-tracking')
 @UseGuards(JwtAuthGuard, PlatinumGuard)
 export class TimeTrackingController {
-  constructor(private readonly timeTrackingService: TimeTrackingService) {}
+  constructor(private readonly timeTrackingService: TimeTrackingService) { }
 
   @Post('clock-in/:workerId')
   @ApiOperation({ summary: 'Clock in a worker' })
   async clockIn(
     @Request() req: any,
     @Param('workerId') workerId: string,
-    @Body() body: { lat?: number; lng?: number },
+    @Body() body: { lat?: number; lng?: number; propertyId?: string },
   ) {
     const location =
       body.lat && body.lng ? { lat: body.lat, lng: body.lng } : undefined;
@@ -46,6 +46,7 @@ export class TimeTrackingController {
       ownerId,
       recorderId,
       location,
+      body.propertyId,
     );
   }
 
@@ -75,6 +76,25 @@ export class TimeTrackingController {
       notes: body.notes,
       location,
     });
+  }
+
+  @Post('auto-clock-out/:workerId')
+  @ApiOperation({ summary: 'Auto clock-out when worker leaves geofence' })
+  async autoClockOut(
+    @Request() req: any,
+    @Param('workerId') workerId: string,
+    @Body() body: { lat: number; lng: number },
+  ) {
+    const isWorker = req.user.role === 'WORKER';
+    const ownerId = isWorker ? req.user.employerId : req.user.userId;
+    const recorderId = req.user.userId;
+
+    return this.timeTrackingService.autoClockOut(
+      workerId,
+      ownerId,
+      recorderId,
+      { lat: body.lat, lng: body.lng },
+    );
   }
 
   @Get('status/:workerId')

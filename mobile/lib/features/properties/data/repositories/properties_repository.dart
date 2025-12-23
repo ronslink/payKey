@@ -12,56 +12,56 @@ class PropertiesRepository {
 
   PropertiesRepository(this._dio);
 
-  Future<List<Property>> getProperties() async {
+  Future<List<PropertyModel>> getProperties() async {
     try {
       final response = await _dio.get('/properties');
       return (response.data as List)
-          .map((e) => Property.fromJson(e))
+          .map((e) => PropertyModel.fromJson(e))
           .toList();
     } catch (e) {
       throw _handleError(e);
     }
   }
 
-  Future<List<PropertySummary>> getPropertySummaries() async {
+  Future<List<PropertyModel>> getPropertySummaries() async {
     try {
       final response = await _dio.get('/properties/summaries');
       return (response.data as List)
-          .map((e) => PropertySummary.fromJson(e))
+          .map((e) => PropertyModel.fromJson(e))
           .toList();
     } catch (e) {
       throw _handleError(e);
     }
   }
 
-  Future<Property> getProperty(String id) async {
+  Future<PropertyModel> getProperty(String id) async {
     try {
       final response = await _dio.get('/properties/$id');
-      return Property.fromJson(response.data);
+      return PropertyModel.fromJson(response.data);
     } catch (e) {
       throw _handleError(e);
     }
   }
 
-  Future<Property> createProperty(CreatePropertyRequest request) async {
+  Future<PropertyModel> createProperty(CreatePropertyRequest request) async {
     try {
       final response = await _dio.post(
         '/properties',
         data: request.toJson(),
       );
-      return Property.fromJson(response.data);
+      return PropertyModel.fromJson(response.data);
     } catch (e) {
       throw _handleError(e);
     }
   }
 
-  Future<Property> updateProperty(String id, UpdatePropertyRequest request) async {
+  Future<PropertyModel> updateProperty(String id, UpdatePropertyRequest request) async {
     try {
       final response = await _dio.patch(
         '/properties/$id',
         data: request.toJson(),
       );
-      return Property.fromJson(response.data);
+      return PropertyModel.fromJson(response.data);
     } catch (e) {
       throw _handleError(e);
     }
