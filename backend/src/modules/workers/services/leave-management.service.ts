@@ -5,7 +5,11 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, In } from 'typeorm';
-import { LeaveRequest, LeaveStatus } from '../entities/leave-request.entity';
+import {
+  LeaveRequest,
+  LeaveStatus,
+  LeaveOrigin,
+} from '../entities/leave-request.entity';
 import { Worker } from '../entities/worker.entity';
 import {
   CreateLeaveRequestDto,
@@ -20,7 +24,7 @@ export class LeaveManagementService {
     private leaveRequestRepository: Repository<LeaveRequest>,
     @InjectRepository(Worker)
     private workersRepository: Repository<Worker>,
-  ) { }
+  ) {}
 
   async createLeaveRequest(
     userId: string,
@@ -82,6 +86,7 @@ export class LeaveManagementService {
       totalDays,
       dailyPayRate,
       paidLeave: createLeaveRequestDto.paidLeave ?? true,
+      origin: createLeaveRequestDto.origin ?? LeaveOrigin.EMPLOYER,
     });
 
     return this.leaveRequestRepository.save(leaveRequest);

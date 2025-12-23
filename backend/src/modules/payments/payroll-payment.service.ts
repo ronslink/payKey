@@ -23,7 +23,7 @@ export class PayrollPaymentService {
     private mpesaService: MpesaService,
     @InjectRepository(PayrollRecord)
     private payrollRecordRepository: Repository<PayrollRecord>,
-  ) { }
+  ) {}
 
   /**
    * Process payouts for a list of finalized payroll records
@@ -44,10 +44,16 @@ export class PayrollPaymentService {
     let failureCount = 0;
 
     // Separate Bank vs Mobile records
-    const mobileRecords = payrollRecords.filter(r =>
-      !r.worker.paymentMethod || r.worker.paymentMethod === PaymentMethod.MPESA
+    const mobileRecords = payrollRecords.filter(
+      (r) =>
+        !r.worker.paymentMethod ||
+        r.worker.paymentMethod === PaymentMethod.MPESA,
     );
-    bankRecords.push(...payrollRecords.filter(r => r.worker.paymentMethod === PaymentMethod.BANK));
+    bankRecords.push(
+      ...payrollRecords.filter(
+        (r) => r.worker.paymentMethod === PaymentMethod.BANK,
+      ),
+    );
 
     // Process Mobile Payments (Batched)
     const BATCH_SIZE = 10;
@@ -68,7 +74,7 @@ export class PayrollPaymentService {
     }
 
     // Tally results
-    allResults.forEach(r => {
+    allResults.forEach((r) => {
       if (r.success) successCount++;
       else failureCount++;
     });
@@ -77,7 +83,9 @@ export class PayrollPaymentService {
     let bankFile: string | undefined;
     if (bankRecords.length > 0) {
       bankFile = this.generateBankFileContent(bankRecords);
-      this.logger.log('Generated Bank File for ' + bankRecords.length + ' records');
+      this.logger.log(
+        'Generated Bank File for ' + bankRecords.length + ' records',
+      );
     }
 
     const duration = Date.now() - startTime;
@@ -125,10 +133,11 @@ export class PayrollPaymentService {
             splitChunk: currentAmount,
             taxBreakdown: record.taxBreakdown,
             grossSalary: record.grossSalary,
-            netPay: record.netSalary
+            netPay: record.netSalary,
           },
         });
-        const savedTransaction = await this.transactionRepository.save(transaction);
+        const savedTransaction =
+          await this.transactionRepository.save(transaction);
 
         // Send B2C for this chunk
         const b2cResult = await this.mpesaService.sendB2C(
@@ -139,9 +148,9 @@ export class PayrollPaymentService {
         );
 
         if (b2cResult.error) {
-          // If a chunk fails, we log it and potentially stop or continue. 
+          // If a chunk fails, we log it and potentially stop or continue.
           // For safety, we'll mark this chunk failed and stop processing the rest to avoid partial mess if possible,
-          // OR we could try to process other chunks. 
+          // OR we could try to process other chunks.
           // Safest to stop and report error so admin can handle the rest manually.
           errors.push(b2cResult.error);
           break; // Stop splitting on first error
@@ -164,10 +173,11 @@ export class PayrollPaymentService {
 
       // In dev mode, B2C is simulated and succeeds immediately
       // In production, status would be 'processing' until callback confirms
-      record.status = PayrollStatus.FINALIZED;  // Confirm finalized status
-      record.paymentStatus = process.env.NODE_ENV !== 'production' ? 'paid' : 'processing';
+      record.status = PayrollStatus.FINALIZED; // Confirm finalized status
+      record.paymentStatus =
+        process.env.NODE_ENV !== 'production' ? 'paid' : 'processing';
       record.paymentDate = new Date();
-      record.finalizedAt = record.finalizedAt || new Date();  // Ensure finalizedAt is set
+      record.finalizedAt = record.finalizedAt || new Date(); // Ensure finalizedAt is set
       await this.payrollRecordRepository.save(record);
 
       return {
@@ -198,7 +208,7 @@ export class PayrollPaymentService {
         metadata: {
           payrollRecordId: record.id,
           workerName: record.worker.name,
-          provider: 'BANK'
+          provider: 'BANK',
         },
       });
       await this.transactionRepository.save(transaction);
@@ -211,14 +221,14 @@ export class PayrollPaymentService {
         workerId: record.workerId,
         workerName: record.worker.name,
         success: true,
-        message: 'Bank transfer simulated'
+        message: 'Bank transfer simulated',
       };
     } catch (error) {
       return {
         workerId: record.workerId,
         workerName: record.worker?.name,
         success: false,
-        error: error.message
+        error: error.message,
       };
     }
   }
@@ -226,10 +236,12 @@ export class PayrollPaymentService {
   private generateBankFileContent(records: PayrollRecord[]): string {
     // Simple CSV format: Account Name, Account Number, Amount, Currency
     const header = 'Worker Name,Account Number,Amount,Currency\n';
-    const rows = records.map(r => {
-      // Assuming account number is in worker details or metadata. Using phone as fallback/placeholder
-      return `${r.worker.name},${r.worker.phoneNumber || 'N/A'},${r.netSalary},KES`;
-    }).join('\n');
+    const rows = records
+      .map((r) => {
+        // Assuming account number is in worker details or metadata. Using phone as fallback/placeholder
+        return `${r.worker.name},${r.worker.phoneNumber || 'N/A'},${r.netSalary},KES`;
+      })
+      .join('\n');
     return header + rows;
   }
 }

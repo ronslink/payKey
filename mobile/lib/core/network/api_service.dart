@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:file_picker/file_picker.dart';
 import '../constants/api_constants.dart';
 
 /// Provider for the singleton ApiService instance
@@ -49,6 +50,8 @@ class ApiService {
   late final ReportEndpoints reports;
   late final EmployeePortalEndpoints employeePortal;
   late final TimeTrackingEndpoints timeTracking;
+  late final PropertyEndpoints properties;
+  late final WorkersConvertEndpoints workersConvert;
 
   // ---------------------------------------------------------------------------
   // Initialization
@@ -81,6 +84,8 @@ class ApiService {
     reports = ReportEndpoints(this);
     employeePortal = EmployeePortalEndpoints(this);
     timeTracking = TimeTrackingEndpoints(this);
+    properties = PropertyEndpoints(this);
+    workersConvert = WorkersConvertEndpoints(this);
   }
 
   InterceptorsWrapper _createAuthInterceptor() {
@@ -1015,6 +1020,13 @@ class EmployeePortalEndpoints extends BaseEndpoints {
   /// Employee: Get own profile
   Future<Response> getMyProfile() => _api.get('/employee-portal/my-profile');
 
+  /// Employee: Get assigned property (Gold/Platinum only)
+  /// Returns property details for clock-in location display
+  Future<Response> getMyProperty() => _api.get('/employee-portal/my-property');
+
+  /// Employee: Get all employer properties for clock-in selection (Gold/Platinum only)
+  Future<Response> getEmployerProperties() => _api.get('/employee-portal/employer-properties');
+
   /// Employee: Get own leave balance
   Future<Response> getMyLeaveBalance() => _api.get('/employee-portal/my-leave-balance');
 
@@ -1069,10 +1081,11 @@ class TimeTrackingEndpoints extends BaseEndpoints {
   const TimeTrackingEndpoints(super.api);
 
   /// Clock in a worker
-  Future<Response> clockIn(String workerId, {double? lat, double? lng}) {
+  Future<Response> clockIn(String workerId, {double? lat, double? lng, String? propertyId}) {
     return _api.post('/time-tracking/clock-in/$workerId', data: {
       if (lat != null) 'lat': lat,
       if (lng != null) 'lng': lng,
+      if (propertyId != null) 'propertyId': propertyId,
     });
   }
 
@@ -1095,6 +1108,14 @@ class TimeTrackingEndpoints extends BaseEndpoints {
   /// Get clock-in status for a worker
   Future<Response> getStatus(String workerId) {
     return _api.get('/time-tracking/status/$workerId');
+  }
+
+  /// Auto clock-out when worker leaves geofence
+  Future<Response> autoClockOut(String workerId, {required double lat, required double lng}) {
+    return _api.post('/time-tracking/auto-clock-out/$workerId', data: {
+      'lat': lat,
+      'lng': lng,
+    });
   }
 
   /// Get live clock-in status of all workers
@@ -1144,11 +1165,64 @@ class TimeTrackingEndpoints extends BaseEndpoints {
     int? breakMinutes,
     required String reason,
   }) {
-    return _api.patch('/time-tracking/adjust/$entryId', data: {
+    return _api.patch('/time-tracking/entries/$entryId/adjust', data: {
       if (clockIn != null) 'clockIn': clockIn,
       if (clockOut != null) 'clockOut': clockOut,
       if (breakMinutes != null) 'breakMinutes': breakMinutes,
       'reason': reason,
     });
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Property Endpoints
+// -----------------------------------------------------------------------------
+
+class PropertyEndpoints extends BaseEndpoints {
+  const PropertyEndpoints(super.api);
+
+  Future<Response> getAll() => _api.get('/properties');
+
+  Future<Response> getById(String id) => _api.get('/properties/$id');
+
+  Future<Response> create(Map<String, dynamic> data) =>
+      _api.post('/properties', data: data);
+
+  Future<Response> update(String id, Map<String, dynamic> data) =>
+      _api.patch('/properties/$id', data: data);
+
+  Future<Response> delete(String id) => _api.delete('/properties/$id');
+
+  Future<Response> getWorkers(String id) => _api.get('/properties/$id/workers');
+}
+
+// -----------------------------------------------------------------------------
+// Workers Convert Endpoints
+// -----------------------------------------------------------------------------
+
+class WorkersConvertEndpoints extends BaseEndpoints {
+  const WorkersConvertEndpoints(super.api);
+
+  Future<Response> importWorkers(PlatformFile file) async {
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromBytes(
+        file.bytes!, 
+        filename: file.name,
+      ),
+    });
+    
+    return _api.post('/workers/import', data: formData);
+  }
+
+  Future<List<int>> downloadTemplate() async {
+    try {
+      final response = await _api.dio.get<List<int>>(
+        '/workers/import/template',
+        options: Options(responseType: ResponseType.bytes),
+      );
+      return response.data ?? [];
+    } catch (e) {
+      throw _api.handleError(e);
+    }
   }
 }

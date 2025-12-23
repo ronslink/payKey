@@ -63,6 +63,7 @@ export class SubscriptionPaymentsController {
   }
 
   @Get('current')
+  @UseGuards(JwtAuthGuard)
   async getCurrentSubscription(@Request() req: any) {
     const subscription = await this.subscriptionRepository.findOne({
       where: {
@@ -148,6 +149,7 @@ export class SubscriptionPaymentsController {
   }
 
   @Get('payment-history')
+  @UseGuards(JwtAuthGuard)
   async getPaymentHistory(@Request() req: any) {
     const payments = await this.paymentRepository.find({
       where: { userId: req.user.userId },
@@ -158,6 +160,7 @@ export class SubscriptionPaymentsController {
   }
 
   @Get('usage')
+  @UseGuards(JwtAuthGuard)
   async getUsage(@Request() req: any) {
     const subscription = await this.subscriptionRepository.findOne({
       where: { userId: req.user.userId, status: 'ACTIVE' as any },
@@ -203,7 +206,10 @@ export class SubscriptionPaymentsController {
   }
 
   @Get('success')
-  async handleSuccess(@Query('session_id') sessionId: string, @Res() res: Response) {
+  async handleSuccess(
+    @Query('session_id') sessionId: string,
+    @Res() res: Response,
+  ) {
     // Return simple HTML success page that deep links back to app or tells user to close browser
     const html = `
       <!DOCTYPE html>

@@ -622,7 +622,7 @@ class _EmploymentDetailsSection extends StatelessWidget {
         
         // Employment Type Dropdown
         DropdownButtonFormField<String>(
-          value: employmentType,
+          initialValue: employmentType,
           decoration: const InputDecoration(
             labelText: 'Employment Type',
             border: OutlineInputBorder(),

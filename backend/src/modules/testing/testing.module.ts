@@ -9,16 +9,16 @@ import { TaxPayment } from '../tax-payments/entities/tax-payment.entity';
 import { User } from '../users/entities/user.entity';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([
-            PayPeriod,
-            PayrollRecord,
-            TaxSubmission,
-            TaxPayment,
-            User,
-        ]),
-    ],
-    controllers: [TestingController],
-    providers: [TestingService],
+  imports: [
+    TypeOrmModule.forFeature([
+      PayPeriod,
+      PayrollRecord,
+      TaxSubmission,
+      TaxPayment,
+      User,
+    ]),
+  ],
+  controllers: [TestingController],
+  providers: [TestingService],
 })
-export class TestingModule { }
+export class TestingModule {}

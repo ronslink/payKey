@@ -1,8 +1,17 @@
-import { Injectable, NotFoundException, StreamableFile } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  StreamableFile,
+  Inject,
+  Optional,
+  Logger,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 import { Worker } from '../workers/entities/worker.entity';
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+
 const PDFDocument = require('pdfkit');
 import archiver from 'archiver';
 import { Readable } from 'stream';
@@ -10,11 +19,21 @@ import { Transaction } from '../payments/entities/transaction.entity';
 import { LeaveRequest } from '../workers/entities/leave-request.entity';
 import { TaxSubmission } from '../taxes/entities/tax-submission.entity';
 import { User } from '../users/entities/user.entity';
-import { PayrollRecord, PayrollStatus } from '../payroll/entities/payroll-record.entity';
+import {
+  PayrollRecord,
+  PayrollStatus,
+} from '../payroll/entities/payroll-record.entity';
 import { PayPeriod } from '../payroll/entities/pay-period.entity';
+
+// Cache TTLs
+const DASHBOARD_CACHE_TTL = 5 * 60 * 1000; // 5 minutes for dashboard
+const P9_CACHE_TTL = 60 * 60 * 1000; // 1 hour for P9 reports (rarely change)
+const STATUTORY_CACHE_TTL = 15 * 60 * 1000; // 15 minutes for statutory reports
 
 @Injectable()
 export class ReportsService {
+  private readonly logger = new Logger(ReportsService.name);
+
   constructor(
     @InjectRepository(Worker)
     private workersRepository: Repository<Worker>,
@@ -30,7 +49,8 @@ export class ReportsService {
     private payPeriodRepository: Repository<PayPeriod>,
     @InjectRepository(TaxSubmission)
     private taxSubmissionRepository: Repository<TaxSubmission>,
-  ) { }
+    @Optional() @Inject(CACHE_MANAGER) private cacheManager?: Cache,
+  ) {}
 
   async getMonthlyPayrollReport(userId: string, year: number, month: number) {
     const startDate = new Date(year, month - 1, 1);
@@ -147,7 +167,9 @@ export class ReportsService {
   }
 
   async getPayrollSummaryByPeriod(userId: string, payPeriodId: string) {
-    console.log(`Getting payroll summary for user ${userId} and period ${payPeriodId}`);
+    console.log(
+      `Getting payroll summary for user ${userId} and period ${payPeriodId}`,
+    );
     const payPeriod = await this.payPeriodRepository.findOne({
       where: { id: payPeriodId, userId },
     });
@@ -172,7 +194,7 @@ export class ReportsService {
       workerCount: records.length,
     };
 
-    const mappedRecords = records.map(record => {
+    const mappedRecords = records.map((record) => {
       const gross = Number(record.grossSalary);
       const net = Number(record.netSalary);
       const paye = Number(record.taxBreakdown?.paye || 0);
@@ -199,8 +221,8 @@ export class ReportsService {
           nssf,
           nhif,
           housingLevy,
-          total: totalDeductions
-        }
+          total: totalDeductions,
+        },
       };
     });
 
@@ -220,8 +242,10 @@ export class ReportsService {
     summary.totals.paye = Math.round(summary.totals.paye * 100) / 100;
     summary.totals.nssf = Math.round(summary.totals.nssf * 100) / 100;
     summary.totals.nhif = Math.round(summary.totals.nhif * 100) / 100;
-    summary.totals.housingLevy = Math.round(summary.totals.housingLevy * 100) / 100;
-    summary.totals.totalDeductions = Math.round(summary.totals.totalDeductions * 100) / 100;
+    summary.totals.housingLevy =
+      Math.round(summary.totals.housingLevy * 100) / 100;
+    summary.totals.totalDeductions =
+      Math.round(summary.totals.totalDeductions * 100) / 100;
 
     return summary;
   }
@@ -242,7 +266,7 @@ export class ReportsService {
         totalDeductions: summary.totals.totalDeductions,
         workerCount: summary.totals.workerCount,
       },
-      employees: summary.records.map(r => ({
+      employees: summary.records.map((r) => ({
         name: r.workerName,
         grossPay: r.grossPay,
         nssf: r.taxBreakdown.nssf,
@@ -317,7 +341,9 @@ export class ReportsService {
     };
   }
   async getP9Report(userId: string, year: number, workerId?: string) {
-    console.log(`Getting P9 report for user ${userId}, year ${year}, worker ${workerId || 'ALL'}`);
+    console.log(
+      `Getting P9 report for user ${userId}, year ${year}, worker ${workerId || 'ALL'}`,
+    );
     const startDate = new Date(year, 0, 1);
     const endDate = new Date(year, 11, 31, 23, 59, 59);
 
@@ -353,20 +379,22 @@ export class ReportsService {
           workerId: record.workerId,
           workerName: record.worker?.name || 'Unknown',
           kraPin: record.worker?.kraPin || '',
-          months: Array(12).fill(null).map((_, i) => ({
-            month: i + 1,
-            basicSalary: 0,
-            benefits: 0,
-            grossPay: 0,
-            contribution: 0, // NSSF
-            taxablePay: 0,
-            taxCharged: 0,
-            relief: 0,
-            paye: 0,
-            valueOfQuarters: 0,
-            ownerOccupiedInterest: 0,
-            retirementContribution: 0,
-          })),
+          months: Array(12)
+            .fill(null)
+            .map((_, i) => ({
+              month: i + 1,
+              basicSalary: 0,
+              benefits: 0,
+              grossPay: 0,
+              contribution: 0, // NSSF
+              taxablePay: 0,
+              taxCharged: 0,
+              relief: 0,
+              paye: 0,
+              valueOfQuarters: 0,
+              ownerOccupiedInterest: 0,
+              retirementContribution: 0,
+            })),
           totals: {
             basicSalary: 0,
             grossPay: 0,
@@ -380,7 +408,8 @@ export class ReportsService {
       const report = workerReports[record.workerId];
 
       const basicSalary = Number(record.grossSalary || 0);
-      const benefits = Number(record.bonuses || 0) + Number(record.otherEarnings || 0);
+      const benefits =
+        Number(record.bonuses || 0) + Number(record.otherEarnings || 0);
       const gross = basicSalary + benefits;
       const nssf = Number(record.taxBreakdown?.nssf || 0);
       const paye = Number(record.taxBreakdown?.paye || 0);
@@ -472,7 +501,9 @@ export class ReportsService {
 
     let worker;
     if (workerId) {
-      worker = await this.workersRepository.findOne({ where: { id: workerId } }); // Need full object here for name etc
+      worker = await this.workersRepository.findOne({
+        where: { id: workerId },
+      }); // Need full object here for name etc
     } else {
       worker = await this.workersRepository.findOne({
         where: { linkedUserId: userId },
@@ -502,20 +533,22 @@ export class ReportsService {
       workerId: worker.id,
       workerName: worker.name,
       kraPin: worker.kraPin || '',
-      months: Array(12).fill(null).map((_, i) => ({
-        month: i + 1,
-        basicSalary: 0,
-        benefits: 0,
-        grossPay: 0,
-        contribution: 0,
-        taxablePay: 0,
-        taxCharged: 0,
-        relief: 0,
-        paye: 0,
-        valueOfQuarters: 0,
-        ownerOccupiedInterest: 0,
-        retirementContribution: 0,
-      })),
+      months: Array(12)
+        .fill(null)
+        .map((_, i) => ({
+          month: i + 1,
+          basicSalary: 0,
+          benefits: 0,
+          grossPay: 0,
+          contribution: 0,
+          taxablePay: 0,
+          taxCharged: 0,
+          relief: 0,
+          paye: 0,
+          valueOfQuarters: 0,
+          ownerOccupiedInterest: 0,
+          retirementContribution: 0,
+        })),
       totals: {
         basicSalary: 0,
         grossPay: 0,
@@ -571,10 +604,17 @@ export class ReportsService {
       doc.on('error', (err: any) => reject(err));
 
       // Header
-      doc.fontSize(14).font('Helvetica-Bold').text('KENYA REVENUE AUTHORITY', { align: 'center' });
+      doc
+        .fontSize(14)
+        .font('Helvetica-Bold')
+        .text('KENYA REVENUE AUTHORITY', { align: 'center' });
       doc.fontSize(12).text('INCOME TAX DEPARTMENT', { align: 'center' });
       doc.fontSize(16).text('P9A', { align: 'left' });
-      doc.fontSize(12).text('TAX DEDUCTION CARD YEAR ' + new Date().getFullYear(), { align: 'center' });
+      doc
+        .fontSize(12)
+        .text('TAX DEDUCTION CARD YEAR ' + new Date().getFullYear(), {
+          align: 'center',
+        });
       doc.moveDown();
 
       // Details Grid
@@ -582,10 +622,18 @@ export class ReportsService {
       let y = doc.y;
 
       doc.fontSize(10).font('Helvetica');
-      doc.text(`Employer's Name: ${report.employerName || 'My Company'}`, startX, y); // TODO: Fetch from config
+      doc.text(
+        `Employer's Name: ${report.employerName || 'My Company'}`,
+        startX,
+        y,
+      ); // TODO: Fetch from config
       doc.text(`Employee's Main Name: ${report.workerName}`, startX + 300, y);
       y += 20;
-      doc.text(`Employer's PIN: ${report.employerPin || 'P000000000A'}`, startX, y); // TODO: Fetch from config
+      doc.text(
+        `Employer's PIN: ${report.employerPin || 'P000000000A'}`,
+        startX,
+        y,
+      ); // TODO: Fetch from config
       doc.text(`Employee's PIN: ${report.kraPin}`, startX + 300, y);
 
       doc.moveDown(2);
@@ -593,9 +641,18 @@ export class ReportsService {
       // Table Headers
       const colWidths = [40, 60, 60, 60, 70, 70, 60, 70, 70, 70, 70, 70];
       const headers = [
-        'Month', 'Basic\nSalary', 'Benefits\nNon-Cash', 'Value of\nQuarters', 'Total\nGross Pay',
-        'Defined\nContrib.', 'Owner\nOcc Int.', 'Retirement\nContrib.', 'Chargeable\nPay',
-        'Tax\nCharged', 'Personal\nRelief', 'PAYE Tax'
+        'Month',
+        'Basic\nSalary',
+        'Benefits\nNon-Cash',
+        'Value of\nQuarters',
+        'Total\nGross Pay',
+        'Defined\nContrib.',
+        'Owner\nOcc Int.',
+        'Retirement\nContrib.',
+        'Chargeable\nPay',
+        'Tax\nCharged',
+        'Personal\nRelief',
+        'PAYE Tax',
       ]; // A to L
 
       // Draw Header Row
@@ -611,8 +668,14 @@ export class ReportsService {
       });
 
       // Draw Lines
-      doc.moveTo(startX, y - 5).lineTo(x, y - 5).stroke(); // Top
-      doc.moveTo(startX, y + headerHeight).lineTo(x, y + headerHeight).stroke(); // Bottom
+      doc
+        .moveTo(startX, y - 5)
+        .lineTo(x, y - 5)
+        .stroke(); // Top
+      doc
+        .moveTo(startX, y + headerHeight)
+        .lineTo(x, y + headerHeight)
+        .stroke(); // Bottom
 
       y += headerHeight + 5;
 
@@ -622,23 +685,71 @@ export class ReportsService {
       report.months.forEach((monthData: any) => {
         let rowX = startX;
         // Month Name
-        const monthName = new Date(0, monthData.month - 1).toLocaleString('default', { month: 'short' });
+        const monthName = new Date(0, monthData.month - 1).toLocaleString(
+          'default',
+          { month: 'short' },
+        );
 
-        doc.text(monthName, rowX, y, { width: colWidths[0], align: 'center' }); rowX += colWidths[0];
-        doc.text(this.formatMoney(monthData.basicSalary), rowX, y, { width: colWidths[1], align: 'right' }); rowX += colWidths[1];
-        doc.text(this.formatMoney(monthData.benefits), rowX, y, { width: colWidths[2], align: 'right' }); rowX += colWidths[2];
-        doc.text(this.formatMoney(monthData.valueOfQuarters), rowX, y, { width: colWidths[3], align: 'right' }); rowX += colWidths[3];
-        doc.text(this.formatMoney(monthData.grossPay), rowX, y, { width: colWidths[4], align: 'right' }); rowX += colWidths[4];
+        doc.text(monthName, rowX, y, { width: colWidths[0], align: 'center' });
+        rowX += colWidths[0];
+        doc.text(this.formatMoney(monthData.basicSalary), rowX, y, {
+          width: colWidths[1],
+          align: 'right',
+        });
+        rowX += colWidths[1];
+        doc.text(this.formatMoney(monthData.benefits), rowX, y, {
+          width: colWidths[2],
+          align: 'right',
+        });
+        rowX += colWidths[2];
+        doc.text(this.formatMoney(monthData.valueOfQuarters), rowX, y, {
+          width: colWidths[3],
+          align: 'right',
+        });
+        rowX += colWidths[3];
+        doc.text(this.formatMoney(monthData.grossPay), rowX, y, {
+          width: colWidths[4],
+          align: 'right',
+        });
+        rowX += colWidths[4];
 
         // Defined Contribution (E1) = 30% of A etc.. usually just NSSF here
-        doc.text(this.formatMoney(monthData.contribution), rowX, y, { width: colWidths[5], align: 'right' }); rowX += colWidths[5];
-        doc.text(this.formatMoney(monthData.ownerOccupiedInterest), rowX, y, { width: colWidths[6], align: 'right' }); rowX += colWidths[6];
-        doc.text(this.formatMoney(monthData.retirementContribution), rowX, y, { width: colWidths[7], align: 'right' }); rowX += colWidths[7];
+        doc.text(this.formatMoney(monthData.contribution), rowX, y, {
+          width: colWidths[5],
+          align: 'right',
+        });
+        rowX += colWidths[5];
+        doc.text(this.formatMoney(monthData.ownerOccupiedInterest), rowX, y, {
+          width: colWidths[6],
+          align: 'right',
+        });
+        rowX += colWidths[6];
+        doc.text(this.formatMoney(monthData.retirementContribution), rowX, y, {
+          width: colWidths[7],
+          align: 'right',
+        });
+        rowX += colWidths[7];
 
-        doc.text(this.formatMoney(monthData.taxablePay), rowX, y, { width: colWidths[8], align: 'right' }); rowX += colWidths[8];
-        doc.text(this.formatMoney(monthData.taxCharged), rowX, y, { width: colWidths[9], align: 'right' }); rowX += colWidths[9]; // J
-        doc.text(this.formatMoney(monthData.relief), rowX, y, { width: colWidths[10], align: 'right' }); rowX += colWidths[10]; // K
-        doc.text(this.formatMoney(monthData.paye), rowX, y, { width: colWidths[11], align: 'right' }); rowX += colWidths[11]; // L
+        doc.text(this.formatMoney(monthData.taxablePay), rowX, y, {
+          width: colWidths[8],
+          align: 'right',
+        });
+        rowX += colWidths[8];
+        doc.text(this.formatMoney(monthData.taxCharged), rowX, y, {
+          width: colWidths[9],
+          align: 'right',
+        });
+        rowX += colWidths[9]; // J
+        doc.text(this.formatMoney(monthData.relief), rowX, y, {
+          width: colWidths[10],
+          align: 'right',
+        });
+        rowX += colWidths[10]; // K
+        doc.text(this.formatMoney(monthData.paye), rowX, y, {
+          width: colWidths[11],
+          align: 'right',
+        });
+        rowX += colWidths[11]; // L
 
         y += 20;
       });
@@ -652,26 +763,51 @@ export class ReportsService {
       doc.text('TOTALS', startX, y, { width: colWidths[0], align: 'center' });
       let totalX = startX + colWidths[0];
 
-      doc.text(this.formatMoney(report.totals.basicSalary), totalX, y, { width: colWidths[1], align: 'right' }); totalX += colWidths[1];
+      doc.text(this.formatMoney(report.totals.basicSalary), totalX, y, {
+        width: colWidths[1],
+        align: 'right',
+      });
+      totalX += colWidths[1];
       // Skip breakdown totals if not calculated, just show key ones
       totalX += colWidths[2]; // Benefits
       totalX += colWidths[3]; // Quarters
-      doc.text(this.formatMoney(report.totals.grossPay), totalX, y, { width: colWidths[4], align: 'right' }); totalX += colWidths[4];
+      doc.text(this.formatMoney(report.totals.grossPay), totalX, y, {
+        width: colWidths[4],
+        align: 'right',
+      });
+      totalX += colWidths[4];
 
       // Skip to PAYE
-      totalX = startX + colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4] + colWidths[5] + colWidths[6] + colWidths[7] + colWidths[8] + colWidths[9] + colWidths[10];
-      doc.text(this.formatMoney(report.totals.paye), totalX, y, { width: colWidths[11], align: 'right' });
-
+      totalX =
+        startX +
+        colWidths[0] +
+        colWidths[1] +
+        colWidths[2] +
+        colWidths[3] +
+        colWidths[4] +
+        colWidths[5] +
+        colWidths[6] +
+        colWidths[7] +
+        colWidths[8] +
+        colWidths[9] +
+        colWidths[10];
+      doc.text(this.formatMoney(report.totals.paye), totalX, y, {
+        width: colWidths[11],
+        align: 'right',
+      });
 
       doc.end();
     });
   }
 
-  async generateP9Zip(userId: string, year: number): Promise<{ stream: Readable; filename: string }> {
+  async generateP9Zip(
+    userId: string,
+    year: number,
+  ): Promise<{ stream: Readable; filename: string }> {
     const reports = await this.getP9Report(userId, year);
     const archive = archiver('zip', { zlib: { level: 9 } });
 
-    for (const report of (reports as any[])) {
+    for (const report of reports) {
       const buffer = await this.generateP9Pdf(report);
       const filename = `P9_${year}_${report.workerName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
       archive.append(buffer, { name: filename });

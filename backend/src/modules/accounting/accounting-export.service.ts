@@ -40,7 +40,7 @@ export class AccountingExportService {
     @InjectRepository(AccountingExport)
     private accountingExportRepository: Repository<AccountingExport>,
     private activitiesService: ActivitiesService,
-  ) { }
+  ) {}
 
   async generateJournalEntries(
     payPeriodId: string,
@@ -57,7 +57,9 @@ export class AccountingExportService {
     });
 
     if (payrollRecords.length === 0) {
-      throw new Error('No finalized payroll records found for this period. Please process and finalize payroll first.');
+      throw new Error(
+        'No finalized payroll records found for this period. Please process and finalize payroll first.',
+      );
     }
 
     // Get user's account mappings

@@ -34,22 +34,25 @@ class _PaymentsPageState extends ConsumerState<PaymentsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: const Color(0xFFF3F4F6),
       appBar: AppBar(
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF111827),
         elevation: 0,
+        toolbarHeight: 80,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
+          children: const [
+            Text(
               'Payment History',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 24,
                 color: Color(0xFF111827),
+                letterSpacing: -0.5,
               ),
             ),
+            SizedBox(height: 4),
             Text(
               'View all your transactions',
               style: TextStyle(
@@ -71,15 +74,23 @@ class _PaymentsPageState extends ConsumerState<PaymentsPage> {
           // Tab Navigation
           Container(
             color: Colors.white,
-            child: Row(
-              children: [
-                Expanded(
-                  child: _buildTabButton('subscription', 'Subscriptions'),
-                ),
-                Expanded(
-                  child: _buildTabButton('payroll', 'Payroll'),
-                ),
-              ],
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFF3F4F6),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.all(4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _buildTabButton('subscription', 'Subscriptions'),
+                  ),
+                  Expanded(
+                    child: _buildTabButton('payroll', 'Payroll'),
+                  ),
+                ],
+              ),
             ),
           ),
           
@@ -98,21 +109,27 @@ class _PaymentsPageState extends ConsumerState<PaymentsPage> {
     final isActive = _activeTab == tab;
     return GestureDetector(
       onTap: () => setState(() => _activeTab = tab),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: isActive ? const Color(0xFF3B82F6) : Colors.transparent,
-              width: 2,
-            ),
-          ),
+          color: isActive ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: isActive
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : [],
         ),
         child: Text(
           label,
           textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 16,
+            fontSize: 14,
             fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
             color: isActive ? const Color(0xFF3B82F6) : const Color(0xFF6B7280),
           ),

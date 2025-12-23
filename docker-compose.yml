@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:15-alpine
+    image: postgres:17-alpine
     container_name: paykey_db
     restart: always
     environment:
@@ -58,6 +58,10 @@ services:
       - MPESA_INITIATOR_NAME=testapi
       - MPESA_SECURITY_CREDENTIAL=n5Vo+6OHz7F+IbfBBu1SHR1/dGRhSiqC9FITNLFKhG5vDWwhL5iJinc6m015n7DpmI4juwdSaQr6IXWzo7/Jc4lPrM+QJoEFjV2nkeCvGiW1Ayme9gr7e3A7O8Xfox1Qz6D3dEdDQ8SGQwsfww/0YLB7Jr7ZeIBwqpisyjJ4+ypUIKPdiP3/k77voiehSaSHHUxczT6L29xpDGFwVXTDh5ZMkZ72uu1AXVcHVM3ht7DoSPUmkQ70GI6l3l7GedYrfsCOuQzcUI/whPyNOmuQ467j35+zH5coH8cKagehGcQuI5Ghf2/4HQfUpme45KI1wK6gvhKBqH1MrgAGz26Tdw==
       - MPESA_CALLBACK_URL=https://dictatorily-contrarious-darby.ngrok-free.dev
+      # Stripe Configuration
+      - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
     env_file:
       - ./backend/.env
     depends_on:

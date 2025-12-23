@@ -26,7 +26,7 @@ export class TaxesService {
     private taxConfigService: TaxConfigService,
     private usersService: UsersService,
     private activitiesService: ActivitiesService,
-  ) { }
+  ) {}
 
   async createTaxTable(data: Partial<TaxTable>): Promise<TaxTable> {
     const taxTable = this.taxTableRepository.create(data);
@@ -178,7 +178,8 @@ export class TaxesService {
 
     if (shifConfig && shifConfig.configuration.percentage !== undefined) {
       // Percentage is stored as whole number (e.g., 2.75 for 2.75%), so divide by 100
-      const shifAmount = grossSalary * (shifConfig.configuration.percentage / 100);
+      const shifAmount =
+        grossSalary * (shifConfig.configuration.percentage / 100);
       const minAmount = shifConfig.configuration.minAmount || 0;
       return Math.round(Math.max(shifAmount, minAmount) * 100) / 100;
     }
@@ -204,8 +205,9 @@ export class TaxesService {
     if (housingConfig && housingConfig.configuration.percentage !== undefined) {
       // Percentage is stored as whole number (e.g., 1.5 for 1.5%), so divide by 100
       return (
-        Math.round(grossSalary * (housingConfig.configuration.percentage / 100) * 100) /
-        100
+        Math.round(
+          grossSalary * (housingConfig.configuration.percentage / 100) * 100,
+        ) / 100
       );
     }
 
@@ -508,7 +510,9 @@ export class TaxesService {
         summaries.set(key, {
           year,
           month,
-          monthName: new Intl.DateTimeFormat('en-US', { month: 'long' }).format(date),
+          monthName: new Intl.DateTimeFormat('en-US', { month: 'long' }).format(
+            date,
+          ),
           totalPaye: 0,
           totalNssf: 0,
           totalNhif: 0,
@@ -525,7 +529,11 @@ export class TaxesService {
       summary.totalNssf += Number(sub.totalNssf);
       summary.totalNhif += Number(sub.totalNhif);
       summary.totalHousingLevy += Number(sub.totalHousingLevy);
-      summary.totalTax += Number(sub.totalPaye) + Number(sub.totalNssf) + Number(sub.totalNhif) + Number(sub.totalHousingLevy);
+      summary.totalTax +=
+        Number(sub.totalPaye) +
+        Number(sub.totalNssf) +
+        Number(sub.totalNhif) +
+        Number(sub.totalHousingLevy);
 
       if (sub.status === TaxSubmissionStatus.PENDING) {
         summary.status = 'PENDING';
@@ -542,7 +550,11 @@ export class TaxesService {
     });
   }
 
-  async markMonthAsFiled(userId: string, year: number, month: number): Promise<void> {
+  async markMonthAsFiled(
+    userId: string,
+    year: number,
+    month: number,
+  ): Promise<void> {
     const submissions = await this.getSubmissions(userId);
     const toFile: TaxSubmission[] = [];
 
@@ -559,7 +571,9 @@ export class TaxesService {
     }
 
     if (toFile.length === 0) {
-      throw new NotFoundException('No pending submissions found for this month');
+      throw new NotFoundException(
+        'No pending submissions found for this month',
+      );
     }
 
     const filedDate = new Date();
@@ -579,7 +593,7 @@ export class TaxesService {
           count: toFile.length,
           year,
           month,
-          ids: toFile.map(s => s.id),
+          ids: toFile.map((s) => s.id),
         },
       );
     } catch (e) {

@@ -5,7 +5,12 @@ import { UsersService } from '../src/modules/users/users.service';
 import { WorkersService } from '../src/modules/workers/workers.service';
 import { Repository } from 'typeorm';
 import { User } from '../src/modules/users/entities/user.entity';
-import { Worker, EmploymentType, PaymentFrequency, PaymentMethod } from '../src/modules/workers/entities/worker.entity';
+import {
+  Worker,
+  EmploymentType,
+  PaymentFrequency,
+  PaymentMethod,
+} from '../src/modules/workers/entities/worker.entity';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 
@@ -78,15 +83,19 @@ async function seedTestData() {
           name: `${userData.firstName} Worker ${i + 1}`,
           phoneNumber: `+25471234567${(i % 10).toString()}`,
           email: `worker${i + 1}@example.com`,
-          salaryGross: 30000 + (i * 1000), // Varying salaries
+          salaryGross: 30000 + i * 1000, // Varying salaries
           startDate: '2024-01-01',
           jobTitle: `Position ${i + 1}`,
           employmentType: EmploymentType.FIXED,
           paymentFrequency: PaymentFrequency.MONTHLY,
           paymentMethod: i % 2 === 0 ? PaymentMethod.BANK : PaymentMethod.MPESA,
           bankName: i % 2 === 0 ? 'KCB Bank' : undefined,
-          bankAccount: i % 2 === 0 ? `1234567890${i.toString().padStart(3, '0')}` : undefined,
-          mpesaNumber: i % 2 === 1 ? `+25471234567${(i % 10).toString()}` : undefined,
+          bankAccount:
+            i % 2 === 0
+              ? `1234567890${i.toString().padStart(3, '0')}`
+              : undefined,
+          mpesaNumber:
+            i % 2 === 1 ? `+25471234567${(i % 10).toString()}` : undefined,
         });
 
         workers.push(worker);
@@ -139,7 +148,6 @@ async function seedTestData() {
     console.log('- 200 test workers created');
     console.log('- 7 compliance test workers created');
     console.log('- All with realistic Kenyan payroll data');
-
   } catch (error) {
     console.error('❌ Error seeding test data:', error);
     throw error;

@@ -1,73 +1,73 @@
 import { MigrationInterface, QueryRunner, Table } from 'typeorm';
 
 export class CreateTaxConfigsTable1733420000000 implements MigrationInterface {
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.createTable(
-            new Table({
-                name: 'tax_configs',
-                columns: [
-                    {
-                        name: 'id',
-                        type: 'uuid',
-                        isPrimary: true,
-                        generationStrategy: 'uuid',
-                        default: 'uuid_generate_v4()',
-                    },
-                    {
-                        name: 'taxType',
-                        type: 'enum',
-                        enum: ['PAYE', 'SHIF', 'NSSF_TIER1', 'NSSF_TIER2', 'HOUSING_LEVY'],
-                    },
-                    {
-                        name: 'rateType',
-                        type: 'enum',
-                        enum: ['PERCENTAGE', 'GRADUATED', 'TIERED'],
-                    },
-                    {
-                        name: 'effectiveFrom',
-                        type: 'date',
-                    },
-                    {
-                        name: 'effectiveTo',
-                        type: 'date',
-                        isNullable: true,
-                    },
-                    {
-                        name: 'configuration',
-                        type: 'jsonb',
-                    },
-                    {
-                        name: 'paymentDeadline',
-                        type: 'varchar',
-                        default: "'9th of following month'",
-                    },
-                    {
-                        name: 'isActive',
-                        type: 'boolean',
-                        default: true,
-                    },
-                    {
-                        name: 'notes',
-                        type: 'text',
-                        isNullable: true,
-                    },
-                    {
-                        name: 'createdAt',
-                        type: 'timestamp',
-                        default: 'CURRENT_TIMESTAMP',
-                    },
-                    {
-                        name: 'updatedAt',
-                        type: 'timestamp',
-                        default: 'CURRENT_TIMESTAMP',
-                    },
-                ],
-            }),
-            true,
-        );
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.createTable(
+      new Table({
+        name: 'tax_configs',
+        columns: [
+          {
+            name: 'id',
+            type: 'uuid',
+            isPrimary: true,
+            generationStrategy: 'uuid',
+            default: 'uuid_generate_v4()',
+          },
+          {
+            name: 'taxType',
+            type: 'enum',
+            enum: ['PAYE', 'SHIF', 'NSSF_TIER1', 'NSSF_TIER2', 'HOUSING_LEVY'],
+          },
+          {
+            name: 'rateType',
+            type: 'enum',
+            enum: ['PERCENTAGE', 'GRADUATED', 'TIERED'],
+          },
+          {
+            name: 'effectiveFrom',
+            type: 'date',
+          },
+          {
+            name: 'effectiveTo',
+            type: 'date',
+            isNullable: true,
+          },
+          {
+            name: 'configuration',
+            type: 'jsonb',
+          },
+          {
+            name: 'paymentDeadline',
+            type: 'varchar',
+            default: "'9th of following month'",
+          },
+          {
+            name: 'isActive',
+            type: 'boolean',
+            default: true,
+          },
+          {
+            name: 'notes',
+            type: 'text',
+            isNullable: true,
+          },
+          {
+            name: 'createdAt',
+            type: 'timestamp',
+            default: 'CURRENT_TIMESTAMP',
+          },
+          {
+            name: 'updatedAt',
+            type: 'timestamp',
+            default: 'CURRENT_TIMESTAMP',
+          },
+        ],
+      }),
+      true,
+    );
 
-        // Insert default tax configurations for Kenya (2024 rates)
-        await queryRunner.query(`
+    // Insert default tax configurations for Kenya (2024 rates)
+    await queryRunner.query(`
       INSERT INTO tax_configs ("taxType", "rateType", "effectiveFrom", "configuration", "isActive") VALUES
       -- PAYE (Graduated)
       ('PAYE', 'GRADUATED', '2024-01-01', 
@@ -104,9 +104,9 @@ export class CreateTaxConfigsTable1733420000000 implements MigrationInterface {
         '{"percentage": 1.5, "minAmount": 0, "maxAmount": null}',
         true);
     `);
-    }
+  }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.dropTable('tax_configs');
-    }
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.dropTable('tax_configs');
+  }
 }

@@ -1,6 +1,10 @@
 import { createConnection } from 'typeorm';
 import { config } from 'dotenv';
-import { TaxConfig, TaxType, RateType } from '../src/modules/tax-config/entities/tax-config.entity';
+import {
+  TaxConfig,
+  TaxType,
+  RateType,
+} from '../src/modules/tax-config/entities/tax-config.entity';
 
 // Load environment variables
 config();
@@ -8,7 +12,7 @@ config();
 async function seedTaxConfigs() {
   try {
     console.log('Connecting to database...');
-    
+
     // Create connection
     const connection = await createConnection({
       type: 'postgres',
@@ -73,7 +77,8 @@ async function seedTaxConfigs() {
           maxAmount: undefined,
         },
         paymentDeadline: '9th of following month',
-        notes: 'SHIF 2.75% of gross salary, min KES 300, no cap. Replaced NHIF Oct 1, 2024',
+        notes:
+          'SHIF 2.75% of gross salary, min KES 300, no cap. Replaced NHIF Oct 1, 2024',
       },
 
       // NSSF Tier 1 - February 2025 rates
@@ -113,7 +118,8 @@ async function seedTaxConfigs() {
           ],
         },
         paymentDeadline: '9th of following month',
-        notes: 'NSSF Tier II: 6% of KES 8,001-72,000 (max KES 3,840 each party)',
+        notes:
+          'NSSF Tier II: 6% of KES 8,001-72,000 (max KES 3,840 each party)',
       },
 
       // Housing Levy
@@ -128,7 +134,8 @@ async function seedTaxConfigs() {
           maxAmount: undefined,
         },
         paymentDeadline: '9th working day after end of month',
-        notes: 'Housing Levy: 1.5% employee + 1.5% employer. Fully tax-deductible from Dec 27, 2024',
+        notes:
+          'Housing Levy: 1.5% employee + 1.5% employer. Fully tax-deductible from Dec 27, 2024',
       },
     ];
 
@@ -143,15 +150,16 @@ async function seedTaxConfigs() {
 
     // Verify data
     const seededConfigs = await taxConfigRepository.find();
-    console.log(`\n📊 Total tax configurations in database: ${seededConfigs.length}`);
-    
+    console.log(
+      `\n📊 Total tax configurations in database: ${seededConfigs.length}`,
+    );
+
     for (const config of seededConfigs) {
       console.log(`- ${config.taxType}: ${config.notes}`);
     }
 
     await connection.close();
     console.log('Database connection closed.');
-    
   } catch (error) {
     console.error('Error seeding tax configurations:', error);
     process.exit(1);

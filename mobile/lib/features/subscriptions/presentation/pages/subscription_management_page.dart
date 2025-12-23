@@ -29,8 +29,17 @@ class _SubscriptionManagementPageState
     final userSubState = ref.watch(userSubscriptionProvider);
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF3F4F6),
       appBar: AppBar(
-        title: const Text('Plans & Pricing'),
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF111827),
+        title: const Text(
+          'Plans & Pricing',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            letterSpacing: -0.5,
+          ),
+        ),
         elevation: 0,
         actions: [
           IconButton(
@@ -38,7 +47,7 @@ class _SubscriptionManagementPageState
               ref.invalidate(subscriptionPlansProvider);
               ref.invalidate(userSubscriptionProvider);
             },
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh, color: Color(0xFF6B7280)),
             tooltip: 'Refresh',
           ),
         ],

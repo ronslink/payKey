@@ -28,12 +28,7 @@ describe('PayrollService Integration', () => {
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [
-        TestDatabaseModule,
-        WorkersModule,
-        TaxesModule,
-        PayrollModule,
-      ],
+      imports: [TestDatabaseModule, WorkersModule, TaxesModule, PayrollModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
@@ -42,10 +37,16 @@ describe('PayrollService Integration', () => {
     payrollService = moduleFixture.get<PayrollService>(PayrollService);
     workersService = moduleFixture.get<WorkersService>(WorkersService);
     taxesService = moduleFixture.get<TaxesService>(TaxesService);
-    
-    workerRepo = moduleFixture.get<Repository<Worker>>(getRepositoryToken(Worker));
-    payPeriodRepo = moduleFixture.get<Repository<PayPeriod>>(getRepositoryToken(PayPeriod));
-    payrollRecordRepo = moduleFixture.get<Repository<PayrollRecord>>(getRepositoryToken(PayrollRecord));
+
+    workerRepo = moduleFixture.get<Repository<Worker>>(
+      getRepositoryToken(Worker),
+    );
+    payPeriodRepo = moduleFixture.get<Repository<PayPeriod>>(
+      getRepositoryToken(PayPeriod),
+    );
+    payrollRecordRepo = moduleFixture.get<Repository<PayrollRecord>>(
+      getRepositoryToken(PayrollRecord),
+    );
     userRepo = moduleFixture.get<Repository<User>>(getRepositoryToken(User));
   });
 
@@ -109,7 +110,10 @@ describe('PayrollService Integration', () => {
       expect(testWorker2).toBeDefined();
 
       // Act: Run payroll for January 2024
-      const payPeriod = await payrollService.runPayroll(testUser.id, new Date('2024-01-31'));
+      const payPeriod = await payrollService.runPayroll(
+        testUser.id,
+        new Date('2024-01-31'),
+      );
       payPeriodId = payPeriod.id;
 
       // Assert: Check payroll records
@@ -122,7 +126,7 @@ describe('PayrollService Integration', () => {
       expect(payPeriod.status).toBe('COMPLETED');
 
       // Verify John Doe's payroll record
-      const johnRecord = records.find(r => r.workerId === testWorker1.id);
+      const johnRecord = records.find((r) => r.workerId === testWorker1.id);
       expect(johnRecord).toBeDefined();
       expect(johnRecord.grossSalary).toBe(50000);
       expect(johnRecord.netSalary).toBeLessThan(50000);
@@ -130,7 +134,7 @@ describe('PayrollService Integration', () => {
       expect(johnRecord.paye).toBeGreaterThan(0);
 
       // Verify Jane Smith's payroll record
-      const janeRecord = records.find(r => r.workerId === testWorker2.id);
+      const janeRecord = records.find((r) => r.workerId === testWorker2.id);
       expect(janeRecord).toBeDefined();
       expect(janeRecord.grossSalary).toBe(35000);
       expect(janeRecord.netSalary).toBeLessThan(35000);
@@ -139,10 +143,13 @@ describe('PayrollService Integration', () => {
 
       // Verify total calculations
       expect(johnRecord.netSalary + janeRecord.netSalary).toBeCloseTo(
-        johnRecord.grossSalary + janeRecord.grossSalary - 
-        johnRecord.nssf - johnRecord.paye - 
-        janeRecord.nssf - janeRecord.paye,
-        0
+        johnRecord.grossSalary +
+          janeRecord.grossSalary -
+          johnRecord.nssf -
+          johnRecord.paye -
+          janeRecord.nssf -
+          janeRecord.paye,
+        0,
       );
     });
 
@@ -152,7 +159,7 @@ describe('PayrollService Integration', () => {
 
       // Act & Assert: Try to run payroll again for the same period
       await expect(
-        payrollService.runPayroll(testUser.id, new Date('2024-01-31'))
+        payrollService.runPayroll(testUser.id, new Date('2024-01-31')),
       ).rejects.toThrow('Payroll already exists for this period');
     });
 
@@ -163,7 +170,10 @@ describe('PayrollService Integration', () => {
       const expectedHousingLevy = 750; // 1.5% of 50000
 
       // Act
-      const payPeriod = await payrollService.runPayroll(testUser.id, new Date('2024-01-31'));
+      const payPeriod = await payrollService.runPayroll(
+        testUser.id,
+        new Date('2024-01-31'),
+      );
       const johnRecord = await payrollRecordRepo.findOne({
         where: { payPeriodId: payPeriod.id, workerId: testWorker1.id },
       });
@@ -172,10 +182,10 @@ describe('PayrollService Integration', () => {
       expect(johnRecord.nssf).toBe(expectedNSSF);
       expect(johnRecord.shif).toBe(expectedSHIF);
       expect(johnRecord.housingLevy).toBe(expectedHousingLevy);
-      
+
       // Total deductions should include NSSF, SHIF, Housing Levy, and PAYE
       expect(johnRecord.totalDeductions).toBeGreaterThan(
-        expectedNSSF + expectedSHIF + expectedHousingLevy
+        expectedNSSF + expectedSHIF + expectedHousingLevy,
       );
     });
 
@@ -192,7 +202,10 @@ describe('PayrollService Integration', () => {
       });
 
       // Act: Run payroll
-      const payPeriod = await payrollService.runPayroll(testUser.id, new Date('2024-01-31'));
+      const payPeriod = await payrollService.runPayroll(
+        testUser.id,
+        new Date('2024-01-31'),
+      );
 
       // Assert: Daily worker should be included in payroll
       const dailyRecord = await payrollRecordRepo.findOne({
@@ -205,8 +218,11 @@ describe('PayrollService Integration', () => {
 
     it('should update payroll records when worker details change', async () => {
       // Arrange: Run initial payroll
-      const initialPayroll = await payrollService.runPayroll(testUser.id, new Date('2024-01-31'));
-      
+      const initialPayroll = await payrollService.runPayroll(
+        testUser.id,
+        new Date('2024-01-31'),
+      );
+
       // Act: Update worker salary
       await workersService.update(testWorker1.id, testUser.id, {
         salaryGross: 60000,
@@ -227,12 +243,15 @@ describe('PayrollService Integration', () => {
     it('should archive workers and exclude them from payroll', async () => {
       // Arrange: Run initial payroll
       await payrollService.runPayroll(testUser.id, new Date('2024-01-31'));
-      
+
       // Act: Archive one worker
       await workersService.archiveWorker(testWorker2.id, testUser.id);
 
       // Re-run payroll for the next month
-      const newPayroll = await payrollService.runPayroll(testUser.id, new Date('2024-02-28'));
+      const newPayroll = await payrollService.runPayroll(
+        testUser.id,
+        new Date('2024-02-28'),
+      );
 
       // Assert: Only active worker should be included
       const records = await payrollRecordRepo.find({
@@ -262,11 +281,11 @@ describe('PayrollService Integration', () => {
     it('should handle database connection errors gracefully', async () => {
       // This would require mocking database connection failures
       // In a real scenario, you'd mock the repository to throw database errors
-      
+
       const nonExistentUserId = 'non-existent-user-id';
-      
+
       await expect(
-        payrollService.runPayroll(nonExistentUserId, new Date())
+        payrollService.runPayroll(nonExistentUserId, new Date()),
       ).rejects.toThrow('No workers found for this user');
     });
 
@@ -280,7 +299,7 @@ describe('PayrollService Integration', () => {
       });
 
       await expect(
-        payrollService.runPayroll(testUser.id, new Date('2024-01-31'))
+        payrollService.runPayroll(testUser.id, new Date('2024-01-31')),
       ).rejects.toThrow('Invalid salary amount');
     });
 
@@ -300,12 +319,16 @@ describe('PayrollService Integration', () => {
       ];
 
       const results = await Promise.allSettled(promises);
-      
+
       // Only one should succeed, others should fail with duplicate period error
-      const successCount = results.filter(r => r.status === 'fulfilled').length;
+      const successCount = results.filter(
+        (r) => r.status === 'fulfilled',
+      ).length;
       expect(successCount).toBe(1);
-      
-      const failureCount = results.filter(r => r.status === 'rejected').length;
+
+      const failureCount = results.filter(
+        (r) => r.status === 'rejected',
+      ).length;
       expect(failureCount).toBe(2);
     });
   });
@@ -330,7 +353,7 @@ describe('PayrollService Integration', () => {
         const worker = await workersService.create(testUser.id, {
           name: `Worker ${i}`,
           phoneNumber: `+2547123456${i.toString().padStart(2, '0')}`,
-          salaryGross: 30000 + (i * 1000), // Varying salaries
+          salaryGross: 30000 + i * 1000, // Varying salaries
           startDate: '2024-01-01',
           jobTitle: `Position ${i}`,
         });
@@ -340,20 +363,23 @@ describe('PayrollService Integration', () => {
 
     it('should process payroll for 50 workers in under 30 seconds', async () => {
       const startTime = Date.now();
-      
-      const payPeriod = await payrollService.runPayroll(testUser.id, new Date('2024-01-31'));
-      
+
+      const payPeriod = await payrollService.runPayroll(
+        testUser.id,
+        new Date('2024-01-31'),
+      );
+
       const endTime = Date.now();
       const duration = endTime - startTime;
-      
+
       // 30 seconds = 30000ms
       expect(duration).toBeLessThan(30000);
-      
+
       // Verify all workers were processed
       const recordCount = await payrollRecordRepo.count({
         where: { payPeriodId: payPeriod.id },
       });
-      
+
       expect(recordCount).toBe(PERFORMANCE_WORKER_COUNT);
     });
   });

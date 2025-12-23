@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 
 async function fixUsersTable() {
   const configService = new ConfigService();
-  
+
   const dataSource = new DataSource({
     type: 'postgres',
     host: configService.get('DB_HOST', 'localhost'),
@@ -21,26 +21,30 @@ async function fixUsersTable() {
   try {
     await dataSource.initialize();
     console.log('✅ Database connected successfully!');
-    
+
     // Check current columns
     const queryRunner = dataSource.createQueryRunner();
     await queryRunner.connect();
-    
+
     const columns = await queryRunner.query(`
       SELECT column_name, data_type, is_nullable, column_default
       FROM information_schema.columns 
       WHERE table_name = 'users' 
       ORDER BY ordinal_position
     `);
-    
+
     console.log('Current users table columns:');
     columns.forEach((col: any) => {
-      console.log(`  - ${col.column_name}: ${col.data_type} ${col.is_nullable === 'YES' ? '(nullable)' : '(not null)'} ${col.column_default ? `default: ${col.column_default}` : ''}`);
+      console.log(
+        `  - ${col.column_name}: ${col.data_type} ${col.is_nullable === 'YES' ? '(nullable)' : '(not null)'} ${col.column_default ? `default: ${col.column_default}` : ''}`,
+      );
     });
-    
+
     // Check if isOnboardingCompleted column exists
-    const hasIsOnboardingCompleted = columns.some((col: any) => col.column_name === 'isOnboardingCompleted');
-    
+    const hasIsOnboardingCompleted = columns.some(
+      (col: any) => col.column_name === 'isOnboardingCompleted',
+    );
+
     if (!hasIsOnboardingCompleted) {
       console.log('Adding missing isOnboardingCompleted column...');
       await queryRunner.query(`
@@ -50,9 +54,8 @@ async function fixUsersTable() {
     } else {
       console.log('✅ isOnboardingCompleted column already exists');
     }
-    
+
     await queryRunner.release();
-    
   } catch (error) {
     console.error('❌ Error fixing users table:', error.message);
   } finally {

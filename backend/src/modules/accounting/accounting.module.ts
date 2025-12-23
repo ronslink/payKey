@@ -16,4 +16,4 @@ import { ActivitiesModule } from '../activities/activities.module';
   providers: [AccountingExportService],
   exports: [AccountingExportService],
 })
-export class AccountingModule { }
+export class AccountingModule {}

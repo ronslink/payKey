@@ -38,7 +38,7 @@ export class PayrollService {
     private taxesService: TaxesService,
     private timeTrackingService: TimeTrackingService,
     private mpesaService: MpesaService,
-  ) { }
+  ) {}
 
   /**
    * Calculate payroll for a single worker

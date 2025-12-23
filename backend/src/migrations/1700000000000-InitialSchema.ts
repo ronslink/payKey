@@ -6,12 +6,12 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * Uses IF NOT EXISTS for idempotency - safe to run on existing databases.
  */
 export class InitialSchema1700000000000 implements MigrationInterface {
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        // Create uuid-ossp extension
-        await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    // Create uuid-ossp extension
+    await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
 
-        // Create enums
-        await queryRunner.query(`
+    // Create enums
+    await queryRunner.query(`
             DO $$ BEGIN
                 CREATE TYPE users_idtype_enum AS ENUM ('NATIONAL_ID', 'ALIEN_ID', 'PASSPORT');
             EXCEPTION
@@ -19,7 +19,7 @@ export class InitialSchema1700000000000 implements MigrationInterface {
             END $$;
         `);
 
-        await queryRunner.query(`
+    await queryRunner.query(`
             DO $$ BEGIN
                 CREATE TYPE payroll_frequency_enum AS ENUM ('WEEKLY', 'BI_WEEKLY', 'MONTHLY');
             EXCEPTION
@@ -27,8 +27,8 @@ export class InitialSchema1700000000000 implements MigrationInterface {
             END $$;
         `);
 
-        // Users table
-        await queryRunner.query(`
+    // Users table
+    await queryRunner.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
                 email VARCHAR UNIQUE NOT NULL,
@@ -56,8 +56,8 @@ export class InitialSchema1700000000000 implements MigrationInterface {
             )
         `);
 
-        // Countries table
-        await queryRunner.query(`
+    // Countries table
+    await queryRunner.query(`
             CREATE TABLE IF NOT EXISTS countries (
                 id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
                 code VARCHAR UNIQUE NOT NULL,
@@ -69,8 +69,8 @@ export class InitialSchema1700000000000 implements MigrationInterface {
             )
         `);
 
-        // Properties table
-        await queryRunner.query(`
+    // Properties table
+    await queryRunner.query(`
             CREATE TABLE IF NOT EXISTS properties (
                 id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
                 "userId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -85,8 +85,8 @@ export class InitialSchema1700000000000 implements MigrationInterface {
             )
         `);
 
-        // Workers table
-        await queryRunner.query(`
+    // Workers table
+    await queryRunner.query(`
             CREATE TABLE IF NOT EXISTS workers (
                 id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
                 "employmentType" VARCHAR DEFAULT 'FIXED',
@@ -122,8 +122,8 @@ export class InitialSchema1700000000000 implements MigrationInterface {
             )
         `);
 
-        // Pay periods table
-        await queryRunner.query(`
+    // Pay periods table
+    await queryRunner.query(`
             CREATE TABLE IF NOT EXISTS pay_periods (
                 id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
                 name VARCHAR NOT NULL,
@@ -149,8 +149,8 @@ export class InitialSchema1700000000000 implements MigrationInterface {
             )
         `);
 
-        // Payroll records table
-        await queryRunner.query(`
+    // Payroll records table
+    await queryRunner.query(`
             CREATE TABLE IF NOT EXISTS payroll_records (
                 id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
                 "userId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -171,8 +171,8 @@ export class InitialSchema1700000000000 implements MigrationInterface {
             )
         `);
 
-        // Subscriptions table
-        await queryRunner.query(`
+    // Subscriptions table
+    await queryRunner.query(`
             CREATE TABLE IF NOT EXISTS subscriptions (
                 id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
                 "userId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -189,8 +189,8 @@ export class InitialSchema1700000000000 implements MigrationInterface {
             )
         `);
 
-        // Tax tables table
-        await queryRunner.query(`
+    // Tax tables table
+    await queryRunner.query(`
             CREATE TABLE IF NOT EXISTS tax_tables (
                 id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
                 year INTEGER NOT NULL,
@@ -206,8 +206,8 @@ export class InitialSchema1700000000000 implements MigrationInterface {
             )
         `);
 
-        // Tax payments table
-        await queryRunner.query(`
+    // Tax payments table
+    await queryRunner.query(`
             CREATE TABLE IF NOT EXISTS tax_payments (
                 id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
                 "userId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -222,8 +222,8 @@ export class InitialSchema1700000000000 implements MigrationInterface {
             )
         `);
 
-        // Transactions table
-        await queryRunner.query(`
+    // Transactions table
+    await queryRunner.query(`
             CREATE TABLE IF NOT EXISTS transactions (
                 id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
                 "userId" UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -240,28 +240,40 @@ export class InitialSchema1700000000000 implements MigrationInterface {
             )
         `);
 
-        // Create essential indexes
-        await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`);
-        await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_workers_userId ON workers("userId")`);
-        await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_pay_periods_userId ON pay_periods("userId")`);
-        await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_payroll_records_userId ON payroll_records("userId")`);
-        await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_payroll_records_workerId ON payroll_records("workerId")`);
-        await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_transactions_userId ON transactions("userId")`);
-    }
+    // Create essential indexes
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS idx_workers_userId ON workers("userId")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS idx_pay_periods_userId ON pay_periods("userId")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS idx_payroll_records_userId ON payroll_records("userId")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS idx_payroll_records_workerId ON payroll_records("workerId")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS idx_transactions_userId ON transactions("userId")`,
+    );
+  }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        // Drop tables in reverse order of dependencies
-        await queryRunner.query(`DROP TABLE IF EXISTS transactions CASCADE`);
-        await queryRunner.query(`DROP TABLE IF EXISTS tax_payments CASCADE`);
-        await queryRunner.query(`DROP TABLE IF EXISTS tax_tables CASCADE`);
-        await queryRunner.query(`DROP TABLE IF EXISTS subscriptions CASCADE`);
-        await queryRunner.query(`DROP TABLE IF EXISTS payroll_records CASCADE`);
-        await queryRunner.query(`DROP TABLE IF EXISTS pay_periods CASCADE`);
-        await queryRunner.query(`DROP TABLE IF EXISTS workers CASCADE`);
-        await queryRunner.query(`DROP TABLE IF EXISTS properties CASCADE`);
-        await queryRunner.query(`DROP TABLE IF EXISTS countries CASCADE`);
-        await queryRunner.query(`DROP TABLE IF EXISTS users CASCADE`);
-        await queryRunner.query(`DROP TYPE IF EXISTS payroll_frequency_enum`);
-        await queryRunner.query(`DROP TYPE IF EXISTS users_idtype_enum`);
-    }
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    // Drop tables in reverse order of dependencies
+    await queryRunner.query(`DROP TABLE IF EXISTS transactions CASCADE`);
+    await queryRunner.query(`DROP TABLE IF EXISTS tax_payments CASCADE`);
+    await queryRunner.query(`DROP TABLE IF EXISTS tax_tables CASCADE`);
+    await queryRunner.query(`DROP TABLE IF EXISTS subscriptions CASCADE`);
+    await queryRunner.query(`DROP TABLE IF EXISTS payroll_records CASCADE`);
+    await queryRunner.query(`DROP TABLE IF EXISTS pay_periods CASCADE`);
+    await queryRunner.query(`DROP TABLE IF EXISTS workers CASCADE`);
+    await queryRunner.query(`DROP TABLE IF EXISTS properties CASCADE`);
+    await queryRunner.query(`DROP TABLE IF EXISTS countries CASCADE`);
+    await queryRunner.query(`DROP TABLE IF EXISTS users CASCADE`);
+    await queryRunner.query(`DROP TYPE IF EXISTS payroll_frequency_enum`);
+    await queryRunner.query(`DROP TYPE IF EXISTS users_idtype_enum`);
+  }
 }

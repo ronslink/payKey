@@ -3,23 +3,26 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Country } from './entities/country.entity';
 
+import { ALL_COUNTRIES } from './countries.data';
+
 @Injectable()
 export class CountriesService implements OnModuleInit {
   constructor(
     @InjectRepository(Country)
     private countriesRepository: Repository<Country>,
-  ) {}
+  ) { }
 
   async onModuleInit() {
-    // Seed Kenya if not exists
-    const count = await this.countriesRepository.count();
-    if (count === 0) {
-      await this.countriesRepository.save({
-        code: 'KE',
-        name: 'Kenya',
-        currency: 'KES',
-        isActive: true,
+    for (const country of ALL_COUNTRIES) {
+      const exists = await this.countriesRepository.findOne({
+        where: { code: country.code },
       });
+      if (!exists) {
+        await this.countriesRepository.save({
+          ...country,
+          isActive: true,
+        });
+      }
     }
   }
 

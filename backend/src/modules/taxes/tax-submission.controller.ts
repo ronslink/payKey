@@ -14,7 +14,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @Controller('taxes/submissions')
 @UseGuards(JwtAuthGuard)
 export class TaxSubmissionController {
-  constructor(private readonly taxesService: TaxesService) { }
+  constructor(private readonly taxesService: TaxesService) {}
 
   @Get()
   async getSubmissions(@Request() req: any) {
@@ -33,7 +33,6 @@ export class TaxSubmissionController {
     @Request() req: any,
     @Body() body: { payPeriodId: string },
   ) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     return this.taxesService.generateTaxSubmission(
       body.payPeriodId,
       req.user.userId,

@@ -12,7 +12,7 @@ export class WorkersService {
     @InjectRepository(Worker)
     private workersRepository: Repository<Worker>,
     private activitiesService: ActivitiesService,
-  ) { }
+  ) {}
 
   async create(
     userId: string,
@@ -148,7 +148,8 @@ export class WorkersService {
     });
 
     const trend = newWorkersThisMonth - newWorkersLastMonth;
-    const trendDescription = trend >= 0 ? `+${trend} this month` : `${trend} this month`;
+    const trendDescription =
+      trend >= 0 ? `+${trend} this month` : `${trend} this month`;
 
     return {
       totalWorkers,

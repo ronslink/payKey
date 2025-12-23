@@ -17,8 +17,12 @@ import { SubscriptionCallbackController } from './subscription-callback.controll
     forwardRef(() => UsersModule),
     forwardRef(() => PaymentsModule),
   ],
-  controllers: [SubscriptionsController, FeatureAccessController, SubscriptionCallbackController],
+  controllers: [
+    SubscriptionsController,
+    FeatureAccessController,
+    SubscriptionCallbackController,
+  ],
   providers: [FeatureAccessService, MockDataService],
   exports: [FeatureAccessService, MockDataService],
 })
-export class SubscriptionsModule { }
+export class SubscriptionsModule {}

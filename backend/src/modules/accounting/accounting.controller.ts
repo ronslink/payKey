@@ -26,7 +26,7 @@ class SaveMappingsDto {
 export class AccountingController {
   constructor(
     private readonly accountingExportService: AccountingExportService,
-  ) { }
+  ) {}
 
   @Post('export/:payPeriodId')
   async exportPayroll(
@@ -60,7 +60,6 @@ export class AccountingController {
       );
     }
   }
-
 
   @Get('history')
   async getExportHistory(@Request() req: any) {

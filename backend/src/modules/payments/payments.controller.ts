@@ -14,8 +14,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Transaction, TransactionStatus } from './entities/transaction.entity';
 import { User } from '../users/entities/user.entity';
-import { PayrollRecord, PayrollStatus } from '../payroll/entities/payroll-record.entity';
-import { PayPeriod, PayPeriodStatus } from '../payroll/entities/pay-period.entity';
+import {
+  PayrollRecord,
+  PayrollStatus,
+} from '../payroll/entities/payroll-record.entity';
+import {
+  PayPeriod,
+  PayPeriodStatus,
+} from '../payroll/entities/pay-period.entity';
 
 interface MpesaCallbackData {
   Body: {
@@ -69,7 +75,7 @@ export class PaymentsController {
     private payrollRecordRepository: Repository<PayrollRecord>,
     @InjectRepository(PayPeriod)
     private payPeriodRepository: Repository<PayPeriod>,
-  ) { }
+  ) {}
 
   @Post('callback')
   async handleStkCallback(@Body() callbackData: MpesaCallbackData) {
@@ -108,7 +114,9 @@ export class PaymentsController {
             'walletBalance',
             transaction.amount,
           );
-          console.log(`Credited wallet for user ${transaction.userId}: +${transaction.amount}`);
+          console.log(
+            `Credited wallet for user ${transaction.userId}: +${transaction.amount}`,
+          );
         }
       }
     } else {
@@ -163,21 +171,25 @@ export class PaymentsController {
           'walletBalance',
           transaction.amount,
         );
-        console.log(`Debited wallet for user ${transaction.userId}: -${transaction.amount}`);
+        console.log(
+          `Debited wallet for user ${transaction.userId}: -${transaction.amount}`,
+        );
 
         // Update linked PayrollRecord if this was a salary payout
-        const payrollRecordId = (transaction.metadata as any)?.payrollRecordId;
+        const payrollRecordId = transaction.metadata?.payrollRecordId;
         if (payrollRecordId) {
           await this.payrollRecordRepository.update(payrollRecordId, {
             status: PayrollStatus.FINALIZED,
             paymentStatus: 'paid',
             paymentDate: new Date(),
           });
-          console.log(`Updated PayrollRecord ${payrollRecordId} to FINALIZED/paid`);
+          console.log(
+            `Updated PayrollRecord ${payrollRecordId} to FINALIZED/paid`,
+          );
         }
 
         // Check if all payments for this pay period are complete
-        const payPeriodId = (transaction.metadata as any)?.payPeriodId;
+        const payPeriodId = transaction.metadata?.payPeriodId;
         if (payPeriodId) {
           // Count pending payments for this pay period
           const pendingCount = await this.transactionsRepository.count({
@@ -193,7 +205,9 @@ export class PaymentsController {
             await this.payPeriodRepository.update(payPeriodId, {
               status: PayPeriodStatus.COMPLETED,
             });
-            console.log(`PayPeriod ${payPeriodId} marked as COMPLETED (all payments successful)`);
+            console.log(
+              `PayPeriod ${payPeriodId} marked as COMPLETED (all payments successful)`,
+            );
           }
         }
       }

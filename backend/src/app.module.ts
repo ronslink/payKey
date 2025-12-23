@@ -23,6 +23,8 @@ import { TimeTrackingModule } from './modules/time-tracking/time-tracking.module
 import { ExportModule } from './modules/export/export.module';
 import { HolidaysModule } from './modules/holidays/holidays.module';
 import { ExcelImportModule } from './modules/excel-import/excel-import.module';
+import { AppCacheModule } from './modules/cache/cache.module';
+import { AppThrottlerModule } from './modules/throttler/throttler.module';
 
 // Explicit Entity Imports
 // Explicit Entity Imports
@@ -54,14 +56,56 @@ import { Holiday } from './modules/holidays/entities/holiday.entity';
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
+        const dbUrl = configService.get('DATABASE_URL');
+        if (dbUrl) {
+          return {
+            type: 'postgres',
+            url: dbUrl,
+            ssl: {
+              rejectUnauthorized: false,
+            },
+            entities: [
+              User,
+              Worker,
+              PayPeriod,
+              PayrollRecord,
+              Transaction,
+              TaxTable,
+              TaxSubmission,
+              TaxPayment,
+              TaxConfig,
+              Subscription,
+              SubscriptionPayment,
+              Property,
+              Country,
+              LeaveRequest,
+              Termination,
+              AccountMapping,
+              AccountingExport,
+              Activity,
+              TimeEntry,
+              Export,
+              Holiday,
+            ],
+            synchronize: true,
+            logging: ['query', 'error'],
+          };
+        }
+
         const dbHost = configService.get('DB_HOST', 'db');
         const dbPort = configService.get('DB_PORT', '5432');
-        const dbUser = configService.get('DB_USER') || configService.get('DB_USERNAME') || 'postgres';
+        const dbUser =
+          configService.get('DB_USER') ||
+          configService.get('DB_USERNAME') ||
+          'postgres';
         return {
           type: 'postgres',
           host: dbHost,
           port: parseInt(configService.get('DB_PORT', '5432')),
-          username: configService.get('DB_USER', configService.get('DB_USERNAME', 'postgres')),
+          username: configService.get(
+            'DB_USER',
+            configService.get('DB_USERNAME', 'postgres'),
+          ),
           password: configService.get('DB_PASSWORD', 'admin'),
           database: configService.get('DB_NAME', 'paykey'),
           entities: [
@@ -114,6 +158,8 @@ import { Holiday } from './modules/holidays/entities/holiday.entity';
     ExportModule,
     HolidaysModule,
     ExcelImportModule,
+    AppCacheModule,
+    AppThrottlerModule,
   ],
   controllers: [AppController],
   providers: [AppService],

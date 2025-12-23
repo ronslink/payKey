@@ -42,7 +42,14 @@ export class PayPeriodsController {
     const limitNum = parseInt(limit, 10) || 10;
     const yearNum = year ? parseInt(year, 10) : undefined;
 
-    return this.payPeriodsService.findAll(req.user.userId, pageNum, limitNum, status, frequency, yearNum);
+    return this.payPeriodsService.findAll(
+      req.user.userId,
+      pageNum,
+      limitNum,
+      status,
+      frequency,
+      yearNum,
+    );
   }
 
   @Get(':id')

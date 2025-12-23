@@ -15,10 +15,7 @@ import { Repository } from 'typeorm';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { StripeService } from './stripe.service';
 import { MpesaService } from './mpesa.service';
-import {
-  Transaction,
-  TransactionStatus,
-} from './entities/transaction.entity';
+import { Transaction, TransactionStatus } from './entities/transaction.entity';
 import {
   Subscription,
   SubscriptionStatus,
@@ -141,14 +138,16 @@ export class UnifiedPaymentsController {
     private readonly subscriptionRepository: Repository<Subscription>,
     @InjectRepository(SubscriptionPayment)
     private readonly subscriptionPaymentRepository: Repository<SubscriptionPayment>,
-  ) { }
+  ) {}
 
   // ==========================================================================
   // Public Endpoints
   // ==========================================================================
 
   @Get('dashboard')
-  async getDashboard(@Request() req: AuthenticatedRequest): Promise<PaymentDashboardData> {
+  async getDashboard(
+    @Request() req: AuthenticatedRequest,
+  ): Promise<PaymentDashboardData> {
     const { userId } = req.user;
     const currentDate = new Date();
 
@@ -171,7 +170,9 @@ export class UnifiedPaymentsController {
       ),
     ]);
 
-    const pendingTaxPayments = this.countPendingTaxPayments(monthlyTaxSummary.taxes);
+    const pendingTaxPayments = this.countPendingTaxPayments(
+      monthlyTaxSummary.taxes,
+    );
 
     return {
       overview: {
@@ -368,7 +369,10 @@ export class UnifiedPaymentsController {
     };
   }
 
-  private async getRecentTransactions(userId: string, limit = 10): Promise<Transaction[]> {
+  private async getRecentTransactions(
+    userId: string,
+    limit = 10,
+  ): Promise<Transaction[]> {
     return this.transactionRepository.find({
       where: { userId },
       order: { createdAt: 'DESC' },
@@ -382,7 +386,9 @@ export class UnifiedPaymentsController {
     });
   }
 
-  private async getActiveSubscription(userId: string): Promise<Subscription | null> {
+  private async getActiveSubscription(
+    userId: string,
+  ): Promise<Subscription | null> {
     return this.subscriptionRepository.findOne({
       where: { userId, status: SubscriptionStatus.ACTIVE },
     });
@@ -393,7 +399,8 @@ export class UnifiedPaymentsController {
    * Accepts status as string since TaxSummaryDto uses string type.
    */
   private countPendingTaxPayments(taxes: Array<{ status: string }>): number {
-    return taxes.filter((t) => t.status === PaymentStatus.PENDING.toString()).length;
+    return taxes.filter((t) => t.status === PaymentStatus.PENDING.toString())
+      .length;
   }
 
   private buildPaymentMethodStatus(): PaymentMethodStatus {
@@ -409,7 +416,9 @@ export class UnifiedPaymentsController {
     };
   }
 
-  private buildSubscriptionInfo(subscription: Subscription | null): SubscriptionInfo {
+  private buildSubscriptionInfo(
+    subscription: Subscription | null,
+  ): SubscriptionInfo {
     return {
       currentPlan: subscription?.tier ?? SubscriptionTier.FREE,
       nextBilling: subscription?.nextBillingDate ?? null,

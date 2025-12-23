@@ -21,4 +21,4 @@ import { ActivitiesModule } from '../activities/activities.module';
   providers: [TaxesService],
   exports: [TaxesService],
 })
-export class TaxesModule { }
+export class TaxesModule {}

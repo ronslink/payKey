@@ -4,15 +4,15 @@ import { Holiday } from './entities/holiday.entity';
 
 @Controller('holidays')
 export class HolidaysController {
-    constructor(private readonly holidaysService: HolidaysService) { }
+  constructor(private readonly holidaysService: HolidaysService) {}
 
-    @Get()
-    findAll() {
-        return this.holidaysService.findAll();
-    }
+  @Get()
+  findAll() {
+    return this.holidaysService.findAll();
+  }
 
-    @Post()
-    create(@Body() createHolidayDto: Partial<Holiday>) {
-        return this.holidaysService.create(createHolidayDto);
-    }
+  @Post()
+  create(@Body() createHolidayDto: Partial<Holiday>) {
+    return this.holidaysService.create(createHolidayDto);
+  }
 }

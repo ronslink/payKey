@@ -139,7 +139,7 @@ export class StripeService {
     const prices: Record<string, number> = {
       FREE: 0,
       BASIC: 999, // $9.99
-      GOLD: 2999,  // $29.99
+      GOLD: 2999, // $29.99
       PLATINUM: 4999, // $49.99
     };
     return prices[planTier] || prices.BASIC;
@@ -169,7 +169,8 @@ export class StripeService {
     if (!subscription || !subscription.stripeSubscriptionId) {
       return {
         success: false,
-        message: 'No active Stripe subscription found. Please use checkout instead.',
+        message:
+          'No active Stripe subscription found. Please use checkout instead.',
       };
     }
 
@@ -235,13 +236,17 @@ export class StripeService {
       subscription.updatedAt = new Date();
       await this.subscriptionRepository.save(subscription);
 
-      this.logger.log(`Upgraded Stripe subscription for user ${userId} to ${normalizedTier}`);
+      this.logger.log(
+        `Upgraded Stripe subscription for user ${userId} to ${normalizedTier}`,
+      );
 
       return {
         success: true,
         message: `Successfully upgraded to ${normalizedTier} plan. Proration applied.`,
         subscriptionId: updatedStripeSubscription.id,
-        prorationAmount: latestInvoice ? (latestInvoice.amount_due || 0) / 100 : undefined,
+        prorationAmount: latestInvoice
+          ? (latestInvoice.amount_due || 0) / 100
+          : undefined,
       };
     } catch (error) {
       this.logger.error('Failed to upgrade Stripe subscription', error);
@@ -262,19 +267,19 @@ export class StripeService {
     try {
       switch (event.type) {
         case 'checkout.session.completed':
-          await this.handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
+          await this.handleCheckoutCompleted(event.data.object);
           break;
         case 'invoice.payment_succeeded':
-          await this.handlePaymentSucceeded(event.data.object as Stripe.Invoice);
+          await this.handlePaymentSucceeded(event.data.object);
           break;
         case 'invoice.payment_failed':
-          await this.handlePaymentFailed(event.data.object as Stripe.Invoice);
+          await this.handlePaymentFailed(event.data.object);
           break;
         case 'customer.subscription.deleted':
-          await this.handleSubscriptionCancelled(event.data.object as Stripe.Subscription);
+          await this.handleSubscriptionCancelled(event.data.object);
           break;
         case 'customer.subscription.updated':
-          await this.handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
+          await this.handleSubscriptionUpdated(event.data.object);
           break;
         default:
           this.logger.log(`Unhandled event type: ${event.type}`);
@@ -288,7 +293,9 @@ export class StripeService {
   /**
    * Handle successful checkout completion
    */
-  private async handleCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {
+  private async handleCheckoutCompleted(
+    session: Stripe.Checkout.Session,
+  ): Promise<void> {
     const metadata = session.metadata || {};
     const userId = metadata.userId;
     const planTier = metadata.planTier;
@@ -322,9 +329,15 @@ export class StripeService {
 
     // Sync tier to User entity
     // We need to inject UsersRepository or use QueryBuilder to update the user table directly
-    await this.subscriptionRepository.manager.update('users', { id: userId }, { tier: planTier });
+    await this.subscriptionRepository.manager.update(
+      'users',
+      { id: userId },
+      { tier: planTier },
+    );
 
-    this.logger.log(`Subscription activated for user ${userId} with plan ${planTier}`);
+    this.logger.log(
+      `Subscription activated for user ${userId} with plan ${planTier}`,
+    );
   }
 
   /**
@@ -339,7 +352,9 @@ export class StripeService {
     });
 
     if (!subscription) {
-      this.logger.error(`Subscription not found for Stripe ID: ${invoice.subscription}`);
+      this.logger.error(
+        `Subscription not found for Stripe ID: ${invoice.subscription}`,
+      );
       return;
     }
 
@@ -524,7 +539,11 @@ export class StripeService {
       await this.subscriptionRepository.save(subscription);
 
       // Sync tier to User entity
-      await this.subscriptionRepository.manager.update('users', { id: userId }, { tier: normalizedTier });
+      await this.subscriptionRepository.manager.update(
+        'users',
+        { id: userId },
+        { tier: normalizedTier },
+      );
 
       this.logger.log(
         `Subscription updated for user ${userId} to ${normalizedTier}`,

@@ -25,6 +25,7 @@ export class TimeTrackingService {
     userId: string,
     recordedById: string,
     location?: { lat: number; lng: number },
+    propertyId?: string,
   ): Promise<TimeEntry> {
     // Check if worker exists and belongs to employer
     const worker = await this.workersRepository.findOne({
@@ -36,13 +37,36 @@ export class TimeTrackingService {
       throw new NotFoundException('Worker not found');
     }
 
+    // Determine which property to use: explicit propertyId or worker's assigned property
+    let activeProperty = worker.property;
+    let activePropertyId = worker.propertyId;
+
+    if (propertyId) {
+      // Validate propertyId belongs to employer
+      const selectedProperty = await this.workersRepository.manager.findOne(
+        'properties',
+        { where: { id: propertyId, userId } },
+      );
+      if (!selectedProperty) {
+        throw new BadRequestException('Invalid property selected');
+      }
+      activeProperty = selectedProperty as any;
+      activePropertyId = propertyId;
+    }
+
     // Geofencing Validation
     // Logic: If Employer is PLATINUM AND Property has Coordinates -> Validate
-    if (worker.user?.tier === 'PLATINUM' && worker.property?.latitude && worker.property?.longitude) {
+    if (
+      worker.user?.tier === 'PLATINUM' &&
+      activeProperty?.latitude &&
+      activeProperty?.longitude
+    ) {
       if (!location) {
-        throw new BadRequestException('Location is required for clock-in at this property');
+        throw new BadRequestException(
+          'Location is required for clock-in at this property',
+        );
       }
-      this.validateGeofence(worker, location);
+      this.validateGeofenceForProperty(activeProperty, location);
     }
 
     // Check if already clocked in
@@ -61,6 +85,7 @@ export class TimeTrackingService {
       workerId,
       userId,
       recordedById,
+      propertyId: activePropertyId,
       clockIn: new Date(),
       status: TimeEntryStatus.ACTIVE,
       clockInLat: location?.lat,
@@ -70,26 +95,67 @@ export class TimeTrackingService {
     return this.timeEntryRepository.save(entry);
   }
 
-  private validateGeofence(worker: Worker, location: { lat: number; lng: number }) {
+  private validateGeofence(
+    worker: Worker,
+    location: { lat: number; lng: number },
+  ) {
     const { latitude, longitude, geofenceRadius } = worker.property;
 
     // Haversine Formula
     const R = 6371e3; // Earth radius in meters
     const lat1 = (Number(location.lat) * Math.PI) / 180;
     const lat2 = (Number(latitude) * Math.PI) / 180;
-    const deltaLat = ((Number(latitude) - Number(location.lat)) * Math.PI) / 180;
-    const deltaLng = ((Number(longitude) - Number(location.lng)) * Math.PI) / 180;
+    const deltaLat =
+      ((Number(latitude) - Number(location.lat)) * Math.PI) / 180;
+    const deltaLng =
+      ((Number(longitude) - Number(location.lng)) * Math.PI) / 180;
 
     const a =
       Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
-      Math.cos(lat1) * Math.cos(lat2) *
-      Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
+      Math.cos(lat1) *
+      Math.cos(lat2) *
+      Math.sin(deltaLng / 2) *
+      Math.sin(deltaLng / 2);
 
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const distance = R * c; // in meters
 
     if (distance > (geofenceRadius || 100)) {
-      throw new BadRequestException(`Clock-in rejected: You are ${Math.round(distance)}m away from the property location. Allowed radius: ${geofenceRadius || 100}m.`);
+      throw new BadRequestException(
+        `Clock-in rejected: You are ${Math.round(distance)}m away from the property location. Allowed radius: ${geofenceRadius || 100}m.`,
+      );
+    }
+  }
+
+  private validateGeofenceForProperty(
+    property: { latitude: number | null; longitude: number | null; geofenceRadius?: number },
+    location: { lat: number; lng: number },
+  ) {
+    if (!property.latitude || !property.longitude) return;
+
+    // Haversine Formula
+    const R = 6371e3; // Earth radius in meters
+    const lat1 = (Number(location.lat) * Math.PI) / 180;
+    const lat2 = (Number(property.latitude) * Math.PI) / 180;
+    const deltaLat =
+      ((Number(property.latitude) - Number(location.lat)) * Math.PI) / 180;
+    const deltaLng =
+      ((Number(property.longitude) - Number(location.lng)) * Math.PI) / 180;
+
+    const a =
+      Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+      Math.cos(lat1) *
+      Math.cos(lat2) *
+      Math.sin(deltaLng / 2) *
+      Math.sin(deltaLng / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = R * c; // in meters
+
+    if (distance > (property.geofenceRadius || 100)) {
+      throw new BadRequestException(
+        `Clock-in rejected: You are ${Math.round(distance)}m away from the property location. Allowed radius: ${property.geofenceRadius || 100}m.`,
+      );
     }
   }
 
@@ -140,9 +206,52 @@ export class TimeTrackingService {
   }
 
   /**
+   * Auto clock-out when worker leaves geofence
+   */
+  async autoClockOut(
+    workerId: string,
+    userId: string,
+    recordedById: string,
+    location: { lat: number; lng: number },
+  ): Promise<TimeEntry> {
+    // Find active entry
+    const entry = await this.timeEntryRepository.findOne({
+      where: {
+        workerId,
+        userId,
+        status: TimeEntryStatus.ACTIVE,
+      },
+      relations: ['property'],
+    });
+
+    if (!entry) {
+      throw new BadRequestException('Worker is not clocked in');
+    }
+
+    const clockOut = new Date();
+    const clockIn = new Date(entry.clockIn);
+
+    // Calculate hours worked (no break for auto clock-out)
+    const diffMs = clockOut.getTime() - clockIn.getTime();
+    const totalHours = Math.round((diffMs / (1000 * 60 * 60)) * 100) / 100;
+
+    entry.clockOut = clockOut;
+    entry.totalHours = Math.max(0, totalHours);
+    entry.notes = 'Auto clock-out: left geofence area';
+    entry.clockOutLat = location.lat;
+    entry.clockOutLng = location.lng;
+    entry.status = TimeEntryStatus.COMPLETED;
+
+    return this.timeEntryRepository.save(entry);
+  }
+
+  /**
    * Get current clock-in status for a worker
    */
-  async getStatus(workerId: string, userId: string): Promise<{
+  async getStatus(
+    workerId: string,
+    userId: string,
+  ): Promise<{
     isClockedIn: boolean;
     currentEntry: TimeEntry | null;
     todayTotal: number;
@@ -242,16 +351,23 @@ export class TimeTrackingService {
       averageHoursPerDay: number;
     };
   }> {
-    const entries = await this.getAllEntriesForEmployer(userId, startDate, endDate);
+    const entries = await this.getAllEntriesForEmployer(
+      userId,
+      startDate,
+      endDate,
+    );
 
     // Group by worker
-    const workerMap = new Map<string, {
-      workerId: string;
-      workerName: string;
-      days: Set<string>;
-      totalHours: number;
-      entries: number;
-    }>();
+    const workerMap = new Map<
+      string,
+      {
+        workerId: string;
+        workerName: string;
+        days: Set<string>;
+        totalHours: number;
+        entries: number;
+      }
+    >();
 
     for (const entry of entries) {
       if (!workerMap.has(entry.workerId)) {
@@ -286,7 +402,8 @@ export class TimeTrackingService {
       totals: {
         totalEntries: entries.length,
         totalHours: Math.round(totalHours * 100) / 100,
-        averageHoursPerDay: totalDays > 0 ? Math.round((totalHours / totalDays) * 100) / 100 : 0,
+        averageHoursPerDay:
+          totalDays > 0 ? Math.round((totalHours / totalDays) * 100) / 100 : 0,
       },
     };
   }
@@ -324,10 +441,14 @@ export class TimeTrackingService {
 
     // Recalculate hours if both times exist
     if (entry.clockIn && entry.clockOut) {
-      const diffMs = new Date(entry.clockOut).getTime() - new Date(entry.clockIn).getTime();
+      const diffMs =
+        new Date(entry.clockOut).getTime() - new Date(entry.clockIn).getTime();
       const breakMs = (entry.breakMinutes || 0) * 60 * 1000;
       const workedMs = diffMs - breakMs;
-      entry.totalHours = Math.max(0, Math.round((workedMs / (1000 * 60 * 60)) * 100) / 100);
+      entry.totalHours = Math.max(
+        0,
+        Math.round((workedMs / (1000 * 60 * 60)) * 100) / 100,
+      );
     }
 
     entry.status = TimeEntryStatus.ADJUSTED;
@@ -339,13 +460,15 @@ export class TimeTrackingService {
   /**
    * Get live status of all workers (who's clocked in now)
    */
-  async getLiveStatus(userId: string): Promise<Array<{
-    workerId: string;
-    workerName: string;
-    isClockedIn: boolean;
-    clockInTime: Date | null;
-    duration: string;
-  }>> {
+  async getLiveStatus(userId: string): Promise<
+    Array<{
+      workerId: string;
+      workerName: string;
+      isClockedIn: boolean;
+      clockInTime: Date | null;
+      duration: string;
+    }>
+  > {
     // Get all workers for employer
     const workers = await this.workersRepository.find({
       where: { userId, isActive: true },

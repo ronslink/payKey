@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/network/api_service.dart';
+import '../../../../core/services/geofence_service.dart';
 import '../../data/models/employee_models.dart';
 
 // ============================================================================
@@ -84,6 +85,8 @@ class EmployeeDashboardPage extends ConsumerStatefulWidget {
 class _EmployeeDashboardPageState extends ConsumerState<EmployeeDashboardPage> {
   LeaveBalance? _leaveBalance;
   ClockStatus? _clockStatus;
+  List<Map<String, dynamic>> _properties = [];
+  String? _selectedPropertyId;
   bool _isLoading = true;
   bool _isClockingIn = false;
 
@@ -100,12 +103,14 @@ class _EmployeeDashboardPageState extends ConsumerState<EmployeeDashboardPage> {
   Future<void> _loadData() async {
     _setLoading(true);
     try {
-      final results = await Future.wait([
-        ApiService().employeePortal.getMyLeaveBalance(),
-        _fetchClockStatus(),
-      ]);
-
-      final leaveResponse = results[0];
+      // Fetch leave balance, clock status, and properties in parallel
+      final leaveBalanceFuture = ApiService().employeePortal.getMyLeaveBalance();
+      
+      // These are fire-and-forget since they update state internally
+      _fetchClockStatus();
+      _fetchEmployerProperties();
+      
+      final leaveResponse = await leaveBalanceFuture;
       if (leaveResponse.statusCode == 200) {
         _leaveBalance = LeaveBalance.fromJson(leaveResponse.data);
       }
@@ -113,6 +118,24 @@ class _EmployeeDashboardPageState extends ConsumerState<EmployeeDashboardPage> {
       // Silent failure - partial data is acceptable
     } finally {
       _setLoading(false);
+    }
+  }
+
+  Future<void> _fetchEmployerProperties() async {
+    try {
+      final response = await ApiService().employeePortal.getEmployerProperties();
+      if (response.statusCode == 200 && mounted) {
+        final data = response.data as List<dynamic>?;
+        setState(() {
+          _properties = data?.map((p) => p as Map<String, dynamic>).toList() ?? [];
+          // Auto-select if only one property
+          if (_properties.length == 1) {
+            _selectedPropertyId = _properties.first['id'] as String?;
+          }
+        });
+      }
+    } catch (_) {
+      // Properties are optional - may fail for non Gold/Platinum
     }
   }
 
@@ -138,17 +161,48 @@ class _EmployeeDashboardPageState extends ConsumerState<EmployeeDashboardPage> {
   // --------------------------------------------------------------------------
 
   Future<void> _handleClockAction() async {
+    final isClockedIn = _clockStatus?.isClockedIn == true;
+    
+    // Show property selection dialog if clocking in with multiple properties
+    if (!isClockedIn && _properties.length > 1 && _selectedPropertyId == null) {
+      final selectedId = await _showPropertySelectionDialog();
+      if (selectedId == null) return; // User cancelled
+      _selectedPropertyId = selectedId;
+    }
+    
     _setClockingIn(true);
     try {
       final workerId = await _getWorkerId();
-      final isClockedIn = _clockStatus?.isClockedIn == true;
 
       if (isClockedIn) {
         await ApiService().timeTracking.clockOut(workerId);
+        await GeofenceService.instance.stopMonitoring();
         _showSnackBar('Clocked out successfully!', Colors.orange);
+        _selectedPropertyId = null; // Reset selection
       } else {
-        await ApiService().timeTracking.clockIn(workerId);
+        await ApiService().timeTracking.clockIn(
+          workerId,
+          propertyId: _selectedPropertyId,
+        );
         _showSnackBar('Clocked in successfully!', Colors.green);
+        
+        // Start geofence monitoring if property selected
+        if (_selectedPropertyId != null) {
+          final prop = _properties.firstWhere(
+            (p) => p['id'] == _selectedPropertyId,
+            orElse: () => <String, dynamic>{},
+          );
+          if (prop.isNotEmpty && prop['latitude'] != null && prop['longitude'] != null) {
+            await GeofenceService.instance.startMonitoring(
+              workerId: workerId,
+              propertyId: _selectedPropertyId!,
+              propertyName: prop['name'] as String? ?? 'Work Location',
+              latitude: (prop['latitude'] as num).toDouble(),
+              longitude: (prop['longitude'] as num).toDouble(),
+              radiusMeters: ((prop['geofenceRadius'] as num?) ?? 100).toDouble(),
+            );
+          }
+        }
       }
 
       await _fetchClockStatus();
@@ -157,6 +211,36 @@ class _EmployeeDashboardPageState extends ConsumerState<EmployeeDashboardPage> {
     } finally {
       _setClockingIn(false);
     }
+  }
+
+  Future<String?> _showPropertySelectionDialog() async {
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Select Work Location'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: _properties.map((prop) {
+            return ListTile(
+              leading: const Icon(Icons.location_on, color: Color(0xFF6366F1)),
+              title: Text(prop['name'] as String? ?? 'Unknown'),
+              subtitle: Text(
+                prop['address'] as String? ?? '',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              onTap: () => Navigator.of(ctx).pop(prop['id'] as String),
+            );
+          }).toList(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<String> _getWorkerId() async {
@@ -219,10 +303,13 @@ class _EmployeeDashboardPageState extends ConsumerState<EmployeeDashboardPage> {
                     SliverPadding(
                       padding: const EdgeInsets.symmetric(horizontal: _DashboardStyles.padding),
                       sliver: SliverToBoxAdapter(
-                        child: _ClockCard(
+                      child: _ClockCard(
                           clockStatus: _clockStatus,
                           isClockingIn: _isClockingIn,
                           onClockAction: _handleClockAction,
+                          properties: _properties,
+                          selectedPropertyId: _selectedPropertyId,
+                          onPropertyChanged: (id) => setState(() => _selectedPropertyId = id),
                         ),
                       ),
                     ),
@@ -342,14 +429,29 @@ class _ClockCard extends StatelessWidget {
   final ClockStatus? clockStatus;
   final bool isClockingIn;
   final VoidCallback onClockAction;
+  final List<Map<String, dynamic>> properties;
+  final String? selectedPropertyId;
+  final ValueChanged<String?> onPropertyChanged;
 
   const _ClockCard({
     required this.clockStatus,
     required this.isClockingIn,
     required this.onClockAction,
+    required this.properties,
+    required this.selectedPropertyId,
+    required this.onPropertyChanged,
   });
 
   bool get _isClockedIn => clockStatus?.isClockedIn ?? false;
+
+  String? get _selectedPropertyName {
+    if (selectedPropertyId == null) return null;
+    final prop = properties.cast<Map<String, dynamic>?>().firstWhere(
+      (p) => p?['id'] == selectedPropertyId,
+      orElse: () => null,
+    );
+    return prop?['name'] as String?;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -360,9 +462,54 @@ class _ClockCard extends StatelessWidget {
       child: Column(
         children: [
           _buildStatus(),
+          if (!_isClockedIn && properties.length > 1) ...[
+            const SizedBox(height: 16),
+            _buildPropertySelector(),
+          ],
           const SizedBox(height: 20),
           _buildActionButton(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPropertySelector() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey[300]!),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          isExpanded: true,
+          hint: const Row(
+            children: [
+              Icon(Icons.location_on_outlined, size: 20, color: Colors.grey),
+              SizedBox(width: 8),
+              Text('Select work location'),
+            ],
+          ),
+          value: selectedPropertyId,
+          items: properties.map((prop) {
+            return DropdownMenuItem<String>(
+              value: prop['id'] as String,
+              child: Row(
+                children: [
+                  const Icon(Icons.location_on, size: 20, color: Color(0xFF6366F1)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      prop['name'] as String? ?? 'Unknown',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+          onChanged: onPropertyChanged,
+        ),
       ),
     );
   }

@@ -13,42 +13,43 @@ part of 'property_model.dart';
 T _$identity<T>(T value) => value;
 
 /// @nodoc
-mixin _$Property {
+mixin _$PropertyModel {
 
- String get id; String get userId; String get name; String get address; double? get latitude; double? get longitude; int get geofenceRadius; bool get isActive; int get workerCount; String get createdAt; String get updatedAt;
-/// Create a copy of Property
+ String get id; String get name; String get address; String get userId; int get geofenceRadius; bool get isActive; double? get latitude; double? get longitude; String? get what3words; int get workerCount;// Computed field often useful in lists
+ DateTime? get createdAt; DateTime? get updatedAt;
+/// Create a copy of PropertyModel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
-$PropertyCopyWith<Property> get copyWith => _$PropertyCopyWithImpl<Property>(this as Property, _$identity);
+$PropertyModelCopyWith<PropertyModel> get copyWith => _$PropertyModelCopyWithImpl<PropertyModel>(this as PropertyModel, _$identity);
 
-  /// Serializes this Property to a JSON map.
+  /// Serializes this PropertyModel to a JSON map.
   Map<String, dynamic> toJson();
 
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Property&&(identical(other.id, id) || other.id == id)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.name, name) || other.name == name)&&(identical(other.address, address) || other.address == address)&&(identical(other.latitude, latitude) || other.latitude == latitude)&&(identical(other.longitude, longitude) || other.longitude == longitude)&&(identical(other.geofenceRadius, geofenceRadius) || other.geofenceRadius == geofenceRadius)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.workerCount, workerCount) || other.workerCount == workerCount)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PropertyModel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.address, address) || other.address == address)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.geofenceRadius, geofenceRadius) || other.geofenceRadius == geofenceRadius)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.latitude, latitude) || other.latitude == latitude)&&(identical(other.longitude, longitude) || other.longitude == longitude)&&(identical(other.what3words, what3words) || other.what3words == what3words)&&(identical(other.workerCount, workerCount) || other.workerCount == workerCount)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,userId,name,address,latitude,longitude,geofenceRadius,isActive,workerCount,createdAt,updatedAt);
+int get hashCode => Object.hash(runtimeType,id,name,address,userId,geofenceRadius,isActive,latitude,longitude,what3words,workerCount,createdAt,updatedAt);
 
 @override
 String toString() {
-  return 'Property(id: $id, userId: $userId, name: $name, address: $address, latitude: $latitude, longitude: $longitude, geofenceRadius: $geofenceRadius, isActive: $isActive, workerCount: $workerCount, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'PropertyModel(id: $id, name: $name, address: $address, userId: $userId, geofenceRadius: $geofenceRadius, isActive: $isActive, latitude: $latitude, longitude: $longitude, what3words: $what3words, workerCount: $workerCount, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
 }
 
 /// @nodoc
-abstract mixin class $PropertyCopyWith<$Res>  {
-  factory $PropertyCopyWith(Property value, $Res Function(Property) _then) = _$PropertyCopyWithImpl;
+abstract mixin class $PropertyModelCopyWith<$Res>  {
+  factory $PropertyModelCopyWith(PropertyModel value, $Res Function(PropertyModel) _then) = _$PropertyModelCopyWithImpl;
 @useResult
 $Res call({
- String id, String userId, String name, String address, double? latitude, double? longitude, int geofenceRadius, bool isActive, int workerCount, String createdAt, String updatedAt
+ String id, String name, String address, String userId, int geofenceRadius, bool isActive, double? latitude, double? longitude, String? what3words, int workerCount, DateTime? createdAt, DateTime? updatedAt
 });
 
 
@@ -56,37 +57,38 @@ $Res call({
 
 }
 /// @nodoc
-class _$PropertyCopyWithImpl<$Res>
-    implements $PropertyCopyWith<$Res> {
-  _$PropertyCopyWithImpl(this._self, this._then);
+class _$PropertyModelCopyWithImpl<$Res>
+    implements $PropertyModelCopyWith<$Res> {
+  _$PropertyModelCopyWithImpl(this._self, this._then);
 
-  final Property _self;
-  final $Res Function(Property) _then;
+  final PropertyModel _self;
+  final $Res Function(PropertyModel) _then;
 
-/// Create a copy of Property
+/// Create a copy of PropertyModel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? userId = null,Object? name = null,Object? address = null,Object? latitude = freezed,Object? longitude = freezed,Object? geofenceRadius = null,Object? isActive = null,Object? workerCount = null,Object? createdAt = null,Object? updatedAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? address = null,Object? userId = null,Object? geofenceRadius = null,Object? isActive = null,Object? latitude = freezed,Object? longitude = freezed,Object? what3words = freezed,Object? workerCount = null,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as String,userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,address: null == address ? _self.address : address // ignore: cast_nullable_to_non_nullable
-as String,latitude: freezed == latitude ? _self.latitude : latitude // ignore: cast_nullable_to_non_nullable
-as double?,longitude: freezed == longitude ? _self.longitude : longitude // ignore: cast_nullable_to_non_nullable
-as double?,geofenceRadius: null == geofenceRadius ? _self.geofenceRadius : geofenceRadius // ignore: cast_nullable_to_non_nullable
+as String,userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
+as String,geofenceRadius: null == geofenceRadius ? _self.geofenceRadius : geofenceRadius // ignore: cast_nullable_to_non_nullable
 as int,isActive: null == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
-as bool,workerCount: null == workerCount ? _self.workerCount : workerCount // ignore: cast_nullable_to_non_nullable
-as int,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
-as String,updatedAt: null == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
-as String,
+as bool,latitude: freezed == latitude ? _self.latitude : latitude // ignore: cast_nullable_to_non_nullable
+as double?,longitude: freezed == longitude ? _self.longitude : longitude // ignore: cast_nullable_to_non_nullable
+as double?,what3words: freezed == what3words ? _self.what3words : what3words // ignore: cast_nullable_to_non_nullable
+as String?,workerCount: null == workerCount ? _self.workerCount : workerCount // ignore: cast_nullable_to_non_nullable
+as int,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,updatedAt: freezed == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 
 }
 
 
-/// Adds pattern-matching-related methods to [Property].
-extension PropertyPatterns on Property {
+/// Adds pattern-matching-related methods to [PropertyModel].
+extension PropertyModelPatterns on PropertyModel {
 /// A variant of `map` that fallback to returning `orElse`.
 ///
 /// It is equivalent to doing:
@@ -99,10 +101,10 @@ extension PropertyPatterns on Property {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _Property value)?  $default,{required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _PropertyModel value)?  $default,{required TResult orElse(),}){
 final _that = this;
 switch (_that) {
-case _Property() when $default != null:
+case _PropertyModel() when $default != null:
 return $default(_that);case _:
   return orElse();
 
@@ -121,10 +123,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _Property value)  $default,){
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _PropertyModel value)  $default,){
 final _that = this;
 switch (_that) {
-case _Property():
+case _PropertyModel():
 return $default(_that);case _:
   throw StateError('Unexpected subclass');
 
@@ -142,10 +144,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _Property value)?  $default,){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _PropertyModel value)?  $default,){
 final _that = this;
 switch (_that) {
-case _Property() when $default != null:
+case _PropertyModel() when $default != null:
 return $default(_that);case _:
   return null;
 
@@ -163,10 +165,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String userId,  String name,  String address,  double? latitude,  double? longitude,  int geofenceRadius,  bool isActive,  int workerCount,  String createdAt,  String updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String address,  String userId,  int geofenceRadius,  bool isActive,  double? latitude,  double? longitude,  String? what3words,  int workerCount,  DateTime? createdAt,  DateTime? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
-case _Property() when $default != null:
-return $default(_that.id,_that.userId,_that.name,_that.address,_that.latitude,_that.longitude,_that.geofenceRadius,_that.isActive,_that.workerCount,_that.createdAt,_that.updatedAt);case _:
+case _PropertyModel() when $default != null:
+return $default(_that.id,_that.name,_that.address,_that.userId,_that.geofenceRadius,_that.isActive,_that.latitude,_that.longitude,_that.what3words,_that.workerCount,_that.createdAt,_that.updatedAt);case _:
   return orElse();
 
 }
@@ -184,10 +186,10 @@ return $default(_that.id,_that.userId,_that.name,_that.address,_that.latitude,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String userId,  String name,  String address,  double? latitude,  double? longitude,  int geofenceRadius,  bool isActive,  int workerCount,  String createdAt,  String updatedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String address,  String userId,  int geofenceRadius,  bool isActive,  double? latitude,  double? longitude,  String? what3words,  int workerCount,  DateTime? createdAt,  DateTime? updatedAt)  $default,) {final _that = this;
 switch (_that) {
-case _Property():
-return $default(_that.id,_that.userId,_that.name,_that.address,_that.latitude,_that.longitude,_that.geofenceRadius,_that.isActive,_that.workerCount,_that.createdAt,_that.updatedAt);case _:
+case _PropertyModel():
+return $default(_that.id,_that.name,_that.address,_that.userId,_that.geofenceRadius,_that.isActive,_that.latitude,_that.longitude,_that.what3words,_that.workerCount,_that.createdAt,_that.updatedAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -204,10 +206,10 @@ return $default(_that.id,_that.userId,_that.name,_that.address,_that.latitude,_t
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String userId,  String name,  String address,  double? latitude,  double? longitude,  int geofenceRadius,  bool isActive,  int workerCount,  String createdAt,  String updatedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String address,  String userId,  int geofenceRadius,  bool isActive,  double? latitude,  double? longitude,  String? what3words,  int workerCount,  DateTime? createdAt,  DateTime? updatedAt)?  $default,) {final _that = this;
 switch (_that) {
-case _Property() when $default != null:
-return $default(_that.id,_that.userId,_that.name,_that.address,_that.latitude,_that.longitude,_that.geofenceRadius,_that.isActive,_that.workerCount,_that.createdAt,_that.updatedAt);case _:
+case _PropertyModel() when $default != null:
+return $default(_that.id,_that.name,_that.address,_that.userId,_that.geofenceRadius,_that.isActive,_that.latitude,_that.longitude,_that.what3words,_that.workerCount,_that.createdAt,_that.updatedAt);case _:
   return null;
 
 }
@@ -218,56 +220,58 @@ return $default(_that.id,_that.userId,_that.name,_that.address,_that.latitude,_t
 /// @nodoc
 @JsonSerializable()
 
-class _Property implements Property {
-  const _Property({required this.id, required this.userId, required this.name, required this.address, this.latitude, this.longitude, this.geofenceRadius = 100, this.isActive = true, this.workerCount = 0, required this.createdAt, required this.updatedAt});
-  factory _Property.fromJson(Map<String, dynamic> json) => _$PropertyFromJson(json);
+class _PropertyModel implements PropertyModel {
+  const _PropertyModel({required this.id, required this.name, required this.address, required this.userId, this.geofenceRadius = 100, this.isActive = true, this.latitude, this.longitude, this.what3words, this.workerCount = 0, this.createdAt, this.updatedAt});
+  factory _PropertyModel.fromJson(Map<String, dynamic> json) => _$PropertyModelFromJson(json);
 
 @override final  String id;
-@override final  String userId;
 @override final  String name;
 @override final  String address;
-@override final  double? latitude;
-@override final  double? longitude;
+@override final  String userId;
 @override@JsonKey() final  int geofenceRadius;
 @override@JsonKey() final  bool isActive;
+@override final  double? latitude;
+@override final  double? longitude;
+@override final  String? what3words;
 @override@JsonKey() final  int workerCount;
-@override final  String createdAt;
-@override final  String updatedAt;
+// Computed field often useful in lists
+@override final  DateTime? createdAt;
+@override final  DateTime? updatedAt;
 
-/// Create a copy of Property
+/// Create a copy of PropertyModel
 /// with the given fields replaced by the non-null parameter values.
 @override @JsonKey(includeFromJson: false, includeToJson: false)
 @pragma('vm:prefer-inline')
-_$PropertyCopyWith<_Property> get copyWith => __$PropertyCopyWithImpl<_Property>(this, _$identity);
+_$PropertyModelCopyWith<_PropertyModel> get copyWith => __$PropertyModelCopyWithImpl<_PropertyModel>(this, _$identity);
 
 @override
 Map<String, dynamic> toJson() {
-  return _$PropertyToJson(this, );
+  return _$PropertyModelToJson(this, );
 }
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Property&&(identical(other.id, id) || other.id == id)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.name, name) || other.name == name)&&(identical(other.address, address) || other.address == address)&&(identical(other.latitude, latitude) || other.latitude == latitude)&&(identical(other.longitude, longitude) || other.longitude == longitude)&&(identical(other.geofenceRadius, geofenceRadius) || other.geofenceRadius == geofenceRadius)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.workerCount, workerCount) || other.workerCount == workerCount)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PropertyModel&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.address, address) || other.address == address)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.geofenceRadius, geofenceRadius) || other.geofenceRadius == geofenceRadius)&&(identical(other.isActive, isActive) || other.isActive == isActive)&&(identical(other.latitude, latitude) || other.latitude == latitude)&&(identical(other.longitude, longitude) || other.longitude == longitude)&&(identical(other.what3words, what3words) || other.what3words == what3words)&&(identical(other.workerCount, workerCount) || other.workerCount == workerCount)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,userId,name,address,latitude,longitude,geofenceRadius,isActive,workerCount,createdAt,updatedAt);
+int get hashCode => Object.hash(runtimeType,id,name,address,userId,geofenceRadius,isActive,latitude,longitude,what3words,workerCount,createdAt,updatedAt);
 
 @override
 String toString() {
-  return 'Property(id: $id, userId: $userId, name: $name, address: $address, latitude: $latitude, longitude: $longitude, geofenceRadius: $geofenceRadius, isActive: $isActive, workerCount: $workerCount, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'PropertyModel(id: $id, name: $name, address: $address, userId: $userId, geofenceRadius: $geofenceRadius, isActive: $isActive, latitude: $latitude, longitude: $longitude, what3words: $what3words, workerCount: $workerCount, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
 }
 
 /// @nodoc
-abstract mixin class _$PropertyCopyWith<$Res> implements $PropertyCopyWith<$Res> {
-  factory _$PropertyCopyWith(_Property value, $Res Function(_Property) _then) = __$PropertyCopyWithImpl;
+abstract mixin class _$PropertyModelCopyWith<$Res> implements $PropertyModelCopyWith<$Res> {
+  factory _$PropertyModelCopyWith(_PropertyModel value, $Res Function(_PropertyModel) _then) = __$PropertyModelCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String userId, String name, String address, double? latitude, double? longitude, int geofenceRadius, bool isActive, int workerCount, String createdAt, String updatedAt
+ String id, String name, String address, String userId, int geofenceRadius, bool isActive, double? latitude, double? longitude, String? what3words, int workerCount, DateTime? createdAt, DateTime? updatedAt
 });
 
 
@@ -275,304 +279,30 @@ $Res call({
 
 }
 /// @nodoc
-class __$PropertyCopyWithImpl<$Res>
-    implements _$PropertyCopyWith<$Res> {
-  __$PropertyCopyWithImpl(this._self, this._then);
+class __$PropertyModelCopyWithImpl<$Res>
+    implements _$PropertyModelCopyWith<$Res> {
+  __$PropertyModelCopyWithImpl(this._self, this._then);
 
-  final _Property _self;
-  final $Res Function(_Property) _then;
+  final _PropertyModel _self;
+  final $Res Function(_PropertyModel) _then;
 
-/// Create a copy of Property
+/// Create a copy of PropertyModel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? userId = null,Object? name = null,Object? address = null,Object? latitude = freezed,Object? longitude = freezed,Object? geofenceRadius = null,Object? isActive = null,Object? workerCount = null,Object? createdAt = null,Object? updatedAt = null,}) {
-  return _then(_Property(
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? address = null,Object? userId = null,Object? geofenceRadius = null,Object? isActive = null,Object? latitude = freezed,Object? longitude = freezed,Object? what3words = freezed,Object? workerCount = null,Object? createdAt = freezed,Object? updatedAt = freezed,}) {
+  return _then(_PropertyModel(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as String,address: null == address ? _self.address : address // ignore: cast_nullable_to_non_nullable
 as String,userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
-as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
-as String,address: null == address ? _self.address : address // ignore: cast_nullable_to_non_nullable
-as String,latitude: freezed == latitude ? _self.latitude : latitude // ignore: cast_nullable_to_non_nullable
+as String,geofenceRadius: null == geofenceRadius ? _self.geofenceRadius : geofenceRadius // ignore: cast_nullable_to_non_nullable
+as int,isActive: null == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
+as bool,latitude: freezed == latitude ? _self.latitude : latitude // ignore: cast_nullable_to_non_nullable
 as double?,longitude: freezed == longitude ? _self.longitude : longitude // ignore: cast_nullable_to_non_nullable
-as double?,geofenceRadius: null == geofenceRadius ? _self.geofenceRadius : geofenceRadius // ignore: cast_nullable_to_non_nullable
-as int,isActive: null == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
-as bool,workerCount: null == workerCount ? _self.workerCount : workerCount // ignore: cast_nullable_to_non_nullable
-as int,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
-as String,updatedAt: null == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
-as String,
-  ));
-}
-
-
-}
-
-
-/// @nodoc
-mixin _$PropertySummary {
-
- String get id; String get name; String get address; int get workerCount; bool get isActive;
-/// Create a copy of PropertySummary
-/// with the given fields replaced by the non-null parameter values.
-@JsonKey(includeFromJson: false, includeToJson: false)
-@pragma('vm:prefer-inline')
-$PropertySummaryCopyWith<PropertySummary> get copyWith => _$PropertySummaryCopyWithImpl<PropertySummary>(this as PropertySummary, _$identity);
-
-  /// Serializes this PropertySummary to a JSON map.
-  Map<String, dynamic> toJson();
-
-
-@override
-bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is PropertySummary&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.address, address) || other.address == address)&&(identical(other.workerCount, workerCount) || other.workerCount == workerCount)&&(identical(other.isActive, isActive) || other.isActive == isActive));
-}
-
-@JsonKey(includeFromJson: false, includeToJson: false)
-@override
-int get hashCode => Object.hash(runtimeType,id,name,address,workerCount,isActive);
-
-@override
-String toString() {
-  return 'PropertySummary(id: $id, name: $name, address: $address, workerCount: $workerCount, isActive: $isActive)';
-}
-
-
-}
-
-/// @nodoc
-abstract mixin class $PropertySummaryCopyWith<$Res>  {
-  factory $PropertySummaryCopyWith(PropertySummary value, $Res Function(PropertySummary) _then) = _$PropertySummaryCopyWithImpl;
-@useResult
-$Res call({
- String id, String name, String address, int workerCount, bool isActive
-});
-
-
-
-
-}
-/// @nodoc
-class _$PropertySummaryCopyWithImpl<$Res>
-    implements $PropertySummaryCopyWith<$Res> {
-  _$PropertySummaryCopyWithImpl(this._self, this._then);
-
-  final PropertySummary _self;
-  final $Res Function(PropertySummary) _then;
-
-/// Create a copy of PropertySummary
-/// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? address = null,Object? workerCount = null,Object? isActive = null,}) {
-  return _then(_self.copyWith(
-id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
-as String,address: null == address ? _self.address : address // ignore: cast_nullable_to_non_nullable
-as String,workerCount: null == workerCount ? _self.workerCount : workerCount // ignore: cast_nullable_to_non_nullable
-as int,isActive: null == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
-as bool,
-  ));
-}
-
-}
-
-
-/// Adds pattern-matching-related methods to [PropertySummary].
-extension PropertySummaryPatterns on PropertySummary {
-/// A variant of `map` that fallback to returning `orElse`.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case _:
-///     return orElse();
-/// }
-/// ```
-
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _PropertySummary value)?  $default,{required TResult orElse(),}){
-final _that = this;
-switch (_that) {
-case _PropertySummary() when $default != null:
-return $default(_that);case _:
-  return orElse();
-
-}
-}
-/// A `switch`-like method, using callbacks.
-///
-/// Callbacks receives the raw object, upcasted.
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case final Subclass2 value:
-///     return ...;
-/// }
-/// ```
-
-@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _PropertySummary value)  $default,){
-final _that = this;
-switch (_that) {
-case _PropertySummary():
-return $default(_that);case _:
-  throw StateError('Unexpected subclass');
-
-}
-}
-/// A variant of `map` that fallback to returning `null`.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case final Subclass value:
-///     return ...;
-///   case _:
-///     return null;
-/// }
-/// ```
-
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _PropertySummary value)?  $default,){
-final _that = this;
-switch (_that) {
-case _PropertySummary() when $default != null:
-return $default(_that);case _:
-  return null;
-
-}
-}
-/// A variant of `when` that fallback to an `orElse` callback.
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case _:
-///     return orElse();
-/// }
-/// ```
-
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String address,  int workerCount,  bool isActive)?  $default,{required TResult orElse(),}) {final _that = this;
-switch (_that) {
-case _PropertySummary() when $default != null:
-return $default(_that.id,_that.name,_that.address,_that.workerCount,_that.isActive);case _:
-  return orElse();
-
-}
-}
-/// A `switch`-like method, using callbacks.
-///
-/// As opposed to `map`, this offers destructuring.
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case Subclass2(:final field2):
-///     return ...;
-/// }
-/// ```
-
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String address,  int workerCount,  bool isActive)  $default,) {final _that = this;
-switch (_that) {
-case _PropertySummary():
-return $default(_that.id,_that.name,_that.address,_that.workerCount,_that.isActive);case _:
-  throw StateError('Unexpected subclass');
-
-}
-}
-/// A variant of `when` that fallback to returning `null`
-///
-/// It is equivalent to doing:
-/// ```dart
-/// switch (sealedClass) {
-///   case Subclass(:final field):
-///     return ...;
-///   case _:
-///     return null;
-/// }
-/// ```
-
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String address,  int workerCount,  bool isActive)?  $default,) {final _that = this;
-switch (_that) {
-case _PropertySummary() when $default != null:
-return $default(_that.id,_that.name,_that.address,_that.workerCount,_that.isActive);case _:
-  return null;
-
-}
-}
-
-}
-
-/// @nodoc
-@JsonSerializable()
-
-class _PropertySummary implements PropertySummary {
-  const _PropertySummary({required this.id, required this.name, required this.address, required this.workerCount, required this.isActive});
-  factory _PropertySummary.fromJson(Map<String, dynamic> json) => _$PropertySummaryFromJson(json);
-
-@override final  String id;
-@override final  String name;
-@override final  String address;
-@override final  int workerCount;
-@override final  bool isActive;
-
-/// Create a copy of PropertySummary
-/// with the given fields replaced by the non-null parameter values.
-@override @JsonKey(includeFromJson: false, includeToJson: false)
-@pragma('vm:prefer-inline')
-_$PropertySummaryCopyWith<_PropertySummary> get copyWith => __$PropertySummaryCopyWithImpl<_PropertySummary>(this, _$identity);
-
-@override
-Map<String, dynamic> toJson() {
-  return _$PropertySummaryToJson(this, );
-}
-
-@override
-bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PropertySummary&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.address, address) || other.address == address)&&(identical(other.workerCount, workerCount) || other.workerCount == workerCount)&&(identical(other.isActive, isActive) || other.isActive == isActive));
-}
-
-@JsonKey(includeFromJson: false, includeToJson: false)
-@override
-int get hashCode => Object.hash(runtimeType,id,name,address,workerCount,isActive);
-
-@override
-String toString() {
-  return 'PropertySummary(id: $id, name: $name, address: $address, workerCount: $workerCount, isActive: $isActive)';
-}
-
-
-}
-
-/// @nodoc
-abstract mixin class _$PropertySummaryCopyWith<$Res> implements $PropertySummaryCopyWith<$Res> {
-  factory _$PropertySummaryCopyWith(_PropertySummary value, $Res Function(_PropertySummary) _then) = __$PropertySummaryCopyWithImpl;
-@override @useResult
-$Res call({
- String id, String name, String address, int workerCount, bool isActive
-});
-
-
-
-
-}
-/// @nodoc
-class __$PropertySummaryCopyWithImpl<$Res>
-    implements _$PropertySummaryCopyWith<$Res> {
-  __$PropertySummaryCopyWithImpl(this._self, this._then);
-
-  final _PropertySummary _self;
-  final $Res Function(_PropertySummary) _then;
-
-/// Create a copy of PropertySummary
-/// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? address = null,Object? workerCount = null,Object? isActive = null,}) {
-  return _then(_PropertySummary(
-id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
-as String,address: null == address ? _self.address : address // ignore: cast_nullable_to_non_nullable
-as String,workerCount: null == workerCount ? _self.workerCount : workerCount // ignore: cast_nullable_to_non_nullable
-as int,isActive: null == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
-as bool,
+as double?,what3words: freezed == what3words ? _self.what3words : what3words // ignore: cast_nullable_to_non_nullable
+as String?,workerCount: null == workerCount ? _self.workerCount : workerCount // ignore: cast_nullable_to_non_nullable
+as int,createdAt: freezed == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,updatedAt: freezed == updatedAt ? _self.updatedAt : updatedAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 
@@ -583,7 +313,7 @@ as bool,
 /// @nodoc
 mixin _$CreatePropertyRequest {
 
- String get name; String get address; double? get latitude; double? get longitude; int get geofenceRadius;
+ String get name; String get address; int get geofenceRadius; double? get latitude; double? get longitude; String? get what3words;
 /// Create a copy of CreatePropertyRequest
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -596,16 +326,16 @@ $CreatePropertyRequestCopyWith<CreatePropertyRequest> get copyWith => _$CreatePr
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is CreatePropertyRequest&&(identical(other.name, name) || other.name == name)&&(identical(other.address, address) || other.address == address)&&(identical(other.latitude, latitude) || other.latitude == latitude)&&(identical(other.longitude, longitude) || other.longitude == longitude)&&(identical(other.geofenceRadius, geofenceRadius) || other.geofenceRadius == geofenceRadius));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CreatePropertyRequest&&(identical(other.name, name) || other.name == name)&&(identical(other.address, address) || other.address == address)&&(identical(other.geofenceRadius, geofenceRadius) || other.geofenceRadius == geofenceRadius)&&(identical(other.latitude, latitude) || other.latitude == latitude)&&(identical(other.longitude, longitude) || other.longitude == longitude)&&(identical(other.what3words, what3words) || other.what3words == what3words));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,name,address,latitude,longitude,geofenceRadius);
+int get hashCode => Object.hash(runtimeType,name,address,geofenceRadius,latitude,longitude,what3words);
 
 @override
 String toString() {
-  return 'CreatePropertyRequest(name: $name, address: $address, latitude: $latitude, longitude: $longitude, geofenceRadius: $geofenceRadius)';
+  return 'CreatePropertyRequest(name: $name, address: $address, geofenceRadius: $geofenceRadius, latitude: $latitude, longitude: $longitude, what3words: $what3words)';
 }
 
 
@@ -616,7 +346,7 @@ abstract mixin class $CreatePropertyRequestCopyWith<$Res>  {
   factory $CreatePropertyRequestCopyWith(CreatePropertyRequest value, $Res Function(CreatePropertyRequest) _then) = _$CreatePropertyRequestCopyWithImpl;
 @useResult
 $Res call({
- String name, String address, double? latitude, double? longitude, int geofenceRadius
+ String name, String address, int geofenceRadius, double? latitude, double? longitude, String? what3words
 });
 
 
@@ -633,14 +363,15 @@ class _$CreatePropertyRequestCopyWithImpl<$Res>
 
 /// Create a copy of CreatePropertyRequest
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? name = null,Object? address = null,Object? latitude = freezed,Object? longitude = freezed,Object? geofenceRadius = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? name = null,Object? address = null,Object? geofenceRadius = null,Object? latitude = freezed,Object? longitude = freezed,Object? what3words = freezed,}) {
   return _then(_self.copyWith(
 name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,address: null == address ? _self.address : address // ignore: cast_nullable_to_non_nullable
-as String,latitude: freezed == latitude ? _self.latitude : latitude // ignore: cast_nullable_to_non_nullable
+as String,geofenceRadius: null == geofenceRadius ? _self.geofenceRadius : geofenceRadius // ignore: cast_nullable_to_non_nullable
+as int,latitude: freezed == latitude ? _self.latitude : latitude // ignore: cast_nullable_to_non_nullable
 as double?,longitude: freezed == longitude ? _self.longitude : longitude // ignore: cast_nullable_to_non_nullable
-as double?,geofenceRadius: null == geofenceRadius ? _self.geofenceRadius : geofenceRadius // ignore: cast_nullable_to_non_nullable
-as int,
+as double?,what3words: freezed == what3words ? _self.what3words : what3words // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -725,10 +456,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String name,  String address,  double? latitude,  double? longitude,  int geofenceRadius)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String name,  String address,  int geofenceRadius,  double? latitude,  double? longitude,  String? what3words)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _CreatePropertyRequest() when $default != null:
-return $default(_that.name,_that.address,_that.latitude,_that.longitude,_that.geofenceRadius);case _:
+return $default(_that.name,_that.address,_that.geofenceRadius,_that.latitude,_that.longitude,_that.what3words);case _:
   return orElse();
 
 }
@@ -746,10 +477,10 @@ return $default(_that.name,_that.address,_that.latitude,_that.longitude,_that.ge
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String name,  String address,  double? latitude,  double? longitude,  int geofenceRadius)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String name,  String address,  int geofenceRadius,  double? latitude,  double? longitude,  String? what3words)  $default,) {final _that = this;
 switch (_that) {
 case _CreatePropertyRequest():
-return $default(_that.name,_that.address,_that.latitude,_that.longitude,_that.geofenceRadius);case _:
+return $default(_that.name,_that.address,_that.geofenceRadius,_that.latitude,_that.longitude,_that.what3words);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -766,10 +497,10 @@ return $default(_that.name,_that.address,_that.latitude,_that.longitude,_that.ge
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String name,  String address,  double? latitude,  double? longitude,  int geofenceRadius)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String name,  String address,  int geofenceRadius,  double? latitude,  double? longitude,  String? what3words)?  $default,) {final _that = this;
 switch (_that) {
 case _CreatePropertyRequest() when $default != null:
-return $default(_that.name,_that.address,_that.latitude,_that.longitude,_that.geofenceRadius);case _:
+return $default(_that.name,_that.address,_that.geofenceRadius,_that.latitude,_that.longitude,_that.what3words);case _:
   return null;
 
 }
@@ -781,14 +512,15 @@ return $default(_that.name,_that.address,_that.latitude,_that.longitude,_that.ge
 @JsonSerializable()
 
 class _CreatePropertyRequest implements CreatePropertyRequest {
-  const _CreatePropertyRequest({required this.name, required this.address, this.latitude, this.longitude, this.geofenceRadius = 100});
+  const _CreatePropertyRequest({required this.name, required this.address, this.geofenceRadius = 100, this.latitude, this.longitude, this.what3words});
   factory _CreatePropertyRequest.fromJson(Map<String, dynamic> json) => _$CreatePropertyRequestFromJson(json);
 
 @override final  String name;
 @override final  String address;
+@override@JsonKey() final  int geofenceRadius;
 @override final  double? latitude;
 @override final  double? longitude;
-@override@JsonKey() final  int geofenceRadius;
+@override final  String? what3words;
 
 /// Create a copy of CreatePropertyRequest
 /// with the given fields replaced by the non-null parameter values.
@@ -803,16 +535,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CreatePropertyRequest&&(identical(other.name, name) || other.name == name)&&(identical(other.address, address) || other.address == address)&&(identical(other.latitude, latitude) || other.latitude == latitude)&&(identical(other.longitude, longitude) || other.longitude == longitude)&&(identical(other.geofenceRadius, geofenceRadius) || other.geofenceRadius == geofenceRadius));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _CreatePropertyRequest&&(identical(other.name, name) || other.name == name)&&(identical(other.address, address) || other.address == address)&&(identical(other.geofenceRadius, geofenceRadius) || other.geofenceRadius == geofenceRadius)&&(identical(other.latitude, latitude) || other.latitude == latitude)&&(identical(other.longitude, longitude) || other.longitude == longitude)&&(identical(other.what3words, what3words) || other.what3words == what3words));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,name,address,latitude,longitude,geofenceRadius);
+int get hashCode => Object.hash(runtimeType,name,address,geofenceRadius,latitude,longitude,what3words);
 
 @override
 String toString() {
-  return 'CreatePropertyRequest(name: $name, address: $address, latitude: $latitude, longitude: $longitude, geofenceRadius: $geofenceRadius)';
+  return 'CreatePropertyRequest(name: $name, address: $address, geofenceRadius: $geofenceRadius, latitude: $latitude, longitude: $longitude, what3words: $what3words)';
 }
 
 
@@ -823,7 +555,7 @@ abstract mixin class _$CreatePropertyRequestCopyWith<$Res> implements $CreatePro
   factory _$CreatePropertyRequestCopyWith(_CreatePropertyRequest value, $Res Function(_CreatePropertyRequest) _then) = __$CreatePropertyRequestCopyWithImpl;
 @override @useResult
 $Res call({
- String name, String address, double? latitude, double? longitude, int geofenceRadius
+ String name, String address, int geofenceRadius, double? latitude, double? longitude, String? what3words
 });
 
 
@@ -840,14 +572,15 @@ class __$CreatePropertyRequestCopyWithImpl<$Res>
 
 /// Create a copy of CreatePropertyRequest
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? name = null,Object? address = null,Object? latitude = freezed,Object? longitude = freezed,Object? geofenceRadius = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? name = null,Object? address = null,Object? geofenceRadius = null,Object? latitude = freezed,Object? longitude = freezed,Object? what3words = freezed,}) {
   return _then(_CreatePropertyRequest(
 name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,address: null == address ? _self.address : address // ignore: cast_nullable_to_non_nullable
-as String,latitude: freezed == latitude ? _self.latitude : latitude // ignore: cast_nullable_to_non_nullable
+as String,geofenceRadius: null == geofenceRadius ? _self.geofenceRadius : geofenceRadius // ignore: cast_nullable_to_non_nullable
+as int,latitude: freezed == latitude ? _self.latitude : latitude // ignore: cast_nullable_to_non_nullable
 as double?,longitude: freezed == longitude ? _self.longitude : longitude // ignore: cast_nullable_to_non_nullable
-as double?,geofenceRadius: null == geofenceRadius ? _self.geofenceRadius : geofenceRadius // ignore: cast_nullable_to_non_nullable
-as int,
+as double?,what3words: freezed == what3words ? _self.what3words : what3words // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -858,7 +591,7 @@ as int,
 /// @nodoc
 mixin _$UpdatePropertyRequest {
 
- String? get name; String? get address; double? get latitude; double? get longitude; int? get geofenceRadius; bool? get isActive;
+ String? get name; String? get address; int? get geofenceRadius; double? get latitude; double? get longitude; String? get what3words; bool? get isActive;
 /// Create a copy of UpdatePropertyRequest
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -871,16 +604,16 @@ $UpdatePropertyRequestCopyWith<UpdatePropertyRequest> get copyWith => _$UpdatePr
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is UpdatePropertyRequest&&(identical(other.name, name) || other.name == name)&&(identical(other.address, address) || other.address == address)&&(identical(other.latitude, latitude) || other.latitude == latitude)&&(identical(other.longitude, longitude) || other.longitude == longitude)&&(identical(other.geofenceRadius, geofenceRadius) || other.geofenceRadius == geofenceRadius)&&(identical(other.isActive, isActive) || other.isActive == isActive));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is UpdatePropertyRequest&&(identical(other.name, name) || other.name == name)&&(identical(other.address, address) || other.address == address)&&(identical(other.geofenceRadius, geofenceRadius) || other.geofenceRadius == geofenceRadius)&&(identical(other.latitude, latitude) || other.latitude == latitude)&&(identical(other.longitude, longitude) || other.longitude == longitude)&&(identical(other.what3words, what3words) || other.what3words == what3words)&&(identical(other.isActive, isActive) || other.isActive == isActive));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,name,address,latitude,longitude,geofenceRadius,isActive);
+int get hashCode => Object.hash(runtimeType,name,address,geofenceRadius,latitude,longitude,what3words,isActive);
 
 @override
 String toString() {
-  return 'UpdatePropertyRequest(name: $name, address: $address, latitude: $latitude, longitude: $longitude, geofenceRadius: $geofenceRadius, isActive: $isActive)';
+  return 'UpdatePropertyRequest(name: $name, address: $address, geofenceRadius: $geofenceRadius, latitude: $latitude, longitude: $longitude, what3words: $what3words, isActive: $isActive)';
 }
 
 
@@ -891,7 +624,7 @@ abstract mixin class $UpdatePropertyRequestCopyWith<$Res>  {
   factory $UpdatePropertyRequestCopyWith(UpdatePropertyRequest value, $Res Function(UpdatePropertyRequest) _then) = _$UpdatePropertyRequestCopyWithImpl;
 @useResult
 $Res call({
- String? name, String? address, double? latitude, double? longitude, int? geofenceRadius, bool? isActive
+ String? name, String? address, int? geofenceRadius, double? latitude, double? longitude, String? what3words, bool? isActive
 });
 
 
@@ -908,14 +641,15 @@ class _$UpdatePropertyRequestCopyWithImpl<$Res>
 
 /// Create a copy of UpdatePropertyRequest
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? name = freezed,Object? address = freezed,Object? latitude = freezed,Object? longitude = freezed,Object? geofenceRadius = freezed,Object? isActive = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? name = freezed,Object? address = freezed,Object? geofenceRadius = freezed,Object? latitude = freezed,Object? longitude = freezed,Object? what3words = freezed,Object? isActive = freezed,}) {
   return _then(_self.copyWith(
 name: freezed == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String?,address: freezed == address ? _self.address : address // ignore: cast_nullable_to_non_nullable
-as String?,latitude: freezed == latitude ? _self.latitude : latitude // ignore: cast_nullable_to_non_nullable
+as String?,geofenceRadius: freezed == geofenceRadius ? _self.geofenceRadius : geofenceRadius // ignore: cast_nullable_to_non_nullable
+as int?,latitude: freezed == latitude ? _self.latitude : latitude // ignore: cast_nullable_to_non_nullable
 as double?,longitude: freezed == longitude ? _self.longitude : longitude // ignore: cast_nullable_to_non_nullable
-as double?,geofenceRadius: freezed == geofenceRadius ? _self.geofenceRadius : geofenceRadius // ignore: cast_nullable_to_non_nullable
-as int?,isActive: freezed == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
+as double?,what3words: freezed == what3words ? _self.what3words : what3words // ignore: cast_nullable_to_non_nullable
+as String?,isActive: freezed == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
 as bool?,
   ));
 }
@@ -1001,10 +735,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? name,  String? address,  double? latitude,  double? longitude,  int? geofenceRadius,  bool? isActive)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? name,  String? address,  int? geofenceRadius,  double? latitude,  double? longitude,  String? what3words,  bool? isActive)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _UpdatePropertyRequest() when $default != null:
-return $default(_that.name,_that.address,_that.latitude,_that.longitude,_that.geofenceRadius,_that.isActive);case _:
+return $default(_that.name,_that.address,_that.geofenceRadius,_that.latitude,_that.longitude,_that.what3words,_that.isActive);case _:
   return orElse();
 
 }
@@ -1022,10 +756,10 @@ return $default(_that.name,_that.address,_that.latitude,_that.longitude,_that.ge
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? name,  String? address,  double? latitude,  double? longitude,  int? geofenceRadius,  bool? isActive)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? name,  String? address,  int? geofenceRadius,  double? latitude,  double? longitude,  String? what3words,  bool? isActive)  $default,) {final _that = this;
 switch (_that) {
 case _UpdatePropertyRequest():
-return $default(_that.name,_that.address,_that.latitude,_that.longitude,_that.geofenceRadius,_that.isActive);case _:
+return $default(_that.name,_that.address,_that.geofenceRadius,_that.latitude,_that.longitude,_that.what3words,_that.isActive);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1042,10 +776,10 @@ return $default(_that.name,_that.address,_that.latitude,_that.longitude,_that.ge
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? name,  String? address,  double? latitude,  double? longitude,  int? geofenceRadius,  bool? isActive)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? name,  String? address,  int? geofenceRadius,  double? latitude,  double? longitude,  String? what3words,  bool? isActive)?  $default,) {final _that = this;
 switch (_that) {
 case _UpdatePropertyRequest() when $default != null:
-return $default(_that.name,_that.address,_that.latitude,_that.longitude,_that.geofenceRadius,_that.isActive);case _:
+return $default(_that.name,_that.address,_that.geofenceRadius,_that.latitude,_that.longitude,_that.what3words,_that.isActive);case _:
   return null;
 
 }
@@ -1057,14 +791,15 @@ return $default(_that.name,_that.address,_that.latitude,_that.longitude,_that.ge
 @JsonSerializable()
 
 class _UpdatePropertyRequest implements UpdatePropertyRequest {
-  const _UpdatePropertyRequest({this.name, this.address, this.latitude, this.longitude, this.geofenceRadius, this.isActive});
+  const _UpdatePropertyRequest({this.name, this.address, this.geofenceRadius, this.latitude, this.longitude, this.what3words, this.isActive});
   factory _UpdatePropertyRequest.fromJson(Map<String, dynamic> json) => _$UpdatePropertyRequestFromJson(json);
 
 @override final  String? name;
 @override final  String? address;
+@override final  int? geofenceRadius;
 @override final  double? latitude;
 @override final  double? longitude;
-@override final  int? geofenceRadius;
+@override final  String? what3words;
 @override final  bool? isActive;
 
 /// Create a copy of UpdatePropertyRequest
@@ -1080,16 +815,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _UpdatePropertyRequest&&(identical(other.name, name) || other.name == name)&&(identical(other.address, address) || other.address == address)&&(identical(other.latitude, latitude) || other.latitude == latitude)&&(identical(other.longitude, longitude) || other.longitude == longitude)&&(identical(other.geofenceRadius, geofenceRadius) || other.geofenceRadius == geofenceRadius)&&(identical(other.isActive, isActive) || other.isActive == isActive));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _UpdatePropertyRequest&&(identical(other.name, name) || other.name == name)&&(identical(other.address, address) || other.address == address)&&(identical(other.geofenceRadius, geofenceRadius) || other.geofenceRadius == geofenceRadius)&&(identical(other.latitude, latitude) || other.latitude == latitude)&&(identical(other.longitude, longitude) || other.longitude == longitude)&&(identical(other.what3words, what3words) || other.what3words == what3words)&&(identical(other.isActive, isActive) || other.isActive == isActive));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,name,address,latitude,longitude,geofenceRadius,isActive);
+int get hashCode => Object.hash(runtimeType,name,address,geofenceRadius,latitude,longitude,what3words,isActive);
 
 @override
 String toString() {
-  return 'UpdatePropertyRequest(name: $name, address: $address, latitude: $latitude, longitude: $longitude, geofenceRadius: $geofenceRadius, isActive: $isActive)';
+  return 'UpdatePropertyRequest(name: $name, address: $address, geofenceRadius: $geofenceRadius, latitude: $latitude, longitude: $longitude, what3words: $what3words, isActive: $isActive)';
 }
 
 
@@ -1100,7 +835,7 @@ abstract mixin class _$UpdatePropertyRequestCopyWith<$Res> implements $UpdatePro
   factory _$UpdatePropertyRequestCopyWith(_UpdatePropertyRequest value, $Res Function(_UpdatePropertyRequest) _then) = __$UpdatePropertyRequestCopyWithImpl;
 @override @useResult
 $Res call({
- String? name, String? address, double? latitude, double? longitude, int? geofenceRadius, bool? isActive
+ String? name, String? address, int? geofenceRadius, double? latitude, double? longitude, String? what3words, bool? isActive
 });
 
 
@@ -1117,14 +852,15 @@ class __$UpdatePropertyRequestCopyWithImpl<$Res>
 
 /// Create a copy of UpdatePropertyRequest
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? name = freezed,Object? address = freezed,Object? latitude = freezed,Object? longitude = freezed,Object? geofenceRadius = freezed,Object? isActive = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? name = freezed,Object? address = freezed,Object? geofenceRadius = freezed,Object? latitude = freezed,Object? longitude = freezed,Object? what3words = freezed,Object? isActive = freezed,}) {
   return _then(_UpdatePropertyRequest(
 name: freezed == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String?,address: freezed == address ? _self.address : address // ignore: cast_nullable_to_non_nullable
-as String?,latitude: freezed == latitude ? _self.latitude : latitude // ignore: cast_nullable_to_non_nullable
+as String?,geofenceRadius: freezed == geofenceRadius ? _self.geofenceRadius : geofenceRadius // ignore: cast_nullable_to_non_nullable
+as int?,latitude: freezed == latitude ? _self.latitude : latitude // ignore: cast_nullable_to_non_nullable
 as double?,longitude: freezed == longitude ? _self.longitude : longitude // ignore: cast_nullable_to_non_nullable
-as double?,geofenceRadius: freezed == geofenceRadius ? _self.geofenceRadius : geofenceRadius // ignore: cast_nullable_to_non_nullable
-as int?,isActive: freezed == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
+as double?,what3words: freezed == what3words ? _self.what3words : what3words // ignore: cast_nullable_to_non_nullable
+as String?,isActive: freezed == isActive ? _self.isActive : isActive // ignore: cast_nullable_to_non_nullable
 as bool?,
   ));
 }

@@ -1,13 +1,12 @@
-
 import { Controller, Get, Query, Res } from '@nestjs/common';
 import type { Response } from 'express';
 
 @Controller('subscription')
 export class SubscriptionCallbackController {
-    @Get('success')
-    handleSuccess(@Query('session_id') sessionId: string, @Res() res: Response) {
-        // Return a simple HTML page that closes itself or tells the user to return to the app
-        const html = `
+  @Get('success')
+  handleSuccess(@Query('session_id') sessionId: string, @Res() res: Response) {
+    // Return a simple HTML page that closes itself or tells the user to return to the app
+    const html = `
       <!DOCTYPE html>
       <html>
         <head>
@@ -59,12 +58,12 @@ export class SubscriptionCallbackController {
         </body>
       </html>
     `;
-        res.send(html);
-    }
+    res.send(html);
+  }
 
-    @Get('cancel')
-    handleCancel(@Res() res: Response) {
-        const html = `
+  @Get('cancel')
+  handleCancel(@Res() res: Response) {
+    const html = `
       <!DOCTYPE html>
       <html>
         <head>
@@ -106,6 +105,6 @@ export class SubscriptionCallbackController {
         </body>
       </html>
     `;
-        res.send(html);
-    }
+    res.send(html);
+  }
 }

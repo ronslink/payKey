@@ -80,3 +80,6 @@ backend/coverage/
 backend/test_output*.txt
 *.log
 backend/.env
+
+# Custom scripts
+backend/scripts/do_login.sh
