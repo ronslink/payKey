@@ -38,7 +38,9 @@ describe('TaxesService', () => {
     };
 
     const mockUsersService = {
-      findOneById: jest.fn().mockResolvedValue({ id: 'user-1', email: 'test@example.com' }),
+      findOneById: jest
+        .fn()
+        .mockResolvedValue({ id: 'user-1', email: 'test@example.com' }),
     };
 
     const mockActivitiesService = {
@@ -49,9 +51,15 @@ describe('TaxesService', () => {
       providers: [
         TaxesService,
         { provide: TaxConfigService, useValue: mockTaxConfigService },
-        { provide: getRepositoryToken(TaxSubmission), useValue: mockTaxSubmissionRepo },
+        {
+          provide: getRepositoryToken(TaxSubmission),
+          useValue: mockTaxSubmissionRepo,
+        },
         { provide: getRepositoryToken(TaxTable), useValue: mockTaxTableRepo },
-        { provide: getRepositoryToken(PayrollRecord), useValue: mockPayrollRecordRepo },
+        {
+          provide: getRepositoryToken(PayrollRecord),
+          useValue: mockPayrollRecordRepo,
+        },
         { provide: UsersService, useValue: mockUsersService },
         { provide: ActivitiesService, useValue: mockActivitiesService },
       ],
@@ -59,7 +67,6 @@ describe('TaxesService', () => {
 
     service = module.get<TaxesService>(TaxesService);
   });
-
 
   it('should be defined', () => {
     expect(service).toBeDefined();
@@ -99,7 +106,8 @@ describe('TaxesService', () => {
 
     it('should have totalDeductions equal to sum of individual taxes', async () => {
       const taxes = await service.calculateTaxes(75000, new Date());
-      const sumOfTaxes = taxes.nssf + taxes.nhif + taxes.housingLevy + taxes.paye;
+      const sumOfTaxes =
+        taxes.nssf + taxes.nhif + taxes.housingLevy + taxes.paye;
 
       expect(taxes.totalDeductions).toBeCloseTo(sumOfTaxes, 2);
     });
@@ -124,7 +132,9 @@ describe('TaxesService', () => {
       const lowSalaryTaxes = await service.calculateTaxes(30000, new Date());
       const highSalaryTaxes = await service.calculateTaxes(100000, new Date());
 
-      expect(highSalaryTaxes.totalDeductions).toBeGreaterThan(lowSalaryTaxes.totalDeductions);
+      expect(highSalaryTaxes.totalDeductions).toBeGreaterThan(
+        lowSalaryTaxes.totalDeductions,
+      );
       expect(highSalaryTaxes.paye).toBeGreaterThan(lowSalaryTaxes.paye);
     });
 

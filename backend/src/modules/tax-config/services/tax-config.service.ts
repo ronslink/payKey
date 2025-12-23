@@ -1,23 +1,43 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, Optional, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThanOrEqual, MoreThanOrEqual, IsNull } from 'typeorm';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 import { TaxConfig, TaxType, RateType } from '../entities/tax-config.entity';
+
+const TAX_CONFIG_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours (tax rates rarely change)
 
 @Injectable()
 export class TaxConfigService {
+  private readonly logger = new Logger(TaxConfigService.name);
+
   constructor(
     @InjectRepository(TaxConfig)
     private taxConfigRepository: Repository<TaxConfig>,
-  ) { }
+    @Optional() @Inject(CACHE_MANAGER) private cacheManager?: Cache,
+  ) {}
 
   /**
-   * Get active tax configuration for a specific date
+   * Get active tax configuration for a specific date (with caching)
    */
   async getActiveTaxConfig(
     taxType: TaxType,
     date: Date = new Date(),
   ): Promise<TaxConfig | null> {
-    return this.taxConfigRepository.findOne({
+    // Cache key based on tax type and date (day granularity)
+    const dateKey = date.toISOString().split('T')[0];
+    const cacheKey = `tax:config:${taxType}:${dateKey}`;
+
+    // Try cache first
+    if (this.cacheManager) {
+      const cached = await this.cacheManager.get<TaxConfig>(cacheKey);
+      if (cached) {
+        this.logger.debug(`Cache hit for ${taxType} tax config`);
+        return cached;
+      }
+    }
+
+    const config = await this.taxConfigRepository.findOne({
       where: [
         {
           taxType,
@@ -36,6 +56,14 @@ export class TaxConfigService {
         effectiveFrom: 'DESC',
       },
     });
+
+    // Cache the result
+    if (this.cacheManager && config) {
+      await this.cacheManager.set(cacheKey, config, TAX_CONFIG_CACHE_TTL);
+      this.logger.debug(`Cached ${taxType} tax config for 24 hours`);
+    }
+
+    return config;
   }
 
   /**

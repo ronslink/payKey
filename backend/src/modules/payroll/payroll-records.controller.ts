@@ -22,7 +22,7 @@ export class PayrollRecordsController {
   constructor(
     @InjectRepository(PayrollRecord)
     private payrollRepository: Repository<PayrollRecord>,
-  ) { }
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Get payroll records for the current user' })

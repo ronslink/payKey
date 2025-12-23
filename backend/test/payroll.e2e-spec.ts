@@ -5,7 +5,7 @@ import { AppModule } from './../src/app.module';
 
 /**
  * Payroll E2E Tests
- * 
+ *
  * Tests the complete payroll workflow:
  * 1. Create a worker
  * 2. Generate pay periods
@@ -32,16 +32,14 @@ describe('Payroll E2E', () => {
     const email = `payroll.test.${Date.now()}@paykey.com`;
     const password = 'Password123!';
 
-    await request(app.getHttpServer())
-      .post('/auth/register')
-      .send({
-        email,
-        password,
-        firstName: 'Payroll',
-        lastName: 'Tester',
-        businessName: 'Payroll Test Corp',
-        phone: '+254700000001'
-      });
+    await request(app.getHttpServer()).post('/auth/register').send({
+      email,
+      password,
+      firstName: 'Payroll',
+      lastName: 'Tester',
+      businessName: 'Payroll Test Corp',
+      phone: '+254700000001',
+    });
 
     // Login to get auth token
     const loginRes = await request(app.getHttpServer())
@@ -183,9 +181,7 @@ describe('Payroll E2E', () => {
 
   describe('Authorization', () => {
     it('should prevent unauthorized access to payroll calculate', async () => {
-      await request(app.getHttpServer())
-        .get('/payroll/calculate')
-        .expect(401);
+      await request(app.getHttpServer()).get('/payroll/calculate').expect(401);
     });
 
     it('should prevent access with invalid token', async () => {

@@ -23,4 +23,4 @@ RUN npm prune --production && npm cache clean --force
 EXPOSE 3000
 
 # Start the application in production mode
-CMD ["node", "dist/main"]
+CMD ["node", "dist/src/main"]

@@ -16,7 +16,11 @@ import {
   SubscriptionStatus,
   SubscriptionTier,
 } from './entities/subscription.entity';
-import { SubscriptionPayment, PaymentStatus, PaymentMethod } from './entities/subscription-payment.entity';
+import {
+  SubscriptionPayment,
+  PaymentStatus,
+  PaymentMethod,
+} from './entities/subscription-payment.entity';
 import { SUBSCRIPTION_PLANS } from './subscription-plans.config';
 import { UsersService } from '../users/users.service';
 import { MpesaService } from '../payments/mpesa.service';
@@ -33,7 +37,7 @@ export class SubscriptionsController {
     private subscriptionPaymentRepository: Repository<SubscriptionPayment>,
     private usersService: UsersService,
     private mpesaService: MpesaService,
-  ) { }
+  ) {}
 
   @Get('plans')
   getPlans() {
@@ -70,7 +74,7 @@ export class SubscriptionsController {
 
   /**
    * Calculate prorated amount for subscription upgrade
-   * 
+   *
    * @param currentTier - Current subscription tier
    * @param newTier - New subscription tier
    * @param currentPeriodStart - Start date of current billing period
@@ -110,10 +114,14 @@ export class SubscriptionsController {
     const newPlanPrice = newPlan.priceKES;
 
     // Credit for unused portion of current plan
-    const currentPlanCredit = Math.round((currentPlanPrice / daysInPeriod) * daysRemaining);
+    const currentPlanCredit = Math.round(
+      (currentPlanPrice / daysInPeriod) * daysRemaining,
+    );
 
     // Charge for new plan for remaining days
-    const newPlanCharge = Math.round((newPlanPrice / daysInPeriod) * daysRemaining);
+    const newPlanCharge = Math.round(
+      (newPlanPrice / daysInPeriod) * daysRemaining,
+    );
 
     // Net amount to charge (difference)
     const proratedAmount = Math.max(0, newPlanCharge - currentPlanCredit);
@@ -167,8 +175,12 @@ export class SubscriptionsController {
     }
 
     // Check if upgrade or downgrade
-    const currentPlanIndex = SUBSCRIPTION_PLANS.findIndex((p) => p.tier === subscription.tier);
-    const newPlanIndex = SUBSCRIPTION_PLANS.findIndex((p) => p.tier === newPlan.tier);
+    const currentPlanIndex = SUBSCRIPTION_PLANS.findIndex(
+      (p) => p.tier === subscription.tier,
+    );
+    const newPlanIndex = SUBSCRIPTION_PLANS.findIndex(
+      (p) => p.tier === newPlan.tier,
+    );
 
     if (newPlanIndex <= currentPlanIndex) {
       return {
@@ -249,7 +261,10 @@ export class SubscriptionsController {
   }
 
   @Post('subscribe')
-  async subscribe(@Request() req: any, @Body() body: { planId: string; paymentMethod?: string }) {
+  async subscribe(
+    @Request() req: any,
+    @Body() body: { planId: string; paymentMethod?: string },
+  ) {
     // TODO: Implement actual payment integration (Stripe / M-Pesa)
     // For now, just update/create subscription record and User tier
 
@@ -277,7 +292,8 @@ export class SubscriptionsController {
       subscription.updatedAt = new Date();
     }
 
-    const savedSubscription = await this.subscriptionRepository.save(subscription);
+    const savedSubscription =
+      await this.subscriptionRepository.save(subscription);
 
     // CRITICAL FIX: Also update the User entity's tier to ensure checks against User work
     await this.usersService.update(req.user.userId, { tier: plan.tier as any });
@@ -323,7 +339,7 @@ export class SubscriptionsController {
     }
 
     // Check for existing subscription to determine proration
-    let existingSubscription = await this.subscriptionRepository.findOne({
+    const existingSubscription = await this.subscriptionRepository.findOne({
       where: { userId: req.user.userId, status: SubscriptionStatus.ACTIVE },
     });
 
@@ -333,8 +349,12 @@ export class SubscriptionsController {
 
     // Calculate proration if upgrading from an existing paid plan
     if (existingSubscription && existingSubscription.tier !== 'FREE') {
-      const currentPlanIndex = SUBSCRIPTION_PLANS.findIndex((p) => p.tier === existingSubscription.tier);
-      const newPlanIndex = SUBSCRIPTION_PLANS.findIndex((p) => p.tier === plan.tier);
+      const currentPlanIndex = SUBSCRIPTION_PLANS.findIndex(
+        (p) => p.tier === existingSubscription.tier,
+      );
+      const newPlanIndex = SUBSCRIPTION_PLANS.findIndex(
+        (p) => p.tier === plan.tier,
+      );
 
       // Only prorate for upgrades
       if (newPlanIndex > currentPlanIndex) {
@@ -356,7 +376,9 @@ export class SubscriptionsController {
       }
     }
 
-    this.logger.log(`Initiating M-Pesa subscription for ${formattedPhone}, plan: ${plan.name}, amount: KES ${amountToCharge} (prorated: ${isProrated})`);
+    this.logger.log(
+      `Initiating M-Pesa subscription for ${formattedPhone}, plan: ${plan.name}, amount: KES ${amountToCharge} (prorated: ${isProrated})`,
+    );
 
     // If amount is 0 (e.g., prorated upgrade with credit), activate immediately
     if (amountToCharge <= 0) {
@@ -364,7 +386,9 @@ export class SubscriptionsController {
         existingSubscription.tier = plan.tier as SubscriptionTier;
         existingSubscription.status = SubscriptionStatus.ACTIVE;
         await this.subscriptionRepository.save(existingSubscription);
-        await this.usersService.update(req.user.userId, { tier: plan.tier as any });
+        await this.usersService.update(req.user.userId, {
+          tier: plan.tier as any,
+        });
       }
 
       return {
@@ -391,7 +415,8 @@ export class SubscriptionsController {
       subscription.tier = plan.tier as SubscriptionTier;
       subscription.status = SubscriptionStatus.PENDING;
     }
-    const savedSubscription = await this.subscriptionRepository.save(subscription);
+    const savedSubscription =
+      await this.subscriptionRepository.save(subscription);
 
     // Create pending payment record
     const now = new Date();
@@ -488,7 +513,9 @@ export class SubscriptionsController {
           (p) => p.tier === subscription.tier,
         );
         if (plan) {
-          await this.usersService.update(req.user.userId, { tier: plan.tier as any });
+          await this.usersService.update(req.user.userId, {
+            tier: plan.tier as any,
+          });
         }
       }
     }
@@ -502,4 +529,3 @@ export class SubscriptionsController {
     };
   }
 }
-

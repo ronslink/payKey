@@ -178,7 +178,8 @@ export class ExportService {
     // KRA P10 CSV Layout (approximate standard)
     // PIN of Employee, Name of Employee, Residential Status, Type of Employee, Basic Salary, House Allowance, Transport Allowance, Overtime Allowance, Directors Fee, Leave Pay, Overtime, Total Cash Pay, Value of Car Benefit, Other Non-Cash Benefits, Total Non-Cash Pay, Global Income, Type of Housing, Rent of House, Computed Rent, Rent Recovered, Net Value of Housing, Total Gross Pay, 30% of Cash Pay, Actual Contribution, Permissible Limit, Mortgage Interest, Deposit on Home Ownership, Amount of Benefit, Taxable Pay, Tax Payable, Personal Relief, Insurance Relief, PAYE Tax
 
-    let csv = 'PIN of Employee,Name of Employee,Residential Status,Type of Employee,Basic Salary,House Allowance,Transport Allowance,Overtime Allowance,other Allowances,Total Cash Pay,Car Benefit,Other Non Cash Benefits,Total Non Cash Pay,Total Gross Pay,Actual Contribution,Morgage Interest,Taxable Pay,Tax Payable,Personal Relief,Insurance Relief,PAYE Tax\n';
+    let csv =
+      'PIN of Employee,Name of Employee,Residential Status,Type of Employee,Basic Salary,House Allowance,Transport Allowance,Overtime Allowance,other Allowances,Total Cash Pay,Car Benefit,Other Non Cash Benefits,Total Non Cash Pay,Total Gross Pay,Actual Contribution,Morgage Interest,Taxable Pay,Tax Payable,Personal Relief,Insurance Relief,PAYE Tax\n';
 
     for (const r of records) {
       // Fetch employee PIN from worker details
@@ -193,7 +194,8 @@ export class ExportService {
       const overtime = 0;
       const otherAllow = 0;
 
-      const totalCash = basic + houseAllow + transportAllow + overtime + otherAllow;
+      const totalCash =
+        basic + houseAllow + transportAllow + overtime + otherAllow;
 
       const carBen = 0;
       const otherNonCash = 0;
@@ -209,7 +211,7 @@ export class ExportService {
 
       const taxPayable = r.paye + 2400; // Gross Tax before relief (Approx back-calculation)
       const relief = 2400; // Personal Relief
-      const insRelief = r.shif * 0.15; // SHIF attracts 15% relief usually, verifying... 
+      const insRelief = r.shif * 0.15; // SHIF attracts 15% relief usually, verifying...
       // Actually standard personal relief is fixed. Insurance relief is separate.
       // Let's stick to simple: Tax Payable = PAYE (Net Tax) for this export if we can't reverse calc easily
       // OR: Tax Payable (Gross) -> Relief -> PAYE (Net).
@@ -238,7 +240,8 @@ export class ExportService {
   ): Promise<string> {
     const records = await this.getPayrollData(userId, startDate, endDate);
 
-    let csv = 'Payroll Number,Surname,Other Names,ID No,KRA PIN,NSSF No,Gross Pay,Voluntary Contribution\n';
+    let csv =
+      'Payroll Number,Surname,Other Names,ID No,KRA PIN,NSSF No,Gross Pay,Voluntary Contribution\n';
 
     for (const r of records) {
       // Split name
@@ -268,7 +271,8 @@ export class ExportService {
   ): Promise<string> {
     const records = await this.getPayrollData(userId, startDate, endDate);
 
-    let csv = 'Payroll No,Last Name,First Name,ID No,Gross Salary,SHIF Amount\n';
+    let csv =
+      'Payroll No,Last Name,First Name,ID No,Gross Salary,SHIF Amount\n';
 
     for (const r of records) {
       const nameParts = r.workerName.split(' ');

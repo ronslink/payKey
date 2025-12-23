@@ -108,4 +108,8 @@ export class CreateWorkerDto {
   @IsString()
   @IsOptional()
   emergencyContactRelationship?: string;
+
+  @IsString()
+  @IsOptional()
+  propertyId?: string;
 }

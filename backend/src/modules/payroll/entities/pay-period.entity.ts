@@ -52,11 +52,20 @@ export enum PayPeriodStatus {
 /**
  * Valid status transitions for pay periods.
  */
-export const PAY_PERIOD_TRANSITIONS: Record<PayPeriodStatus, PayPeriodStatus[]> = {
+export const PAY_PERIOD_TRANSITIONS: Record<
+  PayPeriodStatus,
+  PayPeriodStatus[]
+> = {
   [PayPeriodStatus.DRAFT]: [PayPeriodStatus.ACTIVE],
   [PayPeriodStatus.ACTIVE]: [PayPeriodStatus.PROCESSING, PayPeriodStatus.DRAFT],
-  [PayPeriodStatus.PROCESSING]: [PayPeriodStatus.COMPLETED, PayPeriodStatus.ACTIVE],
-  [PayPeriodStatus.COMPLETED]: [PayPeriodStatus.CLOSED, PayPeriodStatus.PROCESSING],
+  [PayPeriodStatus.PROCESSING]: [
+    PayPeriodStatus.COMPLETED,
+    PayPeriodStatus.ACTIVE,
+  ],
+  [PayPeriodStatus.COMPLETED]: [
+    PayPeriodStatus.CLOSED,
+    PayPeriodStatus.PROCESSING,
+  ],
   [PayPeriodStatus.CLOSED]: [], // Terminal state
 };
 
@@ -342,7 +351,10 @@ export class PayPeriod {
    * Whether this pay period can be edited.
    */
   get isEditable(): boolean {
-    return this.status === PayPeriodStatus.DRAFT || this.status === PayPeriodStatus.ACTIVE;
+    return (
+      this.status === PayPeriodStatus.DRAFT ||
+      this.status === PayPeriodStatus.ACTIVE
+    );
   }
 
   /**

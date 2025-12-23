@@ -6,7 +6,7 @@ import {
   IsBoolean,
   IsNumber,
 } from 'class-validator';
-import { LeaveType } from '../entities/leave-request.entity';
+import { LeaveType, LeaveOrigin } from '../entities/leave-request.entity';
 
 export class CreateLeaveRequestDto {
   @IsEnum(LeaveType)
@@ -37,6 +37,10 @@ export class CreateLeaveRequestDto {
   @IsOptional()
   @IsString()
   emergencyPhone?: string;
+
+  @IsOptional()
+  @IsEnum(LeaveOrigin)
+  origin?: LeaveOrigin;
 }
 
 export class ApproveLeaveRequestDto {

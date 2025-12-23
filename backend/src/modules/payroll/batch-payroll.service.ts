@@ -27,7 +27,7 @@ export class BatchPayrollService {
     private mpesaService: MpesaService,
     private taxesService: TaxesService,
     private taxPaymentsService: TaxPaymentsService,
-  ) { }
+  ) {}
 
   async processBatchPayroll(
     userId: string,
@@ -62,9 +62,8 @@ export class BatchPayrollService {
           });
 
         // Calculate payroll taxes on ADJUSTED gross
-        const taxBreakdown = await this.taxesService.calculateTaxes(
-          adjustedGross,
-        );
+        const taxBreakdown =
+          await this.taxesService.calculateTaxes(adjustedGross);
         const netPay = adjustedGross - taxBreakdown.totalDeductions;
 
         // Create transaction record
@@ -78,7 +77,7 @@ export class BatchPayrollService {
             grossSalary: worker.salaryGross,
             taxBreakdown,
             batchId,
-            payPeriodId: batchRequest.payPeriodId,  // For B2C callback to update pay period
+            payPeriodId: batchRequest.payPeriodId, // For B2C callback to update pay period
             processDate: batchRequest.processDate.toISOString(),
           },
         });
@@ -103,7 +102,8 @@ export class BatchPayrollService {
         } else {
           // In dev mode, B2C simulates immediate success
           // In production, status stays PENDING until M-Pesa callback confirms
-          paymentStatus = process.env.NODE_ENV !== 'production' ? 'SUCCESS' : 'PENDING';
+          paymentStatus =
+            process.env.NODE_ENV !== 'production' ? 'SUCCESS' : 'PENDING';
         }
 
         results.push({
@@ -146,11 +146,14 @@ export class BatchPayrollService {
     }
 
     // Update pay period status to COMPLETED if all workers paid successfully
-    if (successfulPayments > 0 && failedPayments === 0 && batchRequest.payPeriodId) {
-      await this.payPeriodRepository.update(
-        batchRequest.payPeriodId,
-        { status: PayPeriodStatus.COMPLETED }
-      );
+    if (
+      successfulPayments > 0 &&
+      failedPayments === 0 &&
+      batchRequest.payPeriodId
+    ) {
+      await this.payPeriodRepository.update(batchRequest.payPeriodId, {
+        status: PayPeriodStatus.COMPLETED,
+      });
     }
 
     return {

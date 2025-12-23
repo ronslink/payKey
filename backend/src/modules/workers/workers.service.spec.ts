@@ -57,8 +57,12 @@ describe('WorkersService', () => {
         updatedAt: new Date(),
       };
 
-      (mockWorkerRepository.create as jest.Mock).mockReturnValue(expectedWorker);
-      (mockWorkerRepository.save as jest.Mock).mockResolvedValue(expectedWorker);
+      (mockWorkerRepository.create as jest.Mock).mockReturnValue(
+        expectedWorker,
+      );
+      (mockWorkerRepository.save as jest.Mock).mockResolvedValue(
+        expectedWorker,
+      );
 
       const result = await service.create('user-123', createWorkerDto);
 
@@ -96,19 +100,19 @@ describe('WorkersService', () => {
   describe('findAll', () => {
     it('should return workers for specific user', async () => {
       const mockWorkers = [
-        { 
-          id: '1', 
-          name: 'Worker 1', 
-          salaryGross: 50000, 
+        {
+          id: '1',
+          name: 'Worker 1',
+          salaryGross: 50000,
           userId: 'user-123',
           isActive: true,
           createdAt: new Date(),
           updatedAt: new Date(),
         },
-        { 
-          id: '2', 
-          name: 'Worker 2', 
-          salaryGross: 60000, 
+        {
+          id: '2',
+          name: 'Worker 2',
+          salaryGross: 60000,
           userId: 'user-123',
           isActive: true,
           createdAt: new Date(),
@@ -180,9 +184,15 @@ describe('WorkersService', () => {
       };
 
       const updateData = { salaryGross: 70000, jobTitle: 'Senior Developer' };
-      const updatedWorker = { ...existingWorker, ...updateData, updatedAt: new Date() };
+      const updatedWorker = {
+        ...existingWorker,
+        ...updateData,
+        updatedAt: new Date(),
+      };
 
-      (mockWorkerRepository.findOne as jest.Mock).mockResolvedValue(existingWorker);
+      (mockWorkerRepository.findOne as jest.Mock).mockResolvedValue(
+        existingWorker,
+      );
       (mockWorkerRepository.save as jest.Mock).mockResolvedValue(updatedWorker);
 
       const result = await service.update('1', 'user-123', updateData);
@@ -198,9 +208,9 @@ describe('WorkersService', () => {
     it('should throw error when worker not found', async () => {
       (mockWorkerRepository.findOne as jest.Mock).mockResolvedValue(null);
 
-      await expect(service.update('999', 'user-123', { salaryGross: 70000 }))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(
+        service.update('999', 'user-123', { salaryGross: 70000 }),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -215,8 +225,12 @@ describe('WorkersService', () => {
         updatedAt: new Date(),
       };
 
-      (mockWorkerRepository.findOne as jest.Mock).mockResolvedValue(existingWorker);
-      (mockWorkerRepository.remove as jest.Mock).mockResolvedValue(existingWorker);
+      (mockWorkerRepository.findOne as jest.Mock).mockResolvedValue(
+        existingWorker,
+      );
+      (mockWorkerRepository.remove as jest.Mock).mockResolvedValue(
+        existingWorker,
+      );
 
       await service.remove('1', 'user-123');
 
@@ -229,9 +243,9 @@ describe('WorkersService', () => {
     it('should throw error when worker not found', async () => {
       (mockWorkerRepository.findOne as jest.Mock).mockResolvedValue(null);
 
-      await expect(service.remove('999', 'user-123'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(service.remove('999', 'user-123')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -274,8 +288,12 @@ describe('WorkersService', () => {
         updatedAt: new Date(),
       };
 
-      (mockWorkerRepository.findOne as jest.Mock).mockResolvedValue(existingWorker);
-      (mockWorkerRepository.save as jest.Mock).mockResolvedValue(archivedWorker);
+      (mockWorkerRepository.findOne as jest.Mock).mockResolvedValue(
+        existingWorker,
+      );
+      (mockWorkerRepository.save as jest.Mock).mockResolvedValue(
+        archivedWorker,
+      );
 
       const result = await service.archiveWorker('1', 'user-123');
 
@@ -291,19 +309,21 @@ describe('WorkersService', () => {
     it('should throw error when worker not found', async () => {
       (mockWorkerRepository.findOne as jest.Mock).mockResolvedValue(null);
 
-      await expect(service.archiveWorker('999', 'user-123'))
-        .rejects
-        .toThrow(NotFoundException);
+      await expect(service.archiveWorker('999', 'user-123')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
   describe('Edge Cases', () => {
     it('should handle database errors gracefully', async () => {
-      (mockWorkerRepository.find as jest.Mock).mockRejectedValue(new Error('Database error'));
+      (mockWorkerRepository.find as jest.Mock).mockRejectedValue(
+        new Error('Database error'),
+      );
 
-      await expect(service.findAll('user-123'))
-        .rejects
-        .toThrow('Database error');
+      await expect(service.findAll('user-123')).rejects.toThrow(
+        'Database error',
+      );
     });
 
     it('should handle concurrent updates correctly', async () => {
@@ -319,17 +339,24 @@ describe('WorkersService', () => {
       };
 
       const updateData = { salaryGross: 70000 };
-      const updatedWorker = { ...originalWorker, ...updateData, version: 2, updatedAt: new Date() };
+      const updatedWorker = {
+        ...originalWorker,
+        ...updateData,
+        version: 2,
+        updatedAt: new Date(),
+      };
 
       (mockWorkerRepository.findOne as jest.Mock)
         .mockResolvedValueOnce(originalWorker) // First call for validation
         .mockResolvedValueOnce(null); // Second call to check if worker still exists
 
-      (mockWorkerRepository.save as jest.Mock).mockRejectedValue(new Error('Optimistic lock error'));
+      (mockWorkerRepository.save as jest.Mock).mockRejectedValue(
+        new Error('Optimistic lock error'),
+      );
 
-      await expect(service.update('1', 'user-123', updateData))
-        .rejects
-        .toThrow('Optimistic lock error');
+      await expect(service.update('1', 'user-123', updateData)).rejects.toThrow(
+        'Optimistic lock error',
+      );
     });
   });
 });

@@ -1,14 +1,19 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 import {
   Transaction,
   TransactionStatus,
   TransactionType,
 } from './entities/transaction.entity';
+
+const MPESA_TOKEN_CACHE_KEY = 'mpesa:access_token';
+const MPESA_TOKEN_TTL = 55 * 60 * 1000; // 55 minutes (token valid for 1hr)
 
 @Injectable()
 export class MpesaService {
@@ -20,15 +25,28 @@ export class MpesaService {
     private httpService: HttpService,
     @InjectRepository(Transaction)
     private transactionsRepository: Repository<Transaction>,
+    @Optional() @Inject(CACHE_MANAGER) private cacheManager?: Cache,
   ) {
     // Use MPESA_BASE_URL env var, fallback to sandbox for development
-    this.baseUrl = this.configService.get('MPESA_BASE_URL')
-      || 'https://sandbox.safaricom.co.ke';
+    this.baseUrl =
+      this.configService.get('MPESA_BASE_URL') ||
+      'https://sandbox.safaricom.co.ke';
 
     this.logger.log(`M-Pesa API configured for: ${this.baseUrl}`);
   }
 
   async getAccessToken(): Promise<string> {
+    // Try to get cached token first
+    if (this.cacheManager) {
+      const cachedToken = await this.cacheManager.get<string>(
+        MPESA_TOKEN_CACHE_KEY,
+      );
+      if (cachedToken) {
+        this.logger.debug('Using cached M-Pesa access token');
+        return cachedToken;
+      }
+    }
+
     const consumerKey = this.configService.get('MPESA_CONSUMER_KEY');
     const consumerSecret = this.configService.get('MPESA_CONSUMER_SECRET');
     const auth = Buffer.from(`${consumerKey}:${consumerSecret}`).toString(
@@ -44,7 +62,19 @@ export class MpesaService {
           },
         ),
       );
-      return response.data.access_token;
+      const token = response.data.access_token;
+
+      // Cache the token
+      if (this.cacheManager) {
+        await this.cacheManager.set(
+          MPESA_TOKEN_CACHE_KEY,
+          token,
+          MPESA_TOKEN_TTL,
+        );
+        this.logger.debug('Cached M-Pesa access token for 55 minutes');
+      }
+
+      return token;
     } catch (error) {
       this.logger.error('Failed to get M-Pesa access token', error);
       throw error;
@@ -131,10 +161,12 @@ export class MpesaService {
   ): Promise<any> {
     // DEV MODE: Simulate success without calling actual M-Pesa API
     if (process.env.NODE_ENV !== 'production') {
-      this.logger.log(`DEV MODE: Simulating B2C payment success for ${phoneNumber}, amount: ${amount}`);
+      this.logger.log(
+        `DEV MODE: Simulating B2C payment success for ${phoneNumber}, amount: ${amount}`,
+      );
 
       // Simulate a short delay like real API
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Update transaction as successful
       await this.transactionsRepository.update(transactionId, {
@@ -203,10 +235,10 @@ export class MpesaService {
       this.logger.error('B2C Payment failed', error);
       await this.transactionsRepository.update(transactionId, {
         status: TransactionStatus.FAILED,
-        metadata: { error: error.message },
+        metadata: { error: (error as any).message },
       });
       // Don't throw, just return error so payroll process continues for others
-      return { error: error.message };
+      return { error: (error as any).message };
     }
   }
 }

@@ -262,7 +262,9 @@ async function seedDemoData() {
           paymentStatus,
           paymentMethod: 'mpesa',
           paymentDate:
-            paymentStatus === 'paid' && payPeriod.payDate ? new Date(payPeriod.payDate) : undefined,
+            paymentStatus === 'paid' && payPeriod.payDate
+              ? new Date(payPeriod.payDate)
+              : undefined,
           taxBreakdown: {
             incomeTax: taxAmount,
             nhif: Math.min(grossSalary * 0.015, 300), // 1.5% up to 300

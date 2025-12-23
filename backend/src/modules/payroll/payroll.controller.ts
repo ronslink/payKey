@@ -38,14 +38,16 @@ export class PayrollController {
     private payrollRepository: Repository<PayrollRecord>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
-  ) { }
+  ) {}
 
   // Helper method to get employer name (fetch once, use for all payslips)
   private async getEmployerName(userId: string): Promise<string> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
-    return user?.businessName
-      || [user?.firstName, user?.lastName].filter(Boolean).join(' ')
-      || 'Employer';
+    return (
+      user?.businessName ||
+      [user?.firstName, user?.lastName].filter(Boolean).join(' ') ||
+      'Employer'
+    );
   }
 
   // ... existing methods ...
@@ -69,11 +71,16 @@ export class PayrollController {
     });
 
     if (records.length === 0) {
-      throw new Error('No finalized payroll records found for this period. Please verify the period is completed.');
+      throw new Error(
+        'No finalized payroll records found for this period. Please verify the period is completed.',
+      );
     }
 
     // 2. Generate Payslips (employer name passed once for all)
-    const payslips = await this.payslipService.generatePayslipsBatch(records, employerName);
+    const payslips = await this.payslipService.generatePayslipsBatch(
+      records,
+      employerName,
+    );
 
     // 3. Generate Tax Submission
     const taxSubmission = await this.taxesService.generateTaxSubmission(
@@ -93,7 +100,9 @@ export class PayrollController {
   }
 
   @Get('calculate')
-  async calculatePayroll(@Request() req: AuthenticatedRequest): Promise<PayrollCalculationResult> {
+  async calculatePayroll(
+    @Request() req: AuthenticatedRequest,
+  ): Promise<PayrollCalculationResult> {
     return this.payrollService.calculatePayrollForUser(req.user.userId);
   }
 
@@ -261,11 +270,17 @@ export class PayrollController {
     }
 
     // Get employer name: prefer businessName, fallback to fullName
-    const employerName = record.user?.businessName
-      || [record.user?.firstName, record.user?.lastName].filter(Boolean).join(' ')
-      || 'Employer';
+    const employerName =
+      record.user?.businessName ||
+      [record.user?.firstName, record.user?.lastName]
+        .filter(Boolean)
+        .join(' ') ||
+      'Employer';
 
-    const buffer = await this.payslipService.generatePayslip(record, employerName);
+    const buffer = await this.payslipService.generatePayslip(
+      record,
+      employerName,
+    );
 
     res.set({
       'Content-Type': 'application/pdf',
@@ -300,7 +315,10 @@ export class PayrollController {
     }
 
     // Generate ZIP file with all payslips (employer name passed once)
-    const { stream, filename } = await this.payslipService.generatePayslipsZip(records, employerName);
+    const { stream, filename } = await this.payslipService.generatePayslipsZip(
+      records,
+      employerName,
+    );
 
     res.set({
       'Content-Type': 'application/zip',
@@ -327,14 +345,19 @@ export class PayrollController {
       relations: ['worker', 'payPeriod'],
     });
 
-    const selectedRecords = records.filter(r => body.payrollRecordIds.includes(r.id));
+    const selectedRecords = records.filter((r) =>
+      body.payrollRecordIds.includes(r.id),
+    );
 
     if (selectedRecords.length === 0) {
       throw new Error('No payroll records found');
     }
 
     // Generate ZIP file with selected payslips (employer name passed once)
-    const { stream, filename } = await this.payslipService.generatePayslipsZip(selectedRecords, employerName);
+    const { stream, filename } = await this.payslipService.generatePayslipsZip(
+      selectedRecords,
+      employerName,
+    );
 
     res.set({
       'Content-Type': 'application/zip',
@@ -369,7 +392,7 @@ export class PayrollController {
     return {
       message: 'Payslips generated successfully',
       count: records.length,
-      records: records.map(r => ({
+      records: records.map((r) => ({
         id: r.id,
         workerId: r.workerId,
         workerName: r.worker.name,
@@ -382,7 +405,10 @@ export class PayrollController {
     @Request() req: AuthenticatedRequest,
     @Param('workerId') workerId: string,
   ) {
-    return this.payrollService.getWorkerPayrollHistory(req.user.userId, workerId);
+    return this.payrollService.getWorkerPayrollHistory(
+      req.user.userId,
+      workerId,
+    );
   }
 
   @Get('me')
@@ -390,7 +416,10 @@ export class PayrollController {
     // If workerId is available (from JWT), pass it directly (requires service update to accept optional workerId)
     // Or just pass userId and let service resolve it.
     // Ideally we update service to support workerId lookup directly.
-    return this.payrollService.getEmployeePayslips(req.user.userId, req.user.workerId);
+    return this.payrollService.getEmployeePayslips(
+      req.user.userId,
+      req.user.workerId,
+    );
   }
 
   @Get('me/:recordId/pdf')
@@ -421,6 +450,9 @@ export class PayrollController {
     @Request() req: AuthenticatedRequest,
     @Param('payPeriodId') payPeriodId: string,
   ) {
-    return this.payrollService.verifyFundsForPeriod(req.user.userId, payPeriodId);
+    return this.payrollService.verifyFundsForPeriod(
+      req.user.userId,
+      payPeriodId,
+    );
   }
 }

@@ -41,8 +41,12 @@ import { ActivitiesModule } from '../activities/activities.module';
     ActivitiesModule,
   ],
   controllers: [WorkersController, EmployeePortalController],
-  providers: [WorkersService, TerminationService, LeaveManagementService, EmployeePortalService],
+  providers: [
+    WorkersService,
+    TerminationService,
+    LeaveManagementService,
+    EmployeePortalService,
+  ],
   exports: [WorkersService, EmployeePortalService],
 })
-export class WorkersModule { }
-
+export class WorkersModule {}

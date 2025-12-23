@@ -18,7 +18,7 @@ async function createMissingTables() {
 
     // Create account_mappings table
     console.log('\n🔧 Creating account_mappings table...');
-    
+
     // Create the enum type (check if exists first)
     try {
       await dataSource.query(`
@@ -68,9 +68,15 @@ async function createMissingTables() {
 
     // Create indexes
     try {
-      await dataSource.query(`CREATE INDEX idx_account_mappings_userId ON account_mappings (userId)`);
-      await dataSource.query(`CREATE INDEX idx_account_mappings_mappingType ON account_mappings (mappingType)`);
-      await dataSource.query(`CREATE INDEX idx_account_mappings_accountCode ON account_mappings (accountCode)`);
+      await dataSource.query(
+        `CREATE INDEX idx_account_mappings_userId ON account_mappings (userId)`,
+      );
+      await dataSource.query(
+        `CREATE INDEX idx_account_mappings_mappingType ON account_mappings (mappingType)`,
+      );
+      await dataSource.query(
+        `CREATE INDEX idx_account_mappings_accountCode ON account_mappings (accountCode)`,
+      );
       console.log('✅ Created account_mappings indexes');
     } catch (error: any) {
       if (error.message.includes('already exists')) {
@@ -97,12 +103,22 @@ async function createMissingTables() {
 
     // Create accounting_exports table
     console.log('\n🔧 Creating accounting_exports table...');
-    
+
     // Create enum types
     const enums = [
-      { name: 'accounting_exports_export_type_enum', values: 'PAYROLL_SUMMARY, TAX_REPORT, COST_ANALYSIS, LEDGER_EXPORT, BALANCE_SHEET, P&L_STATEMENT' },
-      { name: 'accounting_exports_status_enum', values: 'PENDING, PROCESSING, COMPLETED, FAILED' },
-      { name: 'accounting_exports_format_enum', values: 'CSV, EXCEL, PDF, JSON, XML' }
+      {
+        name: 'accounting_exports_export_type_enum',
+        values:
+          'PAYROLL_SUMMARY, TAX_REPORT, COST_ANALYSIS, LEDGER_EXPORT, BALANCE_SHEET, P&L_STATEMENT',
+      },
+      {
+        name: 'accounting_exports_status_enum',
+        values: 'PENDING, PROCESSING, COMPLETED, FAILED',
+      },
+      {
+        name: 'accounting_exports_format_enum',
+        values: 'CSV, EXCEL, PDF, JSON, XML',
+      },
     ];
 
     for (const enumData of enums) {
@@ -154,10 +170,18 @@ async function createMissingTables() {
 
     // Create indexes
     try {
-      await dataSource.query(`CREATE INDEX idx_accounting_exports_userId ON accounting_exports (userId)`);
-      await dataSource.query(`CREATE INDEX idx_accounting_exports_status ON accounting_exports (status)`);
-      await dataSource.query(`CREATE INDEX idx_accounting_exports_exportType ON accounting_exports (exportType)`);
-      await dataSource.query(`CREATE INDEX idx_accounting_exports_createdAt ON accounting_exports (createdAt)`);
+      await dataSource.query(
+        `CREATE INDEX idx_accounting_exports_userId ON accounting_exports (userId)`,
+      );
+      await dataSource.query(
+        `CREATE INDEX idx_accounting_exports_status ON accounting_exports (status)`,
+      );
+      await dataSource.query(
+        `CREATE INDEX idx_accounting_exports_exportType ON accounting_exports (exportType)`,
+      );
+      await dataSource.query(
+        `CREATE INDEX idx_accounting_exports_createdAt ON accounting_exports (createdAt)`,
+      );
       console.log('✅ Created accounting_exports indexes');
     } catch (error: any) {
       if (error.message.includes('already exists')) {
@@ -176,7 +200,9 @@ async function createMissingTables() {
       console.log('✅ Created FK_accounting_exports_userId constraint');
     } catch (error: any) {
       if (error.message.includes('already exists')) {
-        console.log('✅ FK_accounting_exports_userId constraint already exists');
+        console.log(
+          '✅ FK_accounting_exports_userId constraint already exists',
+        );
       } else {
         throw error;
       }
@@ -198,7 +224,6 @@ async function createMissingTables() {
     });
 
     console.log('\n🎉 All missing tables created successfully!');
-
   } catch (error: any) {
     console.error('Error:', error.message);
   } finally {

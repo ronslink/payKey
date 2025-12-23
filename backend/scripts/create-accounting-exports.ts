@@ -95,10 +95,18 @@ async function createAccountingExportsTable() {
 
     // Create indexes
     try {
-      await dataSource.query(`CREATE INDEX idx_accounting_exports_userId ON accounting_exports (userId)`);
-      await dataSource.query(`CREATE INDEX idx_accounting_exports_status ON accounting_exports (status)`);
-      await dataSource.query(`CREATE INDEX idx_accounting_exports_exportType ON accounting_exports (exportType)`);
-      await dataSource.query(`CREATE INDEX idx_accounting_exports_createdAt ON accounting_exports (createdAt)`);
+      await dataSource.query(
+        `CREATE INDEX idx_accounting_exports_userId ON accounting_exports (userId)`,
+      );
+      await dataSource.query(
+        `CREATE INDEX idx_accounting_exports_status ON accounting_exports (status)`,
+      );
+      await dataSource.query(
+        `CREATE INDEX idx_accounting_exports_exportType ON accounting_exports (exportType)`,
+      );
+      await dataSource.query(
+        `CREATE INDEX idx_accounting_exports_createdAt ON accounting_exports (createdAt)`,
+      );
       console.log('✅ Created accounting_exports indexes');
     } catch (error: any) {
       if (error.message.includes('already exists')) {
@@ -117,14 +125,15 @@ async function createAccountingExportsTable() {
       console.log('✅ Created FK_accounting_exports_userId constraint');
     } catch (error: any) {
       if (error.message.includes('already exists')) {
-        console.log('✅ FK_accounting_exports_userId constraint already exists');
+        console.log(
+          '✅ FK_accounting_exports_userId constraint already exists',
+        );
       } else {
         console.error('Error creating foreign key:', error.message);
       }
     }
 
     console.log('\n🎉 accounting_exports table created successfully!');
-
   } catch (error: any) {
     console.error('Error:', error.message);
   } finally {

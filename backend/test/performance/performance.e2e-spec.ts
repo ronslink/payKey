@@ -31,22 +31,22 @@ describe('Performance Tests', () => {
     await app.init();
 
     userRepo = moduleFixture.get<Repository<User>>(getRepositoryToken(User));
-    workerRepo = moduleFixture.get<Repository<Worker>>(getRepositoryToken(Worker));
+    workerRepo = moduleFixture.get<Repository<Worker>>(
+      getRepositoryToken(Worker),
+    );
 
     const testEmail = `performance-test-${Date.now()}@paykey.com`;
     const testPassword = 'PerformanceTest123!';
 
     // Register test user
-    await request(app.getHttpServer())
-      .post('/auth/register')
-      .send({
-        email: testEmail,
-        password: testPassword,
-        firstName: 'Performance',
-        lastName: 'Test',
-        businessName: 'Performance Testing Inc',
-        phone: '+254700000500'
-      });
+    await request(app.getHttpServer()).post('/auth/register').send({
+      email: testEmail,
+      password: testPassword,
+      firstName: 'Performance',
+      lastName: 'Test',
+      businessName: 'Performance Testing Inc',
+      phone: '+254700000500',
+    });
 
     // Login to get auth token
     const loginRes = await request(app.getHttpServer())
@@ -72,7 +72,7 @@ describe('Performance Tests', () => {
       workers.push({
         name: `Performance Test Worker ${i + 1}`,
         phoneNumber: `+2547${String(i).padStart(8, '0')}`,
-        salaryGross: 50000 + (i * 1000), // Vary salaries slightly
+        salaryGross: 50000 + i * 1000, // Vary salaries slightly
         startDate: new Date('2024-01-01'),
         userId: testUserId,
         isActive: true,
@@ -89,7 +89,9 @@ describe('Performance Tests', () => {
 
   it('should calculate payroll for 50 workers within performance threshold', async () => {
     // Verify workers exist before test
-    const workerCount = await workerRepo.count({ where: { userId: testUserId } });
+    const workerCount = await workerRepo.count({
+      where: { userId: testUserId },
+    });
     expect(workerCount).toBe(50);
     console.log(`✅ Verified ${workerCount} workers exist before test`);
 
@@ -105,12 +107,20 @@ describe('Performance Tests', () => {
 
     // Accept both 200 and 201 as success (endpoint may return either)
     expect([200, 201]).toContain(response.status);
-    expect(duration).toBeLessThan(PERFORMANCE_THRESHOLDS.PAYROLL_CALCULATION_50_WORKERS_MS);
+    expect(duration).toBeLessThan(
+      PERFORMANCE_THRESHOLDS.PAYROLL_CALCULATION_50_WORKERS_MS,
+    );
 
     // Log results
-    console.log(`✅ Payroll calculation for 50 workers completed in ${duration}ms`);
-    console.log(`   Threshold: ${PERFORMANCE_THRESHOLDS.PAYROLL_CALCULATION_50_WORKERS_MS}ms`);
-    console.log(`   Performance: ${duration < PERFORMANCE_THRESHOLDS.PAYROLL_CALCULATION_50_WORKERS_MS ? '✅ PASS' : '❌ FAIL'}`);
+    console.log(
+      `✅ Payroll calculation for 50 workers completed in ${duration}ms`,
+    );
+    console.log(
+      `   Threshold: ${PERFORMANCE_THRESHOLDS.PAYROLL_CALCULATION_50_WORKERS_MS}ms`,
+    );
+    console.log(
+      `   Performance: ${duration < PERFORMANCE_THRESHOLDS.PAYROLL_CALCULATION_50_WORKERS_MS ? '✅ PASS' : '❌ FAIL'}`,
+    );
 
     // Verify response contains worker data
     if (response.body && response.body.records) {
@@ -126,7 +136,7 @@ describe('Performance Tests', () => {
       additionalWorkers.push({
         name: `Performance Test Worker ${i + 1}`,
         phoneNumber: `+2547${String(i).padStart(8, '0')}`,
-        salaryGross: 50000 + (i * 1000),
+        salaryGross: 50000 + i * 1000,
         startDate: new Date('2024-01-01'),
         userId: testUserId,
         isActive: true,
@@ -135,7 +145,9 @@ describe('Performance Tests', () => {
     await workerRepo.save(additionalWorkers);
 
     // Verify total count
-    const workerCount = await workerRepo.count({ where: { userId: testUserId } });
+    const workerCount = await workerRepo.count({
+      where: { userId: testUserId },
+    });
     expect(workerCount).toBe(100);
     console.log(`✅ Verified ${workerCount} workers exist before test`);
 
@@ -150,12 +162,20 @@ describe('Performance Tests', () => {
     const duration = endTime - startTime;
 
     expect([200, 201]).toContain(response.status);
-    expect(duration).toBeLessThan(PERFORMANCE_THRESHOLDS.PAYROLL_CALCULATION_100_WORKERS_MS);
+    expect(duration).toBeLessThan(
+      PERFORMANCE_THRESHOLDS.PAYROLL_CALCULATION_100_WORKERS_MS,
+    );
 
     // Log results
-    console.log(`✅ Payroll calculation for 100 workers completed in ${duration}ms`);
-    console.log(`   Threshold: ${PERFORMANCE_THRESHOLDS.PAYROLL_CALCULATION_100_WORKERS_MS}ms`);
-    console.log(`   Performance: ${duration < PERFORMANCE_THRESHOLDS.PAYROLL_CALCULATION_100_WORKERS_MS ? '✅ PASS' : '❌ FAIL'}`);
+    console.log(
+      `✅ Payroll calculation for 100 workers completed in ${duration}ms`,
+    );
+    console.log(
+      `   Threshold: ${PERFORMANCE_THRESHOLDS.PAYROLL_CALCULATION_100_WORKERS_MS}ms`,
+    );
+    console.log(
+      `   Performance: ${duration < PERFORMANCE_THRESHOLDS.PAYROLL_CALCULATION_100_WORKERS_MS ? '✅ PASS' : '❌ FAIL'}`,
+    );
     console.log(`   Rate: ${(duration / 100).toFixed(2)}ms per worker`);
 
     if (response.body && response.body.records) {
@@ -172,7 +192,7 @@ describe('Performance Tests', () => {
       largeWorkerBatch.push({
         name: `Performance Test Worker ${i + 1}`,
         phoneNumber: `+2547${String(i).padStart(8, '0')}`,
-        salaryGross: 50000 + (i * 500), // Vary salaries
+        salaryGross: 50000 + i * 500, // Vary salaries
         startDate: new Date('2024-01-01'),
         userId: testUserId,
         isActive: true,
@@ -183,11 +203,15 @@ describe('Performance Tests', () => {
     for (let i = 0; i < largeWorkerBatch.length; i += 100) {
       const batch = largeWorkerBatch.slice(i, i + 100);
       await workerRepo.save(batch);
-      console.log(`   Saved batch ${Math.floor(i / 100) + 1}/4 (${batch.length} workers)`);
+      console.log(
+        `   Saved batch ${Math.floor(i / 100) + 1}/4 (${batch.length} workers)`,
+      );
     }
 
     // Verify total count
-    const workerCount = await workerRepo.count({ where: { userId: testUserId } });
+    const workerCount = await workerRepo.count({
+      where: { userId: testUserId },
+    });
     expect(workerCount).toBe(500);
     console.log(`✅ Verified ${workerCount} workers exist before test`);
 
@@ -208,9 +232,13 @@ describe('Performance Tests', () => {
     expect(duration).toBeLessThan(threshold);
 
     // Log results
-    console.log(`✅ Payroll calculation for 500 workers completed in ${duration}ms`);
+    console.log(
+      `✅ Payroll calculation for 500 workers completed in ${duration}ms`,
+    );
     console.log(`   Threshold: ${threshold}ms`);
-    console.log(`   Performance: ${duration < threshold ? '✅ PASS' : '❌ FAIL'}`);
+    console.log(
+      `   Performance: ${duration < threshold ? '✅ PASS' : '❌ FAIL'}`,
+    );
     console.log(`   Rate: ${(duration / 500).toFixed(2)}ms per worker`);
     console.log(`   Total time: ${(duration / 1000).toFixed(2)}s`);
 

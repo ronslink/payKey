@@ -46,4 +46,7 @@ node_modules/
 build/
 dist/
 dist/
-target/
+target/**/*.spec.ts
+
+**/*.spec.ts
+src/**/*.spec.ts

@@ -19,7 +19,7 @@ import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 @Controller('time-tracking')
 @UseGuards(JwtAuthGuard, PlatinumGuard)
 export class TimeTrackingController {
-  constructor(private readonly timeTrackingService: TimeTrackingService) { }
+  constructor(private readonly timeTrackingService: TimeTrackingService) {}
 
   @Post('clock-in/:workerId')
   @ApiOperation({ summary: 'Clock in a worker' })
@@ -28,7 +28,8 @@ export class TimeTrackingController {
     @Param('workerId') workerId: string,
     @Body() body: { lat?: number; lng?: number },
   ) {
-    const location = body.lat && body.lng ? { lat: body.lat, lng: body.lng } : undefined;
+    const location =
+      body.lat && body.lng ? { lat: body.lat, lng: body.lng } : undefined;
 
     // Determine context based on role
     const isWorker = req.user.role === 'WORKER';
@@ -53,38 +54,32 @@ export class TimeTrackingController {
   async clockOut(
     @Request() req: any,
     @Param('workerId') workerId: string,
-    @Body() body: {
+    @Body()
+    body: {
       breakMinutes?: number;
       notes?: string;
       lat?: number;
       lng?: number;
     },
   ) {
-    const location = body.lat && body.lng ? { lat: body.lat, lng: body.lng } : undefined;
+    const location =
+      body.lat && body.lng ? { lat: body.lat, lng: body.lng } : undefined;
 
     // Determine context based on role
     const isWorker = req.user.role === 'WORKER';
     const ownerId = isWorker ? req.user.employerId : req.user.userId;
     const recorderId = req.user.userId;
 
-    return this.timeTrackingService.clockOut(
-      workerId,
-      ownerId,
-      recorderId,
-      {
-        breakMinutes: body.breakMinutes,
-        notes: body.notes,
-        location,
-      },
-    );
+    return this.timeTrackingService.clockOut(workerId, ownerId, recorderId, {
+      breakMinutes: body.breakMinutes,
+      notes: body.notes,
+      location,
+    });
   }
 
   @Get('status/:workerId')
   @ApiOperation({ summary: 'Get clock-in status for a worker' })
-  async getStatus(
-    @Request() req: any,
-    @Param('workerId') workerId: string,
-  ) {
+  async getStatus(@Request() req: any, @Param('workerId') workerId: string) {
     const isWorker = req.user.role === 'WORKER';
     const ownerId = isWorker ? req.user.employerId : req.user.userId;
 
@@ -146,7 +141,8 @@ export class TimeTrackingController {
   async adjustEntry(
     @Request() req: any,
     @Param('entryId') entryId: string,
-    @Body() body: {
+    @Body()
+    body: {
       clockIn?: string;
       clockOut?: string;
       breakMinutes?: number;

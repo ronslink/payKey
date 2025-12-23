@@ -9,7 +9,7 @@ interface JwtUser {
   tier: string;
   role: string;
   employerId?: string; // For WORKER role: ID of the employer User
-  workerId?: string;   // For WORKER role: ID of the Worker profile
+  workerId?: string; // For WORKER role: ID of the Worker profile
 }
 
 interface JwtPayload {

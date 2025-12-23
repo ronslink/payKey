@@ -9,7 +9,10 @@ import { Repository, FindOptionsWhere } from 'typeorm';
 import { TaxPayment, PaymentStatus } from '../entities/tax-payment.entity';
 import { TaxConfigService } from '../../tax-config/services/tax-config.service';
 import { TaxesService } from '../../taxes/taxes.service';
-import { TaxType, TaxConfig } from '../../tax-config/entities/tax-config.entity';
+import {
+  TaxType,
+  TaxConfig,
+} from '../../tax-config/entities/tax-config.entity';
 import {
   CreateTaxPaymentDto,
   MonthlyTaxSummaryDto,
@@ -82,7 +85,7 @@ export class TaxPaymentsService {
     private readonly taxPaymentRepository: Repository<TaxPayment>,
     private readonly taxConfigService: TaxConfigService,
     private readonly taxesService: TaxesService,
-  ) { }
+  ) {}
 
   // ---------------------------------------------------------------------------
   // Public Methods: Monthly Summary
@@ -150,7 +153,9 @@ export class TaxPaymentsService {
   ): Promise<TaxPayment> {
     this.validateYearMonth(dto.paymentYear, dto.paymentMonth);
 
-    const paymentDate = dto.paymentDate ? new Date(dto.paymentDate) : new Date();
+    const paymentDate = dto.paymentDate
+      ? new Date(dto.paymentDate)
+      : new Date();
     const status = dto.paymentDate ? PaymentStatus.PAID : PaymentStatus.PENDING;
 
     const payment = this.taxPaymentRepository.create({
@@ -309,7 +314,11 @@ export class TaxPaymentsService {
     month: number,
   ): Promise<PayrollSummary> {
     try {
-      return await this.taxesService.getMonthlyPayrollSummary(userId, year, month);
+      return await this.taxesService.getMonthlyPayrollSummary(
+        userId,
+        year,
+        month,
+      );
     } catch (error) {
       this.logger.warn(
         `Failed to get payroll summary for ${userId} ${year}/${month}: ${error.message}`,
@@ -329,7 +338,9 @@ export class TaxPaymentsService {
 
   private async findPayment(
     userId: string,
-    criteria: Partial<Pick<TaxPayment, 'taxType' | 'paymentYear' | 'paymentMonth'>>,
+    criteria: Partial<
+      Pick<TaxPayment, 'taxType' | 'paymentYear' | 'paymentMonth'>
+    >,
   ): Promise<TaxPayment | null> {
     return this.taxPaymentRepository.findOne({
       where: {
@@ -527,7 +538,10 @@ export class TaxPaymentsService {
     };
   }
 
-  private getPaymentInstructions(year: number, month: number): PaymentInstructions {
+  private getPaymentInstructions(
+    year: number,
+    month: number,
+  ): PaymentInstructions {
     return {
       mpesa: {
         paybill: KRA_PAYBILL,

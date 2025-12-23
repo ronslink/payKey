@@ -8,12 +8,12 @@ import { TaxesModule } from '../taxes/taxes.module';
 import { ActivitiesModule } from '../activities/activities.module';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([PayPeriod, LeaveRequest]),
-        TaxesModule,
-        ActivitiesModule, // Just in case we need it later, though not used yet
-    ],
-    controllers: [TasksController],
-    providers: [TasksService],
+  imports: [
+    TypeOrmModule.forFeature([PayPeriod, LeaveRequest]),
+    TaxesModule,
+    ActivitiesModule, // Just in case we need it later, though not used yet
+  ],
+  controllers: [TasksController],
+  providers: [TasksService],
 })
-export class TasksModule { }
+export class TasksModule {}

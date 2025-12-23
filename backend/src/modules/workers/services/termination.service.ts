@@ -27,7 +27,7 @@ export class TerminationService {
     @InjectRepository(PayPeriod)
     private payPeriodRepository: Repository<PayPeriod>,
     private taxesService: TaxesService,
-  ) { }
+  ) {}
 
   /**
    * Calculate final payment for a worker
@@ -147,7 +147,8 @@ export class TerminationService {
     );
 
     // Find the Pay Period covering this termination date
-    const payPeriod = await this.payPeriodRepository.createQueryBuilder('period')
+    const payPeriod = await this.payPeriodRepository
+      .createQueryBuilder('period')
       .where('period.userId = :userId', { userId })
       .andWhere('period.startDate <= :date', { date: terminationDate })
       .andWhere('period.endDate >= :date', { date: terminationDate })
@@ -156,7 +157,7 @@ export class TerminationService {
     if (payPeriod) {
       // Check if a record already exists
       let payrollRecord = await this.payrollRecordRepository.findOne({
-        where: { payPeriodId: payPeriod.id, workerId, userId }
+        where: { payPeriodId: payPeriod.id, workerId, userId },
       });
 
       if (!payrollRecord) {
@@ -178,7 +179,7 @@ export class TerminationService {
         nhif: taxCalculation.taxBreakdown.nhif,
         housingLevy: taxCalculation.taxBreakdown.housingLevy,
         paye: taxCalculation.taxBreakdown.paye,
-        totalDeductions: taxCalculation.taxBreakdown.totalDeductions
+        totalDeductions: taxCalculation.taxBreakdown.totalDeductions,
       };
 
       // Mark as finalized termination pay
@@ -196,7 +197,9 @@ export class TerminationService {
         console.warn('Failed to update tax submission after termination:', e);
       }
     } else {
-      console.warn(`No pay period found for termination date ${terminationDate}. Tax liability may not be recorded.`);
+      console.warn(
+        `No pay period found for termination date ${terminationDate}. Tax liability may not be recorded.`,
+      );
     }
 
     // Create termination record

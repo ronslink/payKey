@@ -1,4 +1,12 @@
-import { Controller, Get, Query, UseGuards, Request, Res, StreamableFile } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Query,
+  UseGuards,
+  Request,
+  Res,
+  StreamableFile,
+} from '@nestjs/common';
 import type { Response } from 'express';
 import { ReportsService } from './reports.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -6,7 +14,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @Controller('reports')
 @UseGuards(JwtAuthGuard)
 export class ReportsController {
-  constructor(private readonly reportsService: ReportsService) { }
+  constructor(private readonly reportsService: ReportsService) {}
 
   @Get('payroll')
   async getMonthlyPayrollReport(
@@ -52,10 +60,7 @@ export class ReportsController {
     @Request() req: any,
     @Query('payPeriodId') payPeriodId: string,
   ) {
-    return this.reportsService.getStatutoryReport(
-      req.user.userId,
-      payPeriodId,
-    );
+    return this.reportsService.getStatutoryReport(req.user.userId, payPeriodId);
   }
 
   @Get('muster-roll')
@@ -63,10 +68,7 @@ export class ReportsController {
     @Request() req: any,
     @Query('payPeriodId') payPeriodId: string,
   ) {
-    return this.reportsService.getMasterRoll(
-      req.user.userId,
-      payPeriodId,
-    );
+    return this.reportsService.getMasterRoll(req.user.userId, payPeriodId);
   }
 
   @Get('dashboard')
@@ -80,7 +82,11 @@ export class ReportsController {
     @Query('year') year: string,
     @Query('workerId') workerId?: string,
   ) {
-    return this.reportsService.getP9Report(req.user.userId, parseInt(year), workerId);
+    return this.reportsService.getP9Report(
+      req.user.userId,
+      parseInt(year),
+      workerId,
+    );
   }
 
   @Get('p10')
@@ -90,7 +96,11 @@ export class ReportsController {
 
   @Get('my-p9')
   async getEmployeeP9Report(@Request() req: any, @Query('year') year: string) {
-    return this.reportsService.getEmployeeP9Report(req.user.userId, parseInt(year), req.user.workerId);
+    return this.reportsService.getEmployeeP9Report(
+      req.user.userId,
+      parseInt(year),
+      req.user.workerId,
+    );
   }
 
   @Get('my-p9/pdf')

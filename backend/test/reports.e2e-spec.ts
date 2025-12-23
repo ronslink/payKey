@@ -5,7 +5,7 @@ import { AppModule } from './../src/app.module';
 
 /**
  * Reports E2E Tests
- * 
+ *
  * Tests all reporting features:
  * - Monthly payroll reports
  * - Workers summary
@@ -20,196 +20,192 @@ import { AppModule } from './../src/app.module';
  * - Employee P9 (individual)
  */
 describe('Reports E2E', () => {
-    let app: INestApplication;
-    let authToken: string;
-    let payPeriodId: string;
+  let app: INestApplication;
+  let authToken: string;
+  let payPeriodId: string;
 
-    beforeAll(async () => {
-        const moduleFixture: TestingModule = await Test.createTestingModule({
-            imports: [AppModule],
-        }).compile();
+  beforeAll(async () => {
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
 
-        app = moduleFixture.createNestApplication();
-        await app.init();
+    app = moduleFixture.createNestApplication();
+    await app.init();
 
-        // Register and login test user
-        const email = `reports.test.${Date.now()}@paykey.com`;
-        const password = 'Password123!';
+    // Register and login test user
+    const email = `reports.test.${Date.now()}@paykey.com`;
+    const password = 'Password123!';
 
-        await request(app.getHttpServer())
-            .post('/auth/register')
-            .send({
-                email,
-                password,
-                firstName: 'Reports',
-                lastName: 'Tester',
-                businessName: 'Reports Test Corp',
-                phone: '+254700000900'
-            });
-
-        const loginRes = await request(app.getHttpServer())
-            .post('/auth/login')
-            .send({ email, password });
-
-        authToken = loginRes.body.access_token;
-
-        // Create a pay period for period-specific reports
-        const periodRes = await request(app.getHttpServer())
-            .post('/pay-periods/generate')
-            .set('Authorization', `Bearer ${authToken}`)
-            .send({
-                year: 2024,
-                frequency: 'MONTHLY'
-            });
-
-        if (periodRes.body.periods && periodRes.body.periods.length > 0) {
-            payPeriodId = periodRes.body.periods[0].id;
-        }
+    await request(app.getHttpServer()).post('/auth/register').send({
+      email,
+      password,
+      firstName: 'Reports',
+      lastName: 'Tester',
+      businessName: 'Reports Test Corp',
+      phone: '+254700000900',
     });
 
-    afterAll(async () => {
-        if (app) {
-            await app.close();
-        }
+    const loginRes = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email, password });
+
+    authToken = loginRes.body.access_token;
+
+    // Create a pay period for period-specific reports
+    const periodRes = await request(app.getHttpServer())
+      .post('/pay-periods/generate')
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({
+        year: 2024,
+        frequency: 'MONTHLY',
+      });
+
+    if (periodRes.body.periods && periodRes.body.periods.length > 0) {
+      payPeriodId = periodRes.body.periods[0].id;
+    }
+  });
+
+  afterAll(async () => {
+    if (app) {
+      await app.close();
+    }
+  });
+
+  describe('Dashboard', () => {
+    it('should get dashboard metrics', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/reports/dashboard')
+        .set('Authorization', `Bearer ${authToken}`);
+
+      // May return 200 or 500 if service has issues
+      expect([200, 500]).toContain(res.status);
+    });
+  });
+
+  describe('Payroll Reports', () => {
+    it('should get monthly payroll report', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/reports/payroll?year=2024&month=1')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      expect(res.body).toBeDefined();
     });
 
-    describe('Dashboard', () => {
-        it('should get dashboard metrics', async () => {
-            const res = await request(app.getHttpServer())
-                .get('/reports/dashboard')
-                .set('Authorization', `Bearer ${authToken}`);
+    it('should get payroll summary by period', async () => {
+      if (!payPeriodId) {
+        console.warn('Skipping - no pay period');
+        return;
+      }
 
-            // May return 200 or 500 if service has issues
-            expect([200, 500]).toContain(res.status);
-        });
+      const res = await request(app.getHttpServer())
+        .get(`/reports/payroll-summary?payPeriodId=${payPeriodId}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      expect(res.body).toBeDefined();
+    });
+  });
+
+  describe('Workers Reports', () => {
+    it('should get workers summary', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/reports/workers')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      expect(res.body).toBeDefined();
+    });
+  });
+
+  describe('Leave Reports', () => {
+    it('should get leave report for year', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/reports/leave?year=2024')
+        .set('Authorization', `Bearer ${authToken}`);
+
+      // May return 200 or 500 if no leave data
+      expect([200, 500]).toContain(res.status);
+    });
+  });
+
+  describe('Tax Reports', () => {
+    it('should get tax summary for year', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/reports/tax?year=2024')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      expect(res.body).toBeDefined();
+    });
+  });
+
+  describe('Statutory Reports', () => {
+    it('should get statutory report for period', async () => {
+      if (!payPeriodId) {
+        console.warn('Skipping - no pay period');
+        return;
+      }
+
+      const res = await request(app.getHttpServer())
+        .get(`/reports/statutory?payPeriodId=${payPeriodId}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      expect(res.body).toBeDefined();
     });
 
-    describe('Payroll Reports', () => {
-        it('should get monthly payroll report', async () => {
-            const res = await request(app.getHttpServer())
-                .get('/reports/payroll?year=2024&month=1')
-                .set('Authorization', `Bearer ${authToken}`)
-                .expect(200);
+    it('should get muster roll for period', async () => {
+      if (!payPeriodId) {
+        console.warn('Skipping - no pay period');
+        return;
+      }
 
-            expect(res.body).toBeDefined();
-        });
+      const res = await request(app.getHttpServer())
+        .get(`/reports/muster-roll?payPeriodId=${payPeriodId}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
 
-        it('should get payroll summary by period', async () => {
-            if (!payPeriodId) {
-                console.warn('Skipping - no pay period');
-                return;
-            }
-
-            const res = await request(app.getHttpServer())
-                .get(`/reports/payroll-summary?payPeriodId=${payPeriodId}`)
-                .set('Authorization', `Bearer ${authToken}`)
-                .expect(200);
-
-            expect(res.body).toBeDefined();
-        });
+      expect(res.body).toBeDefined();
     });
+  });
 
-    describe('Workers Reports', () => {
-        it('should get workers summary', async () => {
-            const res = await request(app.getHttpServer())
-                .get('/reports/workers')
-                .set('Authorization', `Bearer ${authToken}`)
-                .expect(200);
+  describe('P9 Reports (Employer)', () => {
+    it('should get P9 report for all workers', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/reports/p9?year=2024')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
 
-            expect(res.body).toBeDefined();
-        });
+      expect(Array.isArray(res.body)).toBe(true);
     });
+  });
 
-    describe('Leave Reports', () => {
-        it('should get leave report for year', async () => {
-            const res = await request(app.getHttpServer())
-                .get('/reports/leave?year=2024')
-                .set('Authorization', `Bearer ${authToken}`);
+  describe('P10 Reports', () => {
+    it('should get P10 report for year', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/reports/p10?year=2024')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
 
-            // May return 200 or 500 if no leave data
-            expect([200, 500]).toContain(res.status);
-        });
+      expect(res.body).toBeDefined();
     });
+  });
 
-    describe('Tax Reports', () => {
-        it('should get tax summary for year', async () => {
-            const res = await request(app.getHttpServer())
-                .get('/reports/tax?year=2024')
-                .set('Authorization', `Bearer ${authToken}`)
-                .expect(200);
+  describe('Employee P9 (My P9)', () => {
+    it('should get employee P9 report', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/reports/my-p9?year=2024')
+        .set('Authorization', `Bearer ${authToken}`);
 
-            expect(res.body).toBeDefined();
-        });
+      // May return 200 or 404 if user is not linked as employee
+      expect([200, 404]).toContain(res.status);
     });
+  });
 
-    describe('Statutory Reports', () => {
-        it('should get statutory report for period', async () => {
-            if (!payPeriodId) {
-                console.warn('Skipping - no pay period');
-                return;
-            }
-
-            const res = await request(app.getHttpServer())
-                .get(`/reports/statutory?payPeriodId=${payPeriodId}`)
-                .set('Authorization', `Bearer ${authToken}`)
-                .expect(200);
-
-            expect(res.body).toBeDefined();
-        });
-
-        it('should get muster roll for period', async () => {
-            if (!payPeriodId) {
-                console.warn('Skipping - no pay period');
-                return;
-            }
-
-            const res = await request(app.getHttpServer())
-                .get(`/reports/muster-roll?payPeriodId=${payPeriodId}`)
-                .set('Authorization', `Bearer ${authToken}`)
-                .expect(200);
-
-            expect(res.body).toBeDefined();
-        });
+  describe('Authorization', () => {
+    it('should prevent unauthorized access to reports', async () => {
+      await request(app.getHttpServer()).get('/reports/dashboard').expect(401);
     });
-
-    describe('P9 Reports (Employer)', () => {
-        it('should get P9 report for all workers', async () => {
-            const res = await request(app.getHttpServer())
-                .get('/reports/p9?year=2024')
-                .set('Authorization', `Bearer ${authToken}`)
-                .expect(200);
-
-            expect(Array.isArray(res.body)).toBe(true);
-        });
-    });
-
-    describe('P10 Reports', () => {
-        it('should get P10 report for year', async () => {
-            const res = await request(app.getHttpServer())
-                .get('/reports/p10?year=2024')
-                .set('Authorization', `Bearer ${authToken}`)
-                .expect(200);
-
-            expect(res.body).toBeDefined();
-        });
-    });
-
-    describe('Employee P9 (My P9)', () => {
-        it('should get employee P9 report', async () => {
-            const res = await request(app.getHttpServer())
-                .get('/reports/my-p9?year=2024')
-                .set('Authorization', `Bearer ${authToken}`);
-
-            // May return 200 or 404 if user is not linked as employee
-            expect([200, 404]).toContain(res.status);
-        });
-    });
-
-    describe('Authorization', () => {
-        it('should prevent unauthorized access to reports', async () => {
-            await request(app.getHttpServer())
-                .get('/reports/dashboard')
-                .expect(401);
-        });
-    });
+  });
 });

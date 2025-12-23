@@ -33,7 +33,7 @@ export class WorkersController {
     private readonly workersService: WorkersService,
     private readonly terminationService: TerminationService,
     private readonly leaveManagementService: LeaveManagementService,
-  ) { }
+  ) {}
 
   // ======================================================================================
   // STATIC ROUTES (MUST BE BEFORE DYNAMIC ROUTES)
@@ -107,8 +107,6 @@ export class WorkersController {
       updateLeaveRequestDto,
     );
   }
-
-
 
   @Delete('leave-requests/:requestId')
   @UseGuards(SubscriptionGuard, PlatinumGuard)

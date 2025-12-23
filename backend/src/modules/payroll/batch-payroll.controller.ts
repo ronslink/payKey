@@ -14,12 +14,13 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @Controller('payroll/batch')
 @UseGuards(JwtAuthGuard)
 export class BatchPayrollController {
-  constructor(private readonly batchPayrollService: BatchPayrollService) { }
+  constructor(private readonly batchPayrollService: BatchPayrollService) {}
 
   @Post('process')
   async processBatchPayroll(
     @Request() req: AuthenticatedRequest,
-    @Body() body: { workerIds: string[]; processDate?: string; payPeriodId?: string },
+    @Body()
+    body: { workerIds: string[]; processDate?: string; payPeriodId?: string },
   ) {
     const processDate = body.processDate
       ? new Date(body.processDate)

@@ -52,4 +52,4 @@ import { ActivitiesModule } from '../activities/activities.module';
   ],
   exports: [PayrollService, BatchPayrollService, PayPeriodsService],
 })
-export class PayrollModule { }
+export class PayrollModule {}

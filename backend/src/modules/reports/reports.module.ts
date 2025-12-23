@@ -11,19 +11,19 @@ import { PayPeriod } from '../payroll/entities/pay-period.entity';
 import { TaxSubmission } from '../taxes/entities/tax-submission.entity';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([
-            Worker,
-            Transaction,
-            LeaveRequest,
-            User,
-            PayrollRecord,
-            PayPeriod,
-            TaxSubmission,
-        ]),
-    ],
-    controllers: [ReportsController],
-    providers: [ReportsService],
-    exports: [ReportsService],
+  imports: [
+    TypeOrmModule.forFeature([
+      Worker,
+      Transaction,
+      LeaveRequest,
+      User,
+      PayrollRecord,
+      PayPeriod,
+      TaxSubmission,
+    ]),
+  ],
+  controllers: [ReportsController],
+  providers: [ReportsService],
+  exports: [ReportsService],
 })
-export class ReportsModule { }
+export class ReportsModule {}

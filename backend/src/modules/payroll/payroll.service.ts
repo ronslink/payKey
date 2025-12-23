@@ -20,10 +20,17 @@ import { ActivityType } from '../activities/entities/activity.entity';
 import { PayrollPaymentService } from '../payments/payroll-payment.service';
 import { TaxesService } from '../taxes/taxes.service';
 import { User } from '../users/entities/user.entity';
-import { LeaveRequest, LeaveStatus, LeaveType } from '../workers/entities/leave-request.entity';
+import {
+  LeaveRequest,
+  LeaveStatus,
+  LeaveType,
+} from '../workers/entities/leave-request.entity';
 import { Worker, EmploymentType } from '../workers/entities/worker.entity';
 import { PayPeriod, PayPeriodStatus } from './entities/pay-period.entity';
-import { TimeEntry, TimeEntryStatus } from '../time-tracking/entities/time-entry.entity';
+import {
+  TimeEntry,
+  TimeEntryStatus,
+} from '../time-tracking/entities/time-entry.entity';
 import { PayrollRecord, PayrollStatus } from './entities/payroll-record.entity';
 import { PayslipService } from './payslip.service';
 
@@ -133,7 +140,7 @@ export class PayrollService {
     private readonly activitiesService: ActivitiesService,
     private readonly dataSource: DataSource,
     private readonly payslipService: PayslipService,
-  ) { }
+  ) {}
 
   // ===========================================================================
   // Public Methods - Payroll Calculation
@@ -142,7 +149,9 @@ export class PayrollService {
   /**
    * Calculate payroll for all active workers belonging to a user.
    */
-  async calculatePayrollForUser(userId: string): Promise<PayrollCalculationResult> {
+  async calculatePayrollForUser(
+    userId: string,
+  ): Promise<PayrollCalculationResult> {
     const workers = await this.workersRepository.find({
       where: { userId, isActive: true },
     });
@@ -150,7 +159,9 @@ export class PayrollService {
     const { year, month } = this.getCurrentPeriod();
 
     const payrollItems = await Promise.all(
-      workers.map((worker) => this.calculateWorkerPayroll(worker, { year, month })),
+      workers.map((worker) =>
+        this.calculateWorkerPayroll(worker, { year, month }),
+      ),
     );
 
     return {
@@ -168,24 +179,34 @@ export class PayrollService {
     workerIds: string[],
   ): Promise<PayrollCalculationResult> {
     const startTime = Date.now();
-    this.logger.log(`Starting batch payroll calculation for ${workerIds.length} workers`);
+    this.logger.log(
+      `Starting batch payroll calculation for ${workerIds.length} workers`,
+    );
 
     const workers = await this.workersRepository.find({
       where: { userId, isActive: true },
     });
 
-    const selectedWorkers = workerIds.length > 0
-      ? workers.filter((w) => workerIds.includes(w.id))
-      : workers;
+    const selectedWorkers =
+      workerIds.length > 0
+        ? workers.filter((w) => workerIds.includes(w.id))
+        : workers;
 
     if (selectedWorkers.length === 0) {
       throw new NotFoundException('No workers found');
     }
 
     const { year, month } = this.getCurrentPeriod();
-    const payrollItems = await this.processWorkersInChunks(selectedWorkers, { year, month });
+    const payrollItems = await this.processWorkersInChunks(selectedWorkers, {
+      year,
+      month,
+    });
 
-    this.logBatchDuration('Batch payroll calculation', startTime, selectedWorkers.length);
+    this.logBatchDuration(
+      'Batch payroll calculation',
+      startTime,
+      selectedWorkers.length,
+    );
 
     return {
       payrollItems,
@@ -208,11 +229,15 @@ export class PayrollService {
     const grossSalary = this.parseNumber(worker.salaryGross);
 
     if (isNaN(grossSalary) || grossSalary <= 0) {
-      throw new BadRequestException(`Invalid salary amount for worker: ${worker.salaryGross}`);
+      throw new BadRequestException(
+        `Invalid salary amount for worker: ${worker.salaryGross}`,
+      );
     }
 
     const taxBreakdown = await this.taxesService.calculateTaxes(grossSalary);
-    const netPay = this.roundCurrency(grossSalary - taxBreakdown.totalDeductions);
+    const netPay = this.roundCurrency(
+      grossSalary - taxBreakdown.totalDeductions,
+    );
 
     return {
       worker,
@@ -233,7 +258,11 @@ export class PayrollService {
   ): Promise<AdjustedSalaryResult> {
     const { startDate, endDate } = await this.resolvePeriodDates(period);
     const leaveRequests = await this.fetchApprovedLeave(worker.id);
-    const overlappingRequests = this.filterOverlappingLeave(leaveRequests, startDate, endDate);
+    const overlappingRequests = this.filterOverlappingLeave(
+      leaveRequests,
+      startDate,
+      endDate,
+    );
 
     const { unpaidDays, paidDays } = this.calculateLeaveDays(
       overlappingRequests,
@@ -253,11 +282,14 @@ export class PayrollService {
         where: {
           workerId: worker.id,
           clockIn: Between(startDate, endDate),
-          status: In([TimeEntryStatus.COMPLETED, TimeEntryStatus.ADJUSTED])
-        }
+          status: In([TimeEntryStatus.COMPLETED, TimeEntryStatus.ADJUSTED]),
+        },
       });
 
-      const totalWorkedHours = timeEntries.reduce((sum, entry) => sum + (Number(entry.totalHours) || 0), 0);
+      const totalWorkedHours = timeEntries.reduce(
+        (sum, entry) => sum + (Number(entry.totalHours) || 0),
+        0,
+      );
       const paidLeaveHours = paidDays * HOURS_PER_DAY;
 
       adjustedGross = (totalWorkedHours + paidLeaveHours) * hourlyRate;
@@ -265,7 +297,6 @@ export class PayrollService {
 
       // If NO hours recorded and NO leave, check if we should fallback?
       // For now, 0 hours = 0 pay.
-
     } else {
       // FIXED: Monthly Salary - Unpaid Leave + Paid Hours? (Usually fixed is fixed)
       const grossSalary = this.parseNumber(worker.salaryGross);
@@ -394,12 +425,16 @@ export class PayrollService {
     if (records.length === 0) {
       // Check if there are already finalized records (might be a retry)
       const existingRecords = await this.payrollRepository.count({
-        where: { userId, payPeriodId }
+        where: { userId, payPeriodId },
       });
       if (existingRecords > 0) {
-        throw new BadRequestException('All payroll records for this period have already been finalized');
+        throw new BadRequestException(
+          'All payroll records for this period have already been finalized',
+        );
       }
-      throw new NotFoundException('No payroll records found for this period. Please run payroll first.');
+      throw new NotFoundException(
+        'No payroll records found for this period. Please run payroll first.',
+      );
     }
 
     const employerName = await this.getEmployerName(userId);
@@ -411,36 +446,41 @@ export class PayrollService {
 
     // 3. Check for Payment Failures
     if (payoutResults.failureCount > 0) {
-      this.logger.warn(`Payroll finalization halted due to ${payoutResults.failureCount} payment failures.`);
+      this.logger.warn(
+        `Payroll finalization halted due to ${payoutResults.failureCount} payment failures.`,
+      );
 
       // Revert records to DRAFT to allow retry
       await this.payrollRepository.update(
         { payPeriodId, userId },
-        { status: PayrollStatus.DRAFT }
+        { status: PayrollStatus.DRAFT },
       );
 
       throw new BadRequestException({
         message: 'Payroll finalization failed due to payment errors.',
-        details: payoutResults.results.filter(r => !r.success),
-        instructions: 'Please check your wallet balance or worker details and try again.'
+        details: payoutResults.results.filter((r) => !r.success),
+        instructions:
+          'Please check your wallet balance or worker details and try again.',
       });
     }
 
     // 4. Generate Documents (Only if payments succeeded)
-    const payslipResults = await this.generatePayslipsAsync(updatedRecords, employerName);
+    const payslipResults = await this.generatePayslipsAsync(
+      updatedRecords,
+      employerName,
+    );
     await this.generateTaxSubmissionSafe(payPeriodId, userId);
 
     // 5. Mark PayPeriod as COMPLETED (The Fix)
     // Verify all records are finalized before closing period
     const nonFinalizedCount = await this.payrollRepository.count({
-      where: { payPeriodId, status: PayrollStatus.DRAFT } // Should be 0
+      where: { payPeriodId, status: PayrollStatus.DRAFT }, // Should be 0
     });
 
     if (nonFinalizedCount === 0) {
-      await this.payPeriodRepository.update(
-        payPeriodId,
-        { status: PayPeriodStatus.COMPLETED }
-      );
+      await this.payPeriodRepository.update(payPeriodId, {
+        status: PayPeriodStatus.COMPLETED,
+      });
       this.logger.log(`PayPeriod ${payPeriodId} marked as COMPLETED.`);
     }
 
@@ -459,8 +499,8 @@ export class PayrollService {
     const totalDuration = Date.now() - startTime;
     this.logger.log(
       `Payroll finalization completed in ${totalDuration}ms: ` +
-      `${updatedRecords.length} records, ${payoutResults.successCount} payments, ` +
-      `${payslipsGenerated} payslips`,
+        `${updatedRecords.length} records, ${payoutResults.successCount} payments, ` +
+        `${payslipsGenerated} payslips`,
     );
 
     return {
@@ -538,7 +578,11 @@ export class PayrollService {
   /**
    * Generate PDF payslip for an employee.
    */
-  async getEmployeePayslipPdf(userId: string, recordId: string, workerId?: string) {
+  async getEmployeePayslipPdf(
+    userId: string,
+    recordId: string,
+    workerId?: string,
+  ) {
     const resolvedWorkerId = await this.resolveWorkerId(userId, workerId);
 
     const record = await this.payrollRepository.findOne({
@@ -640,8 +684,11 @@ export class PayrollService {
         }
       }
 
-      const taxBreakdown = await this.taxesService.calculateTaxes(adjustedGross);
-      const netPay = this.roundCurrency(adjustedGross - taxBreakdown.totalDeductions);
+      const taxBreakdown =
+        await this.taxesService.calculateTaxes(adjustedGross);
+      const netPay = this.roundCurrency(
+        adjustedGross - taxBreakdown.totalDeductions,
+      );
 
       return {
         workerId: worker.id,
@@ -655,8 +702,14 @@ export class PayrollService {
         phoneNumber: worker.phoneNumber,
       };
     } catch (error) {
-      this.logger.error(`Error calculating payroll for worker ${worker.id}:`, error);
-      return this.createErrorPayrollItem(worker, error.message || 'Failed to calculate taxes');
+      this.logger.error(
+        `Error calculating payroll for worker ${worker.id}:`,
+        error,
+      );
+      return this.createErrorPayrollItem(
+        worker,
+        error.message || 'Failed to calculate taxes',
+      );
     }
   }
 
@@ -700,12 +753,18 @@ export class PayrollService {
   }
 
   private calculateSummary(items: PayrollItem[]): PayrollSummary {
-    const totalGross = items.reduce((sum, item) => sum + (item.grossSalary || 0), 0);
+    const totalGross = items.reduce(
+      (sum, item) => sum + (item.grossSalary || 0),
+      0,
+    );
     const totalDeductions = items.reduce(
       (sum, item) => sum + (item.taxBreakdown?.totalDeductions || 0),
       0,
     );
-    const totalNetPay = items.reduce((sum, item) => sum + (item.netPay || 0), 0);
+    const totalNetPay = items.reduce(
+      (sum, item) => sum + (item.netPay || 0),
+      0,
+    );
 
     return {
       totalGross: this.roundCurrency(totalGross),
@@ -774,7 +833,9 @@ export class PayrollService {
       const start = reqStart > periodStart ? reqStart : periodStart;
       const end = reqEnd < periodEnd ? reqEnd : periodEnd;
 
-      const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      const days =
+        Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) +
+        1;
 
       if (days > 0) {
         if (req.leaveType === LeaveType.UNPAID || req.paidLeave === false) {
@@ -788,7 +849,10 @@ export class PayrollService {
     return { unpaidDays, paidDays };
   }
 
-  private calculateLeaveDeduction(grossSalary: number, unpaidDays: number): number {
+  private calculateLeaveDeduction(
+    grossSalary: number,
+    unpaidDays: number,
+  ): number {
     if (unpaidDays <= 0) return 0;
     const dailyRate = grossSalary / DAYS_IN_MONTH;
     return this.roundCurrency(dailyRate * unpaidDays);
@@ -822,7 +886,14 @@ export class PayrollService {
     for (let i = 0; i < items.length; i += SAVE_BATCH_SIZE) {
       const batch = items.slice(i, i + SAVE_BATCH_SIZE);
       const batchPromises = batch.map((item) =>
-        this.processDraftItem(manager, userId, payPeriodId, item, periodStart, periodEnd),
+        this.processDraftItem(
+          manager,
+          userId,
+          payPeriodId,
+          item,
+          periodStart,
+          periodEnd,
+        ),
       );
 
       const batchResults = await Promise.all(batchPromises);
@@ -840,9 +911,11 @@ export class PayrollService {
     periodStart: Date,
     periodEnd: Date,
   ): Promise<PayrollRecord> {
-    const totalEarnings = item.grossSalary + (item.bonuses || 0) + (item.otherEarnings || 0);
+    const totalEarnings =
+      item.grossSalary + (item.bonuses || 0) + (item.otherEarnings || 0);
     const taxBreakdown = await this.taxesService.calculateTaxes(totalEarnings);
-    const totalDeductions = taxBreakdown.totalDeductions + (item.otherDeductions || 0);
+    const totalDeductions =
+      taxBreakdown.totalDeductions + (item.otherDeductions || 0);
     const netPay = totalEarnings - totalDeductions;
 
     let record = await manager.findOne(PayrollRecord, {
@@ -880,27 +953,43 @@ export class PayrollService {
     return manager.save(PayrollRecord, record);
   }
 
-  private applyRecordUpdates(record: PayrollRecord, updates: DraftPayrollUpdateInput): void {
-    if (updates.grossSalary !== undefined) record.grossSalary = updates.grossSalary;
+  private applyRecordUpdates(
+    record: PayrollRecord,
+    updates: DraftPayrollUpdateInput,
+  ): void {
+    if (updates.grossSalary !== undefined)
+      record.grossSalary = updates.grossSalary;
     if (updates.bonuses !== undefined) record.bonuses = updates.bonuses;
-    if (updates.otherEarnings !== undefined) record.otherEarnings = updates.otherEarnings;
-    if (updates.otherDeductions !== undefined) record.otherDeductions = updates.otherDeductions;
-    if (updates.holidayHours !== undefined) record.holidayHours = updates.holidayHours;
-    if (updates.sundayHours !== undefined) record.sundayHours = updates.sundayHours;
+    if (updates.otherEarnings !== undefined)
+      record.otherEarnings = updates.otherEarnings;
+    if (updates.otherDeductions !== undefined)
+      record.otherDeductions = updates.otherDeductions;
+    if (updates.holidayHours !== undefined)
+      record.holidayHours = updates.holidayHours;
+    if (updates.sundayHours !== undefined)
+      record.sundayHours = updates.sundayHours;
   }
 
-  private calculateOvertimePay(record: PayrollRecord, worker: Worker | null): number {
+  private calculateOvertimePay(
+    record: PayrollRecord,
+    worker: Worker | null,
+  ): number {
     if (!worker) return 0;
 
     let hourlyRate: number;
     if (worker.employmentType === EmploymentType.HOURLY) {
       hourlyRate = this.parseNumber(worker.hourlyRate) || 0;
     } else {
-      hourlyRate = this.parseNumber(record.grossSalary) / STANDARD_MONTHLY_HOURS;
+      hourlyRate =
+        this.parseNumber(record.grossSalary) / STANDARD_MONTHLY_HOURS;
     }
 
-    const holidayPay = hourlyRate * HOLIDAY_OVERTIME_RATE * this.parseNumber(record.holidayHours);
-    const sundayPay = hourlyRate * SUNDAY_OVERTIME_RATE * this.parseNumber(record.sundayHours);
+    const holidayPay =
+      hourlyRate *
+      HOLIDAY_OVERTIME_RATE *
+      this.parseNumber(record.holidayHours);
+    const sundayPay =
+      hourlyRate * SUNDAY_OVERTIME_RATE * this.parseNumber(record.sundayHours);
 
     return holidayPay + sundayPay;
   }
@@ -916,7 +1005,8 @@ export class PayrollService {
       overtimePay;
 
     const taxBreakdown = await this.taxesService.calculateTaxes(totalEarnings);
-    const totalDeductions = taxBreakdown.totalDeductions + this.parseNumber(record.otherDeductions);
+    const totalDeductions =
+      taxBreakdown.totalDeductions + this.parseNumber(record.otherDeductions);
 
     record.taxAmount = taxBreakdown.paye;
     record.netSalary = totalEarnings - totalDeductions;
@@ -946,7 +1036,9 @@ export class PayrollService {
   // Private Methods - Finalization Helpers
   // ===========================================================================
 
-  private async markRecordsAsFinalized(records: PayrollRecord[]): Promise<PayrollRecord[]> {
+  private async markRecordsAsFinalized(
+    records: PayrollRecord[],
+  ): Promise<PayrollRecord[]> {
     const finalizedDate = new Date();
 
     return this.dataSource.transaction(async (manager) => {
@@ -967,7 +1059,10 @@ export class PayrollService {
     this.logger.log('Starting payslip generation...');
 
     try {
-      const payslips = await this.payslipService.generatePayslipsBatch(records, employerName);
+      const payslips = await this.payslipService.generatePayslipsBatch(
+        records,
+        employerName,
+      );
       this.logger.log(`Generated ${payslips.length} payslips successfully`);
       return { success: true, count: payslips.length };
     } catch (error) {
@@ -996,7 +1091,10 @@ export class PayrollService {
     }
   }
 
-  private async generateTaxSubmissionSafe(payPeriodId: string, userId: string): Promise<void> {
+  private async generateTaxSubmissionSafe(
+    payPeriodId: string,
+    userId: string,
+  ): Promise<void> {
     try {
       this.logger.log('Generating tax submission...');
       await this.taxesService.generateTaxSubmission(payPeriodId, userId);
@@ -1020,8 +1118,8 @@ export class PayrollService {
         ActivityType.PAYROLL,
         'Payroll Finalized',
         `Finalized payroll for ${workerCount} workers. ` +
-        `Payments: ${payoutResults.successCount} successful, ${payoutResults.failureCount} failed. ` +
-        `Payslips: ${payslipsGenerated} generated.`,
+          `Payments: ${payoutResults.successCount} successful, ${payoutResults.failureCount} failed. ` +
+          `Payslips: ${payslipsGenerated} generated.`,
         {
           workerCount,
           totalAmount,
@@ -1055,7 +1153,9 @@ export class PayrollService {
     });
 
     if (!payPeriod) {
-      throw new NotFoundException(`Pay period with ID ${payPeriodId} not found`);
+      throw new NotFoundException(
+        `Pay period with ID ${payPeriodId} not found`,
+      );
     }
 
     return payPeriod;
@@ -1072,7 +1172,10 @@ export class PayrollService {
     }
   }
 
-  private async resolveWorkerId(userId: string, workerId?: string): Promise<string> {
+  private async resolveWorkerId(
+    userId: string,
+    workerId?: string,
+  ): Promise<string> {
     if (workerId) {
       return workerId;
     }
@@ -1108,11 +1211,15 @@ export class PayrollService {
     return records.reduce((sum, r) => sum + this.parseNumber(r.netSalary), 0);
   }
 
-  private logBatchDuration(operation: string, startTime: number, count: number): void {
+  private logBatchDuration(
+    operation: string,
+    startTime: number,
+    count: number,
+  ): void {
     const duration = Date.now() - startTime;
     this.logger.log(
       `${operation} completed: ${count} items in ${duration}ms ` +
-      `(${(duration / count).toFixed(2)}ms avg)`,
+        `(${(duration / count).toFixed(2)}ms avg)`,
     );
   }
 }

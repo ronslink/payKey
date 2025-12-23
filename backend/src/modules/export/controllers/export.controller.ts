@@ -20,7 +20,7 @@ import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 @Controller('export')
 @UseGuards(JwtAuthGuard)
 export class ExportController {
-  constructor(private readonly exportService: ExportService) { }
+  constructor(private readonly exportService: ExportService) {}
 
   @Post()
   async createExport(
@@ -44,7 +44,10 @@ export class ExportController {
       };
     } catch (error) {
       console.error('Export Error:', error);
-      throw new HttpException(`Export failed: ${error.message}`, HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(
+        `Export failed: ${error.message}`,
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 

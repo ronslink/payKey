@@ -27,6 +27,11 @@ export enum LeaveStatus {
   CANCELLED = 'CANCELLED',
 }
 
+export enum LeaveOrigin {
+  EMPLOYER = 'EMPLOYER',
+  WORKER = 'WORKER',
+}
+
 @Entity('leave_requests')
 @Index(['workerId', 'status'])
 @Index(['requestedById'])
@@ -94,6 +99,13 @@ export class LeaveRequest {
 
   @Column({ type: 'text', nullable: true })
   emergencyPhone: string;
+
+  @Column({
+    type: 'enum',
+    enum: LeaveOrigin,
+    default: LeaveOrigin.EMPLOYER,
+  })
+  origin: LeaveOrigin;
 
   @CreateDateColumn()
   createdAt: Date;

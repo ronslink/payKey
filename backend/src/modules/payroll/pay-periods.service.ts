@@ -20,7 +20,10 @@ import {
   TaxPayment,
   PaymentStatus,
 } from '../tax-payments/entities/tax-payment.entity';
-import { TaxSubmission, TaxSubmissionStatus } from '../taxes/entities/tax-submission.entity';
+import {
+  TaxSubmission,
+  TaxSubmissionStatus,
+} from '../taxes/entities/tax-submission.entity';
 
 @Injectable()
 export class PayPeriodsService {
@@ -32,9 +35,12 @@ export class PayPeriodsService {
     @InjectRepository(TaxSubmission)
     private taxSubmissionRepository: Repository<TaxSubmission>,
     private taxPaymentsService: TaxPaymentsService,
-  ) { }
+  ) {}
 
-  async create(createPayPeriodDto: CreatePayPeriodDto, userId: string): Promise<PayPeriod> {
+  async create(
+    createPayPeriodDto: CreatePayPeriodDto,
+    userId: string,
+  ): Promise<PayPeriod> {
     // Validate that start date is before end date
     if (
       new Date(createPayPeriodDto.startDate) >=
@@ -60,9 +66,10 @@ export class PayPeriodsService {
     }
 
     // Convert notes to proper format if it's a string
-    const notes = typeof createPayPeriodDto.notes === 'string'
-      ? { note: createPayPeriodDto.notes }
-      : createPayPeriodDto.notes;
+    const notes =
+      typeof createPayPeriodDto.notes === 'string'
+        ? { note: createPayPeriodDto.notes }
+        : createPayPeriodDto.notes;
 
     const payPeriod = this.payPeriodRepository.create({
       name: createPayPeriodDto.name,
@@ -231,7 +238,7 @@ export class PayPeriodsService {
     ) {
       await this.payrollRecordRepository.update(
         { payPeriodId: id },
-        { status: PayrollStatus.DRAFT }
+        { status: PayrollStatus.DRAFT },
       );
     }
 
@@ -286,18 +293,20 @@ export class PayPeriodsService {
       {
         status: 'finalized' as any,
         finalizedAt: new Date(),
-      }
+      },
     );
 
     // Generate tax submission data automatically
     const adjustments = await this.generateTaxSubmissionData(id);
 
     // Update status to completed
-    const updatedPeriod = await this.update(id, { status: PayPeriodStatus.COMPLETED });
+    const updatedPeriod = await this.update(id, {
+      status: PayPeriodStatus.COMPLETED,
+    });
 
     return {
       ...updatedPeriod,
-      adjustments
+      adjustments,
     } as any;
   }
 
@@ -367,17 +376,27 @@ export class PayPeriodsService {
 
     if (submission) {
       // Calculate differences if submission already exists (reopening case)
-      const payeDifference = totals[TaxType.PAYE] - Number(submission.totalPaye);
-      const shifDifference = totals[TaxType.SHIF] - Number(submission.totalNhif);
-      const housingLevyDifference = totals[TaxType.HOUSING_LEVY] - Number(submission.totalHousingLevy);
-      const nssfDifference = (totals[TaxType.NSSF_TIER1] + (totals[TaxType.NSSF_TIER2] || 0)) - Number(submission.totalNssf);
+      const payeDifference =
+        totals[TaxType.PAYE] - Number(submission.totalPaye);
+      const shifDifference =
+        totals[TaxType.SHIF] - Number(submission.totalNhif);
+      const housingLevyDifference =
+        totals[TaxType.HOUSING_LEVY] - Number(submission.totalHousingLevy);
+      const nssfDifference =
+        totals[TaxType.NSSF_TIER1] +
+        (totals[TaxType.NSSF_TIER2] || 0) -
+        Number(submission.totalNssf);
 
       adjustments = {
         payeDifference,
         shifDifference,
         housingLevyDifference,
         nssfDifference,
-        totalTaxDifference: payeDifference + shifDifference + housingLevyDifference + nssfDifference
+        totalTaxDifference:
+          payeDifference +
+          shifDifference +
+          housingLevyDifference +
+          nssfDifference,
       };
     } else {
       submission = this.taxSubmissionRepository.create({
@@ -392,7 +411,8 @@ export class PayPeriodsService {
     // Map SHIF to nhif column (Entity uses totalNhif)
     submission.totalNhif = totals[TaxType.SHIF];
     // Map NSSF (Entity uses totalNssf). Currently we put all in TIER1 in totals calculation.
-    submission.totalNssf = totals[TaxType.NSSF_TIER1] + (totals[TaxType.NSSF_TIER2] || 0);
+    submission.totalNssf =
+      totals[TaxType.NSSF_TIER1] + (totals[TaxType.NSSF_TIER2] || 0);
     submission.totalHousingLevy = totals[TaxType.HOUSING_LEVY];
 
     await this.taxSubmissionRepository.save(submission);
@@ -513,12 +533,16 @@ export class PayPeriodsService {
     currentDate.setHours(0, 0, 0, 0);
 
     while (currentDate <= endDate) {
-      let periodStart = new Date(currentDate);
+      const periodStart = new Date(currentDate);
       let periodEnd: Date;
 
       if (frequency === PayPeriodFrequency.MONTHLY) {
         // First day of next month
-        const nextMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+        const nextMonth = new Date(
+          currentDate.getFullYear(),
+          currentDate.getMonth() + 1,
+          1,
+        );
         // Last day of current month is "day 0" of next month
         periodEnd = new Date(nextMonth.getTime() - 1); // effectively last millisecond, or set day 0
         // Clean up time

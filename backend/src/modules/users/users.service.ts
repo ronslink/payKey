@@ -9,7 +9,7 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
-  ) { }
+  ) {}
 
   async create(
     createUserDto: CreateUserDto & { passwordHash: string },
@@ -41,19 +41,14 @@ export class UsersService {
 
     // Check if onboarding is complete based on required fields
     const hasRequiredPersonalInfo =
-      updatedData.firstName &&
-      updatedData.lastName;
+      updatedData.firstName && updatedData.lastName;
 
     const hasRequiredIdentification =
-      updatedData.idType &&
-      updatedData.idNumber &&
-      updatedData.nationalityId;
+      updatedData.idType && updatedData.idNumber && updatedData.nationalityId;
 
-    const hasRequiredTaxCompliance =
-      updatedData.kraPin;
+    const hasRequiredTaxCompliance = updatedData.kraPin;
 
-    const hasRequiredLocation =
-      updatedData.countryId;
+    const hasRequiredLocation = updatedData.countryId;
 
     // Residency status is optional but tracked
     const hasRequiredResidencyInfo = true; // Residency status is optional for onboarding
