@@ -8,6 +8,7 @@ import {
 
 export enum TaxType {
   PAYE = 'PAYE',
+  NHIF = 'NHIF', // Legacy, replaced by SHIF Oct 2024
   SHIF = 'SHIF',
   NSSF_TIER1 = 'NSSF_TIER1',
   NSSF_TIER2 = 'NSSF_TIER2',
@@ -18,6 +19,7 @@ export enum RateType {
   PERCENTAGE = 'PERCENTAGE',
   GRADUATED = 'GRADUATED',
   TIERED = 'TIERED',
+  BANDED = 'BANDED', // For NHIF banded rates
 }
 
 export interface TaxBracket {
@@ -45,6 +47,9 @@ export interface TaxConfiguration {
   // For tiered (NSSF)
   tiers?: TaxTier[];
 
+  // For banded (NHIF)
+  bands?: Array<{ from: number; to: number | null; amount: number }>;
+
   // Reliefs/deductions
   personalRelief?: number;
   insuranceRelief?: number;
@@ -57,8 +62,8 @@ export class TaxConfig {
   id: string;
 
   @Column({
-    type: 'enum',
-    enum: TaxType,
+    type: 'varchar',
+    nullable: true,
   })
   taxType: TaxType;
 

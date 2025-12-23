@@ -8,7 +8,7 @@ export class TaxConfigService {
   constructor(
     @InjectRepository(TaxConfig)
     private taxConfigRepository: Repository<TaxConfig>,
-  ) {}
+  ) { }
 
   /**
    * Get active tax configuration for a specific date

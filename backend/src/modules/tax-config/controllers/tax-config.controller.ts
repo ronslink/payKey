@@ -6,7 +6,7 @@ import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 @Controller('tax-config')
 @UseGuards(JwtAuthGuard)
 export class TaxConfigController {
-  constructor(private readonly taxConfigService: TaxConfigService) {}
+  constructor(private readonly taxConfigService: TaxConfigService) { }
 
   @Get('active')
   async getActiveTaxConfigs(): Promise<TaxConfig[]> {
@@ -22,5 +22,10 @@ export class TaxConfigController {
   async seedInitialConfigs(): Promise<{ message: string }> {
     await this.taxConfigService.seedInitialConfigs();
     return { message: 'Tax configurations seeded successfully' };
+  }
+
+  @Post()
+  async create(@Body() createTaxConfigDto: Partial<TaxConfig>): Promise<TaxConfig> {
+    return this.taxConfigService.createTaxConfig(createTaxConfigDto);
   }
 }

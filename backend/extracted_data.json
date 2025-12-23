@@ -1,0 +1,470 @@
+{
+  "workers": [
+    {
+      "emp_no": "001",
+      "name": "KEFA, Nicholas Luvaga",
+      "department": "OPERATIONS\\CASUALS",
+      "job_title": "Driver - KCA 191B",
+      "pin": "A008064326K",
+      "nssf": "246694939",
+      "nhif": "7573188",
+      "id_no": "22124698",
+      "basic_pay": "16700.00",
+      "gross_pay": "16700.00",
+      "paye": "0.00",
+      "nssf_employee": "1002.00",
+      "nhif_deduction": "500.00",
+      "net_pay": "15198.00"
+    },
+    {
+      "emp_no": "002",
+      "name": "MUSULWA, Janet Ngoyisi",
+      "department": "HOUSE HELP",
+      "job_title": "House Help",
+      "pin": "A011473719L",
+      "nssf": "573605823",
+      "nhif": "7493843",
+      "id_no": "9790160",
+      "basic_pay": "17800.00",
+      "gross_pay": "17800.00",
+      "paye": "0.00",
+      "nssf_employee": "1068.00",
+      "nhif_deduction": "500.00",
+      "net_pay": "16232.00"
+    }
+  ],
+  "payroll_history": [
+    {
+      "month": "April",
+      "year": "2024",
+      "records": [
+        {
+          "name": "KEFA, Nicholas Luvaga",
+          "gross_salary": "16700.00",
+          "basic_pay": "16700.00",
+          "paye": "0.00",
+          "nssf_employee": "1002.00",
+          "nhif": "500.00",
+          "net_pay": "15198.00"
+        },
+        {
+          "name": "MUSULWA, Janet Ngoyisi",
+          "gross_salary": "17800.00",
+          "basic_pay": "17800.00",
+          "paye": "0.00",
+          "nssf_employee": "1068.00",
+          "nhif": "500.00",
+          "net_pay": "16232.00"
+        }
+      ]
+    },
+    {
+      "month": "April",
+      "year": "2025",
+      "records": [
+        {
+          "name": "KEFA, Nicholas Luvaga",
+          "gross_salary": "16700.00",
+          "basic_pay": "16700.00",
+          "paye": "0.00",
+          "nssf_employee": "1002.00",
+          "nhif": "0",
+          "net_pay": "15698.00"
+        },
+        {
+          "name": "MUSULWA, Janet Ngoyisi",
+          "gross_salary": "17800.00",
+          "basic_pay": "17800.00",
+          "paye": "0.00",
+          "nssf_employee": "1068.00",
+          "nhif": "0",
+          "net_pay": "16732.00"
+        }
+      ]
+    },
+    {
+      "month": "August",
+      "year": "2024",
+      "records": [
+        {
+          "name": "KEFA, Nicholas Luvaga",
+          "gross_salary": "16700.00",
+          "basic_pay": "16700.00",
+          "paye": "0.00",
+          "nssf_employee": "1002.00",
+          "nhif": "500.00",
+          "net_pay": "15198.00"
+        },
+        {
+          "name": "MUSULWA, Janet Ngoyisi",
+          "gross_salary": "17800.00",
+          "basic_pay": "17800.00",
+          "paye": "0.00",
+          "nssf_employee": "1068.00",
+          "nhif": "500.00",
+          "net_pay": "16232.00"
+        }
+      ]
+    },
+    {
+      "month": "December",
+      "year": "2024",
+      "records": [
+        {
+          "name": "KEFA, Nicholas Luvaga",
+          "gross_salary": "16700.00",
+          "basic_pay": "16700.00",
+          "paye": "0.00",
+          "nssf_employee": "1002.00",
+          "nhif": "0",
+          "net_pay": "15698.00"
+        },
+        {
+          "name": "MUSULWA, Janet Ngoyisi",
+          "gross_salary": "17800.00",
+          "basic_pay": "17800.00",
+          "paye": "0.00",
+          "nssf_employee": "1068.00",
+          "nhif": "0",
+          "net_pay": "16732.00"
+        }
+      ]
+    },
+    {
+      "month": "February",
+      "year": "2024",
+      "records": [
+        {
+          "name": "KEFA, Nicholas Luvaga",
+          "gross_salary": "16700.00",
+          "basic_pay": "16700.00",
+          "paye": "0.00",
+          "nssf_employee": "1002.00",
+          "nhif": "500.00",
+          "net_pay": "15198.00"
+        },
+        {
+          "name": "MUSULWA, Janet Ngoyisi",
+          "gross_salary": "17800.00",
+          "basic_pay": "17800.00",
+          "paye": "0.00",
+          "nssf_employee": "1068.00",
+          "nhif": "500.00",
+          "net_pay": "16232.00"
+        }
+      ]
+    },
+    {
+      "month": "February",
+      "year": "2025",
+      "records": [
+        {
+          "name": "KEFA, Nicholas Luvaga",
+          "gross_salary": "16700.00",
+          "basic_pay": "16700.00",
+          "paye": "0.00",
+          "nssf_employee": "1002.00",
+          "nhif": "0",
+          "net_pay": "15698.00"
+        },
+        {
+          "name": "MUSULWA, Janet Ngoyisi",
+          "gross_salary": "17800.00",
+          "basic_pay": "17800.00",
+          "paye": "0.00",
+          "nssf_employee": "1068.00",
+          "nhif": "0",
+          "net_pay": "16732.00"
+        }
+      ]
+    },
+    {
+      "month": "January",
+      "year": "2024",
+      "records": [
+        {
+          "name": "KEFA, Nicholas Luvaga",
+          "gross_salary": "16700.00",
+          "basic_pay": "16700.00",
+          "paye": "0.00",
+          "nssf_employee": "1002.00",
+          "nhif": "500.00",
+          "net_pay": "15198.00"
+        },
+        {
+          "name": "MUSULWA, Janet Ngoyisi",
+          "gross_salary": "17800.00",
+          "basic_pay": "17800.00",
+          "paye": "0.00",
+          "nssf_employee": "1068.00",
+          "nhif": "500.00",
+          "net_pay": "16232.00"
+        }
+      ]
+    },
+    {
+      "month": "January",
+      "year": "2025",
+      "records": [
+        {
+          "name": "KEFA, Nicholas Luvaga",
+          "gross_salary": "16700.00",
+          "basic_pay": "16700.00",
+          "paye": "0.00",
+          "nssf_employee": "1002.00",
+          "nhif": "0",
+          "net_pay": "15698.00"
+        },
+        {
+          "name": "MUSULWA, Janet Ngoyisi",
+          "gross_salary": "17800.00",
+          "basic_pay": "17800.00",
+          "paye": "0.00",
+          "nssf_employee": "1068.00",
+          "nhif": "0",
+          "net_pay": "16732.00"
+        }
+      ]
+    },
+    {
+      "month": "July",
+      "year": "2024",
+      "records": [
+        {
+          "name": "KEFA, Nicholas Luvaga",
+          "gross_salary": "16700.00",
+          "basic_pay": "16700.00",
+          "paye": "0.00",
+          "nssf_employee": "1002.00",
+          "nhif": "500.00",
+          "net_pay": "15198.00"
+        },
+        {
+          "name": "MUSULWA, Janet Ngoyisi",
+          "gross_salary": "17800.00",
+          "basic_pay": "17800.00",
+          "paye": "0.00",
+          "nssf_employee": "1068.00",
+          "nhif": "500.00",
+          "net_pay": "16232.00"
+        }
+      ]
+    },
+    {
+      "month": "June",
+      "year": "2024",
+      "records": [
+        {
+          "name": "KEFA, Nicholas Luvaga",
+          "gross_salary": "16700.00",
+          "basic_pay": "16700.00",
+          "paye": "0.00",
+          "nssf_employee": "1002.00",
+          "nhif": "500.00",
+          "net_pay": "15198.00"
+        },
+        {
+          "name": "MUSULWA, Janet Ngoyisi",
+          "gross_salary": "17800.00",
+          "basic_pay": "17800.00",
+          "paye": "0.00",
+          "nssf_employee": "1068.00",
+          "nhif": "500.00",
+          "net_pay": "16232.00"
+        }
+      ]
+    },
+    {
+      "month": "June",
+      "year": "2025",
+      "records": [
+        {
+          "name": "KEFA, Nicholas Luvaga",
+          "gross_salary": "16700.00",
+          "basic_pay": "16700.00",
+          "paye": "0.00",
+          "nssf_employee": "1002.00",
+          "nhif": "0",
+          "net_pay": "15698.00"
+        },
+        {
+          "name": "MUSULWA, Janet Ngoyisi",
+          "gross_salary": "17800.00",
+          "basic_pay": "17800.00",
+          "paye": "0.00",
+          "nssf_employee": "1068.00",
+          "nhif": "0",
+          "net_pay": "16732.00"
+        }
+      ]
+    },
+    {
+      "month": "March",
+      "year": "2024",
+      "records": [
+        {
+          "name": "KEFA, Nicholas Luvaga",
+          "gross_salary": "16700.00",
+          "basic_pay": "16700.00",
+          "paye": "0.00",
+          "nssf_employee": "1002.00",
+          "nhif": "500.00",
+          "net_pay": "15198.00"
+        },
+        {
+          "name": "MUSULWA, Janet Ngoyisi",
+          "gross_salary": "17800.00",
+          "basic_pay": "17800.00",
+          "paye": "0.00",
+          "nssf_employee": "1068.00",
+          "nhif": "500.00",
+          "net_pay": "16232.00"
+        }
+      ]
+    },
+    {
+      "month": "March",
+      "year": "2025",
+      "records": [
+        {
+          "name": "KEFA, Nicholas Luvaga",
+          "gross_salary": "16700.00",
+          "basic_pay": "16700.00",
+          "paye": "0.00",
+          "nssf_employee": "1002.00",
+          "nhif": "0",
+          "net_pay": "15698.00"
+        },
+        {
+          "name": "MUSULWA, Janet Ngoyisi",
+          "gross_salary": "17800.00",
+          "basic_pay": "17800.00",
+          "paye": "0.00",
+          "nssf_employee": "1068.00",
+          "nhif": "0",
+          "net_pay": "16732.00"
+        }
+      ]
+    },
+    {
+      "month": "May",
+      "year": "2024",
+      "records": [
+        {
+          "name": "KEFA, Nicholas Luvaga",
+          "gross_salary": "16700.00",
+          "basic_pay": "16700.00",
+          "paye": "0.00",
+          "nssf_employee": "1002.00",
+          "nhif": "500.00",
+          "net_pay": "15198.00"
+        },
+        {
+          "name": "MUSULWA, Janet Ngoyisi",
+          "gross_salary": "17800.00",
+          "basic_pay": "17800.00",
+          "paye": "0.00",
+          "nssf_employee": "1068.00",
+          "nhif": "500.00",
+          "net_pay": "16232.00"
+        }
+      ]
+    },
+    {
+      "month": "May",
+      "year": "2025",
+      "records": [
+        {
+          "name": "KEFA, Nicholas Luvaga",
+          "gross_salary": "16700.00",
+          "basic_pay": "16700.00",
+          "paye": "0.00",
+          "nssf_employee": "1002.00",
+          "nhif": "0",
+          "net_pay": "15698.00"
+        },
+        {
+          "name": "MUSULWA, Janet Ngoyisi",
+          "gross_salary": "17800.00",
+          "basic_pay": "17800.00",
+          "paye": "0.00",
+          "nssf_employee": "1068.00",
+          "nhif": "0",
+          "net_pay": "16732.00"
+        }
+      ]
+    },
+    {
+      "month": "November",
+      "year": "2024",
+      "records": [
+        {
+          "name": "KEFA, Nicholas Luvaga",
+          "gross_salary": "16700.00",
+          "basic_pay": "16700.00",
+          "paye": "0.00",
+          "nssf_employee": "1002.00",
+          "nhif": "0",
+          "net_pay": "15698.00"
+        },
+        {
+          "name": "MUSULWA, Janet Ngoyisi",
+          "gross_salary": "17800.00",
+          "basic_pay": "17800.00",
+          "paye": "0.00",
+          "nssf_employee": "1068.00",
+          "nhif": "0",
+          "net_pay": "16732.00"
+        }
+      ]
+    },
+    {
+      "month": "October",
+      "year": "2024",
+      "records": [
+        {
+          "name": "KEFA, Nicholas Luvaga",
+          "gross_salary": "16700.00",
+          "basic_pay": "16700.00",
+          "paye": "0.00",
+          "nssf_employee": "1002.00",
+          "nhif": "0",
+          "net_pay": "15698.00"
+        },
+        {
+          "name": "MUSULWA, Janet Ngoyisi",
+          "gross_salary": "17800.00",
+          "basic_pay": "17800.00",
+          "paye": "0.00",
+          "nssf_employee": "1068.00",
+          "nhif": "0",
+          "net_pay": "16732.00"
+        }
+      ]
+    },
+    {
+      "month": "September",
+      "year": "2024",
+      "records": [
+        {
+          "name": "KEFA, Nicholas Luvaga",
+          "gross_salary": "16700.00",
+          "basic_pay": "16700.00",
+          "paye": "0.00",
+          "nssf_employee": "1002.00",
+          "nhif": "500.00",
+          "net_pay": "15198.00"
+        },
+        {
+          "name": "MUSULWA, Janet Ngoyisi",
+          "gross_salary": "17800.00",
+          "basic_pay": "17800.00",
+          "paye": "0.00",
+          "nssf_employee": "1068.00",
+          "nhif": "500.00",
+          "net_pay": "16232.00"
+        }
+      ]
+    }
+  ]
+}

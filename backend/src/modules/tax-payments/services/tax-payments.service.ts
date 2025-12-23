@@ -62,6 +62,7 @@ const TAX_DUE_DAY = 9;
 /** Mapping of tax types to payroll summary fields */
 const TAX_TYPE_FIELD_MAP: Record<TaxType, keyof PayrollSummary | null> = {
   [TaxType.PAYE]: 'totalPaye',
+  [TaxType.NHIF]: 'totalShif', // Map legacy NHIF to totalShif field for now, or add totalNhif
   [TaxType.SHIF]: 'totalShif',
   [TaxType.NSSF_TIER1]: 'totalNssf',
   [TaxType.NSSF_TIER2]: 'totalNssf',
