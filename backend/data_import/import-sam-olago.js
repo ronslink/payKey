@@ -10,8 +10,9 @@ const path = require('path');
 // Load extracted data
 // Try multiple paths to work both on host and inside docker
 const possiblePaths = [
-    path.join(__dirname, '../extracted_data.json'), // Inside docker (if backend passed as root) or local if moved
-    path.join(__dirname, '../../extracted_data.json') // Local original
+    path.join(__dirname, 'extracted_data.json'), // Same directory
+    path.join(__dirname, '../extracted_data.json'), // Parent (if run elsewhere)
+    path.join(__dirname, '../../extracted_data.json') // Original fallback
 ];
 
 let extractedDataPath;

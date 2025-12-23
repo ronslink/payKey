@@ -174,9 +174,21 @@ class _WorkersListPageState extends ConsumerState<WorkersListPage> {
           onSelected: (value) {
             if (value == 'archived') {
               context.push('/workers/archived');
+            } else if (value == 'import') {
+              context.push('/workers/import');
             }
           },
           itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'import',
+              child: Row(
+                children: [
+                  Icon(Icons.upload_file, color: _AppColors.primary),
+                  SizedBox(width: 8),
+                  Text('Import Workers'),
+                ],
+              ),
+            ),
             const PopupMenuItem(
               value: 'archived',
               child: Row(

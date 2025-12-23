@@ -11,6 +11,7 @@ import 'features/workers/presentation/pages/worker_form_page.dart';
 import 'features/workers/presentation/pages/worker_detail_page.dart';
 import 'features/workers/presentation/pages/terminate_worker_page.dart';
 import 'features/workers/presentation/pages/archived_workers_page.dart';
+import 'features/workers/presentation/pages/worker_import_page.dart';
 import 'features/workers/data/models/worker_model.dart';
 import 'features/payroll/presentation/pages/payroll_page.dart';
 import 'features/payroll/presentation/pages/run_payroll_page.dart';
@@ -161,6 +162,7 @@ abstract class AppRoutes {
   static String workerDetail(String id) => '/workers/$id';
   static String workerEdit(String id) => '/workers/$id/edit';
   static String workerTerminate(String id) => '/workers/$id/terminate';
+  static const workersImport = '/workers/import';
 
   // Payroll
   static const payrollRun = '/payroll/run';
@@ -397,6 +399,11 @@ final _workerRoutes = <RouteBase>[
       final workerId = state.pathParameters['id']!;
       return TerminateWorkerPage(workerId: workerId);
     },
+  ),
+  GoRoute(
+    path: AppRoutes.workersImport,
+    name: 'workersImport',
+    builder: (_, _) => const WorkerImportPage(),
   ),
 ];
 

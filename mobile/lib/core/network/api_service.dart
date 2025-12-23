@@ -430,6 +430,36 @@ class ApiService {
   // ---------------------------------------------------------------------------
 
   Future<Response> updateUserProfile(Map<String, dynamic> data) => auth.updateProfile(data);
+
+  // ---------------------------------------------------------------------------
+  // Worker Import (Excel Upload)
+  // ---------------------------------------------------------------------------
+
+  /// Upload Excel file to import workers (GOLD/PLATINUM only)
+  Future<Map<String, dynamic>> uploadWorkerExcel(List<int> bytes, String filename) async {
+    try {
+      final formData = FormData.fromMap({
+        'file': MultipartFile.fromBytes(bytes, filename: filename),
+      });
+      final response = await dio.post('/excel-import/employees', data: formData);
+      return response.data as Map<String, dynamic>;
+    } catch (e) {
+      throw handleError(e);
+    }
+  }
+
+  /// Download worker import template Excel file
+  Future<List<int>> downloadWorkerTemplate() async {
+    try {
+      final response = await dio.get<List<int>>(
+        '/excel-import/employees/template',
+        options: Options(responseType: ResponseType.bytes),
+      );
+      return response.data ?? [];
+    } catch (e) {
+      throw handleError(e);
+    }
+  }
 }
 
 // =============================================================================

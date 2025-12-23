@@ -82,9 +82,10 @@ export class PayPeriodsService {
   async findAll(
     userId: string,
     page: number = 1,
-    limit: number = 10,
+    limit: number = 50,
     status?: PayPeriodStatus,
     frequency?: string,
+    year?: number,
   ): Promise<{
     data: PayPeriod[];
     total: number;
@@ -102,6 +103,10 @@ export class PayPeriodsService {
 
     if (frequency) {
       queryBuilder.andWhere('pp.frequency = :frequency', { frequency });
+    }
+
+    if (year) {
+      queryBuilder.andWhere('EXTRACT(YEAR FROM pp.startDate) = :year', { year });
     }
 
     const [data, total] = await queryBuilder

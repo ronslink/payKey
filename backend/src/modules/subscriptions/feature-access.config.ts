@@ -85,12 +85,12 @@ export const FEATURE_ACCESS_MATRIX: FeatureDefinition[] = [
         displayOrder: 12,
     },
 
-    // ============== GOLD TIER FEATURES ==============
+    // ============== PLATINUM TIER FEATURES ==============
     {
         key: 'time_tracking',
         name: 'Time Tracking',
         description: 'Clock in/out and attendance tracking',
-        tiers: ['GOLD', 'PLATINUM'],
+        tiers: ['PLATINUM'],
         mockDataAvailable: true,
         displayOrder: 20,
     },
@@ -98,7 +98,7 @@ export const FEATURE_ACCESS_MATRIX: FeatureDefinition[] = [
         key: 'geofencing',
         name: 'Geofencing',
         description: 'Location-based attendance verification',
-        tiers: ['GOLD', 'PLATINUM'],
+        tiers: ['PLATINUM'],
         mockDataAvailable: true,
         parentFeature: 'time_tracking',
         displayOrder: 21,

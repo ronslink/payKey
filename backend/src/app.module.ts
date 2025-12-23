@@ -22,6 +22,7 @@ import { ReportsModule } from './modules/reports/reports.module';
 import { TimeTrackingModule } from './modules/time-tracking/time-tracking.module';
 import { ExportModule } from './modules/export/export.module';
 import { HolidaysModule } from './modules/holidays/holidays.module';
+import { ExcelImportModule } from './modules/excel-import/excel-import.module';
 
 // Explicit Entity Imports
 // Explicit Entity Imports
@@ -112,6 +113,7 @@ import { Holiday } from './modules/holidays/entities/holiday.entity';
     TimeTrackingModule,
     ExportModule,
     HolidaysModule,
+    ExcelImportModule,
   ],
   controllers: [AppController],
   providers: [AppService],
