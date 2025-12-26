@@ -1,9 +1,11 @@
+@Tags(['manual'])
+library;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/integrations/intasend/config/intasend_config.dart';
 import 'package:mobile/integrations/intasend/services/intasend_service.dart';
 // import 'package:http/http.dart' as http;
 
-@Tags(['manual'])
 void main() {
   test('IntaSend Integration Test - Sandbox Payout', skip: 'Manual integration test - requires real IntaSend sandbox', () async {
     // Keys from intasend_providers.dart

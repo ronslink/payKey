@@ -1,9 +1,11 @@
+@Tags(['manual'])
+library;
+
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile/integrations/intasend/config/intasend_config.dart';
 
-@Tags(['manual'])
 void main() {
   test('Transfer Funds Test', skip: 'Manual integration test - requires real IntaSend sandbox', () async {
     print('Running IntaSend Fund Transfer Script...');
