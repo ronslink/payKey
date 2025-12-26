@@ -11,6 +11,13 @@ if (!globalThis.crypto) {
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Trust proxy (required for Cloudflare/reverse proxies to get real client IP)
+  // Only enable in production where we're behind a reverse proxy
+  if (process.env.NODE_ENV === 'production') {
+    const expressApp = app.getHttpAdapter().getInstance();
+    expressApp.set('trust proxy', true);
+  }
+
   // Enable CORS for all localhost development ports
   app.enableCors({
     origin: true, // Allow all origins in development (including all localhost ports)
@@ -32,7 +39,7 @@ async function bootstrap() {
       'ETag',
       'Last-Modified',
     ],
-    exposedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['Content-Type', 'Authorization', 'Content-Disposition', 'Content-Length'],
   });
 
   // Swagger Documentation Setup

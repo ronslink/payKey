@@ -32,31 +32,33 @@
 │  │  Housing)  │  │  - grossSalary
 │  └────────────┘  │  - bonuses, otherEarnings, otherDeductions
 │                  │  - taxBreakdown (calculated)
-└────────┬─────────┘  - netSalary (calculated)
+│  - netSalary (calculated)
+└────────┬─────────┘
          │
          ▼
 ┌──────────────────┐
 │  4. REVIEW       │  Frontend: payroll_review_page.dart
-│  Payroll         │  
+│  Payroll         │  (Manual Flow)
 │                  │  Displays:
 │  ┌────────────┐  │  - List of workers with amounts
 │  │ Worker 1   │  │  - Summary statistics
 │  │ Gross: 100K│  │  - Pay period details
 │  │ Net: 75K   │  │
 │  └────────────┘  │
-│  ┌────────────┐  │
-│  │ Worker 2   │  │
-│  │ Gross: 80K │  │
-│  │ Net: 60K   │  │
-│  └────────────┘  │
 └────────┬─────────┘
          │
          ▼
 ┌──────────────────┐
-│  5. ACTIVATE     │  Status: DRAFT → ACTIVE
-│  Pay Period      │  
-│                  │  POST /pay-periods/:id/activate
-│  [Activate]      │
+│  5. CONFIRM      │  Frontend: payroll_confirm_page.dart  ⭐ NEW GATEKEEPER
+│  & PAY           │  
+│                  │  Converge Point:
+│  [Confirm & Pay] │  - Manual Flow navigates here from Review
+│                  │  - Automated Flow navigates here directly (Skipping Review)
+│                  │
+│  IntaSend Logic: │
+│  1. Check Wallet │
+│  2. Top Up (Opt) │
+│  3. Disburse (Batch) <- Supports multiple!│
 └────────┬─────────┘
          │
          ▼
@@ -64,7 +66,8 @@
 │  6. PROCESS      │  Status: ACTIVE → PROCESSING
 │  Payroll         │  
 │                  │  POST /pay-periods/:id/process
-│  [Process]       │  
+│  [Process]       │  (Triggered by Confirm Page success)
+│                  │  
 │                  │  Backend calculates totals:
 │  ┌────────────┐  │  - totalGrossAmount = Σ grossSalary
 │  │ Calculate  │  │  - totalNetAmount = Σ netSalary
@@ -102,7 +105,7 @@
 │  │ Create PDF │  │  1. Fetch finalized payroll records
 │  │ Payslips   │  │  2. Generate PDF for each worker
 │  └────────────┘  │  3. Cache PDFs (5 min TTL)
-│                  │  4. Return success + count
+│  4. Return success + count
 │  Result:         │
 │  ✓ Payslip 1.pdf │
 │  ✓ Payslip 2.pdf │
@@ -121,19 +124,70 @@
 
 
 ┌─────────────────────────────────────────────────────────────────────────┐
+│                       INTASEND PAYMENT INTEGRATION                       │
+└─────────────────────────────────────────────────────────────────────────┘
+
+PREREQUISITE: Wallet Funding
+┌──────────────────┐       ┌──────────────────┐       ┌──────────────────┐
+│  Mobile App      │──────▶│   IntaSend API   │──────▶│   User Phone     │
+│  [Top Up Wallet] │       │   (STK Push)     │       │   (M-Pesa PIN)   │
+└──────────────────┘       └──────────────────┘       └────────┬─────────┘
+                                                               │
+                                                               ▼
+                           ┌──────────────────┐       ┌──────────────────┐
+                           │   Wallet Bal     │◀──────│  M-Pesa System   │
+                           │   Updated        │       │  (Process Payment│
+                           └──────────────────┘       └──────────────────┘
+
+PAYROLL DISBURSEMENT FLOW (Step 6 Detail)
+
+┌──────────────────┐
+│  A. CONFIRM      │
+│  Verification    │
+│                  │
+│  1. Check Wallet │ ────▶ GET /wallets (IntaSend)
+│  2. Calc Total   │
+│  3. Show Balance │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│  B. DISBURSE     │  Triggered by "Confirm & Pay"
+│  (IntaSend)      │
+│                  │
+│  1. Batch Payout │ ────▶ POST /send-money/initiate (IntaSend)
+│  2. M-Pesa B2C   │       (Sends to all workers)
+│  3. Get Tracking │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐       ┌──────────────────┐
+│  C. SYNC         │       │  IntaSend API    │
+│  (Backend)       │       │  (Webhooks)      │
+│                  │       └────────┬─────────┘
+│  1. Status Sync  │◀───────────────┘
+│  2. Record Txns  │
+│  3. Mark Paid    │
+└──────────────────┘
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
 │                            KEY COMPONENTS                                │
 └─────────────────────────────────────────────────────────────────────────┘
 
 Frontend Pages:
 ├── run_payroll_page.dart          → Worker selection & calculation
 ├── payroll_review_page.dart       → Review & actions
-└── payroll_workflow_page.dart     → Status tracking & statistics
+├── payroll_workflow_page.dart     → Status tracking & statistics
+└── payroll_confirm_page.dart      → IntaSend disbursement logic ⭐
 
 Backend Services:
 ├── PayPeriodsService              → Pay period lifecycle
 ├── PayrollService                 → Payroll calculations & draft management
 ├── PayslipService                 → PDF generation with caching
-└── TaxPaymentsService             → Tax submission generation
+├── TaxPaymentsService             → Tax submission generation
+├── SubscriptionsController        → Handles M-Pesa STK Push for subs
+└── IntaSendWebhookHandler         → Processes payment callbacks
 
 API Endpoints:
 ├── POST   /pay-periods                          → Create pay period
@@ -146,7 +200,8 @@ API Endpoints:
 ├── POST   /payroll/draft                        → Save draft
 ├── GET    /payroll/draft/:payPeriodId           → Get draft
 ├── POST   /payroll/finalize/:payPeriodId        → Finalize payroll
-└── POST   /payroll/payslips/generate/:id        → Generate payslips ⭐ NEW
+├── POST   /payroll/payslips/generate/:id        → Generate payslips
+└── POST   /subscriptions/mpesa-subscribe        → Subscribe via M-Pesa ⭐
 
 
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -168,4 +223,8 @@ API Endpoints:
 4. ⚠️ NUMERIC VALUE ERRORS
    Before: Crashed when backend returned strings
    After:  Safe conversion with _getNumValue() helper
+
+5. ⚠️ PAYMENT SYNCHRONIZATION
+   Before: Mobile directly called IntaSend (Ghost payments possible)
+   After:  Backend orchestrates Subscription payments; Payroll syncs post-disbursement
 ```

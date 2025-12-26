@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../../../pay_periods/data/models/pay_period_model.dart';
+// Use the canonical Freezed-based PayPeriod model
+import '../../../payroll/data/models/pay_period_model.dart';
 import '../../../pay_periods/presentation/providers/pay_periods_provider.dart';
 import '../../data/models/report_models.dart';
 import '../providers/reports_provider.dart';
@@ -179,7 +180,7 @@ class ReportsPage extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: payPeriodsAsync.when(
             data: (periods) {
-              final sortedPeriods = List<PayPeriodModel>.from(periods)
+              final sortedPeriods = List<PayPeriod>.from(periods)
                 ..sort((a, b) => b.startDate.compareTo(a.startDate));
 
               if (sortedPeriods.isEmpty) {
@@ -204,13 +205,8 @@ class ReportsPage extends ConsumerWidget {
                       prefixIcon: Icon(Icons.calendar_month),
                     ),
                     items: sortedPeriods.map((p) {
-                      final startDate =
-                          DateTime.tryParse(p.startDate) ?? DateTime.now();
-                      final endDate =
-                          DateTime.tryParse(p.endDate) ?? DateTime.now();
-
                       final dateStr =
-                          '${DateFormat('MMM d').format(startDate)} - ${DateFormat('MMM d, y').format(endDate)}';
+                          '${DateFormat('MMM d').format(p.startDate)} - ${DateFormat('MMM d, y').format(p.endDate)}';
                       return DropdownMenuItem(
                         value: p.id,
                         child: Text(dateStr),

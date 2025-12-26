@@ -1,11 +1,13 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart' show kIsWeb;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/network/api_service.dart';
-import '../../../../core/utils/download_helper.dart';
+import '../../../settings/providers/settings_provider.dart';
+import '../../../../core/utils/download_utils.dart';
+import '../../widgets/funding_sources_section.dart';
 import '../../../payroll/presentation/providers/pay_period_provider.dart';
 import '../../../payroll/data/models/pay_period_model.dart';
 
@@ -75,6 +77,7 @@ class _FinancePageState extends ConsumerState<FinancePage>
   @override
   Widget build(BuildContext context) {
     final payPeriodsAsync = ref.watch(payPeriodsProvider);
+    final settingsAsync = ref.watch(settingsProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F6),
@@ -84,6 +87,26 @@ class _FinancePageState extends ConsumerState<FinancePage>
             // Hero Header
             SliverToBoxAdapter(
               child: _buildHeroHeader(payPeriodsAsync),
+            ),
+
+            // Funding Sources
+            SliverToBoxAdapter(
+              child: settingsAsync.when(
+                data: (settings) => FundingSourcesSection(
+                  isLoading: false,
+                  data: FundingSourceData(
+                    bankName: settings.bankName,
+                    bankAccount: settings.bankAccount,
+                    mpesaPhone: settings.mpesaPhone,
+                    mpesaPaybill: settings.mpesaPaybill,
+                    defaultPaymentMethod: settings.defaultPaymentMethod,
+                    isDirectMPesa: (settings.mpesaPaybill == null || settings.mpesaPaybill!.isEmpty) && 
+                                   (settings.mpesaPhone != null && settings.mpesaPhone!.isNotEmpty),
+                  ),
+                ),
+                loading: () => const FundingSourcesSection(isLoading: true),
+                error: (e, s) => const FundingSourcesSection(isLoading: false, error: 'Failed to load funding sources'),
+              ),
             ),
 
             // Quick Actions Grid
@@ -284,7 +307,7 @@ class _FinancePageState extends ConsumerState<FinancePage>
               onTap: () => context.push('/taxes'),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           Expanded(
             child: _buildActionCard(
               icon: Icons.description_rounded,
@@ -292,6 +315,16 @@ class _FinancePageState extends ConsumerState<FinancePage>
               subtitle: 'Financial reports',
               gradient: const [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
               onTap: () => context.push('/reports'),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _buildActionCard(
+              icon: Icons.account_balance_wallet_rounded,
+              title: 'Top Up',
+              subtitle: 'Add funds',
+              gradient: const [Color(0xFF10B981), Color(0xFF059669)],
+              onTap: () => context.push('/finance/top-up'),
             ),
           ),
         ],
@@ -403,7 +436,7 @@ class _FinancePageState extends ConsumerState<FinancePage>
           payPeriodsAsync.when(
             data: (periods) => _buildBreakdownBars(periods),
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (_, _) => const Text('Unable to load data'),
+            error: (e, s) => const Text('Unable to load data'),
           ),
         ],
       ),
@@ -830,9 +863,11 @@ class _FinancePageState extends ConsumerState<FinancePage>
       // Convert CSV string to bytes and trigger download
       final bytes = utf8.encode(csvData);
       
-      if (kIsWeb) {
-        downloadFileInBrowser(bytes, filename);
-      }
+      await DownloadUtils.downloadFile(
+        filename: filename,
+        bytes: bytes,
+        mimeType: 'text/csv',
+      );
       
       _showSnack('Downloaded: $filename');
     } catch (e) {

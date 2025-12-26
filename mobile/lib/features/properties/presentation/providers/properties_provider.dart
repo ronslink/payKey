@@ -1,8 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_service.dart';
 import '../../data/models/property_model.dart';
-import 'package:dio/dio.dart';
 
 // Service Provider
 final propertyServiceProvider = Provider<PropertyEndpoints>((ref) {

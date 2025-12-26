@@ -122,16 +122,16 @@ class PayPeriodsNotifier extends AsyncNotifier<List<PayPeriod>> {
 }
 
 final payPeriodProvider = FutureProvider.family<PayPeriod, String>((ref, payPeriodId) async {
-  final repository = ref.read(payPeriodRepositoryProvider);
+  final repository = ref.watch(payPeriodRepositoryProvider);
   return repository.getPayPeriodById(payPeriodId);
 });
 
 final currentPayPeriodProvider = FutureProvider<List<PayPeriod>>((ref) async {
-  final repository = ref.read(payPeriodRepositoryProvider);
+  final repository = ref.watch(payPeriodRepositoryProvider);
   return repository.getCurrentPayPeriod();
 });
 
 final payPeriodsByStatusProvider = FutureProvider.family<List<PayPeriod>, PayPeriodStatus>((ref, status) async {
-  final repository = ref.read(payPeriodRepositoryProvider);
+  final repository = ref.watch(payPeriodRepositoryProvider);
   return repository.getPayPeriodsByStatus(status);
 });

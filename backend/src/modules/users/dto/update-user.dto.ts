@@ -87,4 +87,8 @@ export class UpdateUserDto {
   @IsOptional()
   @IsString()
   mpesaTill?: string;
+
+  @IsOptional()
+  @IsString()
+  mpesaPhone?: string;
 }

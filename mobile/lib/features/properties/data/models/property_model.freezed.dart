@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$PropertyModel {
 
- String get id; String get name; String get address; String get userId; int get geofenceRadius; bool get isActive; double? get latitude; double? get longitude; String? get what3words; int get workerCount;// Computed field often useful in lists
+ String get id; String get name;@JsonKey(fromJson: _parseAddress) String get address; String get userId; int get geofenceRadius; bool get isActive;@JsonKey(fromJson: _parseDouble) double? get latitude;@JsonKey(fromJson: _parseDouble) double? get longitude; String? get what3words; int get workerCount;// Computed field often useful in lists
  DateTime? get createdAt; DateTime? get updatedAt;
 /// Create a copy of PropertyModel
 /// with the given fields replaced by the non-null parameter values.
@@ -49,7 +49,7 @@ abstract mixin class $PropertyModelCopyWith<$Res>  {
   factory $PropertyModelCopyWith(PropertyModel value, $Res Function(PropertyModel) _then) = _$PropertyModelCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, String address, String userId, int geofenceRadius, bool isActive, double? latitude, double? longitude, String? what3words, int workerCount, DateTime? createdAt, DateTime? updatedAt
+ String id, String name,@JsonKey(fromJson: _parseAddress) String address, String userId, int geofenceRadius, bool isActive,@JsonKey(fromJson: _parseDouble) double? latitude,@JsonKey(fromJson: _parseDouble) double? longitude, String? what3words, int workerCount, DateTime? createdAt, DateTime? updatedAt
 });
 
 
@@ -165,7 +165,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  String address,  String userId,  int geofenceRadius,  bool isActive,  double? latitude,  double? longitude,  String? what3words,  int workerCount,  DateTime? createdAt,  DateTime? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name, @JsonKey(fromJson: _parseAddress)  String address,  String userId,  int geofenceRadius,  bool isActive, @JsonKey(fromJson: _parseDouble)  double? latitude, @JsonKey(fromJson: _parseDouble)  double? longitude,  String? what3words,  int workerCount,  DateTime? createdAt,  DateTime? updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _PropertyModel() when $default != null:
 return $default(_that.id,_that.name,_that.address,_that.userId,_that.geofenceRadius,_that.isActive,_that.latitude,_that.longitude,_that.what3words,_that.workerCount,_that.createdAt,_that.updatedAt);case _:
@@ -186,7 +186,7 @@ return $default(_that.id,_that.name,_that.address,_that.userId,_that.geofenceRad
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  String address,  String userId,  int geofenceRadius,  bool isActive,  double? latitude,  double? longitude,  String? what3words,  int workerCount,  DateTime? createdAt,  DateTime? updatedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name, @JsonKey(fromJson: _parseAddress)  String address,  String userId,  int geofenceRadius,  bool isActive, @JsonKey(fromJson: _parseDouble)  double? latitude, @JsonKey(fromJson: _parseDouble)  double? longitude,  String? what3words,  int workerCount,  DateTime? createdAt,  DateTime? updatedAt)  $default,) {final _that = this;
 switch (_that) {
 case _PropertyModel():
 return $default(_that.id,_that.name,_that.address,_that.userId,_that.geofenceRadius,_that.isActive,_that.latitude,_that.longitude,_that.what3words,_that.workerCount,_that.createdAt,_that.updatedAt);case _:
@@ -206,7 +206,7 @@ return $default(_that.id,_that.name,_that.address,_that.userId,_that.geofenceRad
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  String address,  String userId,  int geofenceRadius,  bool isActive,  double? latitude,  double? longitude,  String? what3words,  int workerCount,  DateTime? createdAt,  DateTime? updatedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name, @JsonKey(fromJson: _parseAddress)  String address,  String userId,  int geofenceRadius,  bool isActive, @JsonKey(fromJson: _parseDouble)  double? latitude, @JsonKey(fromJson: _parseDouble)  double? longitude,  String? what3words,  int workerCount,  DateTime? createdAt,  DateTime? updatedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _PropertyModel() when $default != null:
 return $default(_that.id,_that.name,_that.address,_that.userId,_that.geofenceRadius,_that.isActive,_that.latitude,_that.longitude,_that.what3words,_that.workerCount,_that.createdAt,_that.updatedAt);case _:
@@ -221,17 +221,17 @@ return $default(_that.id,_that.name,_that.address,_that.userId,_that.geofenceRad
 @JsonSerializable()
 
 class _PropertyModel implements PropertyModel {
-  const _PropertyModel({required this.id, required this.name, required this.address, required this.userId, this.geofenceRadius = 100, this.isActive = true, this.latitude, this.longitude, this.what3words, this.workerCount = 0, this.createdAt, this.updatedAt});
+  const _PropertyModel({required this.id, required this.name, @JsonKey(fromJson: _parseAddress) required this.address, required this.userId, this.geofenceRadius = 100, this.isActive = true, @JsonKey(fromJson: _parseDouble) this.latitude, @JsonKey(fromJson: _parseDouble) this.longitude, this.what3words, this.workerCount = 0, this.createdAt, this.updatedAt});
   factory _PropertyModel.fromJson(Map<String, dynamic> json) => _$PropertyModelFromJson(json);
 
 @override final  String id;
 @override final  String name;
-@override final  String address;
+@override@JsonKey(fromJson: _parseAddress) final  String address;
 @override final  String userId;
 @override@JsonKey() final  int geofenceRadius;
 @override@JsonKey() final  bool isActive;
-@override final  double? latitude;
-@override final  double? longitude;
+@override@JsonKey(fromJson: _parseDouble) final  double? latitude;
+@override@JsonKey(fromJson: _parseDouble) final  double? longitude;
 @override final  String? what3words;
 @override@JsonKey() final  int workerCount;
 // Computed field often useful in lists
@@ -271,7 +271,7 @@ abstract mixin class _$PropertyModelCopyWith<$Res> implements $PropertyModelCopy
   factory _$PropertyModelCopyWith(_PropertyModel value, $Res Function(_PropertyModel) _then) = __$PropertyModelCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, String address, String userId, int geofenceRadius, bool isActive, double? latitude, double? longitude, String? what3words, int workerCount, DateTime? createdAt, DateTime? updatedAt
+ String id, String name,@JsonKey(fromJson: _parseAddress) String address, String userId, int geofenceRadius, bool isActive,@JsonKey(fromJson: _parseDouble) double? latitude,@JsonKey(fromJson: _parseDouble) double? longitude, String? what3words, int workerCount, DateTime? createdAt, DateTime? updatedAt
 });
 
 
@@ -591,7 +591,7 @@ as String?,
 /// @nodoc
 mixin _$UpdatePropertyRequest {
 
- String? get name; String? get address; int? get geofenceRadius; double? get latitude; double? get longitude; String? get what3words; bool? get isActive;
+@JsonKey(includeIfNull: false) String? get name;@JsonKey(includeIfNull: false) String? get address;@JsonKey(includeIfNull: false) int? get geofenceRadius;@JsonKey(includeIfNull: false) double? get latitude;@JsonKey(includeIfNull: false) double? get longitude;@JsonKey(includeIfNull: false) String? get what3words;@JsonKey(includeIfNull: false) bool? get isActive;
 /// Create a copy of UpdatePropertyRequest
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -624,7 +624,7 @@ abstract mixin class $UpdatePropertyRequestCopyWith<$Res>  {
   factory $UpdatePropertyRequestCopyWith(UpdatePropertyRequest value, $Res Function(UpdatePropertyRequest) _then) = _$UpdatePropertyRequestCopyWithImpl;
 @useResult
 $Res call({
- String? name, String? address, int? geofenceRadius, double? latitude, double? longitude, String? what3words, bool? isActive
+@JsonKey(includeIfNull: false) String? name,@JsonKey(includeIfNull: false) String? address,@JsonKey(includeIfNull: false) int? geofenceRadius,@JsonKey(includeIfNull: false) double? latitude,@JsonKey(includeIfNull: false) double? longitude,@JsonKey(includeIfNull: false) String? what3words,@JsonKey(includeIfNull: false) bool? isActive
 });
 
 
@@ -735,7 +735,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? name,  String? address,  int? geofenceRadius,  double? latitude,  double? longitude,  String? what3words,  bool? isActive)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function(@JsonKey(includeIfNull: false)  String? name, @JsonKey(includeIfNull: false)  String? address, @JsonKey(includeIfNull: false)  int? geofenceRadius, @JsonKey(includeIfNull: false)  double? latitude, @JsonKey(includeIfNull: false)  double? longitude, @JsonKey(includeIfNull: false)  String? what3words, @JsonKey(includeIfNull: false)  bool? isActive)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _UpdatePropertyRequest() when $default != null:
 return $default(_that.name,_that.address,_that.geofenceRadius,_that.latitude,_that.longitude,_that.what3words,_that.isActive);case _:
@@ -756,7 +756,7 @@ return $default(_that.name,_that.address,_that.geofenceRadius,_that.latitude,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? name,  String? address,  int? geofenceRadius,  double? latitude,  double? longitude,  String? what3words,  bool? isActive)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function(@JsonKey(includeIfNull: false)  String? name, @JsonKey(includeIfNull: false)  String? address, @JsonKey(includeIfNull: false)  int? geofenceRadius, @JsonKey(includeIfNull: false)  double? latitude, @JsonKey(includeIfNull: false)  double? longitude, @JsonKey(includeIfNull: false)  String? what3words, @JsonKey(includeIfNull: false)  bool? isActive)  $default,) {final _that = this;
 switch (_that) {
 case _UpdatePropertyRequest():
 return $default(_that.name,_that.address,_that.geofenceRadius,_that.latitude,_that.longitude,_that.what3words,_that.isActive);case _:
@@ -776,7 +776,7 @@ return $default(_that.name,_that.address,_that.geofenceRadius,_that.latitude,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? name,  String? address,  int? geofenceRadius,  double? latitude,  double? longitude,  String? what3words,  bool? isActive)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function(@JsonKey(includeIfNull: false)  String? name, @JsonKey(includeIfNull: false)  String? address, @JsonKey(includeIfNull: false)  int? geofenceRadius, @JsonKey(includeIfNull: false)  double? latitude, @JsonKey(includeIfNull: false)  double? longitude, @JsonKey(includeIfNull: false)  String? what3words, @JsonKey(includeIfNull: false)  bool? isActive)?  $default,) {final _that = this;
 switch (_that) {
 case _UpdatePropertyRequest() when $default != null:
 return $default(_that.name,_that.address,_that.geofenceRadius,_that.latitude,_that.longitude,_that.what3words,_that.isActive);case _:
@@ -791,16 +791,16 @@ return $default(_that.name,_that.address,_that.geofenceRadius,_that.latitude,_th
 @JsonSerializable()
 
 class _UpdatePropertyRequest implements UpdatePropertyRequest {
-  const _UpdatePropertyRequest({this.name, this.address, this.geofenceRadius, this.latitude, this.longitude, this.what3words, this.isActive});
+  const _UpdatePropertyRequest({@JsonKey(includeIfNull: false) this.name, @JsonKey(includeIfNull: false) this.address, @JsonKey(includeIfNull: false) this.geofenceRadius, @JsonKey(includeIfNull: false) this.latitude, @JsonKey(includeIfNull: false) this.longitude, @JsonKey(includeIfNull: false) this.what3words, @JsonKey(includeIfNull: false) this.isActive});
   factory _UpdatePropertyRequest.fromJson(Map<String, dynamic> json) => _$UpdatePropertyRequestFromJson(json);
 
-@override final  String? name;
-@override final  String? address;
-@override final  int? geofenceRadius;
-@override final  double? latitude;
-@override final  double? longitude;
-@override final  String? what3words;
-@override final  bool? isActive;
+@override@JsonKey(includeIfNull: false) final  String? name;
+@override@JsonKey(includeIfNull: false) final  String? address;
+@override@JsonKey(includeIfNull: false) final  int? geofenceRadius;
+@override@JsonKey(includeIfNull: false) final  double? latitude;
+@override@JsonKey(includeIfNull: false) final  double? longitude;
+@override@JsonKey(includeIfNull: false) final  String? what3words;
+@override@JsonKey(includeIfNull: false) final  bool? isActive;
 
 /// Create a copy of UpdatePropertyRequest
 /// with the given fields replaced by the non-null parameter values.
@@ -835,7 +835,7 @@ abstract mixin class _$UpdatePropertyRequestCopyWith<$Res> implements $UpdatePro
   factory _$UpdatePropertyRequestCopyWith(_UpdatePropertyRequest value, $Res Function(_UpdatePropertyRequest) _then) = __$UpdatePropertyRequestCopyWithImpl;
 @override @useResult
 $Res call({
- String? name, String? address, int? geofenceRadius, double? latitude, double? longitude, String? what3words, bool? isActive
+@JsonKey(includeIfNull: false) String? name,@JsonKey(includeIfNull: false) String? address,@JsonKey(includeIfNull: false) int? geofenceRadius,@JsonKey(includeIfNull: false) double? latitude,@JsonKey(includeIfNull: false) double? longitude,@JsonKey(includeIfNull: false) String? what3words,@JsonKey(includeIfNull: false) bool? isActive
 });
 
 

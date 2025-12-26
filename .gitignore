@@ -80,6 +80,10 @@ backend/coverage/
 backend/test_output*.txt
 *.log
 backend/.env
+backend/.env.production
 
 # Custom scripts
 backend/scripts/do_login.sh
+
+# Test SQL files (local testing only)
+unit_test_sqls/

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../data/models/pay_period_model.dart';
+import 'package:intl/intl.dart';
+// Use the canonical Freezed-based PayPeriod model
+import '../../../payroll/data/models/pay_period_model.dart';
 import '../providers/pay_periods_provider.dart';
 
 class PayPeriodsListPage extends ConsumerWidget {
@@ -44,9 +46,9 @@ class PayPeriodsListPage extends ConsumerWidget {
             children: [
               const Icon(Icons.error_outline, size: 64, color: Colors.red),
               const SizedBox(height: 16),
-              Text(
+              const Text(
                 'Error loading pay periods',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF111827),
@@ -75,7 +77,7 @@ class PayPeriodsListPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildContent(BuildContext context, WidgetRef ref, List<PayPeriodModel> payPeriods) {
+  Widget _buildContent(BuildContext context, WidgetRef ref, List<PayPeriod> payPeriods) {
     if (payPeriods.isEmpty) {
       return Center(
         child: Column(
@@ -84,7 +86,7 @@ class PayPeriodsListPage extends ConsumerWidget {
             Icon(
               Icons.calendar_today,
               size: 80,
-              color: const Color(0xFF6B7280) .withValues(alpha: 0.5),
+              color: const Color(0xFF6B7280).withValues(alpha: 0.5),
             ),
             const SizedBox(height: 16),
             const Text(
@@ -96,10 +98,10 @@ class PayPeriodsListPage extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 8),
-            Text(
+            const Text(
               'Create your first pay period to get started',
               style: TextStyle(
-                color: const Color(0xFF6B7280),
+                color: Color(0xFF6B7280),
               ),
             ),
             const SizedBox(height: 24),
@@ -130,7 +132,9 @@ class PayPeriodsListPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildPayPeriodCard(BuildContext context, WidgetRef ref, PayPeriodModel payPeriod) {
+  Widget _buildPayPeriodCard(BuildContext context, WidgetRef ref, PayPeriod payPeriod) {
+    final dateFormat = DateFormat('MMM d, y');
+    
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -138,7 +142,7 @@ class PayPeriodsListPage extends ConsumerWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black .withValues(alpha: 0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -168,7 +172,7 @@ class PayPeriodsListPage extends ConsumerWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${payPeriod.startDate} to ${payPeriod.endDate}',
+                          '${dateFormat.format(payPeriod.startDate)} to ${dateFormat.format(payPeriod.endDate)}',
                           style: const TextStyle(
                             fontSize: 14,
                             color: Color(0xFF6B7280),
@@ -180,11 +184,11 @@ class PayPeriodsListPage extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: _getStatusColor(payPeriod.status) .withValues(alpha: 0.1),
+                      color: _getStatusColor(payPeriod.status).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Text(
-                      payPeriod.statusDisplayText,
+                      payPeriod.status.displayName,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -201,16 +205,16 @@ class PayPeriodsListPage extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        const Text(
                           'Gross Amount',
                           style: TextStyle(
                             fontSize: 12,
-                            color: const Color(0xFF6B7280),
+                            color: Color(0xFF6B7280),
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'KES ${payPeriod.totalGrossAmount.toStringAsFixed(0)}',
+                          'KES ${(payPeriod.totalGrossAmount ?? 0).toStringAsFixed(0)}',
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -224,16 +228,16 @@ class PayPeriodsListPage extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        const Text(
                           'Net Amount',
                           style: TextStyle(
                             fontSize: 12,
-                            color: const Color(0xFF6B7280),
+                            color: Color(0xFF6B7280),
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'KES ${payPeriod.totalNetAmount.toStringAsFixed(0)}',
+                          'KES ${(payPeriod.totalNetAmount ?? 0).toStringAsFixed(0)}',
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -247,16 +251,16 @@ class PayPeriodsListPage extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        const Text(
                           'Workers',
                           style: TextStyle(
                             fontSize: 12,
-                            color: const Color(0xFF6B7280),
+                            color: Color(0xFF6B7280),
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '${payPeriod.totalWorkers}/${payPeriod.processedWorkers}',
+                          '${payPeriod.totalWorkers ?? 0}/${payPeriod.processedWorkers ?? 0}',
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -272,20 +276,20 @@ class PayPeriodsListPage extends ConsumerWidget {
               Row(
                 children: [
                   Text(
-                    payPeriod.frequencyDisplayText,
-                    style: TextStyle(
+                    payPeriod.frequency.displayName,
+                    style: const TextStyle(
                       fontSize: 12,
-                      color: const Color(0xFF6B7280),
-                      backgroundColor: const Color(0xFFF3F4F6),
+                      color: Color(0xFF6B7280),
+                      backgroundColor: Color(0xFFF3F4F6),
                     ),
                   ),
                   const Spacer(),
                   if (payPeriod.payDate != null)
                     Text(
-                      'Pay: ${payPeriod.payDate}',
-                      style: TextStyle(
+                      'Pay: ${dateFormat.format(payPeriod.payDate!)}',
+                      style: const TextStyle(
                         fontSize: 12,
-                        color: const Color(0xFF6B7280),
+                        color: Color(0xFF6B7280),
                       ),
                     ),
                 ],
@@ -309,6 +313,8 @@ class PayPeriodsListPage extends ConsumerWidget {
         return const Color(0xFF3B82F6);
       case PayPeriodStatus.closed:
         return const Color(0xFFEF4444);
+      case PayPeriodStatus.cancelled:
+        return const Color(0xFF9CA3AF);
     }
   }
 
@@ -317,7 +323,7 @@ class PayPeriodsListPage extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Filter Pay Periods'),
-        content: Column(
+        content: const Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             // Add filter options here

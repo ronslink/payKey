@@ -362,46 +362,52 @@ class FundVerificationResult {
 // =============================================================================
 
 /// Result of batch payroll processing.
-class PayrollProcessingResult {
-  /// Number of successfully processed workers
-  final int successCount;
 
-  /// Number of failed worker payments
-  final int failureCount;
+@freezed
+abstract class PayrollProcessingResult with _$PayrollProcessingResult {
+  const PayrollProcessingResult._();
 
-  /// Individual results for each worker
-  final List<WorkerPaymentResult> results;
+  const factory PayrollProcessingResult({
+    /// Number of successfully processed workers
+    required int successCount,
 
-  /// Bank file content for bank transfers (if applicable)
-  final String? bankFile;
+    /// Number of failed worker payments
+    required int failureCount,
 
-  const PayrollProcessingResult({
-    required this.successCount,
-    required this.failureCount,
-    required this.results,
-    this.bankFile,
-  });
+    /// Individual results for each worker
+    required List<WorkerPaymentResult> results,
 
-  factory PayrollProcessingResult.fromJson(Map<String, dynamic> json) {
-    return PayrollProcessingResult(
-      successCount: json['successCount'] as int? ?? 0,
-      failureCount: json['failureCount'] as int? ?? 0,
-      results: (json['results'] as List<dynamic>?)
-              ?.map((e) => WorkerPaymentResult.fromJson(e))
-              .toList() ??
-          [],
-      bankFile: json['bankFile'] as String?,
-    );
-  }
+    /// Bank file content for bank transfers (if applicable)
+    String? bankFile,
+
+    /// List of worker IDs for payments that failed.
+    @Default([]) List<String> failedWorkerIds,
+  }) = _PayrollProcessingResult;
+
+  factory PayrollProcessingResult.fromJson(Map<String, dynamic> json) =>
+      _$PayrollProcessingResultFromJson(json);
 
   /// Returns true if all payments succeeded
   bool get allSuccessful => failureCount == 0;
 
+  /// Alias for allSuccessful
+  bool get isFullSuccess => allSuccessful;
+
+  /// Returns true if some payments succeeded and some failed
+  bool get isPartialSuccess => successCount > 0 && failureCount > 0;
+
+  /// Returns true if all payments failed
+  bool get isFullFailure => successCount == 0 && failureCount > 0;
+
   /// Total number of workers processed
   int get totalCount => successCount + failureCount;
+  
+  /// Backward consistency alias
+  int get totalProcessed => totalCount;
 }
 
 /// Result of a single worker's payment processing.
+@JsonSerializable()
 class WorkerPaymentResult {
   final String workerId;
   final String workerName;
@@ -419,14 +425,57 @@ class WorkerPaymentResult {
     this.error,
   });
 
-  factory WorkerPaymentResult.fromJson(Map<String, dynamic> json) {
-    return WorkerPaymentResult(
-      workerId: json['workerId'] as String? ?? '',
-      workerName: json['workerName'] as String? ?? 'Unknown',
-      success: json['success'] as bool? ?? false,
-      netPay: (json['netPay'] as num?)?.toDouble(),
-      transactionId: json['transactionId'] as String?,
-      error: json['error'] as String?,
+  factory WorkerPaymentResult.fromJson(Map<String, dynamic> json) =>
+      _$WorkerPaymentResultFromJson(json);
+
+  Map<String, dynamic> toJson() => _$WorkerPaymentResultToJson(this);
+}
+
+
+/// Preview data for a payslip (without PDF).
+class PayslipPreview {
+  final String workerName;
+  final String payPeriodName;
+  final double grossPay;
+  final double netPay;
+  final double totalDeductions;
+  final Map<String, double> earnings;
+  final Map<String, double> deductions;
+  final DateTime generatedAt;
+
+  const PayslipPreview({
+    required this.workerName,
+    required this.payPeriodName,
+    required this.grossPay,
+    required this.netPay,
+    required this.totalDeductions,
+    required this.earnings,
+    required this.deductions,
+    required this.generatedAt,
+  });
+
+  factory PayslipPreview.fromJson(Map<String, dynamic> json) {
+    return PayslipPreview(
+      workerName: json['workerName'] as String? ?? '',
+      payPeriodName: json['payPeriodName'] as String? ?? '',
+      grossPay: (json['grossPay'] as num?)?.toDouble() ?? 0,
+      netPay: (json['netPay'] as num?)?.toDouble() ?? 0,
+      totalDeductions: (json['totalDeductions'] as num?)?.toDouble() ?? 0,
+      earnings: _parseDoubleMap(json['earnings']),
+      deductions: _parseDoubleMap(json['deductions']),
+      generatedAt: json['generatedAt'] != null
+          ? DateTime.parse(json['generatedAt'] as String)
+          : DateTime.now(),
+    );
+  }
+
+  static Map<String, double> _parseDoubleMap(dynamic data) {
+    if (data is! Map) return {};
+    return data.map(
+      (key, value) => MapEntry(
+        key as String,
+        (value as num?)?.toDouble() ?? 0,
+      ),
     );
   }
 }

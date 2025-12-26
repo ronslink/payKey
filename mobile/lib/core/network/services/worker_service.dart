@@ -149,7 +149,7 @@ class WorkerEndpoints {
     String documentType,
   ) async {
     final formData = FormData.fromMap({
-      'file': await MultipartFile.fromFile(filePath),
+      'file': MultipartFile.fromFile(filePath),
       'type': documentType,
     });
 

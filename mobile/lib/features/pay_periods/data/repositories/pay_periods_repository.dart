@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/pay_period_model.dart';
+// Use the canonical Freezed-based PayPeriod model
+import '../../../payroll/data/models/pay_period_model.dart';
 import '../../../../core/network/api_service.dart';
 
 final payPeriodsRepositoryProvider = Provider((ref) {
@@ -12,9 +13,9 @@ class PayPeriodsRepositoryImpl {
   
   PayPeriodsRepositoryImpl(this._apiService);
 
-  Future<List<PayPeriodModel>> getPayPeriods({
+  Future<List<PayPeriod>> getPayPeriods({
     int page = 1,
-    int limit = 10,
+    int limit = 100,
     PayPeriodStatus? status,
     PayPeriodFrequency? frequency,
   }) async {
@@ -33,23 +34,23 @@ class PayPeriodsRepositoryImpl {
       }
       
       return periodsJson
-          .map((json) => PayPeriodModel.fromJson(json as Map<String, dynamic>))
+          .map((json) => PayPeriod.fromJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
       throw Exception('Failed to fetch pay periods: $e');
     }
   }
 
-  Future<PayPeriodModel> getPayPeriod(String id) async {
+  Future<PayPeriod> getPayPeriod(String id) async {
     try {
       final response = await _apiService.payPeriods.getById(id);
-      return PayPeriodModel.fromJson(response.data as Map<String, dynamic>);
+      return PayPeriod.fromJson(response.data as Map<String, dynamic>);
     } catch (e) {
       throw Exception('Failed to fetch pay period: $e');
     }
   }
 
-  Future<PayPeriodModel> createPayPeriod({
+  Future<PayPeriod> createPayPeriod({
     required String name,
     required String startDate,
     required String endDate,
@@ -63,16 +64,16 @@ class PayPeriodsRepositoryImpl {
         'startDate': startDate,
         'endDate': endDate,
         'payDate': payDate ?? endDate,
-        'frequency': frequency.value,
+        'frequency': _frequencyToString(frequency),
         if (notes != null) 'notes': notes,
       });
-      return PayPeriodModel.fromJson(response.data as Map<String, dynamic>);
+      return PayPeriod.fromJson(response.data as Map<String, dynamic>);
     } catch (e) {
       throw Exception('Failed to create pay period: $e');
     }
   }
 
-  Future<PayPeriodModel> updatePayPeriod(
+  Future<PayPeriod> updatePayPeriod(
     String id, {
     String? name,
     String? startDate,
@@ -88,12 +89,12 @@ class PayPeriodsRepositoryImpl {
       if (startDate != null) data['startDate'] = startDate;
       if (endDate != null) data['endDate'] = endDate;
       if (payDate != null) data['payDate'] = payDate;
-      if (status != null) data['status'] = status.value;
+      if (status != null) data['status'] = _statusToString(status);
       if (approvedBy != null) data['approvedBy'] = approvedBy;
       if (notes != null) data['notes'] = notes;
       
       final response = await _apiService.payPeriods.update(id, data);
-      return PayPeriodModel.fromJson(response.data as Map<String, dynamic>);
+      return PayPeriod.fromJson(response.data as Map<String, dynamic>);
     } catch (e) {
       throw Exception('Failed to update pay period: $e');
     }
@@ -107,37 +108,37 @@ class PayPeriodsRepositoryImpl {
     }
   }
 
-  Future<PayPeriodModel> activatePayPeriod(String id) async {
+  Future<PayPeriod> activatePayPeriod(String id) async {
     try {
       final response = await _apiService.payPeriods.activate(id);
-      return PayPeriodModel.fromJson(response.data as Map<String, dynamic>);
+      return PayPeriod.fromJson(response.data as Map<String, dynamic>);
     } catch (e) {
       throw Exception('Failed to activate pay period: $e');
     }
   }
 
-  Future<PayPeriodModel> processPayPeriod(String id) async {
+  Future<PayPeriod> processPayPeriod(String id) async {
     try {
       final response = await _apiService.payPeriods.process(id);
-      return PayPeriodModel.fromJson(response.data as Map<String, dynamic>);
+      return PayPeriod.fromJson(response.data as Map<String, dynamic>);
     } catch (e) {
       throw Exception('Failed to process pay period: $e');
     }
   }
 
-  Future<PayPeriodModel> completePayPeriod(String id) async {
+  Future<PayPeriod> completePayPeriod(String id) async {
     try {
       final response = await _apiService.payPeriods.complete(id);
-      return PayPeriodModel.fromJson(response.data as Map<String, dynamic>);
+      return PayPeriod.fromJson(response.data as Map<String, dynamic>);
     } catch (e) {
       throw Exception('Failed to complete pay period: $e');
     }
   }
 
-  Future<PayPeriodModel> closePayPeriod(String id) async {
+  Future<PayPeriod> closePayPeriod(String id) async {
     try {
       final response = await _apiService.payPeriods.close(id);
-      return PayPeriodModel.fromJson(response.data as Map<String, dynamic>);
+      return PayPeriod.fromJson(response.data as Map<String, dynamic>);
     } catch (e) {
       throw Exception('Failed to close pay period: $e');
     }
@@ -152,7 +153,7 @@ class PayPeriodsRepositoryImpl {
     }
   }
 
-  Future<List<PayPeriodModel>> generatePayPeriods({
+  Future<List<PayPeriod>> generatePayPeriods({
     required String userId,
     required PayPeriodFrequency frequency,
     required String startDate,
@@ -160,7 +161,7 @@ class PayPeriodsRepositoryImpl {
   }) async {
     try {
       final response = await _apiService.payPeriods.generate(
-        frequency: frequency.value,
+        frequency: _frequencyToString(frequency),
         startDate: startDate,
         endDate: endDate,
       );
@@ -174,10 +175,43 @@ class PayPeriodsRepositoryImpl {
         return [];
       }
       return periodsJson
-          .map((json) => PayPeriodModel.fromJson(json as Map<String, dynamic>))
+          .map((json) => PayPeriod.fromJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
       throw Exception('Failed to generate pay periods: $e');
+    }
+  }
+  
+  // Helper to convert enum to API string
+  String _frequencyToString(PayPeriodFrequency frequency) {
+    switch (frequency) {
+      case PayPeriodFrequency.weekly:
+        return 'WEEKLY';
+      case PayPeriodFrequency.biWeekly:
+        return 'BIWEEKLY';
+      case PayPeriodFrequency.monthly:
+        return 'MONTHLY';
+      case PayPeriodFrequency.quarterly:
+        return 'QUARTERLY';
+      case PayPeriodFrequency.yearly:
+        return 'YEARLY';
+    }
+  }
+  
+  String _statusToString(PayPeriodStatus status) {
+    switch (status) {
+      case PayPeriodStatus.draft:
+        return 'DRAFT';
+      case PayPeriodStatus.active:
+        return 'ACTIVE';
+      case PayPeriodStatus.processing:
+        return 'PROCESSING';
+      case PayPeriodStatus.completed:
+        return 'COMPLETED';
+      case PayPeriodStatus.closed:
+        return 'CLOSED';
+      case PayPeriodStatus.cancelled:
+        return 'CANCELLED';
     }
   }
 }

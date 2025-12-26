@@ -120,6 +120,9 @@ export class User {
   @Column({ nullable: true })
   mpesaTill: string;
 
+  @Column({ nullable: true })
+  mpesaPhone: string;
+
   // Payroll Settings
   @Column({
     type: 'enum',

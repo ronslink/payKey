@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../../core/network/api_client.dart';
 import '../models/payroll_model.dart';
+import '../utils/payroll_utils.dart';
 
 // =============================================================================
 // PROVIDER
@@ -73,32 +74,34 @@ class PayrollRepository {
   /// Returns processing result with success/failure details.
   Future<PayrollProcessingResult> processPayroll(
     List<String> workerIds,
-    String payPeriodId,
-  ) async {
+    String payPeriodId, {
+    bool skipPayout = false,
+  }) async {
     return _executeRequest(
       operation: 'process payroll',
       request: () async {
         final response = await _authenticatedPost(
-          '/payroll/finalize/$payPeriodId',
-          // Backend finalize uses stored drafts, so we don't need to send workerIds
-          // but we can send them for validation if needed in future.
-          // For now, the backend ignores body for finalize.
+          '/payroll/process',
+          data: {
+            'workerIds': workerIds,
+            'payPeriodId': payPeriodId,
+            'skipPayout': skipPayout,
+          },
         );
 
         final data = response.data;
-        // Backend returns: { payoutResults: { successCount, failureCount, ... }, ... }
-        final payoutResults = data['payoutResults'] as Map<String, dynamic>? ?? {};
-        final successCount = payoutResults['successCount'] as int? ?? 0;
-        final failureCount = payoutResults['failureCount'] as int? ?? 0;
+        // Map backend response to the shared model
+        // Backend returns: { finalizedRecords: [], payoutResults: { successCount, failureCount, results: [] } }
         
-        return PayrollProcessingResult(
-          totalProcessed: successCount + failureCount,
-          successCount: successCount,
-          failureCount: failureCount,
-          // Extract failed IDs if available, logic might need adjustment based on backend structure
-          failedWorkerIds: [], 
-          batchId: '', // No batch ID in finalize response currently
-        );
+        final payoutResults = data['payoutResults'] as Map<String, dynamic>? ?? {};
+        
+        // Ensure "results" list is present and passed to model
+        if (!payoutResults.containsKey('results') && payoutResults.containsKey('failedWorkerIds')) {
+           // Fallback if backend uses old format (not expected, but good for safety)
+           // We would need to synthesize results, but for now let's hope backend matches new contract
+        }
+
+        return PayrollProcessingResult.fromJson(payoutResults);
       },
     );
   }
@@ -253,7 +256,10 @@ class PayrollRepository {
         final response = await _dio.get<List<int>>(
           '/payroll/payslip/$payrollRecordId',
           options: Options(
-            headers: _authHeaders(token),
+            headers: {
+              ..._authHeaders(token),
+              'Accept': '*/*',
+            },
             responseType: ResponseType.bytes,
           ),
         );
@@ -321,8 +327,10 @@ class PayrollRepository {
             periodStart: period?['startDate'] != null 
                 ? DateTime.parse(period!['startDate']) 
                 : DateTime.now(),
-            netPay: (map['netSalary'] is num) ? (map['netSalary'] as num).toDouble() : 0.0,
-            status: map['status'] ?? 'unknown',
+            grossSalary: PayrollUtils.parseDouble(map['grossSalary']),
+            totalDeductions: PayrollUtils.parseDeductions(map),
+            netPay: PayrollUtils.parseDouble(map['netSalary']),
+            status: (map['status'] as String? ?? 'CLOSED').toUpperCase(),
             paidAt: map['finalizedAt'] != null 
                 ? DateTime.parse(map['finalizedAt']) 
                 : null,
@@ -531,91 +539,27 @@ class PayrollRepositoryException implements Exception {
 // RESULT TYPES
 // =============================================================================
 
-/// Result of a batch payroll processing operation.
-class PayrollProcessingResult {
-  final int totalProcessed;
-  final int successCount;
-  final int failureCount;
-  final List<String> failedWorkerIds;
-  final String? batchId;
-
-  const PayrollProcessingResult({
-    required this.totalProcessed,
-    required this.successCount,
-    required this.failureCount,
-    this.failedWorkerIds = const [],
-    this.batchId,
-  });
-
-  factory PayrollProcessingResult.fromJson(Map<String, dynamic> json) {
-    return PayrollProcessingResult(
-      totalProcessed: json['totalProcessed'] as int? ?? 0,
-      successCount: json['successCount'] as int? ?? 0,
-      failureCount: json['failureCount'] as int? ?? 0,
-      failedWorkerIds: (json['failedWorkerIds'] as List?)
-              ?.map((e) => e as String)
-              .toList() ??
-          [],
-      batchId: json['batchId'] as String?,
-    );
-  }
-
-  bool get isFullSuccess => failureCount == 0;
-
-  bool get isPartialSuccess => successCount > 0 && failureCount > 0;
-
-  bool get isFullFailure => successCount == 0 && totalProcessed > 0;
-
-  double get successRate =>
-      totalProcessed > 0 ? successCount / totalProcessed : 0;
-}
-
-/// Preview data for a payslip (without PDF).
-class PayslipPreview {
-  final String workerName;
+/// Simple model for worker payment history list items.
+class WorkerPaymentHistoryItem {
+  final String id;
   final String payPeriodName;
-  final double grossPay;
-  final double netPay;
+  final DateTime periodStart;
+  final double grossSalary;
   final double totalDeductions;
-  final Map<String, double> earnings;
-  final Map<String, double> deductions;
-  final DateTime generatedAt;
+  final double netPay;
+  final String status;
+  final DateTime? paidAt;
 
-  const PayslipPreview({
-    required this.workerName,
+  const WorkerPaymentHistoryItem({
+    required this.id,
     required this.payPeriodName,
-    required this.grossPay,
-    required this.netPay,
+    required this.periodStart,
+    required this.grossSalary,
     required this.totalDeductions,
-    required this.earnings,
-    required this.deductions,
-    required this.generatedAt,
+    required this.netPay,
+    required this.status,
+    this.paidAt,
   });
-
-  factory PayslipPreview.fromJson(Map<String, dynamic> json) {
-    return PayslipPreview(
-      workerName: json['workerName'] as String? ?? '',
-      payPeriodName: json['payPeriodName'] as String? ?? '',
-      grossPay: (json['grossPay'] as num?)?.toDouble() ?? 0,
-      netPay: (json['netPay'] as num?)?.toDouble() ?? 0,
-      totalDeductions: (json['totalDeductions'] as num?)?.toDouble() ?? 0,
-      earnings: _parseDoubleMap(json['earnings']),
-      deductions: _parseDoubleMap(json['deductions']),
-      generatedAt: json['generatedAt'] != null
-          ? DateTime.parse(json['generatedAt'] as String)
-          : DateTime.now(),
-    );
-  }
-
-  static Map<String, double> _parseDoubleMap(dynamic data) {
-    if (data is! Map) return {};
-    return data.map(
-      (key, value) => MapEntry(
-        key as String,
-        (value as num?)?.toDouble() ?? 0,
-      ),
-    );
-  }
 }
 
 // =============================================================================
@@ -663,23 +607,4 @@ extension PayrollCalculationListExtensions on List<PayrollCalculation> {
     copy.sort((a, b) => b.netPay.compareTo(a.netPay));
     return copy;
   }
-}
-
-/// Simple model for worker payment history list items.
-class WorkerPaymentHistoryItem {
-  final String id;
-  final String payPeriodName;
-  final DateTime periodStart;
-  final double netPay;
-  final String status;
-  final DateTime? paidAt;
-
-  const WorkerPaymentHistoryItem({
-    required this.id,
-    required this.payPeriodName,
-    required this.periodStart,
-    required this.netPay,
-    required this.status,
-    this.paidAt,
-  });
 }

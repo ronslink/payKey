@@ -1,9 +1,9 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/network/api_service.dart';
-import '../../../../core/utils/download_helper.dart';
+import '../../../../core/utils/download_utils.dart';
 import '../../../reports/data/models/report_models.dart';
 
 // ============================================================================
@@ -112,10 +112,10 @@ class _EmployeeP9PageState extends ConsumerState<EmployeeP9Page> {
       if (bytes.isNotEmpty && context.mounted) {
         final filename = 'P9_$_selectedYear.pdf';
         
-        if (kIsWeb) {
-          // Trigger browser download
-          downloadFileInBrowser(bytes, filename);
-        }
+        await DownloadUtils.downloadFile(
+          filename: filename,
+          bytes: bytes,
+        );
         
         // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(

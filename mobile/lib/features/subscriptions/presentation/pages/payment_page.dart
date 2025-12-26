@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../data/models/subscription_model.dart';
 import '../../data/repositories/subscription_repository.dart';
 import '../providers/subscription_provider.dart';
+import '../../../../integrations/intasend/intasend.dart';
 
 enum PaymentMethod { stripe, mpesa }
 
@@ -78,20 +79,24 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
 
     setState(() {
       _isProcessing = true;
-      _statusMessage = 'Sending STK Push to your phone...';
+      _statusMessage = 'Initiating request...';
     });
 
     try {
+      // Use Subscription Repository (Backend Integration)
       final repo = ref.read(subscriptionRepositoryProvider);
-      final result = await repo.subscribeWithMpesa(widget.plan.tier, phone);
-      
+      final result = await repo.subscribeWithMpesa(
+        widget.plan.tier, // Pass tier as ID for backend lookup
+        phone,
+      );
+
       if (result.success && result.paymentId != null) {
         setState(() {
           _mpesaPaymentId = result.paymentId;
-          _statusMessage = 'Please check your phone and enter your M-Pesa PIN';
+          _statusMessage = 'Request sent! Check your phone and enter PIN.';
         });
         
-        // Start polling for payment status
+        // Start polling for payment status via Backend
         _startStatusPolling();
       } else {
         throw Exception(result.message);
@@ -109,32 +114,26 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     }
   }
 
-  void _startStatusPolling() {
-    int pollCount = 0;
-    const maxPolls = 30; // Poll for max 60 seconds (every 2 seconds)
+  void _startStatusPolling() async {
+    if (_mpesaPaymentId == null) return;
     
-    _statusPollTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
-      pollCount++;
+    // Poll backend for status
+    final repo = ref.read(subscriptionRepositoryProvider);
+    
+    // Create a local timer for this polling session
+    int attempts = 0;
+    const maxAttempts = 60; // 3 minutes approx (3s interval)
+    
+    _statusPollTimer?.cancel();
+    _statusPollTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
+      attempts++;
       
-      if (pollCount > maxPolls) {
-        timer.cancel();
-        if (mounted) {
-          setState(() {
-            _isProcessing = false;
-            _statusMessage = null;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Payment timeout. Please check your M-Pesa messages.'),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        }
-        return;
-      }
-
       try {
-        final repo = ref.read(subscriptionRepositoryProvider);
+        if (!mounted) {
+          timer.cancel();
+          return;
+        }
+
         final status = await repo.checkMpesaPaymentStatus(_mpesaPaymentId!);
         
         if (status.isCompleted) {
@@ -155,13 +154,30 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
               _statusMessage = null;
             });
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Payment failed. Please try again.'), backgroundColor: Colors.red),
+              const SnackBar(
+                content: Text('Payment failed or was cancelled.'), 
+                backgroundColor: Colors.red
+              ),
+            );
+          }
+        } else if (attempts >= maxAttempts) {
+          timer.cancel();
+          if (mounted) {
+             setState(() {
+              _isProcessing = false;
+              _statusMessage = null;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Payment verification timed out. Please check status later.'), 
+                backgroundColor: Colors.orange
+              ),
             );
           }
         }
       } catch (e) {
-        // Continue polling on error
-        debugPrint('Poll error: $e');
+        // Ignore transient errors during polling
+        print('Polling error: $e');
       }
     });
   }
@@ -330,22 +346,25 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
             ),
-            const SizedBox(height: 16),
-            Center(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.lock_outline, size: 16, color: Colors.grey),
-                  const SizedBox(width: 4),
-                  Text(
-                    _selectedMethod == PaymentMethod.mpesa
-                        ? 'Secure M-Pesa payment via Safaricom'
-                        : 'Payments are secure and encrypted by Stripe',
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
-                  ),
-                ],
+            const SizedBox(height: 24),
+            
+            // Trust Badge
+            if (_selectedMethod == PaymentMethod.mpesa)
+              const Center(child: IntaSendTrustBadge(width: 300))
+            else
+              Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.lock_outline, size: 16, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Payments are secure and encrypted by Stripe',
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       ),

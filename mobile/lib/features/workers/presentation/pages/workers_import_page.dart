@@ -4,9 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/network/api_service.dart';
 
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
+import '../../../../core/utils/download_utils.dart';
 
 class WorkersImportPage extends ConsumerStatefulWidget {
   const WorkersImportPage({super.key});
@@ -27,13 +25,10 @@ class _WorkersImportPageState extends ConsumerState<WorkersImportPage> {
     try {
       final bytes = await ApiService().workersConvert.downloadTemplate();
       
-      final tempDir = await getTemporaryDirectory();
-      final file = File('${tempDir.path}/workers_template.xlsx');
-      await file.writeAsBytes(bytes);
-
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        text: 'Workers Import Template',
+      await DownloadUtils.downloadFile(
+        filename: 'workers_template.xlsx',
+        bytes: bytes,
+        mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       );
     } catch (e) {
       setState(() => _error = 'Download failed: $e');
@@ -265,7 +260,7 @@ class _WorkersImportPageState extends ConsumerState<WorkersImportPage> {
                 margin: const EdgeInsets.only(bottom: 8),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
-                    side: BorderSide(color: Colors.red[100]!.withOpacity(0.5))
+                    side: BorderSide(color: Colors.red[100]!.withValues(alpha: 0.5))
                 ),
                 child: ListTile(
                   leading: const Icon(Icons.error_outline, color: Colors.red),
@@ -297,9 +292,9 @@ class _WorkersImportPageState extends ConsumerState<WorkersImportPage> {
     return Container(
        padding: const EdgeInsets.all(16),
        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
        ),
        child: Column(
           children: [

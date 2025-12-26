@@ -458,7 +458,10 @@ class ApiService {
     try {
       final response = await dio.get<List<int>>(
         '/excel-import/employees/template',
-        options: Options(responseType: ResponseType.bytes),
+        options: Options(
+          responseType: ResponseType.bytes,
+          headers: {'Accept': '*/*'},
+        ),
       );
       return response.data ?? [];
     } catch (e) {
@@ -544,6 +547,21 @@ class WorkerEndpoints extends BaseEndpoints {
 class PayrollEndpoints extends BaseEndpoints {
   const PayrollEndpoints(super.api);
 
+  Future<Response> getStats() => _api.get('/payroll/stats');
+
+  Future<Response> calculate({List<String>? workerIds}) {
+    return _api.post('/payroll/calculate', data: {
+      if (workerIds != null) 'workerIds': workerIds,
+    });
+  }
+
+  Future<Response> process(List<String> workerIds, {required String payPeriodId}) {
+    return _api.post('/payroll/process', data: {
+      'workerIds': workerIds,
+      'payPeriodId': payPeriodId,
+    });
+  }
+
   Future<Response> saveDraft(String payPeriodId, List<Map<String, dynamic>> items) {
     return _api.post('/payroll/draft', data: {
       'payPeriodId': payPeriodId,
@@ -578,7 +596,10 @@ class PayrollEndpoints extends BaseEndpoints {
     try {
       final response = await _api.dio.get<List<int>>(
         '/payroll/payslip/$payrollRecordId',
-        options: Options(responseType: ResponseType.bytes),
+        options: Options(
+          responseType: ResponseType.bytes,
+          headers: {'Accept': '*/*'},
+        ),
       );
       return response.data ?? [];
     } catch (e) {
@@ -599,12 +620,12 @@ class PayrollEndpoints extends BaseEndpoints {
 class PayPeriodEndpoints extends BaseEndpoints {
   const PayPeriodEndpoints(super.api);
 
-  Future<Response> getAll() => _api.get('/pay-periods');
+  Future<Response> getAll({Map<String, dynamic>? queryParams}) => _api.get('/pay-periods', queryParams: queryParams);
 
   Future<Response> getById(String id) => _api.get('/pay-periods/$id');
 
   Future<Response> getByStatus(String status) {
-    return _api.get('/pay-periods', queryParams: {'status': status});
+    return _api.get('/pay-periods', queryParams: {'status': status, 'limit': 100});
   }
 
   Future<Response> getCurrent() => _api.get('/pay-periods/current');
@@ -697,7 +718,10 @@ class TaxEndpoints extends BaseEndpoints {
     // The controller returns StreamableFile on /export/download/:id
     return _api.get(
       '/export/download/$maxId',
-      options: Options(responseType: ResponseType.bytes),
+      options: Options(
+        responseType: ResponseType.bytes,
+        headers: {'Accept': '*/*'},
+      ),
     );
   }
 
@@ -967,7 +991,10 @@ class ReportEndpoints extends BaseEndpoints {
       final response = await _api.dio.get<List<int>>(
         '/reports/p9/zip',
         queryParameters: {'year': year.toString()},
-        options: Options(responseType: ResponseType.bytes),
+        options: Options(
+          responseType: ResponseType.bytes,
+          headers: {'Accept': '*/*'},
+        ),
       );
       return response.data ?? [];
     } catch (e) {
@@ -1064,7 +1091,10 @@ class EmployeePortalEndpoints extends BaseEndpoints {
       final response = await _api.dio.get<List<int>>(
         '/reports/my-p9/pdf',
         queryParameters: {'year': year.toString()},
-        options: Options(responseType: ResponseType.bytes),
+        options: Options(
+          responseType: ResponseType.bytes,
+          headers: {'Accept': '*/*'},
+        ),
       );
       return response.data ?? [];
     } catch (e) {
@@ -1205,7 +1235,7 @@ class WorkersConvertEndpoints extends BaseEndpoints {
 
   Future<Response> importWorkers(PlatformFile file) async {
     final formData = FormData.fromMap({
-      'file': await MultipartFile.fromBytes(
+      'file': MultipartFile.fromBytes(
         file.bytes!, 
         filename: file.name,
       ),
@@ -1217,8 +1247,11 @@ class WorkersConvertEndpoints extends BaseEndpoints {
   Future<List<int>> downloadTemplate() async {
     try {
       final response = await _api.dio.get<List<int>>(
-        '/workers/import/template',
-        options: Options(responseType: ResponseType.bytes),
+        '/workers/template',
+        options: Options(
+          responseType: ResponseType.bytes,
+          headers: {'Accept': '*/*'},
+        ),
       );
       return response.data ?? [];
     } catch (e) {

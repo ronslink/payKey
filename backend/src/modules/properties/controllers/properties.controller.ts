@@ -21,7 +21,9 @@ import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 @Controller('properties')
 @UseGuards(JwtAuthGuard)
 export class PropertiesController {
-  constructor(private readonly propertiesService: PropertiesService) {}
+  constructor(private readonly propertiesService: PropertiesService) {
+    console.log('PropertiesController initialized');
+  }
 
   @Post()
   async createProperty(

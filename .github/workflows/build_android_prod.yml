@@ -1,0 +1,44 @@
+name: Build Android Prod
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.16.0' # Adjust to your project's version
+          channel: 'stable'
+
+      - name: Get Dependencies
+        working-directory: ./mobile
+        run: flutter pub get
+
+      - name: Build APK (Prod)
+        working-directory: ./mobile
+        run: |
+          flutter build apk --release \
+            --dart-define=APP_ENV=prod \
+            --dart-define=API_URL=${{ secrets.PROD_API_URL }} \
+            --dart-define=INTASEND_IS_LIVE=true \
+            --dart-define=INTASEND_PUB_KEY=${{ secrets.INTASEND_PUB_KEY_PROD }} \
+            --dart-define=INTASEND_SECRET_KEY=${{ secrets.INTASEND_SECRET_KEY_PROD }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: app-release
+          path: mobile/build/app/outputs/flutter-apk/app-release.apk

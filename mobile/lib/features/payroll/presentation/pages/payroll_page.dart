@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/pay_period_provider.dart';
 import '../../data/models/pay_period_model.dart';
+import '../../data/utils/pay_period_utils.dart';
+import '../widgets/payroll_widgets.dart';
 
 /// Modern payroll management page with premium design
 class PayrollPage extends ConsumerStatefulWidget {
@@ -71,7 +73,7 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
 
             // Show Initialize New Year card when applicable
             SliverToBoxAdapter(
-              child: payPeriodsState.when(
+              child: ref.watch(payPeriodsProvider).when(
                 data: (periods) => _buildInitializeYearCard(periods),
                 loading: () => const SizedBox.shrink(),
                 error: (_, _) => const SizedBox.shrink(),
@@ -593,116 +595,21 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
   /// 1. Current year has no periods at all
   /// 2. All current year periods are completed/closed and we're near year end or in new year
   Widget _buildInitializeYearCard(List<PayPeriod> periods) {
-    final now = DateTime.now();
-    final currentYear = now.year;
-    final nextYear = currentYear + 1;
-
-    // Check if current year has periods
-    final currentYearPeriods = periods.where((p) => p.startDate.year == currentYear).toList();
-    final nextYearPeriods = periods.where((p) => p.startDate.year == nextYear).toList();
-
-    // Case 1: No periods for current year - show initialize current year
-    if (currentYearPeriods.isEmpty && periods.isNotEmpty) {
-      return _buildInitCard(currentYear, 'No pay periods for $currentYear');
+    final yearToInitialize = PayPeriodUtils.getYearToInitialize(periods);
+    
+    if (yearToInitialize != null) {
+      final subtitle = yearToInitialize == DateTime.now().year 
+          ? 'No pay periods for $yearToInitialize' 
+          : 'Ready for $yearToInitialize payroll';
+      
+      return InitializePayPeriodsCard(
+        year: yearToInitialize,
+        subtitle: subtitle,
+        onPressed: () => _initializeYearSpecific(yearToInitialize),
+      );
     }
-
-    // Case 2: All current year periods completed/closed and next year not initialized
-    // Show this in November/December or if all periods done
-    final allCurrentYearCompleted = currentYearPeriods.isNotEmpty &&
-        currentYearPeriods.every((p) =>
-            p.status == PayPeriodStatus.completed || p.status == PayPeriodStatus.closed);
-
-    if (allCurrentYearCompleted && nextYearPeriods.isEmpty) {
-      // Show in November, December, or if it's January and still no next year periods
-      if (now.month >= 11 || now.month == 1) {
-        return _buildInitCard(nextYear, 'Ready for $nextYear payroll');
-      }
-    }
-
+    
     return const SizedBox.shrink();
-  }
-
-  Widget _buildInitCard(int year, String subtitle) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF6366F1).withValues(alpha: 0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.calendar_month_rounded,
-              color: Colors.white,
-              size: 28,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Initialize Pay Periods',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.8),
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          _isInitializing
-              ? const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 2,
-                  ),
-                )
-              : ElevatedButton(
-                  onPressed: () => _initializeYearSpecific(year),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF6366F1),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: Text('Initialize $year'),
-                ),
-        ],
-      ),
-    );
   }
 
   Future<void> _initializeYearSpecific(int year) async {

@@ -25,6 +25,7 @@ import { HolidaysModule } from './modules/holidays/holidays.module';
 import { ExcelImportModule } from './modules/excel-import/excel-import.module';
 import { AppCacheModule } from './modules/cache/cache.module';
 import { AppThrottlerModule } from './modules/throttler/throttler.module';
+import { PropertiesModule } from './modules/properties/properties.module';
 
 // Explicit Entity Imports
 // Explicit Entity Imports
@@ -52,7 +53,12 @@ import { Holiday } from './modules/holidays/entities/holiday.entity';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: !process.env.NODE_ENV
+        ? '.env'
+        : [`.env.${process.env.NODE_ENV}`, '.env'],
+    }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
@@ -160,9 +166,14 @@ import { Holiday } from './modules/holidays/entities/holiday.entity';
     ExcelImportModule,
     AppCacheModule,
     AppThrottlerModule,
+    PropertiesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
   exports: [],
 })
-export class AppModule { }
+export class AppModule {
+  constructor() {
+    console.log('AppModule initialized');
+  }
+}

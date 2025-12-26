@@ -1,9 +1,7 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
-import 'package:open_filex/open_filex.dart';
-import '../../data/models/payroll_model.dart' hide PayrollProcessingResult;
+import '../../../../core/utils/download_utils.dart';
+import '../../data/models/payroll_model.dart';
 import '../../data/repositories/payroll_repository.dart';
 
 final payrollProvider =
@@ -55,10 +53,15 @@ class PayrollNotifier extends AsyncNotifier<List<PayrollCalculation>> {
 
   Future<PayrollProcessingResult> processPayroll(
     List<String> workerIds,
-    String payPeriodId,
-  ) async {
+    String payPeriodId, {
+    bool skipPayout = false,
+  }) async {
     try {
-      return await _repository.processPayroll(workerIds, payPeriodId);
+      return await _repository.processPayroll(
+        workerIds,
+        payPeriodId,
+        skipPayout: skipPayout,
+      );
     } catch (e) {
       rethrow;
     }
@@ -147,15 +150,10 @@ class PayrollNotifier extends AsyncNotifier<List<PayrollCalculation>> {
     try {
       final bytes = await _repository.downloadPayslip(payrollRecordId);
       
-      // Get temporary directory
-      final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/payslip_$workerName.pdf');
-      
-      // Write bytes to file
-      await file.writeAsBytes(bytes);
-      
-      // Open the file
-      await OpenFilex.open(file.path);
+      await DownloadUtils.downloadFile(
+        filename: 'payslip_${workerName.replaceAll(' ', '_')}.pdf',
+        bytes: bytes,
+      );
     } catch (e) {
       rethrow;
     }

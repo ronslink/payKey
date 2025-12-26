@@ -1,9 +1,9 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/repositories/profile_repository.dart';
 import '../../data/models/profile_model.dart';
+import '../../../onboarding/presentation/providers/countries_provider.dart';
 
 class EditProfilePage extends ConsumerStatefulWidget {
   const EditProfilePage({super.key});
@@ -33,13 +33,15 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   // Identity & Location
   final _idTypeCtrl = TextEditingController();
   final _idNumberCtrl = TextEditingController();
-  final _nationalityCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
   final _cityCtrl = TextEditingController();
-  final _countryCtrl = TextEditingController();
   final _residentStatusCtrl = TextEditingController();
+  // M-Pesa Phone for direct payments
+  final _mpesaPhoneCtrl = TextEditingController();
 
   ProfileModel? _loadedProfile;
+  String? _selectedCountryId;
+  String? _selectedNationalityId;
 
   @override
   void initState() {
@@ -80,10 +82,10 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     
     _idTypeCtrl.text = p.idType ?? '';
     _idNumberCtrl.text = p.idNumber ?? '';
-    _nationalityCtrl.text = p.nationalityId ?? '';
+    _selectedNationalityId = p.nationalityId;
     _addressCtrl.text = p.address ?? '';
     _cityCtrl.text = p.city ?? '';
-    _countryCtrl.text = p.countryId ?? '';
+    _selectedCountryId = p.countryId;
     _residentStatusCtrl.text = p.residentStatus ?? '';
   }
 
@@ -103,10 +105,10 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         
         'idType': _idTypeCtrl.text,
         'idNumber': _idNumberCtrl.text,
-        'nationalityId': _nationalityCtrl.text.isEmpty ? null : _nationalityCtrl.text,
+        'nationalityId': _selectedNationalityId,
         'address': _addressCtrl.text.isEmpty ? null : _addressCtrl.text,
         'city': _cityCtrl.text.isEmpty ? null : _cityCtrl.text,
-        'countryId': _countryCtrl.text.isEmpty ? null : _countryCtrl.text,
+        'countryId': _selectedCountryId,
         'residentStatus': _residentStatusCtrl.text.isEmpty ? null : _residentStatusCtrl.text,
 
         'kraPin': _kraPinCtrl.text,
@@ -202,10 +204,13 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
               decoration: const InputDecoration(labelText: 'ID Number'),
               validator: (v) => v?.isEmpty == true ? 'Required' : null,
             ),
-            TextFormField(
-              controller: _nationalityCtrl,
-              decoration: const InputDecoration(labelText: 'Nationality (ID)'),
+            const SizedBox(height: 16),
+            _buildCountryDropdown(
+              label: 'Nationality',
+              value: _selectedNationalityId,
+              onChanged: (v) => setState(() => _selectedNationalityId = v),
             ),
+            const SizedBox(height: 16),
              TextFormField(
               controller: _residentStatusCtrl,
               decoration: const InputDecoration(labelText: 'Resident Status'),
@@ -226,9 +231,10 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: TextFormField(
-                    controller: _countryCtrl,
-                    decoration: const InputDecoration(labelText: 'Country (ID)'),
+                  child: _buildCountryDropdown(
+                    label: 'Country',
+                    value: _selectedCountryId,
+                    onChanged: (v) => setState(() => _selectedCountryId = v),
                   ),
                 ),
               ],
@@ -265,12 +271,21 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
             
             _buildSectionHeader('M-Pesa Details (Optional)'),
             TextFormField(
+              controller: _mpesaPhoneCtrl,
+              decoration: const InputDecoration(
+                labelText: 'M-Pesa Phone Number',
+                hintText: '0712345678',
+                prefixIcon: Icon(Icons.phone_android),
+              ),
+              keyboardType: TextInputType.phone,
+            ),
+            TextFormField(
               controller: _paybillCtrl,
-              decoration: const InputDecoration(labelText: 'Paybill Number'),
+              decoration: const InputDecoration(labelText: 'Paybill Number (Optional)'),
             ),
             TextFormField(
               controller: _tillCtrl,
-              decoration: const InputDecoration(labelText: 'Till Number'),
+              decoration: const InputDecoration(labelText: 'Till Number (Optional)'),
             ),
             
             const SizedBox(height: 32),
@@ -291,6 +306,38 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         title,
         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue),
       ),
+    );
+  }
+
+  Widget _buildCountryDropdown({
+    required String label,
+    required String? value,
+    required void Function(String?) onChanged,
+  }) {
+    final countriesAsync = ref.watch(countriesProvider);
+    
+    return countriesAsync.when(
+      loading: () => const LinearProgressIndicator(),
+      error: (e, _) => Text('Error loading countries: $e'),
+      data: (countries) {
+        // Check if selected value exists in items, otherwise set to null
+        final validValue = countries.any((c) => c.id == value) ? value : null;
+        
+        return DropdownButtonFormField<String>(
+          // Using key to force rebuild when value changes  
+          key: ValueKey('${label}_$validValue'),
+          decoration: InputDecoration(labelText: label),
+          isExpanded: true,
+          items: countries.map((country) {
+            return DropdownMenuItem<String>(
+              value: country.id,
+              child: Text(country.name),
+            );
+          }).toList(),
+          onChanged: onChanged,
+          hint: Text('Select $label'),
+        );
+      },
     );
   }
 }

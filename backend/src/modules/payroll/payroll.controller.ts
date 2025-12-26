@@ -9,6 +9,8 @@ import {
   Request,
   Res,
   StreamableFile,
+  NotFoundException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -38,7 +40,7 @@ export class PayrollController {
     private payrollRepository: Repository<PayrollRecord>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
-  ) {}
+  ) { }
 
   // Helper method to get employer name (fetch once, use for all payslips)
   private async getEmployerName(userId: string): Promise<string> {
@@ -169,23 +171,44 @@ export class PayrollController {
   @Post('process')
   async processPayroll(
     @Request() req: AuthenticatedRequest,
-    @Body() body: { workerIds: string[] },
+    @Body() body: { workerIds: string[]; payPeriodId: string; skipPayout?: boolean },
   ) {
-    // TODO: Implement actual payroll processing with payments
-    // For now, just return calculation
+    // 1. Calculate payroll for verification
     const payrollCalculation =
       await this.payrollService.calculatePayrollForUser(req.user.userId);
 
-    // Filter for selected workers
-    const selectedPayrollItems = payrollCalculation.payrollItems.filter(
-      (item) => body.workerIds.includes(item.workerId),
+    // Filter to ensure we only process what is requested
+    const itemsToProcess = payrollCalculation.payrollItems.filter((item) =>
+      body.workerIds.includes(item.workerId),
     );
 
-    return {
-      ...payrollCalculation,
-      payrollItems: selectedPayrollItems,
-      message: 'Payroll processing initiated',
-    };
+    if (itemsToProcess.length === 0) {
+      throw new Error('No workers selected for processing');
+    }
+
+    // 2. Ensure they are saved as DRAFT first (Repo relies on DRAFT records to finalize)
+    // We update/save draft to ensure latest numbers are in DB
+    const draftItems = itemsToProcess.map(item => ({
+      workerId: item.workerId,
+      grossSalary: item.grossSalary,
+      bonuses: 0, // Default for auto-run
+      otherEarnings: 0,
+      otherDeductions: 0,
+    }));
+
+    await this.payrollService.saveDraftPayroll(
+      req.user.userId,
+      body.payPeriodId,
+      draftItems
+    );
+
+    // 3. Finalize immediately (Automated Flow)
+    // This executes: Funds Check -> Finalize Records -> Generate Payslips -> Tax Submission
+    return this.payrollService.finalizePayroll(
+      req.user.userId,
+      body.payPeriodId,
+      body.skipPayout ?? false // Pass skipPayout flag
+    );
   }
   @Post('draft')
   async saveDraftPayroll(
@@ -250,45 +273,55 @@ export class PayrollController {
   async finalizePayroll(
     @Request() req: AuthenticatedRequest,
     @Param('payPeriodId') payPeriodId: string,
+    @Body() body: { skipPayout?: boolean } = {},
   ) {
-    return this.payrollService.finalizePayroll(req.user.userId, payPeriodId);
+    return this.payrollService.finalizePayroll(
+      req.user.userId,
+      payPeriodId,
+      body.skipPayout ?? false,
+    );
   }
 
   @Get('payslip/:payrollRecordId')
   async downloadPayslip(
     @Request() req: AuthenticatedRequest,
     @Param('payrollRecordId') payrollRecordId: string,
-    @Res() res: Response,
-  ) {
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
     const record = await this.payrollRepository.findOne({
       where: { id: payrollRecordId, userId: req.user.userId },
       relations: ['worker', 'payPeriod', 'user'],
     });
 
     if (!record) {
-      throw new Error('Payroll record not found');
+      throw new NotFoundException('Payroll record not found');
     }
 
-    // Get employer name: prefer businessName, fallback to fullName
-    const employerName =
-      record.user?.businessName ||
-      [record.user?.firstName, record.user?.lastName]
-        .filter(Boolean)
-        .join(' ') ||
-      'Employer';
+    try {
+      // Get employer name: prefer businessName, fallback to fullName
+      const employerName =
+        record.user?.businessName ||
+        [record.user?.firstName, record.user?.lastName]
+          .filter(Boolean)
+          .join(' ') ||
+        'Employer';
 
-    const buffer = await this.payslipService.generatePayslip(
-      record,
-      employerName,
-    );
+      const buffer = await this.payslipService.generatePayslip(
+        record,
+        employerName,
+      );
 
-    res.set({
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename=payslip-${record.worker.name}-${record.payPeriodId}.pdf`,
-      'Content-Length': buffer.length,
-    });
-
-    res.end(buffer);
+      return new StreamableFile(buffer, {
+        type: 'application/pdf',
+        disposition: `attachment; filename="payslip-${record.worker.name}-${record.payPeriodId}.pdf"`,
+        length: buffer.length,
+      });
+    } catch (error) {
+      console.error('Error generating payslip:', error);
+      throw new InternalServerErrorException(
+        error.message || 'Failed to generate payslip',
+      );
+    }
   }
 
   @Get('payslips/batch/:payPeriodId')
@@ -426,7 +459,7 @@ export class PayrollController {
   async downloadMyPayslip(
     @Request() req: AuthenticatedRequest,
     @Param('recordId') recordId: string,
-    @Res({ passthrough: true }) res: Response,
+    @Res() res: Response,
   ) {
     const buffer = await this.payrollService.getEmployeePayslipPdf(
       req.user.userId,
@@ -436,10 +469,11 @@ export class PayrollController {
 
     res.set({
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="payslip.pdf"`,
+      'Content-Disposition': 'attachment; filename="payslip.pdf"',
+      'Content-Length': buffer.length,
     });
 
-    return new StreamableFile(buffer);
+    res.end(buffer);
   }
 
   /**

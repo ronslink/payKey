@@ -21,7 +21,7 @@ export class PayslipService {
 
   constructor(
     @Optional() @Inject(CACHE_MANAGER) private cacheManager?: Cache,
-  ) {}
+  ) { }
 
   /**
    * Generate a single payslip PDF
@@ -118,7 +118,7 @@ export class PayslipService {
         Number(record.taxBreakdown?.paye || 0),
       );
       this.addCurrencyRow(doc, 'NSSF', Number(record.taxBreakdown?.nssf || 0));
-      this.addCurrencyRow(doc, 'NHIF', Number(record.taxBreakdown?.nhif || 0));
+      this.addCurrencyRow(doc, 'SHIF', Number(record.taxBreakdown?.nhif || 0));
       this.addCurrencyRow(
         doc,
         'Housing Levy',

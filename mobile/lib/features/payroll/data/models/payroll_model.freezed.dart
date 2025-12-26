@@ -1188,4 +1188,303 @@ as double,
 
 }
 
+
+/// @nodoc
+mixin _$PayrollProcessingResult {
+
+/// Number of successfully processed workers
+ int get successCount;/// Number of failed worker payments
+ int get failureCount;/// Individual results for each worker
+ List<WorkerPaymentResult> get results;/// Bank file content for bank transfers (if applicable)
+ String? get bankFile;/// List of worker IDs for payments that failed.
+ List<String> get failedWorkerIds;
+/// Create a copy of PayrollProcessingResult
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$PayrollProcessingResultCopyWith<PayrollProcessingResult> get copyWith => _$PayrollProcessingResultCopyWithImpl<PayrollProcessingResult>(this as PayrollProcessingResult, _$identity);
+
+  /// Serializes this PayrollProcessingResult to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PayrollProcessingResult&&(identical(other.successCount, successCount) || other.successCount == successCount)&&(identical(other.failureCount, failureCount) || other.failureCount == failureCount)&&const DeepCollectionEquality().equals(other.results, results)&&(identical(other.bankFile, bankFile) || other.bankFile == bankFile)&&const DeepCollectionEquality().equals(other.failedWorkerIds, failedWorkerIds));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,successCount,failureCount,const DeepCollectionEquality().hash(results),bankFile,const DeepCollectionEquality().hash(failedWorkerIds));
+
+@override
+String toString() {
+  return 'PayrollProcessingResult(successCount: $successCount, failureCount: $failureCount, results: $results, bankFile: $bankFile, failedWorkerIds: $failedWorkerIds)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $PayrollProcessingResultCopyWith<$Res>  {
+  factory $PayrollProcessingResultCopyWith(PayrollProcessingResult value, $Res Function(PayrollProcessingResult) _then) = _$PayrollProcessingResultCopyWithImpl;
+@useResult
+$Res call({
+ int successCount, int failureCount, List<WorkerPaymentResult> results, String? bankFile, List<String> failedWorkerIds
+});
+
+
+
+
+}
+/// @nodoc
+class _$PayrollProcessingResultCopyWithImpl<$Res>
+    implements $PayrollProcessingResultCopyWith<$Res> {
+  _$PayrollProcessingResultCopyWithImpl(this._self, this._then);
+
+  final PayrollProcessingResult _self;
+  final $Res Function(PayrollProcessingResult) _then;
+
+/// Create a copy of PayrollProcessingResult
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? successCount = null,Object? failureCount = null,Object? results = null,Object? bankFile = freezed,Object? failedWorkerIds = null,}) {
+  return _then(_self.copyWith(
+successCount: null == successCount ? _self.successCount : successCount // ignore: cast_nullable_to_non_nullable
+as int,failureCount: null == failureCount ? _self.failureCount : failureCount // ignore: cast_nullable_to_non_nullable
+as int,results: null == results ? _self.results : results // ignore: cast_nullable_to_non_nullable
+as List<WorkerPaymentResult>,bankFile: freezed == bankFile ? _self.bankFile : bankFile // ignore: cast_nullable_to_non_nullable
+as String?,failedWorkerIds: null == failedWorkerIds ? _self.failedWorkerIds : failedWorkerIds // ignore: cast_nullable_to_non_nullable
+as List<String>,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [PayrollProcessingResult].
+extension PayrollProcessingResultPatterns on PayrollProcessingResult {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _PayrollProcessingResult value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _PayrollProcessingResult() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _PayrollProcessingResult value)  $default,){
+final _that = this;
+switch (_that) {
+case _PayrollProcessingResult():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _PayrollProcessingResult value)?  $default,){
+final _that = this;
+switch (_that) {
+case _PayrollProcessingResult() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int successCount,  int failureCount,  List<WorkerPaymentResult> results,  String? bankFile,  List<String> failedWorkerIds)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _PayrollProcessingResult() when $default != null:
+return $default(_that.successCount,_that.failureCount,_that.results,_that.bankFile,_that.failedWorkerIds);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int successCount,  int failureCount,  List<WorkerPaymentResult> results,  String? bankFile,  List<String> failedWorkerIds)  $default,) {final _that = this;
+switch (_that) {
+case _PayrollProcessingResult():
+return $default(_that.successCount,_that.failureCount,_that.results,_that.bankFile,_that.failedWorkerIds);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int successCount,  int failureCount,  List<WorkerPaymentResult> results,  String? bankFile,  List<String> failedWorkerIds)?  $default,) {final _that = this;
+switch (_that) {
+case _PayrollProcessingResult() when $default != null:
+return $default(_that.successCount,_that.failureCount,_that.results,_that.bankFile,_that.failedWorkerIds);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _PayrollProcessingResult extends PayrollProcessingResult {
+  const _PayrollProcessingResult({required this.successCount, required this.failureCount, required final  List<WorkerPaymentResult> results, this.bankFile, final  List<String> failedWorkerIds = const []}): _results = results,_failedWorkerIds = failedWorkerIds,super._();
+  factory _PayrollProcessingResult.fromJson(Map<String, dynamic> json) => _$PayrollProcessingResultFromJson(json);
+
+/// Number of successfully processed workers
+@override final  int successCount;
+/// Number of failed worker payments
+@override final  int failureCount;
+/// Individual results for each worker
+ final  List<WorkerPaymentResult> _results;
+/// Individual results for each worker
+@override List<WorkerPaymentResult> get results {
+  if (_results is EqualUnmodifiableListView) return _results;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_results);
+}
+
+/// Bank file content for bank transfers (if applicable)
+@override final  String? bankFile;
+/// List of worker IDs for payments that failed.
+ final  List<String> _failedWorkerIds;
+/// List of worker IDs for payments that failed.
+@override@JsonKey() List<String> get failedWorkerIds {
+  if (_failedWorkerIds is EqualUnmodifiableListView) return _failedWorkerIds;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_failedWorkerIds);
+}
+
+
+/// Create a copy of PayrollProcessingResult
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$PayrollProcessingResultCopyWith<_PayrollProcessingResult> get copyWith => __$PayrollProcessingResultCopyWithImpl<_PayrollProcessingResult>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$PayrollProcessingResultToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PayrollProcessingResult&&(identical(other.successCount, successCount) || other.successCount == successCount)&&(identical(other.failureCount, failureCount) || other.failureCount == failureCount)&&const DeepCollectionEquality().equals(other._results, _results)&&(identical(other.bankFile, bankFile) || other.bankFile == bankFile)&&const DeepCollectionEquality().equals(other._failedWorkerIds, _failedWorkerIds));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode => Object.hash(runtimeType,successCount,failureCount,const DeepCollectionEquality().hash(_results),bankFile,const DeepCollectionEquality().hash(_failedWorkerIds));
+
+@override
+String toString() {
+  return 'PayrollProcessingResult(successCount: $successCount, failureCount: $failureCount, results: $results, bankFile: $bankFile, failedWorkerIds: $failedWorkerIds)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$PayrollProcessingResultCopyWith<$Res> implements $PayrollProcessingResultCopyWith<$Res> {
+  factory _$PayrollProcessingResultCopyWith(_PayrollProcessingResult value, $Res Function(_PayrollProcessingResult) _then) = __$PayrollProcessingResultCopyWithImpl;
+@override @useResult
+$Res call({
+ int successCount, int failureCount, List<WorkerPaymentResult> results, String? bankFile, List<String> failedWorkerIds
+});
+
+
+
+
+}
+/// @nodoc
+class __$PayrollProcessingResultCopyWithImpl<$Res>
+    implements _$PayrollProcessingResultCopyWith<$Res> {
+  __$PayrollProcessingResultCopyWithImpl(this._self, this._then);
+
+  final _PayrollProcessingResult _self;
+  final $Res Function(_PayrollProcessingResult) _then;
+
+/// Create a copy of PayrollProcessingResult
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? successCount = null,Object? failureCount = null,Object? results = null,Object? bankFile = freezed,Object? failedWorkerIds = null,}) {
+  return _then(_PayrollProcessingResult(
+successCount: null == successCount ? _self.successCount : successCount // ignore: cast_nullable_to_non_nullable
+as int,failureCount: null == failureCount ? _self.failureCount : failureCount // ignore: cast_nullable_to_non_nullable
+as int,results: null == results ? _self._results : results // ignore: cast_nullable_to_non_nullable
+as List<WorkerPaymentResult>,bankFile: freezed == bankFile ? _self.bankFile : bankFile // ignore: cast_nullable_to_non_nullable
+as String?,failedWorkerIds: null == failedWorkerIds ? _self._failedWorkerIds : failedWorkerIds // ignore: cast_nullable_to_non_nullable
+as List<String>,
+  ));
+}
+
+
+}
+
 // dart format on

@@ -1,22 +1,23 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../data/models/pay_period_model.dart';
+// Use the canonical Freezed-based PayPeriod model
+import '../../../payroll/data/models/pay_period_model.dart';
 import '../../data/repositories/pay_periods_repository.dart';
 
-final payPeriodsProvider = AsyncNotifierProvider<PayPeriodsNotifier, List<PayPeriodModel>>(PayPeriodsNotifier.new);
+final payPeriodsProvider = AsyncNotifierProvider<PayPeriodsNotifier, List<PayPeriod>>(PayPeriodsNotifier.new);
 
-class PayPeriodsNotifier extends AsyncNotifier<List<PayPeriodModel>> {
+class PayPeriodsNotifier extends AsyncNotifier<List<PayPeriod>> {
   late final PayPeriodsRepositoryImpl _repository;
 
   @override
-  FutureOr<List<PayPeriodModel>> build() {
+  FutureOr<List<PayPeriod>> build() {
     _repository = ref.watch(payPeriodsRepositoryProvider);
     return _loadPayPeriods();
   }
 
-  Future<List<PayPeriodModel>> _loadPayPeriods({
+  Future<List<PayPeriod>> _loadPayPeriods({
     int page = 1,
-    int limit = 10,
+    int limit = 100,  // Load all periods by default
     PayPeriodStatus? status,
     PayPeriodFrequency? frequency,
   }) async {
@@ -30,7 +31,7 @@ class PayPeriodsNotifier extends AsyncNotifier<List<PayPeriodModel>> {
 
   Future<void> loadPayPeriods({
     int page = 1,
-    int limit = 10,
+    int limit = 100,
     PayPeriodStatus? status,
     PayPeriodFrequency? frequency,
   }) async {
@@ -43,7 +44,7 @@ class PayPeriodsNotifier extends AsyncNotifier<List<PayPeriodModel>> {
     ));
   }
 
-  Future<PayPeriodModel?> createPayPeriod({
+  Future<PayPeriod?> createPayPeriod({
     required String name,
     required String startDate,
     required String endDate,
@@ -174,16 +175,40 @@ class PayPeriodsNotifier extends AsyncNotifier<List<PayPeriodModel>> {
       return false;
     }
   }
+
+  Future<List<PayPeriod>> generatePayPeriods({
+    required PayPeriodFrequency frequency,
+    required String startDate,
+    required String endDate,
+  }) async {
+    state = const AsyncValue.loading();
+    try {
+      final newPeriods = await _repository.generatePayPeriods(
+        userId: '', // Backend gets userId from JWT
+        frequency: frequency,
+        startDate: startDate,
+        endDate: endDate,
+      );
+      
+      // Add new periods to state
+      final existingPeriods = state.value ?? [];
+      state = AsyncValue.data([...newPeriods, ...existingPeriods]);
+      return newPeriods;
+    } catch (error, stack) {
+      state = AsyncValue.error(error, stack);
+      rethrow;
+    }
+  }
 }
 
 // Helper provider for filtered pay periods
-final filteredPayPeriodsProvider = Provider<AsyncValue<List<PayPeriodModel>>>((ref) {
+final filteredPayPeriodsProvider = Provider<AsyncValue<List<PayPeriod>>>((ref) {
   final payPeriodsState = ref.watch(payPeriodsProvider);
   return payPeriodsState;
 });
 
 // Single pay period provider
-final payPeriodProvider = Provider.family<AsyncValue<PayPeriodModel>, String>((ref, id) {
+final payPeriodProvider = Provider.family<AsyncValue<PayPeriod>, String>((ref, id) {
   final payPeriodsState = ref.watch(payPeriodsProvider);
   
   return payPeriodsState.when(

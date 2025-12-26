@@ -4,9 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../providers/workers_provider.dart';
 import '../../data/models/worker_model.dart';
-import 'dart:io';
-import 'package:open_filex/open_filex.dart';
-import 'package:path_provider/path_provider.dart';
+import '../../../../core/utils/download_utils.dart';
 import '../../../payroll/data/repositories/payroll_repository.dart';
 import '../../../employee_portal/presentation/widgets/invite_worker_dialog.dart';
 import '../../../subscriptions/presentation/providers/feature_access_provider.dart';
@@ -128,15 +126,22 @@ class _WorkerDetailPageState extends ConsumerState<WorkerDetailPage> {
           final repo = ref.read(payrollRepositoryProvider);
           final bytes = await repo.downloadPayslip(recordId);
           
-          final dir = await getApplicationDocumentsDirectory();
-          final file = File('${dir.path}/payslip_$periodName.pdf');
-          await file.writeAsBytes(bytes);
+          final filename = 'payslip_${periodName.replaceAll(' ', '_')}.pdf';
           
-          await OpenFilex.open(file.path);
+          await DownloadUtils.downloadFile(
+            filename: filename,
+            bytes: bytes,
+          );
+          
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Payslip downloaded')),
+            );
+          }
       } catch (e) {
           if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Failed to open payslip: $e')),
+                  SnackBar(content: Text('Failed to download: $e')),
               );
           }
       }
@@ -638,33 +643,140 @@ class _PaymentHistoryRow extends StatelessWidget {
     
     @override
     Widget build(BuildContext context) {
-        return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: Row(
+        final currencyFormat = NumberFormat.currency(symbol: 'KES ', decimalDigits: 0);
+        
+        return Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+                color: _AppColors.background,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: _AppColors.border),
+            ),
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                    const Icon(Icons.receipt_long, color: _AppColors.textSecondary),
-                    const SizedBox(width: 12),
-                    Expanded(
-                        child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                                Text(item.payPeriodName, style: const TextStyle(fontWeight: FontWeight.w600)),
-                                Text(
-                                    DateFormat('MMM d, yyyy').format(item.periodStart),
-                                    style: const TextStyle(fontSize: 12, color: _AppColors.textSecondary),
+                    Row(
+                        children: [
+                            const Icon(Icons.receipt_long, color: _AppColors.primary, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                                child: Text(
+                                    item.payPeriodName,
+                                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                                 ),
-                            ],
-                        ),
+                            ),
+                            _StatusChip(status: item.status),
+                        ],
                     ),
-                    Text(
-                        NumberFormat.currency(symbol: 'KES ').format(item.netPay),
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                    const SizedBox(height: 8),
+                    Row(
+                        children: [
+                            Expanded(
+                                child: _AmountColumn(
+                                    label: 'Gross',
+                                    amount: currencyFormat.format(item.grossSalary),
+                                    color: _AppColors.textBody,
+                                ),
+                            ),
+                            Expanded(
+                                child: _AmountColumn(
+                                    label: 'Deductions',
+                                    amount: '-${currencyFormat.format(item.totalDeductions)}',
+                                    color: _AppColors.error,
+                                ),
+                            ),
+                            Expanded(
+                                child: _AmountColumn(
+                                    label: 'Net Pay',
+                                    amount: currencyFormat.format(item.netPay),
+                                    color: _AppColors.success,
+                                    isBold: true,
+                                ),
+                            ),
+                        ],
                     ),
-                    IconButton(
-                        icon: const Icon(Icons.download, color: _AppColors.primary),
-                        onPressed: onDownload,
+                    const SizedBox(height: 8),
+                    Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                            Text(
+                                DateFormat('MMM d, yyyy').format(item.periodStart),
+                                style: const TextStyle(fontSize: 12, color: _AppColors.textSecondary),
+                            ),
+                            TextButton.icon(
+                                onPressed: onDownload,
+                                icon: const Icon(Icons.download, size: 16),
+                                label: const Text('Payslip'),
+                                style: TextButton.styleFrom(
+                                    foregroundColor: _AppColors.primary,
+                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                ),
+                            ),
+                        ],
                     ),
                 ],
+            ),
+        );
+    }
+}
+
+class _AmountColumn extends StatelessWidget {
+    final String label;
+    final String amount;
+    final Color color;
+    final bool isBold;
+    
+    const _AmountColumn({
+        required this.label,
+        required this.amount,
+        required this.color,
+        this.isBold = false,
+    });
+    
+    @override
+    Widget build(BuildContext context) {
+        return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+                Text(
+                    label,
+                    style: const TextStyle(fontSize: 10, color: _AppColors.textSecondary),
+                ),
+                Text(
+                    amount,
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: color,
+                        fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
+                    ),
+                ),
+            ],
+        );
+    }
+}
+
+class _StatusChip extends StatelessWidget {
+    final String status;
+    
+    const _StatusChip({required this.status});
+    
+    @override
+    Widget build(BuildContext context) {
+        final isCompleted = status == 'FINALIZED' || status == 'CLOSED' || status == 'COMPLETED';
+        return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+                color: isCompleted ? _AppColors.successLight : Colors.orange.shade100,
+                borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+                isCompleted ? 'Paid' : status,
+                style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                    color: isCompleted ? _AppColors.success : Colors.orange.shade700,
+                ),
             ),
         );
     }

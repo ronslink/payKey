@@ -97,8 +97,8 @@ enum PayPeriodStatus {
       PayPeriodStatus.draft => 'Draft',
       PayPeriodStatus.active => 'Active',
       PayPeriodStatus.processing => 'Processing',
-      PayPeriodStatus.completed => 'Completed',
-      PayPeriodStatus.closed => 'Closed',
+      PayPeriodStatus.completed => 'Calculated',
+      PayPeriodStatus.closed => 'Finalized',
       PayPeriodStatus.cancelled => 'Cancelled',
     };
   }
@@ -142,8 +142,8 @@ enum PayPeriodStatusAction {
     return switch (this) {
       PayPeriodStatusAction.activate => 'Activate',
       PayPeriodStatusAction.process => 'Process',
-      PayPeriodStatusAction.complete => 'Complete',
-      PayPeriodStatusAction.close => 'Close',
+      PayPeriodStatusAction.complete => 'Finish Calculation',
+      PayPeriodStatusAction.close => 'Finalize',
       PayPeriodStatusAction.cancel => 'Cancel',
       PayPeriodStatusAction.reopen => 'Reopen',
     };

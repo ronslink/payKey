@@ -444,15 +444,6 @@ class _ClockCard extends StatelessWidget {
 
   bool get _isClockedIn => clockStatus?.isClockedIn ?? false;
 
-  String? get _selectedPropertyName {
-    if (selectedPropertyId == null) return null;
-    final prop = properties.cast<Map<String, dynamic>?>().firstWhere(
-      (p) => p?['id'] == selectedPropertyId,
-      orElse: () => null,
-    );
-    return prop?['name'] as String?;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Container(

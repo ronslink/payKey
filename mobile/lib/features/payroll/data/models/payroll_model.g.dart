@@ -6,6 +6,27 @@ part of 'payroll_model.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
+WorkerPaymentResult _$WorkerPaymentResultFromJson(Map<String, dynamic> json) =>
+    WorkerPaymentResult(
+      workerId: json['workerId'] as String,
+      workerName: json['workerName'] as String,
+      success: json['success'] as bool,
+      netPay: (json['netPay'] as num?)?.toDouble(),
+      transactionId: json['transactionId'] as String?,
+      error: json['error'] as String?,
+    );
+
+Map<String, dynamic> _$WorkerPaymentResultToJson(
+  WorkerPaymentResult instance,
+) => <String, dynamic>{
+  'workerId': instance.workerId,
+  'workerName': instance.workerName,
+  'success': instance.success,
+  'netPay': instance.netPay,
+  'transactionId': instance.transactionId,
+  'error': instance.error,
+};
+
 _TaxBreakdown _$TaxBreakdownFromJson(Map<String, dynamic> json) =>
     _TaxBreakdown(
       nssf: (json['nssf'] as num).toDouble(),
@@ -83,3 +104,29 @@ Map<String, dynamic> _$PayrollSummaryToJson(_PayrollSummary instance) =>
       'totalDeductions': instance.totalDeductions,
       'totalNet': instance.totalNet,
     };
+
+_PayrollProcessingResult _$PayrollProcessingResultFromJson(
+  Map<String, dynamic> json,
+) => _PayrollProcessingResult(
+  successCount: (json['successCount'] as num).toInt(),
+  failureCount: (json['failureCount'] as num).toInt(),
+  results: (json['results'] as List<dynamic>)
+      .map((e) => WorkerPaymentResult.fromJson(e as Map<String, dynamic>))
+      .toList(),
+  bankFile: json['bankFile'] as String?,
+  failedWorkerIds:
+      (json['failedWorkerIds'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList() ??
+      const [],
+);
+
+Map<String, dynamic> _$PayrollProcessingResultToJson(
+  _PayrollProcessingResult instance,
+) => <String, dynamic>{
+  'successCount': instance.successCount,
+  'failureCount': instance.failureCount,
+  'results': instance.results,
+  'bankFile': instance.bankFile,
+  'failedWorkerIds': instance.failedWorkerIds,
+};

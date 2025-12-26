@@ -5,8 +5,6 @@ import 'package:go_router/go_router.dart';
 // Features
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/auth/presentation/pages/register_page.dart';
-import 'features/home/presentation/pages/home_page.dart';
-import 'features/workers/presentation/pages/workers_list_page.dart';
 import 'features/workers/presentation/pages/worker_form_page.dart';
 import 'features/workers/presentation/pages/worker_detail_page.dart';
 import 'features/workers/presentation/pages/terminate_worker_page.dart';
@@ -14,13 +12,12 @@ import 'features/workers/presentation/pages/archived_workers_page.dart';
 import 'features/workers/presentation/pages/workers_import_page.dart';
 import 'features/workers/data/models/worker_model.dart';
 import 'features/payroll/presentation/pages/payroll_page.dart';
-import 'features/payroll/presentation/pages/run_payroll_page.dart';
+import 'features/payroll/presentation/pages/run_payroll_page_new.dart';
 import 'features/payroll/presentation/pages/payroll_review_page.dart';
 import 'features/payroll/presentation/pages/payslip_page.dart';
 import 'features/payroll/presentation/pages/payroll_confirm_page.dart';
 import 'features/payroll/data/models/payroll_model.dart';
-import 'features/finance/presentation/pages/finance_page.dart';
-import 'features/finance/presentation/pages/accounting_page.dart';
+
 import 'features/onboarding/presentation/pages/onboarding_page.dart';
 import 'features/subscriptions/presentation/pages/subscription_management_page.dart';
 import 'features/subscriptions/presentation/pages/payment_page.dart';
@@ -47,7 +44,15 @@ import 'features/profile/presentation/pages/edit_profile_page.dart';
 import 'core/network/api_service.dart';
 import 'core/widgets/feature_gate.dart';
 import 'core/theme/app_theme.dart';
-import 'main_layout.dart';
+import 'main_layout_new.dart';
+
+// New Pages
+import 'features/home/presentation/pages/home_page.dart';
+import 'features/workers/workers.dart';
+import 'features/finance/finance.dart';
+import 'features/finance/presentation/pages/mpesa_top_up_page.dart';
+import 'features/taxes/presentation/pages/tax_page_new.dart';
+import 'features/settings/settings.dart';
 
 // =============================================================================
 // MAIN
@@ -68,13 +73,14 @@ class PayKeyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp.router(
       title: AppConfig.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,
-      themeMode: ThemeMode.light,
+      themeMode: themeMode,
       routerConfig: router,
     );
   }
@@ -109,6 +115,8 @@ abstract class AppRoutes {
   static const tax = '/tax';
   static const payroll = '/payroll';
   static const finance = '/finance';
+  static const settings = '/settings';
+  static const settingsSubscription = '/settings/subscription';
 
   // Workers
   static const workersAdd = '/workers/add';
@@ -153,16 +161,6 @@ abstract class AppRoutes {
   static const employeeP9 = '/employee/p9';
 }
 
-/// Navigation tab indices.
-abstract class NavIndex {
-  static const home = 0;
-  static const workers = 1;
-  static const timeTracking = 2;
-  static const subscriptions = 3;
-  static const payroll = 4;
-  static const tax = 5;
-  static const finance = 6;
-}
 
 // =============================================================================
 // ROUTER PROVIDER
@@ -252,65 +250,81 @@ final _authRoutes = <RouteBase>[
 // Main Tab Routes
 // -----------------------------------------------------------------------------
 
+
+
 final _mainTabRoutes = <RouteBase>[
   GoRoute(
     path: AppRoutes.home,
     name: 'home',
-    builder: (_, _) => const MainLayout(
-      currentIndex: NavIndex.home,
+    builder: (_, _) => const MainLayoutNew(
+      currentIndex: 0,
       child: HomePage(),
     ),
   ),
   GoRoute(
     path: AppRoutes.workers,
     name: 'workers',
-    builder: (_, _) => const MainLayout(
-      currentIndex: NavIndex.workers,
-      child: WorkersListPage(),
+    builder: (_, _) => const MainLayoutNew(
+      currentIndex: 1,
+      child: WorkersPage(),
     ),
   ),
   GoRoute(
     path: AppRoutes.timeTracking,
     name: 'timeTracking',
-    builder: (_, _) => const MainLayout(
-      currentIndex: NavIndex.timeTracking,
-      child: FeatureGate(
-        featureKey: 'time_tracking',
-        child: TimeTrackingPage(),
-      ),
+    builder: (_, _) => const FeatureGate(
+      featureKey: 'time_tracking',
+      child: TimeTrackingPage(),
     ),
   ),
   GoRoute(
     path: AppRoutes.subscriptions,
     name: 'subscriptions',
-    builder: (_, _) => const MainLayout(
-      currentIndex: NavIndex.subscriptions,
-      child: SubscriptionManagementPage(),
-    ),
+    builder: (_, _) => const SubscriptionManagementPage(),
   ),
   GoRoute(
     path: AppRoutes.tax,
     name: 'tax',
-    builder: (_, _) => const MainLayout(
-      currentIndex: NavIndex.tax,
-      child: ComprehensiveTaxPage(),
+    builder: (_, _) => const MainLayoutNew(
+      currentIndex: 3,
+      child: TaxPageNew(),
     ),
   ),
   GoRoute(
     path: AppRoutes.payroll,
     name: 'payroll',
-    builder: (_, _) => const MainLayout(
-      currentIndex: NavIndex.payroll,
-      child: PayrollPage(),
-    ),
+    builder: (_, _) => const PayrollPage(),
+  ),
+  GoRoute(
+    path: '/payroll/run',
+    name: 'runPayrollNew',
+    builder: (_, _) => const RunPayrollPageNew(),
   ),
   GoRoute(
     path: AppRoutes.finance,
     name: 'finance',
-    builder: (_, _) => const MainLayout(
-      currentIndex: NavIndex.finance,
+    builder: (_, _) => const MainLayoutNew(
+      currentIndex: 3,
       child: FinancePage(),
     ),
+  ),
+  GoRoute(
+    path: '/finance/top-up',
+    name: 'financeTopUp',
+    builder: (_, _) => const MpesaTopUpPage(),
+  ),
+  GoRoute(
+    path: AppRoutes.settings,
+    name: 'settings',
+    builder: (_, _) => const MainLayoutNew(
+      currentIndex: 4,
+      child: SettingsPage(),
+    ),
+  ),
+  GoRoute(
+    path: AppRoutes.settingsSubscription,
+    name: 'settingsSubscription',
+    builder: (_, _) => const SubscriptionManagementPage(),
   ),
 ];
 
@@ -365,17 +379,13 @@ final _workerRoutes = <RouteBase>[
 // -----------------------------------------------------------------------------
 
 final _payrollRoutes = <RouteBase>[
-  GoRoute(
-    path: AppRoutes.payrollRun,
-    name: 'payrollRun',
-    builder: (_, _) => const RunPayrollPage(),
-  ),
+
   GoRoute(
     path: '/payroll/run/:id',
     name: 'payrollRunWithId',
     builder: (_, state) {
       final id = state.pathParameters['id']!;
-      return RunPayrollPage(payPeriodId: id);
+      return RunPayrollPageNew(payPeriodId: id);
     },
   ),
   GoRoute(
@@ -383,7 +393,8 @@ final _payrollRoutes = <RouteBase>[
     name: 'payrollReview',
     builder: (_, state) {
       final id = state.pathParameters['id']!;
-      return PayrollReviewPage(payPeriodId: id);
+      final selectedWorkers = state.extra as List<WorkerModel>? ?? [];
+      return PayrollReviewPage(payPeriodId: id, selectedWorkers: selectedWorkers);
     },
   ),
   GoRoute(
@@ -479,14 +490,7 @@ final _otherRoutes = <RouteBase>[
     name: 'taxes',
     builder: (_, _) => const ComprehensiveTaxPage(),
   ),
-  GoRoute(
-    path: AppRoutes.accounting,
-    name: 'accounting',
-    builder: (_, _) => const FeatureGate(
-      featureKey: 'accounting_integration',
-      child: AccountingPage(),
-    ),
-  ),
+
   GoRoute(
     path: AppRoutes.reports,
     name: 'reports',

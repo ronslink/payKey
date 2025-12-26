@@ -148,7 +148,7 @@ async function importSamOlagoData() {
         }
 
         // Update details (whether new or existing)
-        property.address = '-1.223039, 36.870959';
+        property.address = 'House 26, Stream Drive Thome 1 Estate';
         property.latitude = -1.223039;
         property.longitude = 36.870959;
         property.what3words = '///rise.condition.hype';

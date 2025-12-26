@@ -1,11 +1,7 @@
-import 'dart:io';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:open_filex/open_filex.dart';
 
 import '../../../../core/network/api_service.dart';
-import '../../../../core/utils/download_helper.dart';
+import '../../../../core/utils/download_utils.dart';
 
 class ExportState {
   final bool isLoading;
@@ -101,24 +97,10 @@ class TaxExportNotifier extends Notifier<ExportState> {
 
   /// Cross-platform file save/download
   Future<void> _saveFile(List<int> bytes, String fileName) async {
-    if (kIsWeb) {
-      // Use web download helper
-      downloadFileInBrowser(bytes, fileName);
-    } else {
-      // Use native file save
-      await _saveFileNative(bytes, fileName);
-    }
-  }
-
-  /// Native (mobile/desktop) file save
-  Future<void> _saveFileNative(List<int> bytes, String fileName) async {
-    final directory = await getApplicationDocumentsDirectory();
-    final filePath = '${directory.path}/$fileName';
-    final file = File(filePath);
-    await file.writeAsBytes(bytes);
-
-    // Try to open the file
-    await OpenFilex.open(filePath);
+    await DownloadUtils.downloadFile(
+      filename: fileName,
+      bytes: bytes,
+    );
   }
 }
 

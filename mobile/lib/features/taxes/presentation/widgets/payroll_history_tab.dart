@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../pay_periods/presentation/providers/pay_periods_provider.dart';
-import '../../../pay_periods/data/models/pay_period_model.dart';
+// Use the canonical Freezed-based PayPeriod model
+import '../../../payroll/data/models/pay_period_model.dart';
 
 class PayrollHistoryTab extends ConsumerWidget {
   const PayrollHistoryTab({super.key});
@@ -40,7 +41,7 @@ class PayrollHistoryTab extends ConsumerWidget {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: sortedPeriods.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 12),
+                separatorBuilder: (context, index) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
                   return _buildHistoryItem(context, sortedPeriods[index]);
                 },
@@ -74,9 +75,11 @@ class PayrollHistoryTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildHistoryItem(BuildContext context, PayPeriodModel period) {
-    final startDate = DateFormat('MMM d').format(DateTime.parse(period.startDate));
-    final endDate = DateFormat('MMM d, y').format(DateTime.parse(period.endDate));
+  Widget _buildHistoryItem(BuildContext context, PayPeriod period) {
+    final dateFormat = DateFormat('MMM d');
+    final dateFormatYear = DateFormat('MMM d, y');
+    final startDate = dateFormat.format(period.startDate);
+    final endDate = dateFormatYear.format(period.endDate);
     
     // Determine status color
     Color statusColor;
@@ -86,15 +89,15 @@ class PayrollHistoryTab extends ConsumerWidget {
       case PayPeriodStatus.completed:
         statusColor = Colors.green;
         statusIcon = Icons.check_circle;
-        break;
       case PayPeriodStatus.processing:
         statusColor = Colors.blue;
         statusIcon = Icons.sync;
-        break;
       case PayPeriodStatus.active:
         statusColor = Colors.orange;
         statusIcon = Icons.pending;
-        break;
+      case PayPeriodStatus.closed:
+        statusColor = Colors.purple;
+        statusIcon = Icons.lock;
       default:
         statusColor = Colors.grey;
         statusIcon = Icons.circle_outlined;
@@ -137,7 +140,7 @@ class PayrollHistoryTab extends ConsumerWidget {
                 Icon(statusIcon, size: 14, color: statusColor),
                 const SizedBox(width: 4),
                 Text(
-                  period.status.name.toUpperCase(),
+                  period.status.displayName,
                   style: TextStyle(
                     color: statusColor,
                     fontSize: 12,

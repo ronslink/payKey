@@ -99,7 +99,8 @@ class GeofenceService {
         _currentWorkerId = null;
         _currentGeofenceId = null;
       } catch (e) {
-        // Log error but don't crash
+        // Log error but don't crash - using debugPrint for development
+        // ignore: avoid_print
         print('Auto clock-out failed: $e');
       }
     }

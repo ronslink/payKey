@@ -51,17 +51,17 @@ services:
       - MPESA_BASE_URL=https://sandbox.safaricom.co.ke
       # M-Pesa Sandbox Credentials
       - MPESA_CONSUMER_KEY=UyNcT5SZGGdCBAyzJdcpTR53Lujxyu2rW5kcJ9IVqFjGdqLh
-      - MPESA_CONSUMER_SECRET=gPTUyt9gyzTUyRLGhdkNEpFwFFpjsIVIPunuqhI6rR4yolL6Y1yFURnOkq1d3wMv
-      - MPESA_PASSKEY=bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919
+      - MPESA_CONSUMER_SECRET=YOUR_MPESA_CONSUMER_SECRET
+      - MPESA_PASSKEY=YOUR_MPESA_PASSKEY
       - MPESA_SHORTCODE=174379
       - MPESA_B2C_SHORTCODE=600981
       - MPESA_INITIATOR_NAME=testapi
-      - MPESA_SECURITY_CREDENTIAL=n5Vo+6OHz7F+IbfBBu1SHR1/dGRhSiqC9FITNLFKhG5vDWwhL5iJinc6m015n7DpmI4juwdSaQr6IXWzo7/Jc4lPrM+QJoEFjV2nkeCvGiW1Ayme9gr7e3A7O8Xfox1Qz6D3dEdDQ8SGQwsfww/0YLB7Jr7ZeIBwqpisyjJ4+ypUIKPdiP3/k77voiehSaSHHUxczT6L29xpDGFwVXTDh5ZMkZ72uu1AXVcHVM3ht7DoSPUmkQ70GI6l3l7GedYrfsCOuQzcUI/whPyNOmuQ467j35+zH5coH8cKagehGcQuI5Ghf2/4HQfUpme45KI1wK6gvhKBqH1MrgAGz26Tdw==
+      - MPESA_SECURITY_CREDENTIAL=YOUR_MPESA_SECURITY_CREDENTIAL
       - MPESA_CALLBACK_URL=https://dictatorily-contrarious-darby.ngrok-free.dev
       # Stripe Configuration
-      - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
-      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
-      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - STRIPE_PUBLISHABLE_KEY=pk_test_51QwpabCEEEC74IBu4Hfv55pvIFddcqRw4AYyVeexIsE2ZO32yRnfAnQKJb6184IFMAHWrXf09CcNYpDYG7kru3At00eSn5kILz
+      - STRIPE_SECRET_KEY=YOUR_STRIPE_SECRET_KEY
+      - STRIPE_WEBHOOK_SECRET=YOUR_STRIPE_WEBHOOK_SECRET
     env_file:
       - ./backend/.env
     depends_on:
@@ -72,7 +72,7 @@ services:
     working_dir: /app
     volumes:
       - ./backend:/app
-    command: sh -c "npm install -g npm@latest && npm install && npm run build && npm run typeorm:migration:run && npm run start:prod"
+    command: sh -c "npm install -g npm@11.7.0 && npm install && npm run typeorm:migration:run && npm run start:dev"
     networks:
       - paykey-network
 

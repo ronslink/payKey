@@ -140,7 +140,7 @@ export class PayrollService {
     private readonly activitiesService: ActivitiesService,
     private readonly dataSource: DataSource,
     private readonly payslipService: PayslipService,
-  ) {}
+  ) { }
 
   // ===========================================================================
   // Public Methods - Payroll Calculation
@@ -412,9 +412,13 @@ export class PayrollService {
    * Finalize payroll with optimized batch processing.
    * Generates payslips, processes payments, and creates tax submissions.
    */
-  async finalizePayroll(userId: string, payPeriodId: string) {
+  async finalizePayroll(
+    userId: string,
+    payPeriodId: string,
+    skipPayout: boolean = false,
+  ) {
     const startTime = Date.now();
-    this.logger.log(`Finalizing payroll for period ${payPeriodId}`);
+    this.logger.log(`Finalizing payroll for period ${payPeriodId} (skipPayout: ${skipPayout})`);
 
     // Find records that need to be finalized (draft status)
     const records = await this.payrollRepository.find({
@@ -442,7 +446,24 @@ export class PayrollService {
     const updatedRecords = await this.markRecordsAsFinalized(records);
 
     // 2. Process Payouts FIRST (Critical Step)
-    const payoutResults = await this.processPayoutsAsync(updatedRecords);
+    let payoutResults;
+    if (skipPayout) {
+      this.logger.log('Skipping payout processing (handled by client)');
+      payoutResults = {
+        successCount: updatedRecords.length,
+        failureCount: 0,
+        results: updatedRecords.map(r => ({
+          workerId: r.workerId,
+          workerName: r.worker.name,
+          success: true,
+          netPay: this.parseNumber(r.netSalary),
+          message: 'Payment handled externally'
+        })),
+        error: null,
+      };
+    } else {
+      payoutResults = await this.processPayoutsAsync(updatedRecords);
+    }
 
     // 3. Check for Payment Failures
     if (payoutResults.failureCount > 0) {
@@ -499,8 +520,8 @@ export class PayrollService {
     const totalDuration = Date.now() - startTime;
     this.logger.log(
       `Payroll finalization completed in ${totalDuration}ms: ` +
-        `${updatedRecords.length} records, ${payoutResults.successCount} payments, ` +
-        `${payslipsGenerated} payslips`,
+      `${updatedRecords.length} records, ${payoutResults.successCount} payments, ` +
+      `${payslipsGenerated} payslips`,
     );
 
     return {
@@ -616,6 +637,7 @@ export class PayrollService {
     return this.payrollRepository.find({
       where: {
         workerId: worker.id,
+        userId, // Critical: scope to current user's records only
         status: In([PayrollStatus.FINALIZED, PayrollStatus.PAID]),
       },
       relations: ['payPeriod'],
@@ -1109,7 +1131,7 @@ export class PayrollService {
     payPeriodId: string,
     workerCount: number,
     totalAmount: number,
-    payoutResults: { successCount: number; failureCount: number },
+    payoutResults: any,
     payslipsGenerated: number,
   ): Promise<void> {
     try {
@@ -1118,8 +1140,8 @@ export class PayrollService {
         ActivityType.PAYROLL,
         'Payroll Finalized',
         `Finalized payroll for ${workerCount} workers. ` +
-          `Payments: ${payoutResults.successCount} successful, ${payoutResults.failureCount} failed. ` +
-          `Payslips: ${payslipsGenerated} generated.`,
+        `Payments: ${payoutResults.successCount} successful, ${payoutResults.failureCount} failed. ` +
+        `Payslips: ${payslipsGenerated} generated.`,
         {
           workerCount,
           totalAmount,
@@ -1219,7 +1241,7 @@ export class PayrollService {
     const duration = Date.now() - startTime;
     this.logger.log(
       `${operation} completed: ${count} items in ${duration}ms ` +
-        `(${(duration / count).toFixed(2)}ms avg)`,
+      `(${(duration / count).toFixed(2)}ms avg)`,
     );
   }
 }
