@@ -10,7 +10,7 @@ export class CountriesService implements OnModuleInit {
   constructor(
     @InjectRepository(Country)
     private countriesRepository: Repository<Country>,
-  ) { }
+  ) {}
 
   async onModuleInit() {
     for (const country of ALL_COUNTRIES) {

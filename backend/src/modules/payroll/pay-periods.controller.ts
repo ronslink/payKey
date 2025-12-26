@@ -22,7 +22,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @Controller('pay-periods')
 @UseGuards(JwtAuthGuard)
 export class PayPeriodsController {
-  constructor(private readonly payPeriodsService: PayPeriodsService) { }
+  constructor(private readonly payPeriodsService: PayPeriodsService) {}
 
   @Post()
   create(@Request() req: any, @Body() createPayPeriodDto: CreatePayPeriodDto) {

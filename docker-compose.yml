@@ -48,20 +48,20 @@ services:
       # M-Pesa API Configuration
       # Sandbox (default): https://sandbox.safaricom.co.ke
       # Live/Production:   https://api.safaricom.co.ke
-      - MPESA_BASE_URL=https://sandbox.safaricom.co.ke
+      #MPESA_BASE_URL=https://sandbox.safaricom.co.ke
       # M-Pesa Sandbox Credentials
-      - MPESA_CONSUMER_KEY=UyNcT5SZGGdCBAyzJdcpTR53Lujxyu2rW5kcJ9IVqFjGdqLh
-      - MPESA_CONSUMER_SECRET=YOUR_MPESA_CONSUMER_SECRET
-      - MPESA_PASSKEY=YOUR_MPESA_PASSKEY
-      - MPESA_SHORTCODE=174379
-      - MPESA_B2C_SHORTCODE=600981
-      - MPESA_INITIATOR_NAME=testapi
-      - MPESA_SECURITY_CREDENTIAL=YOUR_MPESA_SECURITY_CREDENTIAL
-      - MPESA_CALLBACK_URL=https://dictatorily-contrarious-darby.ngrok-free.dev
+      # MPESA_CONSUMER_KEY=UyNcT5SZGGdCBAyzJdcpTR53Lujxyu2rW5kcJ9IVqFjGdqLh
+      # MPESA_CONSUMER_SECRET=YOUR_MPESA_CONSUMER_SECRET
+      # MPESA_PASSKEY=YOUR_MPESA_PASSKEY
+      # MPESA_SHORTCODE=174379
+      # MPESA_B2C_SHORTCODE=600981
+      # MPESA_INITIATOR_NAME=testapi
+      # MPESA_SECURITY_CREDENTIAL=YOUR_MPESA_SECURITY_CREDENTIAL
+      # MPESA_CALLBACK_URL=https://dictatorily-contrarious-darby.ngrok-free.dev
       # Stripe Configuration
-      - STRIPE_PUBLISHABLE_KEY=pk_test_51QwpabCEEEC74IBu4Hfv55pvIFddcqRw4AYyVeexIsE2ZO32yRnfAnQKJb6184IFMAHWrXf09CcNYpDYG7kru3At00eSn5kILz
-      - STRIPE_SECRET_KEY=YOUR_STRIPE_SECRET_KEY
-      - STRIPE_WEBHOOK_SECRET=YOUR_STRIPE_WEBHOOK_SECRET
+      # STRIPE_PUBLISHABLE_KEY=pk_test_51QwpabCEEEC74IBu4Hfv55pvIFddcqRw4AYyVeexIsE2ZO32yRnfAnQKJb6184IFMAHWrXf09CcNYpDYG7kru3At00eSn5kILz
+      # STRIPE_SECRET_KEY=YOUR_STRIPE_SECRET_KEY
+      # STRIPE_WEBHOOK_SECRET=YOUR_STRIPE_WEBHOOK_SECRET
     env_file:
       - ./backend/.env
     depends_on:

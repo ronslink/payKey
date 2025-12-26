@@ -31,7 +31,7 @@ export class WorkersImportController {
   constructor(
     private readonly workersService: WorkersService,
     private readonly usersService: UsersService,
-  ) { }
+  ) {}
 
   @Get('template')
   @UseGuards(SubscriptionGuard)
@@ -43,7 +43,11 @@ export class WorkersImportController {
     worksheet.columns = [
       { header: 'Full Name (Required)', key: 'name', width: 25 },
       { header: 'Phone Number (Required)', key: 'phoneNumber', width: 20 },
-      { header: 'Gross Salary (KES) (Required)', key: 'salaryGross', width: 20 },
+      {
+        header: 'Gross Salary (KES) (Required)',
+        key: 'salaryGross',
+        width: 20,
+      },
       { header: 'Start Date (YYYY-MM-DD)', key: 'startDate', width: 20 },
       { header: 'Employment Type', key: 'employmentType', width: 20 },
       { header: 'Job Title', key: 'jobTitle', width: 20 },
@@ -120,19 +124,36 @@ export class WorkersImportController {
       paymentFrequency: 'MONTHLY',
     });
 
-    // Add validations to example row and subsequent rows (ExcelJS limitation: best to apply to column but explicit ranges work better in some viewers. 
+    // Add validations to example row and subsequent rows (ExcelJS limitation: best to apply to column but explicit ranges work better in some viewers.
     // The loop above applies to existing cells. We need to apply to a large range for user input.)
 
     // Applying validation to rows 2-1000 for convenience
     for (let r = 2; r <= 1000; r++) {
-      worksheet.getCell(`E${r}`).dataValidation = { type: 'list', allowBlank: true, formulae: ['"FIXED,HOURLY"'] };
-      worksheet.getCell(`L${r}`).dataValidation = { type: 'list', allowBlank: true, formulae: ['"MPESA,BANK,CASH"'] };
-      worksheet.getCell(`M${r}`).dataValidation = { type: 'list', allowBlank: true, formulae: ['"MONTHLY,WEEKLY"'] };
+      worksheet.getCell(`E${r}`).dataValidation = {
+        type: 'list',
+        allowBlank: true,
+        formulae: ['"FIXED,HOURLY"'],
+      };
+      worksheet.getCell(`L${r}`).dataValidation = {
+        type: 'list',
+        allowBlank: true,
+        formulae: ['"MPESA,BANK,CASH"'],
+      };
+      worksheet.getCell(`M${r}`).dataValidation = {
+        type: 'list',
+        allowBlank: true,
+        formulae: ['"MONTHLY,WEEKLY"'],
+      };
     }
 
-
-    res.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.header('Content-Disposition', 'attachment; filename=workers_template.xlsx');
+    res.header(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.header(
+      'Content-Disposition',
+      'attachment; filename=workers_template.xlsx',
+    );
 
     const buffer = await workbook.xlsx.writeBuffer();
     res.send(buffer);
@@ -174,7 +195,8 @@ export class WorkersImportController {
     const headerRow = worksheet.getRow(1);
     headerRow.eachCell((cell, colNumber) => {
       const rawValue = cell.value;
-      const header = typeof rawValue === 'string' ? rawValue.toLowerCase().trim() : '';
+      const header =
+        typeof rawValue === 'string' ? rawValue.toLowerCase().trim() : '';
       columnMap[header] = colNumber.toString();
     });
 
@@ -196,14 +218,15 @@ export class WorkersImportController {
       if (!col) return '';
       const cell = row.getCell(parseInt(col));
       const val = cell.value;
-      if (val && typeof val === 'object' && 'text' in val) return (val as any).text; // Rich text
+      if (val && typeof val === 'object' && 'text' in val)
+        return (val as any).text; // Rich text
       return val != null ? String(val).trim() : '';
     };
 
     // Minimal required check
     if (!findCol(['name']) || !findCol(['phone']) || !findCol(['salary'])) {
       // Only failing if absolutely critical fields are missing from header
-      // However, user might have different header names. 
+      // However, user might have different header names.
       // We'll rely on the row processing to catch missing data.
     }
 
@@ -215,13 +238,14 @@ export class WorkersImportController {
       if (name) validRowsCount++;
     }
 
-    if (validRowsCount === 0) throw new BadRequestException('No valid worker data found.');
+    if (validRowsCount === 0)
+      throw new BadRequestException('No valid worker data found.');
 
     // 3. Subscription Check (Logic preserved)
     const user = await this.usersService.findOneById(req.user.userId);
     if (!user) throw new BadRequestException('User not found');
 
-    // ... (Limit check logic from previous step, abbreviated for brevity in replacement but assumed present if I use replace block correctly. 
+    // ... (Limit check logic from previous step, abbreviated for brevity in replacement but assumed present if I use replace block correctly.
     // Wait, I am replacing the WHOLE method, so I must re-include it fully.)
 
     const trialEndDate = new Date(user.createdAt);
@@ -229,13 +253,15 @@ export class WorkersImportController {
     const isInTrial = new Date() <= trialEndDate;
 
     if (!isInTrial) {
-      const currentCount = await this.workersService.getWorkerCount(req.user.userId);
-      const plan = SUBSCRIPTION_PLANS.find(p => p.tier === user.tier);
+      const currentCount = await this.workersService.getWorkerCount(
+        req.user.userId,
+      );
+      const plan = SUBSCRIPTION_PLANS.find((p) => p.tier === user.tier);
       const limit = plan?.workerLimit || 3;
 
       if (currentCount + validRowsCount > limit) {
         throw new BadRequestException(
-          `Importing ${validRowsCount} workers would exceed your plan limit of ${limit}. You have ${currentCount}. Upgrade required.`
+          `Importing ${validRowsCount} workers would exceed your plan limit of ${limit}. You have ${currentCount}. Upgrade required.`,
         );
       }
     }
@@ -273,14 +299,21 @@ export class WorkersImportController {
       const empType = getVal(row, ['employment', 'type']).toUpperCase();
       const startDate = getVal(row, ['start date']);
       const payMethod = getVal(row, ['payment method', 'method']).toUpperCase();
-      const payFreq = getVal(row, ['payment frequency', 'frequency']).toUpperCase();
+      const payFreq = getVal(row, [
+        'payment frequency',
+        'frequency',
+      ]).toUpperCase();
 
       const mpesa = getVal(row, ['mpesa']);
       const bank = getVal(row, ['bank name']);
       const account = getVal(row, ['bank account', 'account no']);
 
-      const housing = parseFloat(getVal(row, ['housing']).replace(/[^0-9.]/g, '') || '0');
-      const transport = parseFloat(getVal(row, ['transport']).replace(/[^0-9.]/g, '') || '0');
+      const housing = parseFloat(
+        getVal(row, ['housing']).replace(/[^0-9.]/g, '') || '0',
+      );
+      const transport = parseFloat(
+        getVal(row, ['transport']).replace(/[^0-9.]/g, '') || '0',
+      );
       const dob = getVal(row, ['date of birth', 'dob']);
 
       try {
@@ -295,9 +328,15 @@ export class WorkersImportController {
           nssfNumber: nssf || undefined,
           nhifNumber: nhif || undefined,
           jobTitle: jobTitle || undefined,
-          employmentType: (['FIXED', 'HOURLY'].includes(empType) ? empType : 'FIXED') as any,
-          paymentMethod: (['MPESA', 'BANK', 'CASH'].includes(payMethod) ? payMethod : 'MPESA') as any,
-          paymentFrequency: (['MONTHLY', 'WEEKLY'].includes(payFreq) ? payFreq : 'MONTHLY') as any,
+          employmentType: (['FIXED', 'HOURLY'].includes(empType)
+            ? empType
+            : 'FIXED') as any,
+          paymentMethod: (['MPESA', 'BANK', 'CASH'].includes(payMethod)
+            ? payMethod
+            : 'MPESA') as any,
+          paymentFrequency: (['MONTHLY', 'WEEKLY'].includes(payFreq)
+            ? payFreq
+            : 'MONTHLY') as any,
           mpesaNumber: mpesa || undefined,
           bankName: bank || undefined,
           bankAccount: account || undefined,
@@ -315,7 +354,11 @@ export class WorkersImportController {
     return result;
   }
 
-  private getCellValue(row: ExcelJS.Row, headers: string[], columnMap: Record<string, string>): string {
+  private getCellValue(
+    row: ExcelJS.Row,
+    headers: string[],
+    columnMap: Record<string, string>,
+  ): string {
     for (const header of headers) {
       const colNum = columnMap[header];
       if (colNum) {
@@ -325,7 +368,9 @@ export class WorkersImportController {
         if (rawValue && typeof rawValue === 'object' && 'text' in rawValue) {
           return (rawValue as any).text;
         }
-        return typeof rawValue === 'string' ? rawValue.trim() : String(rawValue ?? '').trim();
+        return typeof rawValue === 'string'
+          ? rawValue.trim()
+          : String(rawValue ?? '').trim();
       }
     }
     return '';

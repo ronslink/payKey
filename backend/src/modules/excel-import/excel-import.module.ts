@@ -5,8 +5,8 @@ import { WorkersModule } from '../workers/workers.module';
 import { UsersModule } from '../users/users.module';
 
 @Module({
-    imports: [WorkersModule, UsersModule],
-    controllers: [ExcelImportController],
-    providers: [ExcelImportService],
+  imports: [WorkersModule, UsersModule],
+  controllers: [ExcelImportController],
+  providers: [ExcelImportService],
 })
-export class ExcelImportModule { }
+export class ExcelImportModule {}

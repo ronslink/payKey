@@ -348,8 +348,9 @@ describe('Employee Portal - Payslips & Leave E2E', () => {
 
   describe('Authorization', () => {
     it('should require authentication for payslip access', async () => {
-      const res = await request(app.getHttpServer())
-        .get('/employee-portal/my-payslips');
+      const res = await request(app.getHttpServer()).get(
+        '/employee-portal/my-payslips',
+      );
 
       // 401 if endpoint exists with auth guard, 404 if endpoint doesn't exist
       expect([401, 404]).toContain(res.status);

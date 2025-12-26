@@ -235,10 +235,10 @@ export class MpesaService {
       this.logger.error('B2C Payment failed', error);
       await this.transactionsRepository.update(transactionId, {
         status: TransactionStatus.FAILED,
-        metadata: { error: (error as any).message },
+        metadata: { error: error.message },
       });
       // Don't throw, just return error so payroll process continues for others
-      return { error: (error as any).message };
+      return { error: error.message };
     }
   }
 }

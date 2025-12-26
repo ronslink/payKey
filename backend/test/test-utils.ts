@@ -153,4 +153,3 @@ export function extractUserIdFromToken(token: string): string | null {
     return null;
   }
 }
-

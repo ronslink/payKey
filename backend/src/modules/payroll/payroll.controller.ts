@@ -40,7 +40,7 @@ export class PayrollController {
     private payrollRepository: Repository<PayrollRecord>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
-  ) { }
+  ) {}
 
   // Helper method to get employer name (fetch once, use for all payslips)
   private async getEmployerName(userId: string): Promise<string> {
@@ -171,7 +171,8 @@ export class PayrollController {
   @Post('process')
   async processPayroll(
     @Request() req: AuthenticatedRequest,
-    @Body() body: { workerIds: string[]; payPeriodId: string; skipPayout?: boolean },
+    @Body()
+    body: { workerIds: string[]; payPeriodId: string; skipPayout?: boolean },
   ) {
     // 1. Calculate payroll for verification
     const payrollCalculation =
@@ -188,7 +189,7 @@ export class PayrollController {
 
     // 2. Ensure they are saved as DRAFT first (Repo relies on DRAFT records to finalize)
     // We update/save draft to ensure latest numbers are in DB
-    const draftItems = itemsToProcess.map(item => ({
+    const draftItems = itemsToProcess.map((item) => ({
       workerId: item.workerId,
       grossSalary: item.grossSalary,
       bonuses: 0, // Default for auto-run
@@ -199,7 +200,7 @@ export class PayrollController {
     await this.payrollService.saveDraftPayroll(
       req.user.userId,
       body.payPeriodId,
-      draftItems
+      draftItems,
     );
 
     // 3. Finalize immediately (Automated Flow)
@@ -207,7 +208,7 @@ export class PayrollController {
     return this.payrollService.finalizePayroll(
       req.user.userId,
       body.payPeriodId,
-      body.skipPayout ?? false // Pass skipPayout flag
+      body.skipPayout ?? false, // Pass skipPayout flag
     );
   }
   @Post('draft')

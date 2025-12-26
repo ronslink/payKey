@@ -27,7 +27,7 @@ export class SubscriptionPaymentsController {
     private subscriptionRepository: Repository<Subscription>,
     @InjectRepository(SubscriptionPayment)
     private paymentRepository: Repository<SubscriptionPayment>,
-  ) { }
+  ) {}
 
   @Get('plans')
   getPlans() {

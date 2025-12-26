@@ -9,6 +9,9 @@ import { PayrollPaymentService } from '../payments/payroll-payment.service';
 import { ActivitiesService } from '../activities/activities.service';
 import { PayslipService } from './payslip.service';
 import { DataSource } from 'typeorm';
+import { User } from '../users/entities/user.entity';
+import { LeaveRequest } from '../workers/entities/leave-request.entity';
+import { TimeEntry } from '../time-tracking/entities/time-entry.entity';
 
 describe('PayrollService', () => {
   let service: PayrollService;
@@ -62,6 +65,18 @@ describe('PayrollService', () => {
         {
           provide: getRepositoryToken(PayPeriod),
           useValue: { findOne: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(User),
+          useValue: { findOne: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(LeaveRequest),
+          useValue: { find: jest.fn() },
+        },
+        {
+          provide: getRepositoryToken(TimeEntry),
+          useValue: { find: jest.fn() },
         },
         {
           provide: TaxesService,

@@ -39,7 +39,12 @@ async function bootstrap() {
       'ETag',
       'Last-Modified',
     ],
-    exposedHeaders: ['Content-Type', 'Authorization', 'Content-Disposition', 'Content-Length'],
+    exposedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Content-Disposition',
+      'Content-Length',
+    ],
   });
 
   // Swagger Documentation Setup

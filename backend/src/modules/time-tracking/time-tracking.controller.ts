@@ -19,7 +19,7 @@ import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 @Controller('time-tracking')
 @UseGuards(JwtAuthGuard, PlatinumGuard)
 export class TimeTrackingController {
-  constructor(private readonly timeTrackingService: TimeTrackingService) { }
+  constructor(private readonly timeTrackingService: TimeTrackingService) {}
 
   @Post('clock-in/:workerId')
   @ApiOperation({ summary: 'Clock in a worker' })

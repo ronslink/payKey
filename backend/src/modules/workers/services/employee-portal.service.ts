@@ -22,7 +22,7 @@ export class EmployeePortalService {
     @InjectRepository(Property)
     private propertyRepository: Repository<Property>,
     private jwtService: JwtService,
-  ) { }
+  ) {}
 
   /**
    * Generate an invite code for a worker
@@ -267,9 +267,7 @@ export class EmployeePortalService {
    * Get the property assigned to a worker (for clock-in display)
    * Returns null if worker has no assigned property
    */
-  async getWorkerProperty(
-    workerId: string,
-  ): Promise<{
+  async getWorkerProperty(workerId: string): Promise<{
     id: string;
     name: string;
     address: string;
@@ -299,22 +297,22 @@ export class EmployeePortalService {
   /**
    * Get all active properties for an employer (for worker to select at clock-in)
    */
-  async getEmployerProperties(
-    employerId: string,
-  ): Promise<Array<{
-    id: string;
-    name: string;
-    address: string;
-    latitude: number | null;
-    longitude: number | null;
-    geofenceRadius: number;
-  }>> {
+  async getEmployerProperties(employerId: string): Promise<
+    Array<{
+      id: string;
+      name: string;
+      address: string;
+      latitude: number | null;
+      longitude: number | null;
+      geofenceRadius: number;
+    }>
+  > {
     const properties = await this.propertyRepository.find({
       where: { userId: employerId, isActive: true },
       order: { name: 'ASC' },
     });
 
-    return properties.map(p => ({
+    return properties.map((p) => ({
       id: p.id,
       name: p.name,
       address: p.address,

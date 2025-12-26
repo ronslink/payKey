@@ -21,7 +21,7 @@ export class PayslipService {
 
   constructor(
     @Optional() @Inject(CACHE_MANAGER) private cacheManager?: Cache,
-  ) { }
+  ) {}
 
   /**
    * Generate a single payslip PDF

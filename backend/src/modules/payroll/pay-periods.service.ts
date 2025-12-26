@@ -113,7 +113,9 @@ export class PayPeriodsService {
     }
 
     if (year) {
-      queryBuilder.andWhere('EXTRACT(YEAR FROM pp.startDate) = :year', { year });
+      queryBuilder.andWhere('EXTRACT(YEAR FROM pp.startDate) = :year', {
+        year,
+      });
     }
 
     const [data, total] = await queryBuilder

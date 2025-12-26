@@ -140,7 +140,7 @@ export class PayrollService {
     private readonly activitiesService: ActivitiesService,
     private readonly dataSource: DataSource,
     private readonly payslipService: PayslipService,
-  ) { }
+  ) {}
 
   // ===========================================================================
   // Public Methods - Payroll Calculation
@@ -418,7 +418,9 @@ export class PayrollService {
     skipPayout: boolean = false,
   ) {
     const startTime = Date.now();
-    this.logger.log(`Finalizing payroll for period ${payPeriodId} (skipPayout: ${skipPayout})`);
+    this.logger.log(
+      `Finalizing payroll for period ${payPeriodId} (skipPayout: ${skipPayout})`,
+    );
 
     // Find records that need to be finalized (draft status)
     const records = await this.payrollRepository.find({
@@ -452,12 +454,12 @@ export class PayrollService {
       payoutResults = {
         successCount: updatedRecords.length,
         failureCount: 0,
-        results: updatedRecords.map(r => ({
+        results: updatedRecords.map((r) => ({
           workerId: r.workerId,
           workerName: r.worker.name,
           success: true,
           netPay: this.parseNumber(r.netSalary),
-          message: 'Payment handled externally'
+          message: 'Payment handled externally',
         })),
         error: null,
       };
@@ -520,8 +522,8 @@ export class PayrollService {
     const totalDuration = Date.now() - startTime;
     this.logger.log(
       `Payroll finalization completed in ${totalDuration}ms: ` +
-      `${updatedRecords.length} records, ${payoutResults.successCount} payments, ` +
-      `${payslipsGenerated} payslips`,
+        `${updatedRecords.length} records, ${payoutResults.successCount} payments, ` +
+        `${payslipsGenerated} payslips`,
     );
 
     return {
@@ -1140,8 +1142,8 @@ export class PayrollService {
         ActivityType.PAYROLL,
         'Payroll Finalized',
         `Finalized payroll for ${workerCount} workers. ` +
-        `Payments: ${payoutResults.successCount} successful, ${payoutResults.failureCount} failed. ` +
-        `Payslips: ${payslipsGenerated} generated.`,
+          `Payments: ${payoutResults.successCount} successful, ${payoutResults.failureCount} failed. ` +
+          `Payslips: ${payslipsGenerated} generated.`,
         {
           workerCount,
           totalAmount,
@@ -1241,7 +1243,7 @@ export class PayrollService {
     const duration = Date.now() - startTime;
     this.logger.log(
       `${operation} completed: ${count} items in ${duration}ms ` +
-      `(${(duration / count).toFixed(2)}ms avg)`,
+        `(${(duration / count).toFixed(2)}ms avg)`,
     );
   }
 }

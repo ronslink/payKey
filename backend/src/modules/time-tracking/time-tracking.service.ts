@@ -15,7 +15,7 @@ export class TimeTrackingService {
     private timeEntryRepository: Repository<TimeEntry>,
     @InjectRepository(Worker)
     private workersRepository: Repository<Worker>,
-  ) { }
+  ) {}
 
   /**
    * Clock in a worker
@@ -113,9 +113,9 @@ export class TimeTrackingService {
     const a =
       Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
       Math.cos(lat1) *
-      Math.cos(lat2) *
-      Math.sin(deltaLng / 2) *
-      Math.sin(deltaLng / 2);
+        Math.cos(lat2) *
+        Math.sin(deltaLng / 2) *
+        Math.sin(deltaLng / 2);
 
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const distance = R * c; // in meters
@@ -128,7 +128,11 @@ export class TimeTrackingService {
   }
 
   private validateGeofenceForProperty(
-    property: { latitude: number | null; longitude: number | null; geofenceRadius?: number },
+    property: {
+      latitude: number | null;
+      longitude: number | null;
+      geofenceRadius?: number;
+    },
     location: { lat: number; lng: number },
   ) {
     if (!property.latitude || !property.longitude) return;
@@ -145,9 +149,9 @@ export class TimeTrackingService {
     const a =
       Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
       Math.cos(lat1) *
-      Math.cos(lat2) *
-      Math.sin(deltaLng / 2) *
-      Math.sin(deltaLng / 2);
+        Math.cos(lat2) *
+        Math.sin(deltaLng / 2) *
+        Math.sin(deltaLng / 2);
 
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const distance = R * c; // in meters

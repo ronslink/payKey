@@ -5,10 +5,12 @@ import { Worker } from './entities/worker.entity';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { CreateWorkerDto } from './dto/create-worker.dto';
 import { NotFoundException } from '@nestjs/common';
+import { ActivitiesService } from '../activities/activities.service';
 
 describe('WorkersService', () => {
   let service: WorkersService;
   let mockWorkerRepository: Partial<Repository<Worker>>;
+  let mockActivitiesService: Partial<ActivitiesService>;
 
   beforeEach(async () => {
     mockWorkerRepository = {
@@ -20,12 +22,20 @@ describe('WorkersService', () => {
       count: jest.fn(),
     };
 
+    mockActivitiesService = {
+      logActivity: jest.fn().mockResolvedValue(undefined),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         WorkersService,
         {
           provide: getRepositoryToken(Worker),
           useValue: mockWorkerRepository,
+        },
+        {
+          provide: ActivitiesService,
+          useValue: mockActivitiesService,
         },
       ],
     }).compile();

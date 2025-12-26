@@ -21,7 +21,7 @@ export class EmployeePortalController {
     private readonly employeePortalService: EmployeePortalService,
     private readonly leaveManagementService: LeaveManagementService,
     private readonly featureAccessService: FeatureAccessService,
-  ) { }
+  ) {}
 
   // ============================================================
   // PUBLIC ENDPOINTS (No Auth Required)
@@ -123,7 +123,8 @@ export class EmployeePortalController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Get all employer properties for clock-in selection (Gold/Platinum only)',
+    summary:
+      'Get all employer properties for clock-in selection (Gold/Platinum only)',
   })
   async getEmployerProperties(@Request() req: any) {
     // Check if employer has Gold/Platinum tier (geofencing feature)
@@ -138,7 +139,9 @@ export class EmployeePortalController {
       );
     }
 
-    return this.employeePortalService.getEmployerProperties(req.user.employerId);
+    return this.employeePortalService.getEmployerProperties(
+      req.user.employerId,
+    );
   }
 
   @Get('my-leave-balance')

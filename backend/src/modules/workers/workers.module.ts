@@ -45,7 +45,11 @@ import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
     ActivitiesModule,
     forwardRef(() => SubscriptionsModule),
   ],
-  controllers: [WorkersController, EmployeePortalController, WorkersImportController],
+  controllers: [
+    WorkersController,
+    EmployeePortalController,
+    WorkersImportController,
+  ],
   providers: [
     WorkersService,
     TerminationService,
@@ -54,4 +58,4 @@ import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
   ],
   exports: [WorkersService, EmployeePortalService],
 })
-export class WorkersModule { }
+export class WorkersModule {}
