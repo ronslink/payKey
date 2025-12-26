@@ -5,7 +5,7 @@ import 'package:mobile/integrations/intasend/services/intasend_service.dart';
 
 @Tags(['manual'])
 void main() {
-  test('IntaSend Integration Test - Sandbox Payout', () async {
+  test('IntaSend Integration Test - Sandbox Payout', skip: 'Manual integration test - requires real IntaSend sandbox', () async {
     // Keys from intasend_providers.dart
     final env = IntaSendEnvironment.sandbox(
       publishableKey: 'ISPubKey_test_98b2ef28-5e6f-46c8-bae9-0e2acedcbf64',

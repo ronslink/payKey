@@ -5,7 +5,7 @@ import 'package:mobile/integrations/intasend/config/intasend_config.dart';
 
 @Tags(['manual'])
 void main() {
-  test('Transfer Funds Test', () async {
+  test('Transfer Funds Test', skip: 'Manual integration test - requires real IntaSend sandbox', () async {
     print('Running IntaSend Fund Transfer Script...');
 
     // 1. Setup Environment
