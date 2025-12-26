@@ -1,0 +1,4 @@
+tags:
+  manual:
+    # Skip tests with this tag by default in CI
+    # Run with: flutter test --tags=manual
