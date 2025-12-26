@@ -76,7 +76,7 @@ jobs:
           DB_PORT: 5435
           DB_USERNAME: postgres
           DB_PASSWORD: password
-          DB_DATABASE: paykey_test
+          DB_NAME: paykey_test
           REDIS_HOST: localhost
           REDIS_PORT: 6379
           JWT_SECRET: test_secret_key_for_ci_cd_pipeline_12345
