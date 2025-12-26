@@ -161,7 +161,7 @@ describe('Payroll Complete Flow E2E', () => {
 
     expect(res.header['content-type']).toBe('application/pdf');
     expect(res.header['content-disposition']).toContain(
-      'attachment; filename=payslip-',
+      'attachment; filename="payslip-',
     );
   });
 });
