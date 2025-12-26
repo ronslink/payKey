@@ -113,9 +113,7 @@ jobs:
         run: flutter analyze --no-fatal-infos
 
       - name: Run Tests
-        run: |
-          # Run tests, excluding manual integration tests
-          find test -name "*_test.dart" -not -path "*/manual/*" | xargs flutter test
+        run: flutter test --exclude-tags=manual
 
   # ============================================
   # Build Docker Image (main branch only)
