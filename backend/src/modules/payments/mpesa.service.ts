@@ -89,11 +89,77 @@ export class MpesaService {
     amount: number,
     accountReference: string = 'PayKey',
     transactionDesc: string = 'Wallet Topup',
+    metadata: any = {},
   ) {
     if (amount > this.MPESA_MAX_AMOUNT) {
       throw new Error(
         `Amount cannot exceed M-Pesa limit of KES ${this.MPESA_MAX_AMOUNT}`,
       );
+    }
+
+    // SIMULATION MODE for Sandbox/Dev
+    if (this.baseUrl.includes('sandbox') || process.env.NODE_ENV !== 'production') {
+      this.logger.log(`⚠️ SIMULATION: M-Pesa STK Push for ${phoneNumber} - ${amount}`);
+      const checkoutRequestId = `ws_CO_SIM_${Date.now()}`;
+      const merchantRequestId = `MR_SIM_${Date.now()}`;
+
+      // Create pending transaction first
+      const transaction = this.transactionsRepository.create({
+        userId,
+        amount,
+        currency: 'KES',
+        type: TransactionType.DEPOSIT,
+        status: TransactionStatus.PENDING,
+        provider: 'MPESA',
+        accountReference,
+        recipientPhone: phoneNumber,
+        createdAt: new Date(),
+        metadata, // Store metadata
+        providerRef: merchantRequestId,
+      });
+      await this.transactionsRepository.save(transaction);
+
+      // Simulate Callback after delay
+      setTimeout(async () => {
+        try {
+          this.logger.log('⚠️ SIMULATION: Sending Success Callback...');
+          const payload = {
+            Body: {
+              stkCallback: {
+                MerchantRequestID: merchantRequestId,
+                CheckoutRequestID: checkoutRequestId,
+                ResultCode: 0,
+                ResultDesc: 'The service request is processed successfully.',
+                CallbackMetadata: {
+                  Item: [
+                    { Name: 'Amount', Value: amount },
+                    { Name: 'MpesaReceiptNumber', Value: `SIM${Date.now()}` },
+                    { Name: 'PhoneNumber', Value: phoneNumber },
+                  ],
+                },
+              },
+            },
+          };
+          // Post to local callback endpoint
+          await lastValueFrom(
+            this.httpService.post(
+              'http://localhost:3000/payments/callback',
+              payload,
+            ),
+          );
+        } catch (e) {
+          this.logger.error('Simulation Callback Failed', e);
+        }
+      }, 3000);
+
+      // Return immediate success
+      return {
+        MerchantRequestID: merchantRequestId,
+        CheckoutRequestID: checkoutRequestId,
+        ResponseCode: '0',
+        ResponseDescription: 'Success. Request accepted for processing',
+        CustomerMessage: 'Success. Request accepted for processing',
+      };
     }
     const token = await this.getAccessToken();
     const shortCode = this.configService.get('MPESA_SHORTCODE');
@@ -117,6 +183,7 @@ export class MpesaService {
       provider: 'MPESA',
       accountReference, // Store the reference
       recipientPhone: phoneNumber,
+      metadata,
       createdAt: new Date(),
     });
     await this.transactionsRepository.save(transaction);

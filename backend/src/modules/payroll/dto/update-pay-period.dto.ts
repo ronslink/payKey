@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString, IsDate } from 'class-validator';
+import { IsEnum, IsOptional, IsString, IsDate, IsBoolean } from 'class-validator';
 import { PayPeriodStatus } from '../entities/pay-period.entity';
 
 export class UpdatePayPeriodDto {
@@ -29,4 +29,7 @@ export class UpdatePayPeriodDto {
   @IsOptional()
   @IsDate()
   approvedAt?: Date;
+
+  @IsOptional()
+  isOffCycle?: boolean;
 }

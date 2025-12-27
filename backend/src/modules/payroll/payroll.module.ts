@@ -2,8 +2,6 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PayrollController } from './payroll.controller';
 import { PayrollService } from './payroll.service';
-import { BatchPayrollController } from './batch-payroll.controller';
-import { BatchPayrollService } from './batch-payroll.service';
 import { PayrollRecordsController } from './payroll-records.controller';
 import { PayPeriodsController } from './pay-periods.controller';
 import { PayPeriod } from './entities/pay-period.entity';
@@ -20,6 +18,8 @@ import { TaxesModule } from '../taxes/taxes.module';
 import { TaxPaymentsModule } from '../tax-payments/tax-payments.module';
 import { PayslipService } from './payslip.service';
 import { ActivitiesModule } from '../activities/activities.module';
+import { BullModule } from '@nestjs/bull';
+import { PayrollProcessor } from './payroll.processor';
 
 @Module({
   imports: [
@@ -37,19 +37,25 @@ import { ActivitiesModule } from '../activities/activities.module';
     TaxesModule,
     TaxPaymentsModule,
     ActivitiesModule,
+    BullModule.registerQueue({
+      name: 'payouts',
+      limiter: {
+        max: 5, // Process max 5 jobs
+        duration: 1000, // per second (IntaSend safe limit)
+      },
+    }),
   ],
   controllers: [
     PayrollController,
-    BatchPayrollController,
     PayrollRecordsController,
     PayPeriodsController,
   ],
   providers: [
     PayrollService,
-    BatchPayrollService,
     PayPeriodsService,
     PayslipService,
+    PayrollProcessor,
   ],
-  exports: [PayrollService, BatchPayrollService, PayPeriodsService],
+  exports: [PayrollService, PayPeriodsService],
 })
-export class PayrollModule {}
+export class PayrollModule { }

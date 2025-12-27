@@ -72,7 +72,7 @@ services:
     working_dir: /app
     volumes:
       - ./backend:/app
-    command: sh -c "npm install -g npm@11.7.0 && npm install && npm run typeorm:migration:run && npm run seed && npm run start:dev"
+    command: sh -c "npm install -g npm@11.7.0 && npm install && npm run typeorm:migration:run && npm run start:dev"
     networks:
       - paykey-network
 

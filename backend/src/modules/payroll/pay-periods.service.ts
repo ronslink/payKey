@@ -35,7 +35,7 @@ export class PayPeriodsService {
     @InjectRepository(TaxSubmission)
     private taxSubmissionRepository: Repository<TaxSubmission>,
     private taxPaymentsService: TaxPaymentsService,
-  ) {}
+  ) { }
 
   async create(
     createPayPeriodDto: CreatePayPeriodDto,
@@ -50,19 +50,25 @@ export class PayPeriodsService {
     }
 
     // Check for overlapping pay periods (only for this user)
-    const overlapping = await this.payPeriodRepository
-      .createQueryBuilder('pp')
-      .where('pp.userId = :userId', { userId })
-      .andWhere('pp.startDate <= :endDate', {
-        endDate: createPayPeriodDto.endDate,
-      })
-      .andWhere('pp.endDate >= :startDate', {
-        startDate: createPayPeriodDto.startDate,
-      })
-      .getOne();
+    // EXCEPTION: Off-cycle periods can overlap with anything. Standard periods can only overlap off-cycle ones (not other standard ones).
+    if (!createPayPeriodDto.isOffCycle) {
+      const overlapping = await this.payPeriodRepository
+        .createQueryBuilder('pp')
+        .where('pp.userId = :userId', { userId })
+        .andWhere('pp.isOffCycle = :isOffCycle', { isOffCycle: false }) // Only check against other standard periods
+        .andWhere('pp.startDate <= :endDate', {
+          endDate: createPayPeriodDto.endDate,
+        })
+        .andWhere('pp.endDate >= :startDate', {
+          startDate: createPayPeriodDto.startDate,
+        })
+        .getOne();
 
-    if (overlapping) {
-      throw new BadRequestException('Pay period overlaps with existing period');
+      if (overlapping) {
+        throw new BadRequestException(
+          'Standard pay period overlaps with existing standard period',
+        );
+      }
     }
 
     // Convert notes to proper format if it's a string
@@ -161,18 +167,27 @@ export class PayPeriodsService {
       }
 
       // Check for overlapping periods (excluding current one, only for this user)
-      const overlapping = await this.payPeriodRepository
-        .createQueryBuilder('pp')
-        .where('pp.id != :id', { id })
-        .andWhere('pp.userId = :userId', { userId: payPeriod.userId })
-        .andWhere('pp.startDate <= :endDate', { endDate: newEndDate })
-        .andWhere('pp.endDate >= :startDate', { startDate: newStartDate })
-        .getOne();
+      // Logic: Standard periods cannot overlap other Standard periods. Off-cycle can overlap anything.
 
-      if (overlapping) {
-        throw new BadRequestException(
-          'Pay period overlaps with existing period',
-        );
+      const isOffCycle = updatePayPeriodDto.isOffCycle !== undefined
+        ? updatePayPeriodDto.isOffCycle
+        : payPeriod.isOffCycle;
+
+      if (!isOffCycle) {
+        const overlapping = await this.payPeriodRepository
+          .createQueryBuilder('pp')
+          .where('pp.id != :id', { id })
+          .andWhere('pp.userId = :userId', { userId: payPeriod.userId })
+          .andWhere('pp.isOffCycle = :isOffCycle', { isOffCycle: false })
+          .andWhere('pp.startDate <= :endDate', { endDate: newEndDate })
+          .andWhere('pp.endDate >= :startDate', { startDate: newStartDate })
+          .getOne();
+
+        if (overlapping) {
+          throw new BadRequestException(
+            'Standard pay period overlaps with existing standard period',
+          );
+        }
       }
     }
 

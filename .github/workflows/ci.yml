@@ -156,7 +156,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [docker-build, mobile-ci]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    environment: production
+    environment: PROD
 
     steps:
       - name: Deploy to DigitalOcean
@@ -165,8 +165,18 @@ jobs:
           host: ${{ secrets.DO_HOST }}
           username: ${{ secrets.DO_USERNAME }}
           key: ${{ secrets.DO_SSH_KEY }}
+          envs: INTRASEND_PUBLISHABLE_KEY, INTRASEND_SECRET
           script: |
             cd /opt/paykey
+            
+            # Update/Append IntaSend Secrets to .env
+            # Note: This simple append assumes cleanup or distinct management. 
+            # Ideally, use a dedicated config management strategy.
+            sed -i '/INTASEND_/d' .env || true
+            echo "INTASEND_PUBLISHABLE_KEY=$INTRASEND_PUBLISHABLE_KEY" >> .env
+            echo "INTASEND_SECRET_KEY=$INTRASEND_SECRET" >> .env
+            echo "INTASEND_IS_LIVE=true" >> .env
+
             docker-compose pull backend
             docker-compose up -d --no-deps backend
             docker image prune -f

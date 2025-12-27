@@ -26,7 +26,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   final _payrollKey = GlobalKey();
   final _workersKey = GlobalKey();
   final _quickActionsKey = GlobalKey();
-  final _reportsKey = GlobalKey();
+
 
   @override
   Widget build(BuildContext context) {

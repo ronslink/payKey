@@ -8,6 +8,7 @@ import { MpesaService } from './mpesa.service';
 import { StripeService } from './stripe.service';
 import { PayrollPaymentService } from './payroll-payment.service';
 import { PayrollService } from './payroll.service';
+import { IntaSendService } from './intasend.service';
 import { Transaction } from './entities/transaction.entity';
 import { Worker } from '../workers/entities/worker.entity';
 import { Subscription } from '../subscriptions/entities/subscription.entity';
@@ -50,7 +51,8 @@ import { HttpModule } from '@nestjs/axios';
     StripeService,
     PayrollPaymentService,
     PayrollService,
+    IntaSendService,
   ],
-  exports: [MpesaService, StripeService, PayrollPaymentService, PayrollService],
+  exports: [MpesaService, StripeService, PayrollPaymentService, PayrollService, IntaSendService],
 })
-export class PaymentsModule {}
+export class PaymentsModule { }

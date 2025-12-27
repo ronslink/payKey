@@ -33,6 +33,8 @@ import {
 } from '../time-tracking/entities/time-entry.entity';
 import { PayrollRecord, PayrollStatus } from './entities/payroll-record.entity';
 import { PayslipService } from './payslip.service';
+import { InjectQueue } from '@nestjs/bull';
+import type { Queue } from 'bull';
 
 // =============================================================================
 // Types & Interfaces
@@ -140,7 +142,8 @@ export class PayrollService {
     private readonly activitiesService: ActivitiesService,
     private readonly dataSource: DataSource,
     private readonly payslipService: PayslipService,
-  ) {}
+    @InjectQueue('payouts') private readonly payoutsQueue: Queue,
+  ) { }
 
   // ===========================================================================
   // Public Methods - Payroll Calculation
@@ -412,7 +415,48 @@ export class PayrollService {
    * Finalize payroll with optimized batch processing.
    * Generates payslips, processes payments, and creates tax submissions.
    */
+  /**
+   * Triggers the async payroll finalization process.
+   * Adds a job to the queue and returns immediately.
+   */
   async finalizePayroll(
+    userId: string,
+    payPeriodId: string,
+    skipPayout: boolean = false,
+  ) {
+    this.logger.log(`Queueing payroll finalization for period ${payPeriodId}`);
+
+    // Updates PayPeriod status to PROCESSING to prevent double clicks
+    await this.payPeriodRepository.update(payPeriodId, {
+      status: PayPeriodStatus.PROCESSING,
+    });
+
+    const job = await this.payoutsQueue.add(
+      'process-payout',
+      { userId, payPeriodId, skipPayout },
+      {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 1000,
+        },
+      },
+    );
+
+    return {
+      status: 'PROCESSING',
+      message: 'Payroll finalization queued successfully',
+      jobId: job.id,
+      payPeriodId,
+    };
+  }
+
+  /**
+   * Internal method executed by the Worker.
+   * Finalize payroll with optimized batch processing.
+   * Generates payslips, processes payments, and creates tax submissions.
+   */
+  async executePayrollFinalization(
     userId: string,
     payPeriodId: string,
     skipPayout: boolean = false,
@@ -522,8 +566,8 @@ export class PayrollService {
     const totalDuration = Date.now() - startTime;
     this.logger.log(
       `Payroll finalization completed in ${totalDuration}ms: ` +
-        `${updatedRecords.length} records, ${payoutResults.successCount} payments, ` +
-        `${payslipsGenerated} payslips`,
+      `${updatedRecords.length} records, ${payoutResults.successCount} payments, ` +
+      `${payslipsGenerated} payslips`,
     );
 
     return {
@@ -1142,8 +1186,8 @@ export class PayrollService {
         ActivityType.PAYROLL,
         'Payroll Finalized',
         `Finalized payroll for ${workerCount} workers. ` +
-          `Payments: ${payoutResults.successCount} successful, ${payoutResults.failureCount} failed. ` +
-          `Payslips: ${payslipsGenerated} generated.`,
+        `Payments: ${payoutResults.successCount} successful, ${payoutResults.failureCount} failed. ` +
+        `Payslips: ${payslipsGenerated} generated.`,
         {
           workerCount,
           totalAmount,
@@ -1243,7 +1287,7 @@ export class PayrollService {
     const duration = Date.now() - startTime;
     this.logger.log(
       `${operation} completed: ${count} items in ${duration}ms ` +
-        `(${(duration / count).toFixed(2)}ms avg)`,
+      `(${(duration / count).toFixed(2)}ms avg)`,
     );
   }
 }

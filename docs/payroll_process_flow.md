@@ -156,8 +156,9 @@ Once payroll is **Finalized**:
 | Status | Display Name | Meaning |
 | :--- | :--- | :--- |
 | `DRAFT` | **Draft** | Inputs are being entered. Editable. |
-| `COMPLETED` | **Calculated** | Review phase. Calculations done but not paid. |
-| `CLOSED` | **Finalized** | Paid and locked. No further edits. |
+| `PROCESSING` | **Processing** | Calculations/Allocations in progress. |
+| `COMPLETED` | **Finalized** | Payroll calculated, paid (if applicable), and payslips generated. |
+| `CLOSED` | **Archived** | Optional manual state. Permanently locked. |
 
 ## 6. Key Components
 
@@ -168,7 +169,54 @@ Once payroll is **Finalized**:
 - `WorkerPayrollCard` - Worker input card with optional proration UI
 
 ### Controller Management
-- `WorkerHoursControllerManager` - Manages all input controllers including:
   - Hours, Overtime, Bonuses, Deductions
   - **Days Worked** - with smart defaults based on worker status
+
+---
+
+## 7. Tax Submission Workflow
+
+The system handles the **calculation** and **tracking** of tax liabilities automatically, but the **filing** and **payment** to authorities is currently a manual process.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant App
+    participant Backend
+    participant External as KRA/NSSF/SHIF
+
+    note over Backend: Payroll Finalized (Auto)
+    Backend->>Backend: Aggregate Tax Liabilities
+    Backend->>Backend: Create TaxSubmission (PENDING)
+    
+    User->>App: View Tax Obligations
+    App-->>User: Show PAYE, NSSF, SHIF Totals
+    
+    rect rgb(255, 255, 240)
+        note right of User: Manual Action
+        User->>External: File Returns & Pay (iTax/Paybill)
+    end
+    
+    User->>App: Click "Mark as Filed"
+    App->>Backend: POST /taxes/:id/file
+    Backend->>Backend: Update Status to FILED
+    Backend-->>App: Confirmation
+```
+
+### Steps Description
+
+1.  **Automatic Generation**:
+    *   Immediately after payroll is finalized (`COMPLETED`), the backend aggregates all tax data (PAYE, NSSF, SHIF, Housing Levy) from the period's payroll records.
+    *   A `TaxSubmission` record is created with a `PENDING` status.
+
+2.  **User Review**:
+    *   The user views the "Statutory Reports" or "Tax" section in the app to see exactly how much is owed for each category.
+
+3.  **Manual Filing (Critical)**:
+    *   The user must manually log in to the KRA iTax portal or NSSF/SHIF portals to file the returns.
+    *   Payment is made via external channels (M-Pesa Paybill or Bank).
+
+4.  **Completion**:
+    *   Once paid, the user clicks "Mark as Filed" in the app.
+    *   The system updates the record to `FILED` for compliance tracking.
 

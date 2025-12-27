@@ -4,6 +4,7 @@ import {
   IsEnum,
   IsOptional,
   IsObject,
+  IsBoolean,
 } from 'class-validator';
 import { PayPeriodFrequency } from '../entities/pay-period.entity';
 
@@ -30,4 +31,7 @@ export class CreatePayPeriodDto {
   @IsOptional()
   @IsString()
   createdBy?: string;
+
+  @IsOptional()
+  isOffCycle?: boolean;
 }

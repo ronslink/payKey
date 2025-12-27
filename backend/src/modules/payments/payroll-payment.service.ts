@@ -6,7 +6,7 @@ import {
   TransactionType,
   TransactionStatus,
 } from './entities/transaction.entity';
-import { MpesaService } from './mpesa.service';
+import { IntaSendService } from './intasend.service';
 import {
   PayrollRecord,
   PayrollStatus,
@@ -20,10 +20,10 @@ export class PayrollPaymentService {
   constructor(
     @InjectRepository(Transaction)
     private transactionRepository: Repository<Transaction>,
-    private mpesaService: MpesaService,
+    private intaSendService: IntaSendService,
     @InjectRepository(PayrollRecord)
     private payrollRecordRepository: Repository<PayrollRecord>,
-  ) {}
+  ) { }
 
   /**
    * Process payouts for a list of finalized payroll records
@@ -139,15 +139,21 @@ export class PayrollPaymentService {
         const savedTransaction =
           await this.transactionRepository.save(transaction);
 
-        // Send B2C for this chunk
-        const b2cResult = await this.mpesaService.sendB2C(
-          savedTransaction.id,
+        // Send B2C for this chunk via IntaSend
+        const b2cResult = await this.intaSendService.sendMoney(
           record.worker.phoneNumber,
           currentAmount,
           `Salary Payment${Number(record.netSalary) > this.MPESA_LIMIT ? ' (Part)' : ''}`,
         );
 
-        if (b2cResult.error) {
+        if (b2cResult.tracking_id) {
+          savedTransaction.providerRef = b2cResult.tracking_id;
+          await this.transactionRepository.save(savedTransaction);
+        }
+
+        // IntaSend usually returns { status: 'Preview', ... } or tracking details.
+        // Assuming success structure handling:
+        if (b2cResult.status === 'Failed' || b2cResult.error) {
           // If a chunk fails, we log it and potentially stop or continue.
           // For safety, we'll mark this chunk failed and stop processing the rest to avoid partial mess if possible,
           // OR we could try to process other chunks.

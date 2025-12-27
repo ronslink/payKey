@@ -23,7 +23,7 @@ import {
 } from './entities/subscription-payment.entity';
 import { SUBSCRIPTION_PLANS } from './subscription-plans.config';
 import { UsersService } from '../users/users.service';
-import { MpesaService } from '../payments/mpesa.service';
+import { IntaSendService } from '../payments/intasend.service';
 
 @Controller('subscriptions')
 @UseGuards(JwtAuthGuard)
@@ -36,8 +36,8 @@ export class SubscriptionsController {
     @InjectRepository(SubscriptionPayment)
     private subscriptionPaymentRepository: Repository<SubscriptionPayment>,
     private usersService: UsersService,
-    private mpesaService: MpesaService,
-  ) {}
+    private intaSendService: IntaSendService,
+  ) { }
 
   @Get('plans')
   getPlans() {
@@ -445,35 +445,38 @@ export class SubscriptionsController {
     });
     const savedPayment = await this.subscriptionPaymentRepository.save(payment);
 
+    // Initiate STK Push via IntaSend
     try {
-      // Initiate STK Push
-      const stkResult = await this.mpesaService.initiateStkPush(
-        req.user.userId,
+      const stkResponse = await this.intaSendService.initiateStkPush(
         formattedPhone,
-        plan.priceKES,
+        amountToCharge,
         `PayKey-${plan.tier}`,
-        `${plan.name} Subscription`,
       );
+
+      // IntaSend returns invoice details. We store invoice_id or tracking_id
+      const invoiceId = stkResponse.invoice.invoice_id;
+      const trackingId = stkResponse.tracking_id; // Check actual response structure
 
       // Update payment with checkout request ID
       await this.subscriptionPaymentRepository.update(savedPayment.id, {
-        transactionId: stkResult.CheckoutRequestID,
+        transactionId: invoiceId, // Store Invoice ID as Transaction ID
         metadata: {
           ...savedPayment.metadata,
-          checkoutRequestId: stkResult.CheckoutRequestID,
-          merchantRequestId: stkResult.MerchantRequestID,
+          intaSendInvoiceId: invoiceId,
+          intaSendTrackingId: trackingId,
+          provider: 'INTASEND',
         },
       });
 
       return {
         success: true,
-        message: 'STK Push sent to your phone. Please enter your M-Pesa PIN.',
+        message: 'Info: Please check your phone to enter M-Pesa PIN.',
         paymentId: savedPayment.id,
-        checkoutRequestId: stkResult.CheckoutRequestID,
+        checkoutRequestId: invoiceId,
         subscriptionId: savedSubscription.id,
       };
     } catch (error) {
-      this.logger.error('M-Pesa STK Push failed:', error);
+      this.logger.error('IntaSend STK Push failed:', error);
 
       // Mark payment as failed
       await this.subscriptionPaymentRepository.update(savedPayment.id, {
@@ -481,7 +484,7 @@ export class SubscriptionsController {
         notes: error.message,
       });
 
-      throw new Error(`M-Pesa payment initiation failed: ${error.message}`);
+      throw new Error(`Payment initiation failed: ${error.message}`);
     }
   }
 
