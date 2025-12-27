@@ -10,6 +10,10 @@ import '../../../payroll/data/models/pay_period_model.dart';
 import '../../../payroll/data/utils/pay_period_utils.dart';
 import '../../../profile/presentation/providers/profile_provider.dart';
 
+import '../../../onboarding/presentation/widgets/guided_tour.dart';
+import '../../../onboarding/presentation/providers/tour_progress_provider.dart';
+import '../../../onboarding/presentation/models/tour_models.dart';
+
 /// New Home page with the redesigned dashboard UI
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -19,6 +23,11 @@ class HomePage extends ConsumerStatefulWidget {
 }
 
 class _HomePageState extends ConsumerState<HomePage> {
+  final _payrollKey = GlobalKey();
+  final _workersKey = GlobalKey();
+  final _quickActionsKey = GlobalKey();
+  final _reportsKey = GlobalKey();
+
   @override
   Widget build(BuildContext context) {
     final workersAsync = ref.watch(workersProvider);
@@ -26,21 +35,67 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(context),
-              _buildPayrollCard(context, payPeriodsAsync),
-              _buildStatsRow(context, workersAsync, payPeriodsAsync),
-              _buildQuickActionsSection(context),
-              _buildDeadlinesSection(context),
-              const SizedBox(height: 100),
-            ],
+      body: Stack(
+        children: [
+          SafeArea(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeader(context),
+                  _buildPayrollCard(context, payPeriodsAsync),
+                  _buildStatsRow(context, workersAsync, payPeriodsAsync),
+                  _buildQuickActionsSection(context),
+                  _buildDeadlinesSection(context),
+                  const SizedBox(height: 100),
+                ],
+              ),
+            ),
           ),
-        ),
+          _buildTour(context),
+        ],
       ),
+    );
+  }
+
+  Widget _buildTour(BuildContext context) {
+    // Only show if tour provider is loaded and we haven't seen this tour
+    final tourProgress = ref.watch(tourProgressProvider);
+    final hasSeenTour = ref.watch(hasSeenProvider(TourKeys.dashboardTour));
+
+    if (!tourProgress.isLoaded || hasSeenTour) {
+      return const SizedBox.shrink();
+    }
+
+    final steps = [
+      TourStep(
+        targetKey: _payrollKey,
+        title: 'Runs Payroll',
+        description: 'Process payments, generate payslips, and manage pay periods here.',
+        icon: Icons.payments_outlined,
+        position: TourStepPosition.below,
+      ),
+      TourStep(
+        targetKey: _workersKey,
+        title: 'Manage Workers',
+        description: 'Add new employees, view profiles, and track compliance status.',
+        icon: Icons.people_outline,
+        position: TourStepPosition.below,
+      ),
+      TourStep(
+        targetKey: _quickActionsKey,
+        title: 'Quick Actions',
+        description: 'Fast access to common tasks like Leave Management and Reports.',
+        icon: Icons.bolt,
+        position: TourStepPosition.above,
+      ),
+    ];
+
+    return GuidedTour(
+      tourKey: TourKeys.dashboardTour,
+      steps: steps,
+      onComplete: () => ref.read(tourProgressProvider.notifier).completeTour(TourKeys.dashboardTour),
+      onSkip: () => ref.read(tourProgressProvider.notifier).completeTour(TourKeys.dashboardTour),
     );
   }
 
@@ -116,6 +171,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     final daysUntilDue = activePeriod?.payDate?.difference(DateTime.now()).inDays ?? 5;
 
     return GradientCard(
+      key: _payrollKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -225,6 +281,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     final formatter = NumberFormat('#,###');
 
     return SizedBox(
+      key: _workersKey,
       height: 110,
       child: ListView(
         scrollDirection: Axis.horizontal,
@@ -269,6 +326,7 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   Widget _buildQuickActionsSection(BuildContext context) {
     return Column(
+      key: _quickActionsKey,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(

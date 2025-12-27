@@ -514,3 +514,187 @@ class InlineUpgradePrompt extends StatelessWidget {
     );
   }
 }
+
+/// A professional dialog shown when a feature requires a higher subscription tier.
+/// Use [showFeatureUpgradeDialog] for convenience.
+class FeatureUpgradeDialog extends StatelessWidget {
+  final String featureName;
+  final String? requiredTier;
+  final VoidCallback onUpgrade;
+  final VoidCallback? onCancel;
+
+  const FeatureUpgradeDialog({
+    super.key,
+    required this.featureName,
+    this.requiredTier,
+    required this.onUpgrade,
+    this.onCancel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Icon
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: _getTierGradient(requiredTier ?? 'GOLD'),
+                ),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                _getTierIcon(requiredTier ?? 'GOLD'),
+                color: Colors.white,
+                size: 32,
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Title
+            const Text(
+              'Upgrade Required',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF111827),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Description
+            Text(
+              '$featureName is available on ${requiredTier ?? 'GOLD'} and higher plans. '
+              'Upgrade your subscription to unlock this feature.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF6B7280),
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Tier badge
+            if (requiredTier != null)
+              Container(
+                margin: const EdgeInsets.only(top: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: _getTierGradient(requiredTier!)),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(_getTierIcon(requiredTier!), color: Colors.white, size: 14),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Requires $requiredTier',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            const SizedBox(height: 24),
+
+            // Buttons
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: onCancel ?? () => Navigator.of(context).pop(),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF6B7280),
+                      side: const BorderSide(color: Color(0xFFE5E7EB)),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Maybe Later'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: onUpgrade,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6366F1),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text('Upgrade Now'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<Color> _getTierGradient(String tier) {
+    switch (tier.toUpperCase()) {
+      case 'BASIC':
+        return [const Color(0xFF3B82F6), const Color(0xFF2563EB)];
+      case 'GOLD':
+        return [const Color(0xFFF59E0B), const Color(0xFFD97706)];
+      case 'PLATINUM':
+        return [const Color(0xFF8B5CF6), const Color(0xFF7C3AED)];
+      default:
+        return [const Color(0xFF6B7280), const Color(0xFF4B5563)];
+    }
+  }
+
+  IconData _getTierIcon(String tier) {
+    switch (tier.toUpperCase()) {
+      case 'BASIC':
+        return Icons.star_outline_rounded;
+      case 'GOLD':
+        return Icons.star_rounded;
+      case 'PLATINUM':
+        return Icons.workspace_premium_rounded;
+      default:
+        return Icons.lock_outline_rounded;
+    }
+  }
+}
+
+/// Shows the [FeatureUpgradeDialog] and returns when closed.
+/// [onUpgrade] is called when the user taps "Upgrade Now".
+void showFeatureUpgradeDialog(
+  BuildContext context, {
+  required String featureName,
+  String? requiredTier,
+  VoidCallback? onUpgrade,
+}) {
+  showDialog(
+    context: context,
+    builder: (ctx) => FeatureUpgradeDialog(
+      featureName: featureName,
+      requiredTier: requiredTier ?? 'GOLD',
+      onUpgrade: onUpgrade ?? () {
+        Navigator.of(ctx).pop();
+        // Default: navigate to subscription settings
+        // Assumes GoRouter is used and settingsSubscription route exists
+      },
+    ),
+  );
+}

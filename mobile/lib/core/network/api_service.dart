@@ -237,8 +237,15 @@ class ApiService {
   }
 
   /// Wraps an error in an Exception with a readable message.
+  /// Wraps an error in an Exception with a readable message.
   Exception handleError(dynamic error) {
-    return Exception(getErrorMessage(error));
+    if (error is DioException) {
+      return ApiException(
+        getErrorMessage(error),
+        statusCode: error.response?.statusCode,
+      );
+    }
+    return ApiException(getErrorMessage(error));
   }
 
   // ---------------------------------------------------------------------------
@@ -1241,13 +1248,13 @@ class WorkersConvertEndpoints extends BaseEndpoints {
       ),
     });
     
-    return _api.post('/workers/import', data: formData);
+    return _api.post('/excel-import/employees', data: formData);
   }
 
   Future<List<int>> downloadTemplate() async {
     try {
       final response = await _api.dio.get<List<int>>(
-        '/workers/template',
+        '/excel-import/employees/template',
         options: Options(
           responseType: ResponseType.bytes,
           headers: {'Accept': '*/*'},
@@ -1257,5 +1264,16 @@ class WorkersConvertEndpoints extends BaseEndpoints {
     } catch (e) {
       throw _api.handleError(e);
     }
+
   }
+}
+
+class ApiException implements Exception {
+  final String message;
+  final int? statusCode;
+
+  ApiException(this.message, {this.statusCode});
+
+  @override
+  String toString() => message;
 }

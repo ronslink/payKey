@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/network/api_service.dart';
+import '../../../../core/widgets/feature_gate.dart';
+import '../../../../main.dart'; // Import AppRoutes
 
 import '../../../../core/utils/download_utils.dart';
 
@@ -31,9 +33,9 @@ class _WorkersImportPageState extends ConsumerState<WorkersImportPage> {
         mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       );
     } catch (e) {
-      setState(() => _error = 'Download failed: $e');
+      if (mounted) _handleError(e);
     } finally {
-      setState(() => _isDownloading = false);
+      if (mounted) setState(() => _isDownloading = false);
     }
   }
 
@@ -73,10 +75,30 @@ class _WorkersImportPageState extends ConsumerState<WorkersImportPage> {
         setState(() => _error = response.data['message'] ?? 'Upload failed');
       }
     } catch (e) {
-      setState(() => _error = 'Upload failed: $e');
+      if (mounted) _handleError(e);
     } finally {
-      setState(() => _isUploading = false);
+      if (mounted) setState(() => _isUploading = false);
     }
+  }
+
+  void _handleError(dynamic error) {
+    if (error is ApiException && error.statusCode == 403) {
+      _showUpgradeDialog();
+    } else {
+      setState(() => _error = error.toString());
+    }
+  }
+
+  void _showUpgradeDialog() {
+    showFeatureUpgradeDialog(
+      context,
+      featureName: 'Bulk Worker Import',
+      requiredTier: 'GOLD',
+      onUpgrade: () {
+        Navigator.of(context).pop();
+        context.push(AppRoutes.settingsSubscription);
+      },
+    );
   }
 
   @override
@@ -208,10 +230,17 @@ class _WorkersImportPageState extends ConsumerState<WorkersImportPage> {
                borderRadius: BorderRadius.circular(16),
                border: Border.all(color: const Color(0xFFE2E8F0), style: BorderStyle.solid),
             ),
-             child: const Column(
+             child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                   Icon(Icons.cloud_upload_outlined, size: 48, color: Color(0xFF6366F1)),
+                   ShaderMask(
+                     shaderCallback: (bounds) => const LinearGradient(
+                       colors: [Color(0xFF6366F1), Color(0xFFEC4899), Color(0xFF8B5CF6)],
+                       begin: Alignment.topLeft,
+                       end: Alignment.bottomRight,
+                     ).createShader(bounds),
+                     child: const Icon(Icons.cloud_upload_outlined, size: 64, color: Colors.white),
+                   ),
                    SizedBox(height: 16),
                    Text(
                       'Tap to upload Excel file',

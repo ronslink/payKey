@@ -113,11 +113,18 @@ class _WorkersPageState extends ConsumerState<WorkersPage> {
       elevation: 0,
       title: const Text('My Workforce'),
       actions: [
-        IconButton(
-          icon: const Icon(Icons.upload_file_outlined),
-          onPressed: () => context.push(WorkersConstants.importWorkersRoute),
-          tooltip: 'Import Workers',
-        ),
+          IconButton(
+            icon: ShaderMask(
+              shaderCallback: (bounds) => const LinearGradient(
+                colors: [Color(0xFF6366F1), Color(0xFFEC4899)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ).createShader(bounds),
+              child: const Icon(Icons.upload_file_outlined),
+            ),
+            onPressed: () => context.push(WorkersConstants.importWorkersRoute),
+            tooltip: 'Import Workers',
+          ),
         IconButton(
           icon: const Icon(Icons.help_outline),
           tooltip: 'Help',

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 // Use the canonical Freezed-based PayPeriod model
 import '../../../payroll/data/models/pay_period_model.dart';
@@ -7,6 +8,8 @@ import '../../../pay_periods/presentation/providers/pay_periods_provider.dart';
 import '../../data/models/report_models.dart';
 import '../providers/reports_provider.dart';
 import '../providers/export_provider.dart';
+import '../../../../core/widgets/feature_gate.dart';
+import '../../../../main.dart';
 
 
 class ReportsPage extends ConsumerWidget {
@@ -301,6 +304,29 @@ class ReportsPage extends ConsumerWidget {
 class _P9ReportView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Listen for 403 errors from export provider
+    ref.listen<ExportState>(taxExportProvider, (previous, next) {
+      if (next.statusCode == 403) {
+        showFeatureUpgradeDialog(
+          context,
+          featureName: 'P9 Bulk Export',
+          requiredTier: 'GOLD',
+          onUpgrade: () {
+            Navigator.of(context).pop();
+            context.push(AppRoutes.settingsSubscription);
+          },
+        );
+      } else if (next.error != null && next.statusCode != 403) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(next.error!), backgroundColor: Colors.red),
+        );
+      } else if (next.successMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(next.successMessage!), backgroundColor: Colors.green),
+        );
+      }
+    });
+
     final selectedYear = ref.watch(selectedP9YearProvider);
     final p9ReportsAsync = ref.watch(p9ReportsProvider(selectedYear));
     final selectedWorker = ref.watch(selectedP9WorkerProvider);

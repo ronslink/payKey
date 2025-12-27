@@ -85,6 +85,27 @@ async function importSamOlagoData() {
                 WHERE id = $2
             `, [kenyaId, samUser.id]);
             console.log('   ✅ User profile and onboarding completed');
+            console.log('   ✅ User profile and onboarding completed');
+        }
+
+        // =====================================================================
+        // Step 1b: Demo User (testuser@paykey.com)
+        // =====================================================================
+        console.log('\n👤 Step 1b: Ensure Demo User Exists...');
+        let demoUser: User | null = await usersService.findOneByEmail('testuser@paykey.com');
+
+        if (!demoUser) {
+            console.log('   Creating demo user...');
+            await authService.register({
+                email: 'testuser@paykey.com',
+                password: 'testuser123',
+                firstName: 'Test',
+                lastName: 'User',
+            });
+            demoUser = await usersService.findOneByEmail('testuser@paykey.com');
+            console.log('   ✅ Demo User created');
+        } else {
+            console.log('   ✅ Demo User found');
         }
 
         // =====================================================================

@@ -5,6 +5,9 @@ import '../providers/pay_period_provider.dart';
 import '../../data/models/pay_period_model.dart';
 import '../../data/utils/pay_period_utils.dart';
 import '../widgets/payroll_widgets.dart';
+import '../../../../core/network/api_service.dart';
+import '../../../../core/widgets/feature_gate.dart';
+import '../../../../main.dart';
 
 /// Modern payroll management page with premium design
 class PayrollPage extends ConsumerStatefulWidget {
@@ -654,14 +657,26 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
+        if (e is ApiException && e.statusCode == 403) {
+          showFeatureUpgradeDialog(
+            context,
+            featureName: 'Payroll Initialization',
+            requiredTier: 'GOLD',
+            onUpgrade: () {
+              Navigator.of(context).pop();
+              context.push(AppRoutes.settingsSubscription);
+            },
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: $e'),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          );
+        }
       }
     } finally {
       if (mounted) setState(() => _isInitializing = false);

@@ -6,22 +6,26 @@ import '../../../../core/utils/download_utils.dart';
 class ExportState {
   final bool isLoading;
   final String? error;
+  final int? statusCode;
   final String? successMessage;
 
   ExportState({
     this.isLoading = false,
     this.error,
+    this.statusCode,
     this.successMessage,
   });
 
   ExportState copyWith({
     bool? isLoading,
     String? error,
+    int? statusCode,
     String? successMessage,
   }) {
     return ExportState(
       isLoading: isLoading ?? this.isLoading,
       error: error,
+      statusCode: statusCode,
       successMessage: successMessage,
     );
   }
@@ -71,6 +75,7 @@ class TaxExportNotifier extends Notifier<ExportState> {
       state = ExportState(
         isLoading: false,
         error: _api.getErrorMessage(e),
+        statusCode: e is ApiException ? e.statusCode : null,
       );
     }
   }
@@ -91,6 +96,7 @@ class TaxExportNotifier extends Notifier<ExportState> {
       state = ExportState(
         isLoading: false,
         error: _api.getErrorMessage(e),
+        statusCode: e is ApiException ? e.statusCode : null,
       );
     }
   }

@@ -334,6 +334,11 @@ final _mainTabRoutes = <RouteBase>[
 
 final _workerRoutes = <RouteBase>[
   GoRoute(
+    path: '/workers/import',
+    name: 'workersImport',
+    builder: (_, _) => const WorkersImportPage(),
+  ),
+  GoRoute(
     path: AppRoutes.workersAdd,
     name: 'workersAdd',
     builder: (_, _) => const WorkerFormPage(),
@@ -367,11 +372,7 @@ final _workerRoutes = <RouteBase>[
       return TerminateWorkerPage(workerId: workerId);
     },
   ),
-  GoRoute(
-    path: '/workers/import',
-    name: 'workersImport',
-    builder: (_, _) => const WorkersImportPage(),
-  ),
+
 ];
 
 // -----------------------------------------------------------------------------
