@@ -18,7 +18,7 @@ import { ExcelImportService } from './excel-import.service';
 @Controller('excel-import')
 @UseGuards(JwtAuthGuard, TierGuard)
 export class ExcelImportController {
-  constructor(private readonly excelImportService: ExcelImportService) {}
+  constructor(private readonly excelImportService: ExcelImportService) { }
 
   /**
    * Upload and import employees from Excel file
@@ -32,6 +32,17 @@ export class ExcelImportController {
     file: { buffer: Buffer; mimetype: string; originalname: string },
     @Request() req: any,
   ) {
+    // Debug logging
+    console.log('=== Excel Import Debug ===');
+    console.log('File received:', file ? 'yes' : 'no');
+    if (file) {
+      console.log('  - originalname:', file.originalname);
+      console.log('  - mimetype:', file.mimetype);
+      console.log('  - buffer size:', file.buffer?.length || 0);
+    }
+    console.log('User:', req.user?.userId);
+    console.log('========================');
+
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }

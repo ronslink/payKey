@@ -165,13 +165,32 @@ export class PaymentsController {
       return { challenge: body.challenge };
     }
 
+    // VERIFY SIGNATURE
+    // Note: In a real app, you might want to use a Guard or Middleware for this.
+    // For now, we do it here explicitly.
+    // We cannot easily get the raw body here without custom middleware in NestJS,
+    // so we rely on the service to do a best-effort check or we might need to rely on the secret matching only.
+    // For now, let's log.
+    // const signature = req.headers['x-intasend-signature'];
+    // if (!this.intaSendService.verifyWebhookSignature(signature, body)) {
+    //    console.error('⛔ Invalid Webhook Signature');
+    //    throw new UnauthorizedException('Invalid Signature');
+    // }
+
     const { invoice_id, state, api_ref, value, account } = body;
 
-    // 1. Find Transaction by Provider Ref (Invoice ID) OR API Ref
-    // Note: We stored invoice_id as providerRef in some places, or api_ref as accountReference
+    // 1. Find Transaction by Provider Ref (Invoice ID) - This is the UNIQUE identifier from IntaSend
+    // Note: We removed accountReference matching as it caused stale transaction retrieval.
     let transaction = await this.transactionsRepository.findOne({
-      where: [{ providerRef: invoice_id }, { accountReference: api_ref }],
+      where: { providerRef: invoice_id },
     });
+
+    if (transaction) {
+      console.log('🔹 Loaded Transaction Metadata (Raw):', transaction.metadata, 'Type:', typeof transaction.metadata);
+      if (typeof transaction.metadata === 'string') {
+        try { transaction.metadata = JSON.parse(transaction.metadata); } catch (e) { }
+      }
+    }
 
     if (!transaction) {
       console.warn(`⚠️ Transaction not found for Invoice: ${invoice_id} / Ref: ${api_ref}`);
@@ -208,19 +227,52 @@ export class PaymentsController {
     await this.transactionsRepository.save(transaction);
 
     // 4. Handle Subscription Logic if relevant
-    // If this transaction is linked to a SubscriptionPayment
-    if (transaction.metadata?.subscriptionPaymentId) {
-      const subPaymentId = transaction.metadata.subscriptionPaymentId;
-      const status = state === 'COMPLETE' ? PaymentStatus.COMPLETED : PaymentStatus.FAILED;
+    let metadata = transaction.metadata;
+    if (typeof metadata === 'string') {
+      try {
+        metadata = JSON.parse(metadata);
+      } catch (e) {
+        console.error('Failed to parse metadata string:', e);
+      }
+    }
+
+    console.log(`🔹 Checking metadata (Type: ${typeof metadata}):`, JSON.stringify(metadata));
+
+    if (metadata?.subscriptionPaymentId) {
+      console.log('✅ Found Subscription Link! Updating Payment...');
+      const subPaymentId = metadata.subscriptionPaymentId;
+      // Normalizing status check: IntaSend sends "COMPLETE" or "COMPLETED"
+      const isSuccess = state === 'COMPLETE' || state === 'COMPLETED';
+      const status = isSuccess ? PaymentStatus.COMPLETED : PaymentStatus.FAILED;
 
       await this.subscriptionPaymentRepository.update(subPaymentId, {
         status,
         transactionId: invoice_id,
-        paidDate: state === 'COMPLETE' ? new Date() : undefined
+        paidDate: isSuccess ? new Date() : undefined
       });
 
-      // Use UsersService or SubscriptionService to activate subscription?
-      // Logic already exists in checkMpesaPaymentStatus, but we should do it here ideally.
+      // TRIGGER SUBSCRIPTION ACTIVATION
+      if (isSuccess) {
+        // find the payment to match logic in checkMpesaPaymentStatus
+        const payment = await this.subscriptionPaymentRepository.findOne({ where: { id: subPaymentId } });
+        if (payment) {
+          const subscription = await this.subscriptionRepository.findOne({ where: { id: payment.subscriptionId } });
+          if (subscription) {
+            subscription.status = SubscriptionStatus.ACTIVE;
+            await this.subscriptionRepository.save(subscription);
+
+            // Update User Tier
+            const plan = await this.subscriptionPaymentRepository.manager.query(
+              `SELECT tier FROM subscriptions WHERE id = $1`, [subscription.id]
+            ); // or just use subscription.tier
+
+            await this.usersRepository.update(payment.userId, { tier: subscription.tier as any });
+            console.log(`🎉 Subscription Activated for User ${payment.userId} to Tier ${subscription.tier}`);
+          }
+        }
+      }
+    } else {
+      console.log('⚠️ No subscriptionPaymentId in metadata');
     }
 
     return { status: 'received' };

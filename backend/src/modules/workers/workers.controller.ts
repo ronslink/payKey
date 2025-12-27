@@ -33,7 +33,7 @@ export class WorkersController {
     private readonly workersService: WorkersService,
     private readonly terminationService: TerminationService,
     private readonly leaveManagementService: LeaveManagementService,
-  ) {}
+  ) { }
 
   // ======================================================================================
   // STATIC ROUTES (MUST BE BEFORE DYNAMIC ROUTES)
@@ -157,12 +157,27 @@ export class WorkersController {
   }
 
   @Post(':id/terminate')
-  terminateWorker(
+  async terminateWorker(
     @Request() req: AuthenticatedRequest,
     @Param('id') id: string,
     @Body() dto: CreateTerminationDto,
   ) {
-    return this.terminationService.terminateWorker(id, req.user.userId, dto);
+    console.log('=== Termination Request Debug ===');
+    console.log('Worker ID:', id);
+    console.log('User ID:', req.user?.userId);
+    console.log('DTO:', JSON.stringify(dto, null, 2));
+    console.log('================================');
+
+    try {
+      const result = await this.terminationService.terminateWorker(id, req.user.userId, dto);
+      return result;
+    } catch (error: any) {
+      console.error('=== Termination Error ===');
+      console.error('Message:', error.message);
+      console.error('Stack:', error.stack);
+      console.error('==========================');
+      throw error;
+    }
   }
 
   @Post(':id/leave-requests')

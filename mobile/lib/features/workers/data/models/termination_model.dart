@@ -1,22 +1,78 @@
+/// Termination reasons - must match backend TerminationReason enum exactly
 enum TerminationReason {
   resignation,
-  termination,
+  dismissal,  // Maps to DISMISSAL in backend (was 'termination')
+  contractEnd, // Maps to CONTRACT_END in backend
+  illness,
+  death,
   retirement,
-  endOfContract,
+  redundancy,
   other;
 
+  /// Returns the display name for UI presentation
   String get displayName {
     switch (this) {
       case TerminationReason.resignation:
         return 'Resignation';
-      case TerminationReason.termination:
-        return 'Termination';
+      case TerminationReason.dismissal:
+        return 'Dismissal';
+      case TerminationReason.contractEnd:
+        return 'End of Contract';
+      case TerminationReason.illness:
+        return 'Illness';
+      case TerminationReason.death:
+        return 'Death';
       case TerminationReason.retirement:
         return 'Retirement';
-      case TerminationReason.endOfContract:
-        return 'End of Contract';
+      case TerminationReason.redundancy:
+        return 'Redundancy';
       case TerminationReason.other:
         return 'Other';
+    }
+  }
+
+  /// Returns the backend enum value (UPPERCASE, snake_case for multi-word)
+  String get backendValue {
+    switch (this) {
+      case TerminationReason.resignation:
+        return 'RESIGNATION';
+      case TerminationReason.dismissal:
+        return 'DISMISSAL';
+      case TerminationReason.contractEnd:
+        return 'CONTRACT_END';
+      case TerminationReason.illness:
+        return 'ILLNESS';
+      case TerminationReason.death:
+        return 'DEATH';
+      case TerminationReason.retirement:
+        return 'RETIREMENT';
+      case TerminationReason.redundancy:
+        return 'REDUNDANCY';
+      case TerminationReason.other:
+        return 'OTHER';
+    }
+  }
+
+  /// Parse from backend value (handles UPPERCASE)
+  static TerminationReason fromBackend(String value) {
+    switch (value.toUpperCase()) {
+      case 'RESIGNATION':
+        return TerminationReason.resignation;
+      case 'DISMISSAL':
+        return TerminationReason.dismissal;
+      case 'CONTRACT_END':
+        return TerminationReason.contractEnd;
+      case 'ILLNESS':
+        return TerminationReason.illness;
+      case 'DEATH':
+        return TerminationReason.death;
+      case 'RETIREMENT':
+        return TerminationReason.retirement;
+      case 'REDUNDANCY':
+        return TerminationReason.redundancy;
+      case 'OTHER':
+      default:
+        return TerminationReason.other;
     }
   }
 }
@@ -54,10 +110,7 @@ class Termination {
       workerId: json['workerId'],
       workerName: json['workerName'] ?? 'Unknown',
       terminationDate: json['terminationDate'],
-      reason: TerminationReason.values.firstWhere(
-        (e) => e.name == json['reason'],
-        orElse: () => TerminationReason.other,
-      ),
+      reason: TerminationReason.fromBackend(json['reason'] ?? 'OTHER'),
       noticePeriodDays: json['noticePeriodDays'] ?? 0,
       proratedSalary: (json['proratedSalary'] ?? 0).toDouble(),
       unusedLeavePayout: (json['unusedLeavePayout'] ?? 0).toDouble(),
@@ -117,7 +170,7 @@ class TerminationRequest {
   Map<String, dynamic> toJson() {
     return {
       'terminationDate': terminationDate,
-      'reason': reason.name,
+      'reason': reason.backendValue,
       'noticePeriodDays': noticePeriodDays,
       'severancePay': severancePay,
       'outstandingPayments': outstandingPayments,

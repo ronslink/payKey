@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -67,12 +68,34 @@ class _WorkersImportPageState extends ConsumerState<WorkersImportPage> {
     setState(() => _isUploading = true);
 
     try {
+      // Debug: check file details
+      debugPrint('Uploading file: ${file.name}');
+      debugPrint('File bytes length: ${file.bytes?.length ?? "NULL"}');
+      
+      if (file.bytes == null || file.bytes!.isEmpty) {
+        setState(() => _error = 'File data is empty. Please try selecting the file again.');
+        return;
+      }
+      
       final response = await ApiService().workersConvert.importWorkers(file);
       
       if (response.statusCode == 201 || response.statusCode == 200) {
         setState(() => _result = response.data);
       } else {
         setState(() => _error = response.data['message'] ?? 'Upload failed');
+      }
+    } on DioException catch (e) {
+      if (mounted) {
+        // Extract the actual error message from the server response
+        final serverMessage = e.response?.data?['message'] ?? e.message ?? 'Unknown error';
+        final statusCode = e.response?.statusCode;
+        debugPrint('DioException: $statusCode - $serverMessage');
+        
+        if (statusCode == 403) {
+          _showUpgradeDialog();
+        } else {
+          setState(() => _error = 'Error ($statusCode): $serverMessage');
+        }
       }
     } catch (e) {
       if (mounted) _handleError(e);

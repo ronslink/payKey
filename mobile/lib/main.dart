@@ -431,7 +431,8 @@ final _subscriptionRoutes = <RouteBase>[
     name: 'subscriptionPayment',
     builder: (_, state) {
       final plan = state.extra as SubscriptionPlan;
-      return PaymentPage(plan: plan);
+      final returnPath = state.uri.queryParameters['returnPath'];
+      return PaymentPage(plan: plan, returnPath: returnPath);
     },
   ),
 ];

@@ -692,7 +692,12 @@ class _SubscriptionManagementPageState
   }
 
   void _selectPlan(SubscriptionPlan plan) {
-    context.push('/subscriptions/payment', extra: plan);
+    // Relay returnPath if present in current URL
+    final returnPath = GoRouterState.of(context).uri.queryParameters['returnPath'];
+    final path = returnPath != null && returnPath.isNotEmpty
+        ? '/subscriptions/payment?returnPath=${Uri.encodeComponent(returnPath)}'
+        : '/subscriptions/payment';
+    context.push(path, extra: plan);
   }
 
   String _formatShortDate(DateTime date) {

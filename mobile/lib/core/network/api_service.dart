@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:http_parser/http_parser.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:file_picker/file_picker.dart';
@@ -1241,10 +1242,17 @@ class WorkersConvertEndpoints extends BaseEndpoints {
   const WorkersConvertEndpoints(super.api);
 
   Future<Response> importWorkers(PlatformFile file) async {
+    // Determine content type based on file extension
+    String contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    if (file.name.endsWith('.xls')) {
+      contentType = 'application/vnd.ms-excel';
+    }
+    
     final formData = FormData.fromMap({
       'file': MultipartFile.fromBytes(
         file.bytes!, 
         filename: file.name,
+        contentType: MediaType.parse(contentType),
       ),
     });
     

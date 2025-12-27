@@ -108,6 +108,9 @@ class FeatureGate extends ConsumerWidget {
   }
 
   Widget _buildContent(BuildContext context, FeatureAccess access) {
+    // Get current route to pass as returnPath
+    final currentRoute = GoRouterState.of(context).uri.toString();
+
     switch (access.accessLevel) {
       case FeatureAccessLevelLocal.fullAccess:
         return child;
@@ -119,7 +122,7 @@ class FeatureGate extends ConsumerWidget {
             PreviewBanner(
               featureName: access.featureName ?? _getFeatureDisplayName(featureKey),
               requiredTier: access.requiredTier ?? 'BASIC',
-              onUpgrade: onUpgrade ?? () => context.go('/subscriptions'),
+              onUpgrade: onUpgrade ?? () => context.go('/subscriptions?returnPath=${Uri.encodeComponent(currentRoute)}'),
             ),
             Expanded(child: child),
           ],
@@ -131,7 +134,7 @@ class FeatureGate extends ConsumerWidget {
               featureKey: featureKey,
               requiredTier: access.requiredTier,
               reason: access.reason,
-              onUpgrade: onUpgrade ?? () => context.go('/subscriptions'),
+              onUpgrade: onUpgrade ?? () => context.go('/subscriptions?returnPath=${Uri.encodeComponent(currentRoute)}'),
             );
     }
   }

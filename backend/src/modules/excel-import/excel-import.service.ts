@@ -21,7 +21,7 @@ interface ParsedRow {
 
 @Injectable()
 export class ExcelImportService {
-  constructor(private readonly workersService: WorkersService) {}
+  constructor(private readonly workersService: WorkersService) { }
 
   /**
    * Parse and validate Excel file for employee import
@@ -42,7 +42,25 @@ export class ExcelImportService {
     try {
       // Parse Excel file
       const workbook = XLSX.read(buffer, { type: 'buffer' });
-      const sheetName = workbook.SheetNames[0];
+      console.log('=== Excel Parsing Debug ===');
+      console.log('Sheet names:', workbook.SheetNames);
+
+      // Look for 'Employees' sheet first, then fall back to first non-Instructions sheet
+      let sheetName = workbook.SheetNames.find(
+        (name) => name.toLowerCase() === 'employees',
+      );
+      if (!sheetName) {
+        // Fall back to first sheet that isn't 'Instructions'
+        sheetName = workbook.SheetNames.find(
+          (name) => name.toLowerCase() !== 'instructions',
+        );
+      }
+      if (!sheetName) {
+        // Last resort: use first sheet
+        sheetName = workbook.SheetNames[0];
+      }
+
+      console.log('Using sheet:', sheetName);
 
       if (!sheetName) {
         throw new BadRequestException('Excel file has no sheets');
@@ -54,6 +72,12 @@ export class ExcelImportService {
         raw: false,
       });
 
+      console.log('Total rows found:', rows.length);
+      if (rows.length > 0) {
+        console.log('First row keys:', Object.keys(rows[0]));
+        console.log('First row data:', JSON.stringify(rows[0]));
+      }
+
       if (rows.length === 0) {
         throw new BadRequestException('Excel file has no data rows');
       }
@@ -62,7 +86,10 @@ export class ExcelImportService {
 
       // Validate header columns (first row keys)
       const firstRowKeys = Object.keys(rows[0] || {});
+      console.log('Validating headers:', firstRowKeys);
       this.validateHeaders(firstRowKeys);
+      console.log('Headers validated successfully');
+      console.log('===========================');
 
       // Normalize row keys map
       const keyMap: Record<string, keyof ParsedRow> = {};
@@ -183,7 +210,7 @@ export class ExcelImportService {
     if (missingHeaders.length > 0) {
       throw new BadRequestException(
         `Missing required columns: ${missingHeaders.join(', ')}. ` +
-          `Required columns are marked with * in the template.`,
+        `Required columns are marked with * in the template.`,
       );
     }
   }

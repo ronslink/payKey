@@ -24,6 +24,7 @@ import {
 import { SUBSCRIPTION_PLANS } from './subscription-plans.config';
 import { UsersService } from '../users/users.service';
 import { IntaSendService } from '../payments/intasend.service';
+import { Transaction, TransactionStatus, TransactionType } from '../payments/entities/transaction.entity';
 
 @Controller('subscriptions')
 @UseGuards(JwtAuthGuard)
@@ -37,6 +38,8 @@ export class SubscriptionsController {
     private subscriptionPaymentRepository: Repository<SubscriptionPayment>,
     private usersService: UsersService,
     private intaSendService: IntaSendService,
+    @InjectRepository(Transaction)
+    private transactionRepository: Repository<Transaction>,
   ) { }
 
   @Get('plans')
@@ -467,6 +470,27 @@ export class SubscriptionsController {
           provider: 'INTASEND',
         },
       });
+
+      // CREATE TRANSACTION RECORD FOR WEBHOOK HANDLING
+      // The PaymentsController webhook handler looks for a Transaction entity with the providerRef.
+      const transaction = this.transactionRepository.create({
+        userId: req.user.userId,
+        amount: amountToCharge,
+        currency: 'KES',
+        type: TransactionType.SUBSCRIPTION,
+        status: TransactionStatus.PENDING,
+        provider: 'INTASEND',
+        providerRef: invoiceId, // THIS matches the invoice_id in the webhook
+        accountReference: `PayKey-${plan.tier}`,
+        recipientPhone: formattedPhone,
+        metadata: {
+          subscriptionPaymentId: savedPayment.id,
+          planId: plan.tier,
+          phoneNumber: formattedPhone,
+        },
+      });
+      console.log('🔹 Creating Transaction with Metadata:', transaction.metadata);
+      await this.transactionRepository.save(transaction);
 
       return {
         success: true,

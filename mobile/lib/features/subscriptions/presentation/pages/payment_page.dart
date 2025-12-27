@@ -12,8 +12,9 @@ enum PaymentMethod { stripe, mpesa }
 
 class PaymentPage extends ConsumerStatefulWidget {
   final SubscriptionPlan plan;
+  final String? returnPath;
 
-  const PaymentPage({super.key, required this.plan});
+  const PaymentPage({super.key, required this.plan, this.returnPath});
 
   @override
   ConsumerState<PaymentPage> createState() => _PaymentPageState();
@@ -197,7 +198,12 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              context.go('/subscriptions');
+              // Navigate to returnPath if provided, otherwise go to subscriptions
+              if (widget.returnPath != null && widget.returnPath!.isNotEmpty) {
+                context.go(widget.returnPath!);
+              } else {
+                context.go('/subscriptions');
+              }
             },
             child: const Text('Continue'),
           ),

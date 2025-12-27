@@ -3,8 +3,11 @@ import {
   CanActivate,
   ExecutionContext,
   ForbiddenException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { UsersService } from '../../modules/users/users.service';
 
 export const TIERS_KEY = 'tiers';
 export const RequireTiers = (...tiers: string[]) => {
@@ -16,9 +19,13 @@ export const RequireTiers = (...tiers: string[]) => {
 
 @Injectable()
 export class TierGuard implements CanActivate {
-  constructor(private reflector: Reflector) {}
+  constructor(
+    private reflector: Reflector,
+    @Inject(forwardRef(() => UsersService))
+    private usersService: UsersService,
+  ) { }
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const requiredTiers = this.reflector.get<string[]>(
       TIERS_KEY,
       context.getHandler(),
@@ -31,17 +38,24 @@ export class TierGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const user = request.user;
 
-    if (!user?.tier) {
-      throw new ForbiddenException('Subscription tier required');
+    if (!user?.userId) {
+      throw new ForbiddenException('Authentication required');
     }
 
-    const hasAccess = requiredTiers.includes(user.tier);
+    // FETCH FRESH TIER FROM DATABASE (not from cached JWT)
+    const freshUser = await this.usersService.findOneById(user.userId);
+    const currentTier = freshUser?.tier || 'FREE';
+
+    const hasAccess = requiredTiers.includes(currentTier);
 
     if (!hasAccess) {
       throw new ForbiddenException(
         `This feature requires ${requiredTiers.join(' or ')} subscription`,
       );
     }
+
+    // Update request.user.tier for downstream use
+    request.user.tier = currentTier;
 
     return true;
   }

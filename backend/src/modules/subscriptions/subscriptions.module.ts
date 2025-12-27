@@ -8,12 +8,13 @@ import { FeatureAccessService } from './feature-access.service';
 import { MockDataService } from './mock-data.service';
 import { UsersModule } from '../users/users.module';
 import { PaymentsModule } from '../payments/payments.module';
+import { Transaction } from '../payments/entities/transaction.entity';
 
 import { SubscriptionCallbackController } from './subscription-callback.controller';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Subscription, SubscriptionPayment]),
+    TypeOrmModule.forFeature([Subscription, SubscriptionPayment, Transaction]),
     forwardRef(() => UsersModule),
     forwardRef(() => PaymentsModule),
   ],
@@ -25,4 +26,4 @@ import { SubscriptionCallbackController } from './subscription-callback.controll
   providers: [FeatureAccessService, MockDataService],
   exports: [FeatureAccessService, MockDataService],
 })
-export class SubscriptionsModule {}
+export class SubscriptionsModule { }
