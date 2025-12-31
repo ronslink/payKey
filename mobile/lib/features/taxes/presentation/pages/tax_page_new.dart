@@ -18,7 +18,6 @@ class TaxPageNew extends ConsumerWidget {
     final now = DateTime.now();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,

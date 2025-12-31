@@ -9,6 +9,7 @@ import '../../../payroll/presentation/providers/pay_period_provider.dart';
 import '../../../payroll/data/models/pay_period_model.dart';
 import '../../../payroll/data/utils/pay_period_utils.dart';
 import '../../../profile/presentation/providers/profile_provider.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 
 import '../../../onboarding/presentation/widgets/guided_tour.dart';
 import '../../../onboarding/presentation/providers/tour_progress_provider.dart';
@@ -34,7 +35,6 @@ class _HomePageState extends ConsumerState<HomePage> {
     final payPeriodsAsync = ref.watch(payPeriodsProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
       body: Stack(
         children: [
           SafeArea(
@@ -125,7 +125,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                       firstName.isEmpty ? 'Jambo! 👋' : 'Jambo, $firstName! 👋',
                       style: theme.textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
-                        color: const Color(0xFF1E293B),
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : const Color(0xFF1E293B),
                       ),
                     );
                   },
@@ -133,27 +135,81 @@ class _HomePageState extends ConsumerState<HomePage> {
               ],
             ),
           ),
-          Stack(
-            children: [
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: Colors.grey.shade200,
-                child: const Icon(Icons.person, color: Colors.grey),
-              ),
-              Positioned(
-                right: 0,
-                top: 0,
-                child: Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
+          GestureDetector(
+            onTap: () {
+              showModalBottomSheet(
+                context: context,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                builder: (sheetContext) => SafeArea(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ListTile(
+                        leading: const Icon(Icons.settings),
+                        title: const Text('Settings'),
+                        onTap: () {
+                          Navigator.pop(sheetContext);
+                          context.go('/settings');
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.logout, color: Colors.red),
+                        title: const Text('Logout', style: TextStyle(color: Colors.red)),
+                        onTap: () async {
+                          Navigator.pop(sheetContext);
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (dialogContext) => AlertDialog(
+                              title: const Text('Logout'),
+                              content: const Text('Are you sure you want to logout?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(dialogContext, false),
+                                  child: const Text('Cancel'),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.pop(dialogContext, true),
+                                  child: const Text('Logout', style: TextStyle(color: Colors.red)),
+                                ),
+                              ],
+                            ),
+                          );
+                          
+                          if (confirm == true) {
+                             ref.read(authStateProvider.notifier).logout();
+                             if (context.mounted) context.go('/login');
+                          }
+                        },
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ],
+              );
+            },
+            child: Stack(
+              children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: Colors.grey.shade200,
+                  child: const Icon(Icons.person, color: Colors.grey),
+                ),
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

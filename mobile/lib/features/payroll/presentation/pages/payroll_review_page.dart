@@ -101,7 +101,6 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text('Review Payroll'),
         centerTitle: true,

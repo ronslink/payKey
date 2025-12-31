@@ -30,7 +30,6 @@ class PayslipPage extends ConsumerWidget {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
       body: CustomScrollView(
         slivers: [
           // Gradient App Bar with worker info

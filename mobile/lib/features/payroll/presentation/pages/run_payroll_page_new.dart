@@ -72,7 +72,6 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
     final workersAsync = ref.watch(workersProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
       appBar: _buildAppBar(context),
       body: Column(
         children: [

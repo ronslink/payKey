@@ -169,7 +169,7 @@ class QuickAccessTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: SettingsTheme.cardBackground,
+          color: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(SettingsTheme.cardBorderRadius),
           border: Border.all(color: Colors.grey.shade200),
           boxShadow: [

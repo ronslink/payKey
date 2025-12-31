@@ -31,9 +31,11 @@ class SettingsRoutes {
 class SettingsTheme {
   SettingsTheme._();
 
-  // Colors
-  static const Color backgroundColor = Color(0xFFF8FAFC);
-  static const Color cardBackground = Colors.white;
+  // Colors - use static getters with context for theme awareness
+  static Color backgroundColor(BuildContext context) =>
+      Theme.of(context).scaffoldBackgroundColor;
+  static Color cardBackground(BuildContext context) =>
+      Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface;
   static const Color dangerColor = Colors.red;
 
   // Dimensions
@@ -58,9 +60,9 @@ class SettingsTheme {
   static const double quickAccessSpacing = 12.0;
 
   // Bottom sheet decoration
-  static ShapeDecoration get bottomSheetDecoration => const ShapeDecoration(
-        color: cardBackground,
-        shape: RoundedRectangleBorder(
+  static ShapeDecoration bottomSheetDecoration(BuildContext context) => ShapeDecoration(
+        color: cardBackground(context),
+        shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(
             top: Radius.circular(bottomSheetBorderRadius),
           ),
@@ -68,18 +70,21 @@ class SettingsTheme {
       );
 
   // Card decoration
-  static BoxDecoration cardDecoration(BuildContext context) => BoxDecoration(
-        color: cardBackground,
-        borderRadius: BorderRadius.circular(cardBorderRadius),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      );
+  static BoxDecoration cardDecoration(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return BoxDecoration(
+      color: cardBackground(context),
+      borderRadius: BorderRadius.circular(cardBorderRadius),
+      border: Border.all(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
+          blurRadius: 8,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    );
+  }
 
   // Profile card gradient
   static LinearGradient profileGradient(Color primaryColor) => LinearGradient(

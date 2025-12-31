@@ -30,7 +30,7 @@ class SettingsPage extends ConsumerWidget {
     final settingsAsync = ref.watch(settingsProvider);
 
     return Scaffold(
-      backgroundColor: SettingsTheme.backgroundColor,
+      backgroundColor: SettingsTheme.backgroundColor(context),
       appBar: _buildAppBar(context),
       body: settingsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
