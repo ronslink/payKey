@@ -22,7 +22,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @Controller('pay-periods')
 @UseGuards(JwtAuthGuard)
 export class PayPeriodsController {
-  constructor(private readonly payPeriodsService: PayPeriodsService) {}
+  constructor(private readonly payPeriodsService: PayPeriodsService) { }
 
   @Post()
   create(@Request() req: any, @Body() createPayPeriodDto: CreatePayPeriodDto) {
@@ -41,6 +41,8 @@ export class PayPeriodsController {
     const pageNum = parseInt(page, 10) || 1;
     const limitNum = parseInt(limit, 10) || 10;
     const yearNum = year ? parseInt(year, 10) : undefined;
+
+    console.log(`📋 PayPeriods findAll: page=${page} (${pageNum}), limit=${limit} (${limitNum})`);
 
     return this.payPeriodsService.findAll(
       req.user.userId,
@@ -80,6 +82,11 @@ export class PayPeriodsController {
     return this.payPeriodsService.process(id);
   }
 
+  @Get('current')
+  getCurrentPayPeriods() {
+    return this.payPeriodsService.getCurrentPayPeriods();
+  }
+
   @Post(':id/complete')
   complete(@Param('id') id: string) {
     return this.payPeriodsService.complete(id);
@@ -117,5 +124,10 @@ export class PayPeriodsController {
       new Date(body.startDate),
       new Date(body.endDate),
     );
+  }
+
+  @Post('recalculate-stats')
+  recalculateAllStats(@Request() req: any) {
+    return this.payPeriodsService.recalculateAllPayPeriodStats(req.user.userId);
   }
 }

@@ -14,8 +14,9 @@ export enum ExportType {
   GENERIC_CSV = 'GENERIC_CSV',
   EXCEL = 'EXCEL',
   KRA_P10_CSV = 'KRA_P10_CSV',
-  NSSF_RETURN_EXCEL = 'NSSF_RETURN_EXCEL', // Using CSV/Excel compatible format
-  SHIF_RETURN_EXCEL = 'SHIF_RETURN_EXCEL', // Using CSV/Excel compatible format
+  NSSF_RETURN_EXCEL = 'NSSF_RETURN_EXCEL',
+  SHIF_RETURN_EXCEL = 'SHIF_RETURN_EXCEL',
+  MUSTER_ROLL_CSV = 'MUSTER_ROLL_CSV',
 }
 
 @Entity('exports')

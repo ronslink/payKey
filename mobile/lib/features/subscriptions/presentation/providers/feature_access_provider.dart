@@ -38,11 +38,12 @@ class FeatureAccessResult {
         accessLevel: FeatureAccessLevel.full,
       );
 
-  factory FeatureAccessResult.preview({String? mockNotice}) => FeatureAccessResult(
+  factory FeatureAccessResult.preview({String? mockNotice, String? requiredTier}) => FeatureAccessResult(
         hasAccess: true,
         accessLevel: FeatureAccessLevel.preview,
         isPreview: true,
         mockNotice: mockNotice,
+        requiredTier: requiredTier,
       );
 
   factory FeatureAccessResult.locked(String requiredTier, String reason) =>
@@ -223,7 +224,7 @@ class FeatureAccessService {
       trialDaysRemaining: 0,
       workerLimit: 1,
       currentWorkerCount: 0,
-      accessibleFeatures: ['workers', 'basic_payroll', 'tax_calculations', 'payslips'],
+      accessibleFeatures: ['workers', 'basic_payroll', 'tax_calculations', 'payslips', 'statutory_reports'],
       previewFeatures: [],
       lockedFeatures: [
         'leave_management',
@@ -232,6 +233,11 @@ class FeatureAccessService {
         'time_tracking',
         'advanced_reports',
         'accounting_integration',
+        'property_management',
+        'geofencing',
+        'employee_portal',
+        'excel_import',
+        'payroll_processing',
       ],
     );
   }
@@ -275,31 +281,54 @@ final featureAccessProvider =
       if (summary.previewFeatures.contains(featureKey)) {
         return FeatureAccessResult.preview(
           mockNotice: 'This is sample data. Upgrade to see your real data.',
+          requiredTier: _getRequiredTierForFeature(featureKey),
         );
       }
       return FeatureAccessResult.full();
     },
-    loading: () => FeatureAccessResult.full(), // Default to allow while loading
-    error: (_, _) => FeatureAccessResult.full(), // Default to allow on error
+    loading: () => FeatureAccessResult.locked(
+      _getRequiredTierForFeature(featureKey),
+      'Loading subscription status...',
+    ), // Default to locked while loading
+    error: (_, _) {
+      // Check if this feature requires a paid tier
+      final requiredTier = _getRequiredTierForFeature(featureKey);
+      if (requiredTier != 'FREE') {
+        // Fail closed - require upgrade for paid features
+        return FeatureAccessResult.locked(
+          requiredTier,
+          'Unable to verify subscription. Upgrade to access this feature.',
+        );
+      }
+      // Allow access for FREE tier features
+      return FeatureAccessResult.full();
+    },
   );
 });
 
 /// Helper to get minimum tier for a feature
 String _getRequiredTierForFeature(String featureKey) {
   const tierMap = {
+    // FREE tier features (always accessible)
+    'statutory_reports': 'FREE',
     // BASIC tier features
     'mpesa_payments': 'BASIC',
     'p9_tax_cards': 'BASIC',
     'basic_reports': 'BASIC',
+    'payroll_processing': 'BASIC',
     // GOLD tier features
-    'time_tracking': 'GOLD',
+    'excel_import': 'GOLD',
     'advanced_reports': 'GOLD',
     'accounting_integration': 'GOLD',
-    'geofencing': 'GOLD',
+    'priority_support': 'GOLD',
     // PLATINUM tier features
+    'time_tracking': 'PLATINUM',
+    'geofencing': 'PLATINUM',
+    'property_management': 'PLATINUM',
     'leave_management': 'PLATINUM',
     'employee_portal': 'PLATINUM',
     'auto_tax_filing': 'PLATINUM',
+    'dedicated_support': 'PLATINUM',
   };
   return tierMap[featureKey] ?? 'BASIC';
 }

@@ -45,7 +45,7 @@ export const FEATURE_ACCESS_MATRIX: FeatureDefinition[] = [
   {
     key: 'tax_calculations',
     name: 'Automatic Tax Calculations',
-    description: 'PAYE, NSSF, NHIF calculated automatically',
+    description: 'PAYE, NSSF, SHIF calculated automatically',
     tiers: ['FREE', 'BASIC', 'GOLD', 'PLATINUM'],
     mockDataAvailable: false,
     displayOrder: 3,
@@ -58,8 +58,24 @@ export const FEATURE_ACCESS_MATRIX: FeatureDefinition[] = [
     mockDataAvailable: false,
     displayOrder: 4,
   },
+  {
+    key: 'statutory_reports',
+    name: 'Statutory Reports (P9, P10)',
+    description: 'KRA statutory tax reports and filings (required by law)',
+    tiers: ['FREE', 'BASIC', 'GOLD', 'PLATINUM'],
+    mockDataAvailable: false, // Statutory reports need real data
+    displayOrder: 4.5,
+  },
 
   // ============== BASIC TIER FEATURES ==============
+  {
+    key: 'payroll_processing',
+    name: 'Payroll Processing',
+    description: 'Process payroll and M-Pesa disbursements (FREE tier can preview only)',
+    tiers: ['BASIC', 'GOLD', 'PLATINUM'],
+    mockDataAvailable: false,
+    displayOrder: 5,
+  },
   {
     key: 'mpesa_payments',
     name: 'M-Pesa Payments',
@@ -87,21 +103,12 @@ export const FEATURE_ACCESS_MATRIX: FeatureDefinition[] = [
 
   // ============== GOLD TIER FEATURES ==============
   {
-    key: 'time_tracking',
-    name: 'Time Tracking',
-    description: 'Clock in/out and attendance tracking',
+    key: 'excel_import',
+    name: 'Excel Import',
+    description: 'Bulk import workers from Excel spreadsheets',
     tiers: ['GOLD', 'PLATINUM'],
-    mockDataAvailable: true,
-    displayOrder: 20,
-  },
-  {
-    key: 'geofencing',
-    name: 'Geofencing',
-    description: 'Location-based attendance verification',
-    tiers: ['GOLD', 'PLATINUM'],
-    mockDataAvailable: true,
-    parentFeature: 'time_tracking',
-    displayOrder: 21,
+    mockDataAvailable: false,
+    displayOrder: 15,
   },
   {
     key: 'advanced_reports',
@@ -129,6 +136,31 @@ export const FEATURE_ACCESS_MATRIX: FeatureDefinition[] = [
   },
 
   // ============== PLATINUM TIER FEATURES ==============
+  {
+    key: 'time_tracking',
+    name: 'Time Tracking',
+    description: 'Clock in/out and attendance tracking',
+    tiers: ['PLATINUM'],
+    mockDataAvailable: true,
+    displayOrder: 20,
+  },
+  {
+    key: 'geofencing',
+    name: 'Geofencing',
+    description: 'Location-based attendance verification',
+    tiers: ['PLATINUM'],
+    mockDataAvailable: true,
+    parentFeature: 'time_tracking',
+    displayOrder: 21,
+  },
+  {
+    key: 'property_management',
+    name: 'Property Management',
+    description: 'Multi-property geofencing and worker assignment',
+    tiers: ['PLATINUM'],
+    mockDataAvailable: true,
+    displayOrder: 25,
+  },
   {
     key: 'leave_management',
     name: 'Leave Management',
@@ -168,10 +200,10 @@ export const FEATURE_ACCESS_MATRIX: FeatureDefinition[] = [
  * Tier limits configuration
  */
 export const TIER_LIMITS: Record<SubscriptionTier, { workerLimit: number }> = {
-  FREE: { workerLimit: 1 },
+  FREE: { workerLimit: 3 },
   BASIC: { workerLimit: 5 },
   GOLD: { workerLimit: 10 },
-  PLATINUM: { workerLimit: 15 },
+  PLATINUM: { workerLimit: 20 },
 };
 
 /**

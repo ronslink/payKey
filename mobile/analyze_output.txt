@@ -1,29 +1,42 @@
-Resolving dependencies...
-Downloading packages...
-  _fe_analyzer_shared 91.0.0 (92.0.0 available)
-  analyzer 8.4.1 (9.0.0 available)
-  characters 1.4.0 (1.4.1 available)
-  file_picker 8.3.7 (10.3.8 available)
-  fl_chart 0.66.2 (1.1.1 available)
-  hugeicons 0.0.11 (1.1.4 available)
-  json_serializable 6.11.2 (6.11.3 available)
-  matcher 0.12.17 (0.12.18 available)
-  material_color_utilities 0.11.1 (0.13.0 available)
-  package_info_plus 8.3.1 (9.0.0 available)
-  source_helper 1.3.8 (1.3.9 available)
-  test 1.26.3 (1.28.0 available)
-  test_api 0.7.7 (0.7.8 available)
-  test_core 0.6.12 (0.6.14 available)
-Got dependencies!
-14 packages have newer versions incompatible with dependency constraints.
-Try `flutter pub outdated` for more information.
 Analyzing mobile...                                             
 
-   info - The import of '../../data/models/payroll_model.dart' is unnecessary because all of the used elements are also provided by the import of '../models/payroll_confirm_state.dart' - lib\features\payroll\presentation\pages\payroll_confirm_page.dart:15:8 - unnecessary_import
-   info - The import of '../../../../integrations/intasend/providers/intasend_providers.dart' is unnecessary because all of the used elements are also provided by the import of '../../../../integrations/intasend/intasend.dart' - lib\features\payroll\presentation\pages\payroll_confirm_page.dart:22:8 - unnecessary_import
-   info - The import of '../../../../integrations/intasend/services/payment_service.dart' is unnecessary because all of the used elements are also provided by the import of '../../../../integrations/intasend/intasend.dart' - lib\features\payroll\presentation\pages\payroll_confirm_page.dart:23:8 - unnecessary_import
-warning - The declaration '_processPayroll' isn't referenced - lib\features\payroll\presentation\pages\payroll_review_page.dart:89:16 - unused_element
-warning - Unused import: '../models/payroll_confirm_state.dart' - lib\features\payroll\presentation\pages\run_payroll_page_new.dart:23:8 - unused_import
-warning - Unused import: '../widgets/payment_results_page.dart' - lib\features\payroll\presentation\pages\run_payroll_page_new.dart:24:8 - unused_import
-  error - 'MockPayrollRepository.processPayroll' ('Future<PayrollProcessingResult> Function(List<String>?, String?)') isn't a valid override of 'PayrollRepository.processPayroll' ('Future<PayrollProcessingResult> Function(List<String>, String, {bool skipPayout})') - test\features\payroll\payroll_workflow_test.mocks.dart:334:43 - invalid_override
+  error - Expected to find ')' - lib\features\finance\presentation\pages\finance_page.dart:658:17 - expected_token
+  error - Expected to find ';' - lib\features\finance\presentation\pages\finance_page.dart:663:11 - expected_token
+warning - Dead code - lib\features\finance\presentation\pages\finance_page.dart:663:12 - dead_code
+  error - Expected an identifier - lib\features\finance\presentation\pages\finance_page.dart:663:12 - missing_identifier
+  error - Expected to find ';' - lib\features\finance\presentation\pages\finance_page.dart:663:12 - expected_token
+  error - Unexpected text ';' - lib\features\finance\presentation\pages\finance_page.dart:663:12 - unexpected_token
+  error - Expected an identifier - lib\features\finance\presentation\pages\finance_page.dart:664:9 - missing_identifier
+  error - Expected to find ';' - lib\features\finance\presentation\pages\finance_page.dart:664:9 - expected_token
+  error - Unexpected text ';' - lib\features\finance\presentation\pages\finance_page.dart:664:9 - unexpected_token
+  error - Expected an identifier - lib\features\finance\presentation\pages\finance_page.dart:664:10 - missing_identifier
+  error - Expected to find ';' - lib\features\finance\presentation\pages\finance_page.dart:664:10 - expected_token
+  error - Unexpected text ';' - lib\features\finance\presentation\pages\finance_page.dart:664:10 - unexpected_token
+  error - Expected an identifier - lib\features\finance\presentation\pages\finance_page.dart:665:7 - missing_identifier
+  error - Expected to find ';' - lib\features\finance\presentation\pages\finance_page.dart:665:7 - expected_token
+  error - Unexpected text ';' - lib\features\finance\presentation\pages\finance_page.dart:665:7 - unexpected_token
+  error - Expected an identifier - lib\features\finance\presentation\pages\finance_page.dart:665:8 - missing_identifier
+  error - Expected to find ';' - lib\features\finance\presentation\pages\finance_page.dart:665:8 - expected_token
+  error - Unexpected text ';' - lib\features\finance\presentation\pages\finance_page.dart:665:8 - unexpected_token
+  error - Expected an identifier - lib\features\finance\presentation\pages\finance_page.dart:666:5 - missing_identifier
+  error - Unexpected text ';' - lib\features\finance\presentation\pages\finance_page.dart:666:5 - unexpected_token
+warning - Unused import: '../../../../core/widgets/widgets.dart' - lib\features\home\presentation\pages\home_page.dart:5:8 - unused_import
+  error - The named parameter 'onPressed' is required, but there's no corresponding argument - lib\features\leave_management\presentation\pages\leave_balance_page.dart:114:17 - missing_required_argument
+  error - The named parameter 'onPressed' is required, but there's no corresponding argument - lib\features\leave_management\presentation\pages\leave_balance_page.dart:158:17 - missing_required_argument
+warning - The declaration '_convertIntaSendResult' isn't referenced - lib\features\payroll\presentation\pages\payroll_confirm_page.dart:230:22 - unused_element
+warning - Unused import: 'package:http/http.dart' - lib\integrations\intasend\services\intasend_service.dart:2:8 - unused_import
+warning - Unused import: '../config/intasend_config.dart' - lib\integrations\intasend\services\intasend_service.dart:4:8 - unused_import
+  error - 1 positional argument expected by 'IntaSendService.new', but 0 found - test\integrations\intasend_service_test.dart:43:11 - not_enough_positional_arguments
+  error - The named parameter 'environment' isn't defined - test\integrations\intasend_service_test.dart:43:11 - undefined_named_parameter
+  error - The named parameter 'client' isn't defined - test\integrations\intasend_service_test.dart:47:11 - undefined_named_parameter
+  error - 1 positional argument expected by 'IntaSendService.new', but 0 found - test\integrations\intasend_service_test.dart:78:11 - not_enough_positional_arguments
+  error - The named parameter 'environment' isn't defined - test\integrations\intasend_service_test.dart:78:11 - undefined_named_parameter
+  error - The named parameter 'client' isn't defined - test\integrations\intasend_service_test.dart:82:11 - undefined_named_parameter
+  error - 1 positional argument expected by 'IntaSendService.new', but 0 found - test\integrations\intasend_service_test.dart:113:13 - not_enough_positional_arguments
+  error - The named parameter 'environment' isn't defined - test\integrations\intasend_service_test.dart:113:13 - undefined_named_parameter
+  error - The named parameter 'client' isn't defined - test\integrations\intasend_service_test.dart:117:13 - undefined_named_parameter
+  error - 1 positional argument expected by 'IntaSendService.new', but 0 found - test\manual\fund_wallet_stk_push.dart:20:35 - not_enough_positional_arguments
+  error - The named parameter 'environment' isn't defined - test\manual\fund_wallet_stk_push.dart:20:35 - undefined_named_parameter
+  error - 1 positional argument expected by 'IntaSendService.new', but 0 found - test\manual\intasend_integration_test.dart:17:37 - not_enough_positional_arguments
+  error - The named parameter 'environment' isn't defined - test\manual\intasend_integration_test.dart:17:37 - undefined_named_parameter
 

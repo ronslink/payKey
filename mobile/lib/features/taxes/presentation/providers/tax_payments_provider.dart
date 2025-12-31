@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/repositories/tax_repository.dart';
 
 class TaxPaymentsNotifier extends AsyncNotifier<Map<String, dynamic>> {
-  late final TaxRepository _repository;
+  late TaxRepository _repository;
   
   @override
   FutureOr<Map<String, dynamic>> build() {

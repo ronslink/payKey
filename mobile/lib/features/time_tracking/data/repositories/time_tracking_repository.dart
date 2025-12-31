@@ -2,13 +2,21 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_service.dart';
 import '../models/time_tracking_model.dart';
+import '../mock/time_tracking_mock_data.dart';
 
 final timeTrackingRepositoryProvider = Provider<TimeTrackingRepository>((ref) {
   return TimeTrackingRepository(ApiService());
 });
 
+/// Repository for time tracking with 403 fallback to mock data.
+/// 
+/// When the user doesn't have PLATINUM subscription, the backend returns 403.
+/// This repository catches those errors and returns mock data for preview mode.
 class TimeTrackingRepository {
   final ApiService _apiService;
+
+  /// Feature key for gating
+  static const String featureKey = 'time_tracking';
 
   TimeTrackingRepository(this._apiService);
 
@@ -26,6 +34,12 @@ class TimeTrackingRepository {
 
       return TimeEntry.fromJson(data as Map<String, dynamic>);
     } on DioException catch (e) {
+      if (e.response?.statusCode == 403) {
+        throw TimeTrackingException(
+          'Upgrade to PLATINUM to use time tracking',
+          statusCode: 403,
+        );
+      }
       throw _handleDioError(e);
     } catch (e) {
       if (e is TimeTrackingException) rethrow;
@@ -47,6 +61,12 @@ class TimeTrackingRepository {
 
       return TimeEntry.fromJson(data as Map<String, dynamic>);
     } on DioException catch (e) {
+      if (e.response?.statusCode == 403) {
+        throw TimeTrackingException(
+          'Upgrade to PLATINUM to use time tracking',
+          statusCode: 403,
+        );
+      }
       throw _handleDioError(e);
     } catch (e) {
       if (e is TimeTrackingException) rethrow;
@@ -71,6 +91,12 @@ class TimeTrackingRepository {
       // 404 means no active entry exists - this is expected
       if (e.response?.statusCode == 404) {
         return null;
+      }
+
+      // 403 means feature is gated - return mock active entry
+      if (e.response?.statusCode == 403) {
+        print('[$featureKey] 403 Forbidden - returning mock active entry');
+        return TimeTrackingMockData.getActiveEntry(workerId);
       }
 
       // For timeout/connection errors, throw with network flag
@@ -117,6 +143,14 @@ class TimeTrackingRepository {
           .map((json) => TimeEntry.fromJson(json as Map<String, dynamic>))
           .toList();
     } on DioException catch (e) {
+      // 403 means feature is gated - return mock entries
+      if (e.response?.statusCode == 403) {
+        print('[$featureKey] 403 Forbidden - returning mock time entries');
+        if (workerId != null) {
+          return TimeTrackingMockData.getEntriesForWorker(workerId);
+        }
+        return TimeTrackingMockData.timeEntries;
+      }
       throw _handleDioError(e);
     } catch (e) {
       if (e is TimeTrackingException) rethrow;

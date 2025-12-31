@@ -46,41 +46,46 @@ class PayPeriodUtils {
   /// Determines if the "Initialize Pay Periods" card should be shown.
   /// 
   /// Logic:
-  /// - If any future pay periods exist (Draft/Active/Processing), return NULL (Hide card).
-  /// - If NO future periods exist, return the year to initialize.
-  ///   - If current year has no periods -> Initialize Current Year.
-  ///   - If date is Nov/Dec, and Current Year is done -> Initialize Next Year.
-  ///   - If date is Jan, and Next Year is empty -> Initialize Next Year (Current Year).
+  /// - If any future periods exist (Draft/Active/Processing), return NULL (Hide card).
+  /// - If Current Year has no periods -> Initialize Current Year.
+  /// - If Current Year exists but is fully closed (or empty active) -> Initialize Next Year.
   static int? getYearToInitialize(List<PayPeriod> allPeriods) {
     final now = DateTime.now();
     final currentYear = now.year;
     final nextYear = currentYear + 1;
 
     // Check for ANY future periods (Draft/Active/Processing) regardless of year
-    // This assumes if we have future periods, we are good.
     final hasFuturePeriods = allPeriods.any((p) => 
       p.startDate.isAfter(now) && 
       (p.status == PayPeriodStatus.draft || p.status == PayPeriodStatus.active)
     );
 
+    // If we have future active periods, we probably don't need to force initialization
     if (hasFuturePeriods) return null;
-
-    // If no future periods, we might need to initialize.
     
     // Check if Current Year has periods
     final currentYearPeriods = allPeriods.where((p) => p.startDate.year == currentYear).toList();
     
     if (currentYearPeriods.isEmpty) {
-      return currentYear; // Initialize Current Year (e.g. fresh install)
+      return currentYear; // Case 1: Initialize Current Year (e.g. fresh install or new year started with no data)
     }
 
-    // Check if Current Year is fully completed/closed
-    // Or if we are approaching end of year
+    // Check if Next Year has periods
     final nextYearPeriods = allPeriods.where((p) => p.startDate.year == nextYear).toList();
-    
-    // If we are in Nov/Dec/Jan and Next Year is empty -> Suggest Next Year
-    if ((now.month >= 11 || now.month == 1) && nextYearPeriods.isEmpty) {
-        return nextYear;
+    if (nextYearPeriods.isNotEmpty) {
+      return null; // Next year already initialized
+    }
+
+    // If Current Year is fully completed/closed -> Suggest Next Year
+    // OR if we are just simply done with all current active periods.
+    final hasActiveCurrentYear = currentYearPeriods.any((p) => 
+      p.status == PayPeriodStatus.active || 
+      p.status == PayPeriodStatus.draft || 
+      p.status == PayPeriodStatus.processing
+    );
+
+    if (!hasActiveCurrentYear) {
+      return nextYear; // Case 2: All current year periods are done. Ready for next year.
     }
 
     return null;

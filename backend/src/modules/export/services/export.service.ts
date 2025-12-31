@@ -70,13 +70,13 @@ export class ExportService {
       workerNssf: t.worker?.nssfNumber || '',
       workerNhif: t.worker?.nhifNumber || '',
       workerIdNo: t.worker?.idNumber || '',
-      grossSalary: t.metadata?.grossSalary || 0,
-      paye: t.metadata?.taxBreakdown?.paye || 0,
-      nssf: t.metadata?.taxBreakdown?.nssf || 0,
-      shif: t.metadata?.taxBreakdown?.nhif || 0,
-      housingLevy: t.metadata?.taxBreakdown?.housingLevy || 0,
-      totalDeductions: t.metadata?.taxBreakdown?.totalDeductions || 0,
-      netPay: t.metadata?.netPay || t.amount,
+      grossSalary: parseFloat(t.metadata?.grossSalary) || 0,
+      paye: parseFloat(t.metadata?.taxBreakdown?.paye) || 0,
+      nssf: parseFloat(t.metadata?.taxBreakdown?.nssf) || 0,
+      shif: parseFloat(t.metadata?.taxBreakdown?.nhif) || 0,
+      housingLevy: parseFloat(t.metadata?.taxBreakdown?.housingLevy) || 0,
+      totalDeductions: parseFloat(t.metadata?.taxBreakdown?.totalDeductions) || 0,
+      netPay: parseFloat(t.metadata?.netPay) || Number(t.amount) || 0,
     }));
   }
 
@@ -226,6 +226,39 @@ export class ExportService {
       csv += `${taxable.toFixed(2)},${(paye + relief).toFixed(2)},${relief.toFixed(2)},0.00,${paye.toFixed(2)}\n`;
     }
 
+    // Calculate and add totals row
+    let totalBasic = 0, totalHouseAllow = 0, totalTransportAllow = 0, totalOvertime = 0, totalOtherAllow = 0;
+    let totalCashPay = 0, totalCarBen = 0, totalOtherNonCash = 0, totalNonCash = 0;
+    let totalGrossPay = 0, totalContrib = 0, totalMortgage = 0, totalTaxable = 0;
+    let totalTaxPayable = 0, totalRelief = 0, totalInsRelief = 0, totalPaye = 0;
+
+    for (const r of records) {
+      totalBasic += r.grossSalary;
+      totalHouseAllow += 0;
+      totalTransportAllow += 0;
+      totalOvertime += 0;
+      totalOtherAllow += 0;
+      totalCashPay += r.grossSalary;
+      totalCarBen += 0;
+      totalOtherNonCash += 0;
+      totalNonCash += 0;
+      totalGrossPay += r.grossSalary;
+      totalContrib += r.nssf;
+      totalMortgage += 0;
+      totalTaxable += (r.grossSalary - r.nssf);
+      totalTaxPayable += (r.paye + 2400);
+      totalRelief += 2400;
+      totalInsRelief += (r.shif * 0.15);
+      totalPaye += r.paye;
+    }
+
+    // Add totals row with 'TOTAL' as the name
+    csv += `TOTAL,TOTALS,Resident,Primary Employee,`;
+    csv += `${totalBasic.toFixed(2)},${totalHouseAllow.toFixed(2)},${totalTransportAllow.toFixed(2)},${totalOvertime.toFixed(2)},${totalOtherAllow.toFixed(2)},`;
+    csv += `${totalCashPay.toFixed(2)},${totalCarBen.toFixed(2)},${totalOtherNonCash.toFixed(2)},${totalNonCash.toFixed(2)},`;
+    csv += `${totalGrossPay.toFixed(2)},${totalContrib.toFixed(2)},${totalMortgage.toFixed(2)},`;
+    csv += `${totalTaxable.toFixed(2)},${totalTaxPayable.toFixed(2)},${totalRelief.toFixed(2)},${totalInsRelief.toFixed(2)},${totalPaye.toFixed(2)}\n`;
+
     return csv;
   }
 
@@ -287,6 +320,32 @@ export class ExportService {
   }
 
   /**
+   * Generate Muster Roll CSV format
+   * Attendance/payroll register with basic employee pay info
+   */
+  async generateMusterRollCSV(
+    userId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<string> {
+    const records = await this.getPayrollData(userId, startDate, endDate);
+
+    let csv = 'EMP NO,NAME,ID NUMBER,PHONE,GROSS SALARY,PAYE,NSSF,SHIF,HOUSING LEVY,TOTAL DEDUCTIONS,NET PAY,SIGNATURE\n';
+
+    for (const r of records) {
+      const empNo = r.workerId.substring(0, 8);
+      const idNo = r.workerIdNo || '-';
+
+      csv += `${empNo},"${r.workerName}",${idNo},-,`;
+      csv += `${r.grossSalary.toFixed(2)},${r.paye.toFixed(2)},${r.nssf.toFixed(2)},`;
+      csv += `${r.shif.toFixed(2)},${r.housingLevy.toFixed(2)},${r.totalDeductions.toFixed(2)},`;
+      csv += `${r.netPay.toFixed(2)},\n`;
+    }
+
+    return csv;
+  }
+
+  /**
    * Save export file and create record
    */
   async createExport(
@@ -295,56 +354,92 @@ export class ExportService {
     startDate: Date,
     endDate: Date,
   ): Promise<Export> {
+    console.log(`[Export] Creating export: type=${exportType}, userId=${userId}, dates=${startDate.toISOString()} to ${endDate.toISOString()}`);
+
     let content: string;
     let extension: string;
 
-    switch (exportType) {
-      case ExportType.QUICKBOOKS_IIF:
-        content = await this.generateQuickBooksIIF(userId, startDate, endDate);
-        extension = 'iif';
-        break;
-      case ExportType.XERO_CSV:
-        content = await this.generateXeroCSV(userId, startDate, endDate);
-        extension = 'csv';
-        break;
-      case ExportType.GENERIC_CSV:
-        content = await this.generateGenericCSV(userId, startDate, endDate);
-        extension = 'csv';
-        break;
-      case ExportType.KRA_P10_CSV:
-        content = await this.generateKRA_P10_CSV(userId, startDate, endDate);
-        extension = 'csv';
-        break;
-      case ExportType.NSSF_RETURN_EXCEL:
-        content = await this.generateNSSF_Excel(userId, startDate, endDate);
-        extension = 'csv'; // Sticking to CSV for simplicity
-        break;
-      case ExportType.SHIF_RETURN_EXCEL:
-        content = await this.generateSHIF_Excel(userId, startDate, endDate);
-        extension = 'csv'; // Sticking to CSV for simplicity
-        break;
-      default:
-        throw new Error('Unsupported export type');
+    try {
+      switch (exportType) {
+        case ExportType.QUICKBOOKS_IIF:
+          content = await this.generateQuickBooksIIF(userId, startDate, endDate);
+          extension = 'iif';
+          break;
+        case ExportType.XERO_CSV:
+          content = await this.generateXeroCSV(userId, startDate, endDate);
+          extension = 'csv';
+          break;
+        case ExportType.GENERIC_CSV:
+          content = await this.generateGenericCSV(userId, startDate, endDate);
+          extension = 'csv';
+          break;
+        case ExportType.KRA_P10_CSV:
+          content = await this.generateKRA_P10_CSV(userId, startDate, endDate);
+          extension = 'csv';
+          break;
+        case ExportType.NSSF_RETURN_EXCEL:
+          content = await this.generateNSSF_Excel(userId, startDate, endDate);
+          extension = 'csv';
+          break;
+        case ExportType.SHIF_RETURN_EXCEL:
+          content = await this.generateSHIF_Excel(userId, startDate, endDate);
+          extension = 'csv';
+          break;
+        case ExportType.MUSTER_ROLL_CSV:
+          content = await this.generateMusterRollCSV(userId, startDate, endDate);
+          extension = 'csv';
+          break;
+        default:
+          throw new Error(`Unsupported export type: ${exportType}`);
+      }
+    } catch (error) {
+      console.error(`[Export] Failed to generate content: ${error.message}`);
+      throw error;
     }
+
+    console.log(`[Export] Generated content length: ${content?.length || 0} chars`);
 
     const fileName = `payroll_export_${exportType.toLowerCase()}_${Date.now()}.${extension}`;
     const filePath = path.join(this.exportsDir, fileName);
 
-    fs.writeFileSync(filePath, content, 'utf-8');
+    // Ensure exports directory exists
+    try {
+      if (!fs.existsSync(this.exportsDir)) {
+        console.log(`[Export] Creating exports directory: ${this.exportsDir}`);
+        fs.mkdirSync(this.exportsDir, { recursive: true });
+      }
+      console.log(`[Export] Writing file: ${filePath}`);
+      fs.writeFileSync(filePath, content, 'utf-8');
+    } catch (error) {
+      console.error(`[Export] Failed to write file: ${error.message}`);
+      throw new Error(`Failed to write export file: ${error.message}`);
+    }
 
-    const recordCount = content.split('\n').length - 1; // Subtract header
+    const recordCount = content.split('\n').length - 1;
+    console.log(`[Export] Record count: ${recordCount}`);
 
-    const exportRecord = this.exportRepository.create({
-      userId,
-      exportType,
-      startDate,
-      endDate,
-      fileName,
-      filePath,
-      recordCount,
-    });
+    try {
+      const exportRecord = this.exportRepository.create({
+        userId,
+        exportType,
+        startDate,
+        endDate,
+        fileName,
+        filePath,
+        recordCount,
+      });
 
-    return this.exportRepository.save(exportRecord);
+      const saved = await this.exportRepository.save(exportRecord);
+      console.log(`[Export] Saved export record: id=${saved.id}`);
+      return saved;
+    } catch (error) {
+      console.error(`[Export] Failed to save to DB: ${error.message}`);
+      // Clean up the file if DB save fails
+      try {
+        fs.unlinkSync(filePath);
+      } catch { }
+      throw new Error(`Failed to save export record: ${error.message}`);
+    }
   }
 
   /**

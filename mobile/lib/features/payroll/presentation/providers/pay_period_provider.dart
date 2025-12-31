@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_service.dart';
 import '../../data/models/pay_period_model.dart';
@@ -9,7 +10,7 @@ final payPeriodRepositoryProvider = Provider((ref) => PayPeriodRepository(ApiSer
 final payPeriodsProvider = AsyncNotifierProvider<PayPeriodsNotifier, List<PayPeriod>>(PayPeriodsNotifier.new);
 
 class PayPeriodsNotifier extends AsyncNotifier<List<PayPeriod>> {
-  late final PayPeriodRepository _repository;
+  late PayPeriodRepository _repository;
 
   @override
   FutureOr<List<PayPeriod>> build() {
@@ -17,8 +18,10 @@ class PayPeriodsNotifier extends AsyncNotifier<List<PayPeriod>> {
     return _loadPayPeriods();
   }
 
-  Future<List<PayPeriod>> _loadPayPeriods() {
-    return _repository.getPayPeriods();
+  Future<List<PayPeriod>> _loadPayPeriods() async {
+    final periods = await _repository.getPayPeriods();
+    debugPrint('PayPeriodsNotifier: Loaded ${periods.length} periods');
+    return periods;
   }
 
   /// Loads all pay periods (no status filter).

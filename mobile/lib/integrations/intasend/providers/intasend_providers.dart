@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/network/api_service.dart';
 import '../../../core/config/app_environment.dart';
 import '../config/intasend_config.dart';
 import '../models/intasend_models.dart';
@@ -39,10 +40,8 @@ final intaSendEnvironmentProvider = Provider<IntaSendEnvironment>((ref) {
 
 /// Provider for IntaSend service
 final intaSendServiceProvider = Provider<IntaSendService>((ref) {
-  final environment = ref.watch(intaSendEnvironmentProvider);
-  final service = IntaSendService(environment: environment);
-  ref.onDispose(() => service.dispose());
-  return service;
+  final apiService = ref.watch(apiServiceProvider);
+  return IntaSendService(apiService);
 });
 
 // =============================================================================

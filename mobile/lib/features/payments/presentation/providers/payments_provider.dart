@@ -32,7 +32,7 @@ final taxPaymentSummaryProvider = FutureProvider<Map<String, dynamic>>((ref) asy
 final paymentsProvider = AsyncNotifierProvider<PaymentsNotifier, void>(PaymentsNotifier.new);
 
 class PaymentsNotifier extends AsyncNotifier<void> {
-  late final ApiService _apiService;
+  late ApiService _apiService;
 
   @override
   FutureOr<void> build() {

@@ -1108,13 +1108,13 @@ class _P9WorkerDetailView extends StatelessWidget {
 // PAYROLL SUMMARY VIEW
 // =============================================================================
 
-class _PayrollSummaryView extends StatelessWidget {
+class _PayrollSummaryView extends ConsumerWidget {
   final PayrollSummaryReport report;
 
   const _PayrollSummaryView({required this.report});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final currencyFormat = NumberFormat('#,##0.00');
 
     return SingleChildScrollView(
@@ -1167,7 +1167,58 @@ class _PayrollSummaryView extends StatelessWidget {
             ],
           ),
 
+          const SizedBox(height: 16),
+
+          // Download Muster Roll Button
+          Card(
+            color: Colors.purple.shade50,
+            child: InkWell(
+              onTap: () => _downloadMusterRoll(context, ref),
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.purple.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(Icons.download, color: Colors.purple.shade700),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Download Muster Roll',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.purple.shade700,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'CSV file with employee payroll register',
+                            style: TextStyle(
+                              color: Colors.purple.shade600,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.chevron_right, color: Colors.purple.shade600),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
           const SizedBox(height: 24),
+
 
           // Employee Breakdown Header
           Row(
@@ -1212,6 +1263,22 @@ class _PayrollSummaryView extends StatelessWidget {
               )),
         ],
       ),
+    );
+  }
+
+  void _downloadMusterRoll(BuildContext context, WidgetRef ref) {
+    final startDate = DateTime.parse(report.payPeriod.startDate);
+    final endDate = DateTime.parse(report.payPeriod.endDate);
+
+    ref.read(taxExportProvider.notifier).downloadStatutoryReport(
+          exportType: 'MUSTER_ROLL_CSV',
+          startDate: startDate,
+          endDate: endDate,
+          title: 'Muster Roll',
+        );
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Downloading muster roll...')),
     );
   }
 }

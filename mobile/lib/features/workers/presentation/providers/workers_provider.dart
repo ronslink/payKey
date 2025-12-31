@@ -9,7 +9,7 @@ final workersRepositoryProvider = Provider((ref) => WorkersRepository(ApiService
 final workersProvider = AsyncNotifierProvider<WorkersNotifier, List<WorkerModel>>(WorkersNotifier.new);
 
 class WorkersNotifier extends AsyncNotifier<List<WorkerModel>> {
-  late final WorkersRepository _repository;
+  late WorkersRepository _repository;
 
   @override
   FutureOr<List<WorkerModel>> build() {

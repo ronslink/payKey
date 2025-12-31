@@ -524,7 +524,7 @@ return $default(_that.id,_that.workerId,_that.workerName,_that.grossSalary,_that
 @JsonSerializable()
 
 class _PayrollCalculation extends PayrollCalculation {
-  const _PayrollCalculation({this.id, required this.workerId, required this.workerName, required this.grossSalary, this.bonuses = 0, this.otherEarnings = 0, this.otherDeductions = 0, required this.taxBreakdown, required this.netPay, this.status = PayrollStatus.draft, this.isEdited = false}): super._();
+  const _PayrollCalculation({this.id, required this.workerId, required this.workerName, this.grossSalary = 0, this.bonuses = 0, this.otherEarnings = 0, this.otherDeductions = 0, required this.taxBreakdown, required this.netPay, this.status = PayrollStatus.draft, this.isEdited = false}): super._();
   factory _PayrollCalculation.fromJson(Map<String, dynamic> json) => _$PayrollCalculationFromJson(json);
 
 /// Unique identifier. Null for new/unsaved calculations.
@@ -534,7 +534,7 @@ class _PayrollCalculation extends PayrollCalculation {
 /// Worker's display name (denormalized for convenience).
 @override final  String workerName;
 /// Base salary before any additions or deductions.
-@override final  double grossSalary;
+@override@JsonKey() final  double grossSalary;
 /// Additional bonus payments.
 @override@JsonKey() final  double bonuses;
 /// Other earnings (allowances, overtime, etc.).

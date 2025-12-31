@@ -3,26 +3,30 @@ import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
 
+// IntaSend sandbox requires this specific phone number for B2C payouts
+const INTASEND_SANDBOX_TEST_PHONE = '254708374149';
+
 @Injectable()
 export class IntaSendService {
     private readonly logger = new Logger(IntaSendService.name);
     private readonly baseUrl: string;
     private readonly publishableKey: string;
     private readonly secretKey: string;
+    private readonly isLive: boolean;
 
     constructor(
         private configService: ConfigService,
         private httpService: HttpService,
     ) {
-        const isLive =
+        this.isLive =
             this.configService.get('INTASEND_IS_LIVE') === 'true' ||
             this.configService.get('NODE_ENV') === 'production';
 
-        this.baseUrl = isLive
+        this.baseUrl = this.isLive
             ? 'https://payment.intasend.com/api'
             : 'https://sandbox.intasend.com/api';
 
-        if (isLive) {
+        if (this.isLive) {
             this.publishableKey = this.configService.get('INTASEND_PUBLISHABLE_KEY') || '';
             this.secretKey = this.configService.get('INTASEND_SECRET_KEY') || '';
         } else {
@@ -41,7 +45,7 @@ export class IntaSendService {
         }
 
         this.logger.log(
-            `IntaSend Service initialized in ${isLive ? 'LIVE' : 'SANDBOX'} mode`,
+            `IntaSend Service initialized in ${this.isLive ? 'LIVE' : 'SANDBOX'} mode`,
         );
 
         if (!this.publishableKey || !this.secretKey) {
@@ -169,9 +173,18 @@ export class IntaSendService {
         amount: number,
         reason: string = 'Salary Payment',
     ) {
+        // In Sandbox mode, IntaSend requires using their test phone number for B2C payouts
+        const effectivePhone = this.isLive ? phoneNumber : INTASEND_SANDBOX_TEST_PHONE;
+
+        if (!this.isLive && phoneNumber !== INTASEND_SANDBOX_TEST_PHONE) {
+            this.logger.log(
+                `⚠️ SANDBOX: Overriding phone ${phoneNumber} -> ${INTASEND_SANDBOX_TEST_PHONE} (IntaSend requirement)`,
+            );
+        }
+
         const url = `${this.baseUrl}/v1/send-money/initiate/`;
         this.logger.log(
-            `Initiating IntaSend Payout to ${phoneNumber} for ${amount}`,
+            `Initiating IntaSend Payout to ${effectivePhone} for ${amount}`,
         );
 
         try {
@@ -184,7 +197,7 @@ export class IntaSendService {
                         transactions: [
                             {
                                 name: 'Worker',
-                                account: phoneNumber,
+                                account: effectivePhone,
                                 amount: amount,
                                 narrative: reason,
                             },

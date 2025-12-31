@@ -32,7 +32,7 @@ class ExportState {
 }
 
 class TaxExportNotifier extends Notifier<ExportState> {
-  late final ApiService _api;
+  late ApiService _api;
 
   @override
   ExportState build() {

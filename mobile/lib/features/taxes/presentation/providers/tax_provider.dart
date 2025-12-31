@@ -26,7 +26,7 @@ final payrollTaxSubmissionsProvider = FutureProvider<List<PayrollTaxSubmission>>
 final monthlyTaxSummariesProvider = AsyncNotifierProvider<MonthlyTaxNotifier, List<MonthlyTaxSummary>>(MonthlyTaxNotifier.new);
 
 class MonthlyTaxNotifier extends AsyncNotifier<List<MonthlyTaxSummary>> {
-  late final TaxRepository _repository;
+  late TaxRepository _repository;
 
   @override
   FutureOr<List<MonthlyTaxSummary>> build() {
@@ -69,7 +69,7 @@ class MonthlyTaxNotifier extends AsyncNotifier<List<MonthlyTaxSummary>> {
 
 // Backward compatibility notifier
 class TaxNotifier extends AsyncNotifier<List<dynamic>> {
-  late final TaxRepository _repository;
+  late TaxRepository _repository;
 
   @override
   FutureOr<List<dynamic>> build() {

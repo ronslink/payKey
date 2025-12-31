@@ -27,7 +27,7 @@ class SelectedWorkersNotifier extends Notifier<Set<String>> {
 }
 
 class PayrollNotifier extends AsyncNotifier<List<PayrollCalculation>> {
-  late final PayrollRepository _repository;
+  late PayrollRepository _repository;
 
   @override
   FutureOr<List<PayrollCalculation>> build() {

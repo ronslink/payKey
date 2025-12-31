@@ -348,6 +348,9 @@ export class PayrollService {
       );
     });
 
+    // Update pay period with aggregated statistics
+    await this.updatePayPeriodStatistics(payPeriodId);
+
     this.logBatchDuration('Draft payroll save', startTime, savedRecords.length);
 
     return savedRecords;
@@ -1288,6 +1291,54 @@ export class PayrollService {
     this.logger.log(
       `${operation} completed: ${count} items in ${duration}ms ` +
       `(${(duration / count).toFixed(2)}ms avg)`,
+    );
+  }
+
+  /**
+   * Update pay period with aggregated statistics from payroll records.
+   * Called after saving draft payroll or finalizing payroll.
+   */
+  private async updatePayPeriodStatistics(payPeriodId: string): Promise<void> {
+    // Get all payroll records for this pay period
+    const records = await this.payrollRepository.find({
+      where: { payPeriodId },
+    });
+
+    if (records.length === 0) {
+      this.logger.log(`No payroll records found for period ${payPeriodId}`);
+      return;
+    }
+
+    // Aggregate statistics
+    const stats = records.reduce(
+      (acc, record) => {
+        acc.totalGrossAmount += this.parseNumber(record.grossSalary);
+        acc.totalNetAmount += this.parseNumber(record.netSalary);
+        acc.totalWorkers += 1;
+        if (record.status === PayrollStatus.FINALIZED) {
+          acc.processedWorkers += 1;
+        }
+        return acc;
+      },
+      {
+        totalGrossAmount: 0,
+        totalNetAmount: 0,
+        totalWorkers: 0,
+        processedWorkers: 0,
+      },
+    );
+
+    // Update pay period with aggregated statistics
+    await this.payPeriodRepository.update(payPeriodId, {
+      totalGrossAmount: this.roundCurrency(stats.totalGrossAmount),
+      totalNetAmount: this.roundCurrency(stats.totalNetAmount),
+      totalWorkers: stats.totalWorkers,
+      processedWorkers: stats.processedWorkers,
+    });
+
+    this.logger.log(
+      `Updated pay period ${payPeriodId} stats: ${stats.totalWorkers} workers, ` +
+      `gross: ${stats.totalGrossAmount}, net: ${stats.totalNetAmount}`,
     );
   }
 }

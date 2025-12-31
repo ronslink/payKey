@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -92,6 +93,7 @@ class ApiService {
   InterceptorsWrapper _createAuthInterceptor() {
     return InterceptorsWrapper(
       onRequest: (options, handler) async {
+        debugPrint('API Request: ${options.method} ${options.uri}');
         if (!_isAuthEndpoint(options.uri.path)) {
           final token = await _getStoredToken();
           if (token != null) {
@@ -770,6 +772,8 @@ class PaymentEndpoints extends BaseEndpoints {
 
   // Dashboard
   Future<Response> getDashboard() => _api.get('/payments/unified/dashboard');
+
+  Future<Response> getWalletBalance() => _api.get('/payments/unified/wallet');
 
   Future<Response> getMethods() => _api.get('/payments/unified/methods');
 

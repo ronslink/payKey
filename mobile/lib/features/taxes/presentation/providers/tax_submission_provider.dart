@@ -4,7 +4,7 @@ import '../../data/repositories/tax_repository.dart';
 import '../../data/models/tax_submission_model.dart';
 
 class TaxSubmissionNotifier extends AsyncNotifier<List<TaxSubmissionModel>> {
-  late final TaxRepository _repository;
+  late TaxRepository _repository;
 
   @override
   FutureOr<List<TaxSubmissionModel>> build() {

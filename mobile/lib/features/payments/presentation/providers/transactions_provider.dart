@@ -5,7 +5,7 @@ import '../../data/repositories/transactions_repository.dart';
 final transactionsRepositoryProvider = Provider((ref) => TransactionsRepository());
 
 class TransactionsNotifier extends AsyncNotifier<List<dynamic>> {
-  late final TransactionsRepository _repository;
+  late TransactionsRepository _repository;
 
   @override
   FutureOr<List<dynamic>> build() {

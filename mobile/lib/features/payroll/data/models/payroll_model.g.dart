@@ -50,7 +50,7 @@ _PayrollCalculation _$PayrollCalculationFromJson(Map<String, dynamic> json) =>
       id: json['id'] as String?,
       workerId: json['workerId'] as String,
       workerName: json['workerName'] as String,
-      grossSalary: (json['grossSalary'] as num).toDouble(),
+      grossSalary: (json['grossSalary'] as num?)?.toDouble() ?? 0,
       bonuses: (json['bonuses'] as num?)?.toDouble() ?? 0,
       otherEarnings: (json['otherEarnings'] as num?)?.toDouble() ?? 0,
       otherDeductions: (json['otherDeductions'] as num?)?.toDouble() ?? 0,

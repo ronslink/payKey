@@ -9,7 +9,7 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 });
 
 class AuthNotifier extends AsyncNotifier<void> {
-  late final AuthRepository _authRepository;
+  late AuthRepository _authRepository;
 
   @override
   FutureOr<void> build() {

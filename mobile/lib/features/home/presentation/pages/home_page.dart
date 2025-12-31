@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import '../../../../core/widgets/widgets.dart';
+
 import '../../../workers/presentation/providers/workers_provider.dart';
 import '../../../workers/data/models/worker_model.dart';
 import '../../../payroll/presentation/providers/pay_period_provider.dart';
@@ -43,7 +43,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildHeader(context),
-                  _buildPayrollCard(context, payPeriodsAsync),
+                  _buildHeroSection(context, payPeriodsAsync),
                   _buildStatsRow(context, workersAsync, payPeriodsAsync),
                   _buildQuickActionsSection(context),
                   _buildDeadlinesSection(context),
@@ -59,11 +59,10 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Widget _buildTour(BuildContext context) {
-    // Only show if tour provider is loaded and we haven't seen this tour
-    final tourProgress = ref.watch(tourProgressProvider);
-    final hasSeenTour = ref.watch(hasSeenProvider(TourKeys.dashboardTour));
+    // Only show if onboarding is completed and we haven't seen this tour
+    final showTour = ref.watch(showDashboardTourProvider);
 
-    if (!tourProgress.isLoaded || hasSeenTour) {
+    if (!showTour) {
       return const SizedBox.shrink();
     }
 
@@ -104,7 +103,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     final greeting = _getGreeting();
 
     return Padding(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
       child: Row(
         children: [
           Expanded(
@@ -114,7 +113,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 Text(
                   greeting,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.primaryColor,
+                    color: Colors.grey.shade600,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -124,8 +123,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                     final firstName = ref.watch(userFirstNameProvider);
                     return Text(
                       firstName.isEmpty ? 'Jambo! 👋' : 'Jambo, $firstName! 👋',
-                      style: theme.textTheme.headlineSmall?.copyWith(
+                      style: theme.textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
+                        color: const Color(0xFF1E293B),
                       ),
                     );
                   },
@@ -160,7 +160,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  Widget _buildPayrollCard(BuildContext context, AsyncValue<List<PayPeriod>> payPeriodsAsync) {
+  Widget _buildHeroSection(BuildContext context, AsyncValue<List<PayPeriod>> payPeriodsAsync) {
     final activePeriod = payPeriodsAsync.when(
       data: (periods) => PayPeriodUtils.getNextPayrollPeriod(periods),
       loading: () => null,
@@ -170,33 +170,71 @@ class _HomePageState extends ConsumerState<HomePage> {
     final periodName = activePeriod?.name ?? 'No Active Payroll';
     final daysUntilDue = activePeriod?.payDate?.difference(DateTime.now()).inDays ?? 5;
 
-    return GradientCard(
-      key: _payrollKey,
+    return Container(
+      margin: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF6366F1).withValues(alpha: 0.4),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Payroll • $periodName',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white70),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Payroll',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.8),
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    periodName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Icon(Icons.notifications_outlined, color: Colors.white, size: 20),
+                child: const Icon(
+                  Icons.payments_rounded,
+                  color: Colors.white,
+                  size: 28,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 20),
           Text(
             daysUntilDue <= 0 ? 'Due Today!' : 'Due in $daysUntilDue days',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            style: const TextStyle(
               color: Colors.white,
+              fontSize: 28,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -216,26 +254,27 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ),
               )),
               const SizedBox(width: 8),
-              Text('+ others ready', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white70)),
+              Text('+ others ready', style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 12)),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () => context.push('/payroll/run'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
-                foregroundColor: Theme.of(context).primaryColor,
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                foregroundColor: const Color(0xFF6366F1),
+                padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('Process Payroll Now'),
+                  const Text('Process Payroll Now', style: TextStyle(fontWeight: FontWeight.w600)),
                   const SizedBox(width: 8),
-                  Icon(Icons.arrow_forward, size: 18, color: Theme.of(context).primaryColor),
+                  const Icon(Icons.arrow_forward, size: 18),
                 ],
               ),
             ),
@@ -282,43 +321,108 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     return SizedBox(
       key: _workersKey,
-      height: 110,
+      height: 90,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         children: [
           SizedBox(
-            width: 140,
-            child: StatCard(
+            width: 120,
+            child: _buildColorfulStatCard(
               icon: Icons.payments_outlined, 
               label: 'Last Payroll', 
               value: 'KES ${formatter.format(lastPayrollNet)}',
-              iconColor: Colors.green,
+              gradient: const [Color(0xFF10B981), Color(0xFF059669)],
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           SizedBox(
-            width: 140,
-            child: StatCard(
+            width: 110,
+            child: _buildColorfulStatCard(
               icon: Icons.people_outline, 
               label: 'Employees', 
               value: '$workerCount',
               subtitle: '$activeWorkers Active',
-              subtitleColor: Colors.green,
+              gradient: const [Color(0xFF3B82F6), Color(0xFF2563EB)],
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           SizedBox(
-            width: 140,
-            child: StatCard(
+            width: 100,
+            child: _buildColorfulStatCard(
               icon: Icons.pending_actions, 
               label: 'Pending', 
               value: '$pendingCount',
-              iconColor: pendingCount > 0 ? Colors.orange : Colors.green,
-              subtitle: pendingCount > 0 ? 'Compliance' : 'All set',
-              subtitleColor: pendingCount > 0 ? Colors.orange : Colors.green,
+              gradient: const [Color(0xFFF59E0B), Color(0xFFD97706)],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildColorfulStatCard({
+    required IconData icon,
+    required String label,
+    required String value,
+    String? subtitle,
+    required List<Color> gradient,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: gradient,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: gradient[0].withValues(alpha: 0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(icon, color: Colors.white, size: 14),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.8),
+              fontSize: 9,
+            ),
+          ),
+          if (subtitle != null) ...[
+            Text(
+              subtitle,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.9),
+                fontSize: 8,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -331,17 +435,113 @@ class _HomePageState extends ConsumerState<HomePage> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-          child: Text('Quick Actions', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          child: Text('Quick Actions', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: const Color(0xFF1E293B))),
         ),
-        QuickActionGrid(
-          actions: [
-            QuickActionButton(icon: Icons.home_work_outlined, label: 'Properties', onTap: () => context.push('/properties')),
-            QuickActionButton(icon: Icons.access_time_outlined, label: 'Time Tracking', onTap: () => context.push('/time-tracking')),
-            QuickActionButton(icon: Icons.event_note_outlined, label: 'Leave Mgmt', onTap: () => context.push('/leave')),
-            QuickActionButton(icon: Icons.description_outlined, label: 'Reports', onTap: () => context.push('/reports')),
-          ],
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            children: [
+              Expanded(
+                child: _buildGradientActionCard(
+                  icon: Icons.home_work_outlined,
+                  label: 'Properties',
+                  gradient: const [Color(0xFF10B981), Color(0xFF059669)],
+                  onTap: () => context.push('/properties'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildGradientActionCard(
+                  icon: Icons.access_time_outlined,
+                  label: 'Time Tracking',
+                  gradient: const [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                  onTap: () => context.push('/time-tracking'),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Row(
+            children: [
+              Expanded(
+                child: _buildGradientActionCard(
+                  icon: Icons.event_note_outlined,
+                  label: 'Leave Mgmt',
+                  gradient: const [Color(0xFFF59E0B), Color(0xFFD97706)],
+                  onTap: () => context.push('/leave'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildGradientActionCard(
+                  icon: Icons.description_outlined,
+                  label: 'Reports',
+                  gradient: const [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+                  onTap: () => context.push('/reports'),
+                ),
+              ),
+            ],
+          ),
         ),
       ],
+    );
+  }
+
+  Widget _buildGradientActionCard({
+    required IconData icon,
+    required String label,
+    required List<Color> gradient,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: gradient,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: gradient[0].withValues(alpha: 0.3),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: Colors.white, size: 22),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

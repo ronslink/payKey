@@ -36,9 +36,12 @@ class PayPeriodRepository {
     return _executeRequest(
       operation: 'fetch pay periods',
       request: () async {
-        final response = await _apiService.payPeriods.getAll(queryParams: {'limit': '100'});
+        final response = await _apiService.payPeriods.getAll(queryParams: {'limit': 100});
         final periods = _parsePayPeriodList(response.data);
-        debugPrint('PayPeriodRepository: Fetched ${periods.length} periods');
+        debugPrint('PayPeriodRepository: Fetched ${periods.length} periods.');
+        if (periods.isNotEmpty) {
+           debugPrint('PayPeriodRepository: First=${periods.first.name} (${periods.first.startDate}), Last=${periods.last.name} (${periods.last.startDate})');
+        }
         return periods;
       },
     );

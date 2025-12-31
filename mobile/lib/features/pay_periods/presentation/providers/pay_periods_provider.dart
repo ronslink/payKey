@@ -7,7 +7,7 @@ import '../../data/repositories/pay_periods_repository.dart';
 final payPeriodsProvider = AsyncNotifierProvider<PayPeriodsNotifier, List<PayPeriod>>(PayPeriodsNotifier.new);
 
 class PayPeriodsNotifier extends AsyncNotifier<List<PayPeriod>> {
-  late final PayPeriodsRepositoryImpl _repository;
+  late PayPeriodsRepositoryImpl _repository;
 
   @override
   FutureOr<List<PayPeriod>> build() {

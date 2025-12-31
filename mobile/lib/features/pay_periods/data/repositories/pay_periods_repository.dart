@@ -20,7 +20,12 @@ class PayPeriodsRepositoryImpl {
     PayPeriodFrequency? frequency,
   }) async {
     try {
-      final response = await _apiService.payPeriods.getAll();
+      final response = await _apiService.payPeriods.getAll(queryParams: {
+        'page': page,
+        'limit': limit,
+        if (status != null) 'status': _statusToString(status),
+        if (frequency != null) 'frequency': _frequencyToString(frequency),
+      });
       final data = response.data;
       
       // Handle both wrapped {data: [...]} and direct array responses
@@ -33,9 +38,34 @@ class PayPeriodsRepositoryImpl {
         return [];
       }
       
-      return periodsJson
-          .map((json) => PayPeriod.fromJson(json as Map<String, dynamic>))
-          .toList();
+      // Parse with defensive null handling
+      final periods = <PayPeriod>[];
+      for (final json in periodsJson) {
+        try {
+          if (json is Map<String, dynamic>) {
+            // Ensure id is not null
+            if (json['id'] != null) {
+              // Handle null name gracefully - generate default from date
+              final adjustedJson = Map<String, dynamic>.from(json);
+              if (adjustedJson['name'] == null || (adjustedJson['name'] as String).isEmpty) {
+                final startDate = DateTime.tryParse(adjustedJson['startDate']?.toString() ?? '');
+                if (startDate != null) {
+                  final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                  adjustedJson['name'] = '${months[startDate.month - 1]} ${startDate.year}';
+                } else {
+                  adjustedJson['name'] = 'Pay Period';
+                }
+              }
+              periods.add(PayPeriod.fromJson(adjustedJson));
+            } else {
+              print('[PayPeriods] Skipping item with null id: $json');
+            }
+          }
+        } catch (e) {
+          print('[PayPeriods] Failed to parse item: $e, data: $json');
+        }
+      }
+      return periods;
     } catch (e) {
       throw Exception('Failed to fetch pay periods: $e');
     }

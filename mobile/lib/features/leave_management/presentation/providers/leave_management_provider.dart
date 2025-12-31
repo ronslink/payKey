@@ -50,7 +50,7 @@ final leaveBalanceProvider =
 
 /// Notifier for managing all leave requests.
 class LeaveManagementNotifier extends AsyncNotifier<List<LeaveRequestModel>> {
-  late final LeaveManagementRepository _repository;
+  late LeaveManagementRepository _repository;
 
   @override
   FutureOr<List<LeaveRequestModel>> build() {

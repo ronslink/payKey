@@ -445,7 +445,10 @@ final _timeTrackingRoutes = <RouteBase>[
   GoRoute(
     path: AppRoutes.timeTrackingHistory,
     name: 'timeTrackingHistory',
-    builder: (_, _) => const TimeTrackingHistoryPage(),
+    builder: (_, _) => const FeatureGate(
+      featureKey: 'time_tracking',
+      child: TimeTrackingHistoryPage(),
+    ),
   ),
 ];
 
@@ -457,19 +460,28 @@ final _propertyRoutes = <RouteBase>[
   GoRoute(
     path: AppRoutes.properties,
     name: 'properties',
-    builder: (_, _) => const PropertiesPage(),
+    builder: (_, _) => const FeatureGate(
+      featureKey: 'property_management',
+      child: PropertiesPage(),
+    ),
   ),
   GoRoute(
     path: AppRoutes.propertiesAdd,
     name: 'propertiesAdd',
-    builder: (_, _) => const PropertyFormPage(),
+    builder: (_, _) => const FeatureGate(
+      featureKey: 'property_management',
+      child: PropertyFormPage(),
+    ),
   ),
   GoRoute(
     path: '/properties/edit/:id',
     name: 'propertyEdit',
     builder: (_, state) {
       final id = state.pathParameters['id'];
-      return PropertyFormPage(propertyId: id);
+      return FeatureGate(
+        featureKey: 'property_management',
+        child: PropertyFormPage(propertyId: id),
+      );
     },
   ),
   GoRoute(
@@ -477,7 +489,10 @@ final _propertyRoutes = <RouteBase>[
     name: 'propertyDetail',
     builder: (_, state) {
       final id = state.pathParameters['id']!;
-      return PropertyDetailPage(propertyId: id);
+      return FeatureGate(
+        featureKey: 'property_management',
+        child: PropertyDetailPage(propertyId: id),
+      );
     },
   ),
 ];

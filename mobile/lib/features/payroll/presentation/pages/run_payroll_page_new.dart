@@ -48,6 +48,7 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
   int _expandedWorkerIndex = -1;
   bool _isAutomatedMode = true;
   bool _isProcessing = false;
+  bool _isWorkersSectionExpanded = false;
 
   // Controllers and utilities
   final _controllerManager = WorkerHoursControllerManager();
@@ -101,8 +102,88 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back),
+        tooltip: 'Back',
+        onPressed: () => context.pop(),
+      ),
       title: const Text('Run Payroll'),
       actions: [
+        PopupMenuButton<String>(
+          icon: const Icon(Icons.menu),
+          tooltip: 'Navigate',
+          onSelected: (value) {
+            switch (value) {
+              case 'home':
+                context.go('/home');
+                break;
+              case 'finance':
+                context.push('/finance');
+                break;
+              case 'workers':
+                context.push('/workers');
+                break;
+              case 'taxes':
+                context.push('/taxes');
+                break;
+              case 'settings':
+                context.push('/settings');
+                break;
+            }
+          },
+          itemBuilder: (context) => [
+            const PopupMenuItem<String>(
+              value: 'home',
+              child: Row(
+                children: [
+                  Icon(Icons.home_outlined, size: 20),
+                  SizedBox(width: 12),
+                  Text('Home'),
+                ],
+              ),
+            ),
+            const PopupMenuItem<String>(
+              value: 'finance',
+              child: Row(
+                children: [
+                  Icon(Icons.account_balance_outlined, size: 20),
+                  SizedBox(width: 12),
+                  Text('Finance'),
+                ],
+              ),
+            ),
+            const PopupMenuItem<String>(
+              value: 'workers',
+              child: Row(
+                children: [
+                  Icon(Icons.people_outline, size: 20),
+                  SizedBox(width: 12),
+                  Text('Workers'),
+                ],
+              ),
+            ),
+            const PopupMenuItem<String>(
+              value: 'taxes',
+              child: Row(
+                children: [
+                  Icon(Icons.receipt_long_outlined, size: 20),
+                  SizedBox(width: 12),
+                  Text('Taxes'),
+                ],
+              ),
+            ),
+            const PopupMenuItem<String>(
+              value: 'settings',
+              child: Row(
+                children: [
+                  Icon(Icons.settings_outlined, size: 20),
+                  SizedBox(width: 12),
+                  Text('Settings'),
+                ],
+              ),
+            ),
+          ],
+        ),
         IconButton(
           icon: const Icon(Icons.help_outline),
           tooltip: 'Help',
@@ -195,59 +276,43 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
     // Use centralized logic to determine if initialization is needed
     final yearToInitialize = PayPeriodUtils.getYearToInitialize(periods);
     
-    // Variables for dropdown logic (kept for existing display logic)
-    final now = DateTime.now();
-    final currentYear = now.year;
-    final nextYear = currentYear + 1;
-    
-    final currentYearPeriods = periods
-        .where((p) => p.startDate.year == currentYear)
-        .toList();
-    final nextYearPeriods = periods
-        .where((p) => p.startDate.year == nextYear)
-        .toList();
-
-    final closedStatuses = ['CLOSED', 'COMPLETED', 'FINALIZED'];
-    final allCurrentYearClosed = currentYearPeriods.isNotEmpty && 
-        currentYearPeriods.every((p) => closedStatuses.contains(p.status.name.toUpperCase()));
-    
     if (yearToInitialize != null) {
-      if (yearToInitialize == DateTime.now().year) {
-        // Case 1: Initialize Current Year (No periods or fresh install)
-        return InitializePayPeriodsCard(
-          year: yearToInitialize,
-          subtitle: 'No pay periods for $yearToInitialize',
-          onPressed: () => _handleInitializeYear(context, yearToInitialize),
-        );
-      } else {
-        // Case 2: Initialize Next Year (Current year done)
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-             InitializePayPeriodsCard(
-              year: yearToInitialize,
-              subtitle: 'Ready for $yearToInitialize payroll',
-              onPressed: () => _handleInitializeYear(context, yearToInitialize),
-            ),
-            const SizedBox(height: 8),
-            _buildPeriodDropdownWidget(context, periods), // Pass periods, let dropdown filter if needed
-          ],
-        );
-      }
+      debugPrint('Dropdown: Suggesting init for year $yearToInitialize');
+      // Case 1: Initialize Current/Next Year if suggested by utils
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+            InitializePayPeriodsCard(
+            year: yearToInitialize,
+            subtitle: yearToInitialize == DateTime.now().year 
+                ? 'No pay periods for $yearToInitialize' 
+                : 'Ready for $yearToInitialize payroll',
+            onPressed: () => _handleInitializeYear(context, yearToInitialize),
+          ),
+          const SizedBox(height: 8),
+          if (periods.isNotEmpty)
+            _buildPeriodDropdownWidget(context, periods),
+        ],
+      );
     }
 
-    // Combine periods based on context
-    List<PayPeriod> visiblePeriods;
+    // Logic: Show periods from the last 36 months + any future periods
+    // This allows access to history across year boundaries (e.g. accessing Jan 2025 from Mar 2026)
+    final now = DateTime.now();
+    final cutoffDate = DateTime(now.year, now.month - 36, 1);
     
-    if (allCurrentYearClosed && nextYearPeriods.isNotEmpty) {
-      // All current year closed, show next year + current year for viewing
-      visiblePeriods = [...nextYearPeriods, ...currentYearPeriods];
-    } else if (now.month >= 11 || now.month == 1) {
-      // In December or January, show both years
-      visiblePeriods = [...nextYearPeriods, ...currentYearPeriods];
-    } else {
-      // Normal case: show current year only
-      visiblePeriods = currentYearPeriods;
+    // Filter periods within the window
+    List<PayPeriod> visiblePeriods = periods.where((p) {
+      // Include if it starts after the cutoff (last 15 months)
+      // OR if it's active/processing/draft (don't hide active work)
+      final isRecent = p.startDate.isAfter(cutoffDate);
+      final isActiveWork = !['CLOSED', 'CANCELLED'].contains(p.status.name.toUpperCase());
+      return isRecent || isActiveWork;
+    }).toList();
+    
+    debugPrint('Dropdown: All Periods: ${periods.length}, Visible: ${visiblePeriods.length}');
+    if (visiblePeriods.isNotEmpty) {
+      debugPrint('Dropdown: First Visible: ${visiblePeriods.first.name}, Last: ${visiblePeriods.last.name}');
     }
     
     // Sort: open/draft periods first by date ascending, then closed periods by date descending
@@ -270,13 +335,15 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
       }
     });
 
-    if (visiblePeriods.isEmpty) {
+    if (visiblePeriods.isEmpty && yearToInitialize == null) {
       return Text(
         'No pay periods available',
         style: TextStyle(color: Colors.orange.shade700),
       );
     }
 
+    // Default: Show dropdown if we have periods, even if we showed the init card above (it's handled in the init block now if yearToInitialize was set)
+    // But if yearToInitialize was NULL, we just show the dropdown here.
     return _buildPeriodDropdownWidget(context, visiblePeriods);
   }
 
@@ -284,14 +351,17 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
     // Auto-select first period if none selected
     _autoSelectFirstPeriod(periods);
 
+    // Use ID-based lookup to avoid object equality issues
+    final selectedId = _selectedPayPeriod?.id ?? periods.first.id;
+
     return DropdownButtonHideUnderline(
-      child: DropdownButton<PayPeriod>(
-        value: _selectedPayPeriod ?? periods.first,
+      child: DropdownButton<String>(
+        value: selectedId,
         isExpanded: true,
         items: periods.map((period) {
           final isClosed = ['CLOSED', 'COMPLETED', 'FINALIZED'].contains(period.status.name.toUpperCase());
-          return DropdownMenuItem<PayPeriod>(
-            value: period,
+          return DropdownMenuItem<String>(
+            value: period.id,
             child: Row(
               children: [
                 Expanded(
@@ -319,8 +389,14 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
             ),
           );
         }).toList(),
-        onChanged: (val) {
-          if (val != null) setState(() => _selectedPayPeriod = val);
+        onChanged: (String? selectedId) {
+          if (selectedId != null) {
+            final period = periods.firstWhere((p) => p.id == selectedId);
+            setState(() {
+              _selectedPayPeriod = period;
+              _controllerManager.clearDaysWorkedControllers();
+            });
+          }
         },
       ),
     );
@@ -335,16 +411,19 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
           if (widget.payPeriodId != null) {
             try {
               final requested = periods.firstWhere((p) => p.id == widget.payPeriodId);
-              setState(() => _selectedPayPeriod = requested);
+              setState(() {
+                _selectedPayPeriod = requested;
+                _controllerManager.clearDaysWorkedControllers();
+              });
               return;
             } catch (_) {
               // Period not found, fall back to default behavior
-              debugPrint('Requested pay period ${widget.payPeriodId} not found');
             }
           }
-          
-          // Default: Select first available (usually latest open)
-          setState(() => _selectedPayPeriod = periods.first);
+          setState(() {
+            _selectedPayPeriod = periods.first;
+            _controllerManager.clearDaysWorkedControllers();
+          });
         }
       });
     }
@@ -375,6 +454,15 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
   }
 
   Widget _buildWorkersList(BuildContext context, List<WorkerModel> workers) {
+    if (_selectedPayPeriod == null) {
+      return const Padding(
+        padding: EdgeInsets.all(32),
+        child: Center(
+          child: Text('Select a pay period to view employee inputs'),
+        ),
+      );
+    }
+
     if (workers.isEmpty) {
       return NoWorkersEmptyState(
         onAddWorker: () => context.push('/workers/add'),
@@ -387,37 +475,58 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
     return Column(
       children: [
         _buildWorkersHeader(context, workers.length),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(
-            children: workers.asMap().entries.map((entry) {
-              return _buildWorkerCard(context, entry.key, entry.value);
-            }).toList(),
+        AnimatedCrossFade(
+          firstChild: Container(),
+          secondChild: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              children: workers.asMap().entries.map((entry) {
+                return _buildWorkerCard(context, entry.key, entry.value);
+              }).toList(),
+            ),
           ),
+          crossFadeState: _isWorkersSectionExpanded
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 300),
         ),
       ],
     );
   }
 
   Widget _buildWorkersHeader(BuildContext context, int count) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            'Employee Inputs',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+    return InkWell(
+      onTap: () => setState(() => _isWorkersSectionExpanded = !_isWorkersSectionExpanded),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Employee Inputs',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
-          ),
-          Text(
-            '$count Workers',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                const SizedBox(width: 8),
+                Icon(
+                  _isWorkersSectionExpanded 
+                      ? Icons.keyboard_arrow_up_rounded 
+                      : Icons.keyboard_arrow_down_rounded,
                   color: Colors.grey.shade600,
                 ),
-          ),
-        ],
+              ],
+            ),
+            Text(
+              '$count Workers',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey.shade600,
+                  ),
+            ),
+          ],
+        ),
       ),
     );
   }

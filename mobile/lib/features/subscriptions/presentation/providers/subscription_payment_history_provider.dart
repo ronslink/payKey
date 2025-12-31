@@ -4,7 +4,7 @@ import '../../data/repositories/subscription_repository.dart';
 import '../../data/models/subscription_payment_record.dart';
 
 class SubscriptionPaymentHistoryNotifier extends AsyncNotifier<List<SubscriptionPaymentRecord>> {
-  late final SubscriptionRepository _repository;
+  late SubscriptionRepository _repository;
 
   @override
   FutureOr<List<SubscriptionPaymentRecord>> build() {

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../data/models/time_tracking_model.dart';
 import '../../data/repositories/time_tracking_repository.dart';
+import '../../data/mock/time_tracking_mock_data.dart';
 
 final timeTrackingProvider =
     AsyncNotifierProvider<TimeTrackingNotifier, TimeEntry?>(TimeTrackingNotifier.new);
@@ -20,7 +21,7 @@ final timeEntriesProvider =
     AsyncNotifierProvider<TimeEntriesNotifier, List<TimeEntry>>(TimeEntriesNotifier.new);
 
 class TimeTrackingNotifier extends AsyncNotifier<TimeEntry?> {
-  late final TimeTrackingRepository _repository;
+  late TimeTrackingRepository _repository;
 
   @override
   FutureOr<TimeEntry?> build() {
@@ -102,7 +103,7 @@ class TimeTrackingNotifier extends AsyncNotifier<TimeEntry?> {
 }
 
 class TimeEntriesNotifier extends AsyncNotifier<List<TimeEntry>> {
-  late final TimeTrackingRepository _repository;
+  late TimeTrackingRepository _repository;
 
   @override
   FutureOr<List<TimeEntry>> build() {
@@ -125,6 +126,14 @@ class TimeEntriesNotifier extends AsyncNotifier<List<TimeEntry>> {
         );
       } on TimeTrackingException catch (e) {
         if (e.isNetworkError) return [];
+        // Check if feature is gated (403) - return mock data instead of showing error
+        if (e.statusCode == 403) {
+          print('[TimeTrackingProvider] Feature gated, returning mock time entries');
+          if (workerId != null) {
+            return TimeTrackingMockData.getEntriesForWorker(workerId);
+          }
+          return TimeTrackingMockData.timeEntries;
+        }
         rethrow;
       }
     });

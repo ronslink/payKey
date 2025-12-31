@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/countries_provider.dart';
+import '../providers/tour_progress_provider.dart';
 import '../../data/models/country_model.dart';
 import '../../../../core/network/api_service.dart';
 
@@ -144,6 +145,9 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
             behavior: SnackBarBehavior.floating,
           ),
         );
+
+        // Mark onboarding as completed
+        await ref.read(tourProgressProvider.notifier).completeOnboarding();
 
         // Navigate after a short delay
         await Future.delayed(const Duration(milliseconds: 500));

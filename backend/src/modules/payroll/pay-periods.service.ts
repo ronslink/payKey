@@ -77,8 +77,21 @@ export class PayPeriodsService {
         ? { note: createPayPeriodDto.notes }
         : createPayPeriodDto.notes;
 
+    // Generate default name if not provided
+    let periodName = createPayPeriodDto.name;
+    if (!periodName || periodName.trim() === '') {
+      const startDate = new Date(createPayPeriodDto.startDate);
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'];
+      const month = monthNames[startDate.getMonth()];
+      const year = startDate.getFullYear();
+      periodName = createPayPeriodDto.isOffCycle
+        ? `Off-Cycle ${month} ${year}`
+        : `${month} ${year}`;
+    }
+
     const payPeriod = this.payPeriodRepository.create({
-      name: createPayPeriodDto.name,
+      name: periodName,
       startDate: createPayPeriodDto.startDate,
       endDate: createPayPeriodDto.endDate,
       payDate: createPayPeriodDto.payDate,
@@ -87,6 +100,7 @@ export class PayPeriodsService {
       createdBy: createPayPeriodDto.createdBy,
       userId,
       status: PayPeriodStatus.DRAFT,
+      isOffCycle: createPayPeriodDto.isOffCycle ?? false,
     });
 
     return this.payPeriodRepository.save(payPeriod);
@@ -129,6 +143,38 @@ export class PayPeriodsService {
       .skip((page - 1) * limit)
       .take(limit)
       .getManyAndCount();
+
+    // Calculate totals dynamically from payroll records for each pay period
+    // This ensures Workers, Gross, and Net values are always available
+    for (const period of data) {
+      const payrollRecords = await this.payrollRecordRepository.find({
+        where: { payPeriodId: period.id },
+      });
+
+      if (payrollRecords.length > 0) {
+        const totals = payrollRecords.reduce(
+          (acc, record) => ({
+            totalWorkers: acc.totalWorkers + 1,
+            totalGrossAmount: acc.totalGrossAmount + Number(record.grossSalary || 0),
+            totalNetAmount: acc.totalNetAmount + Number(record.netSalary || 0),
+            totalTaxAmount: acc.totalTaxAmount + Number(record.taxAmount || 0),
+          }),
+          { totalWorkers: 0, totalGrossAmount: 0, totalNetAmount: 0, totalTaxAmount: 0 },
+        );
+
+        // Update the period with calculated totals
+        period.totalWorkers = totals.totalWorkers;
+        period.totalGrossAmount = totals.totalGrossAmount;
+        period.totalNetAmount = totals.totalNetAmount;
+        period.totalTaxAmount = totals.totalTaxAmount;
+      } else {
+        // Set defaults for periods with no payroll records
+        period.totalWorkers = 0;
+        period.totalGrossAmount = 0;
+        period.totalNetAmount = 0;
+        period.totalTaxAmount = 0;
+      }
+    }
 
     return { data, total, page, limit };
   }
@@ -590,18 +636,32 @@ export class PayPeriodsService {
 
       const name = this.generatePeriodName(periodStart, periodEnd, frequency);
 
-      const payPeriod = this.payPeriodRepository.create({
-        name,
-        startDate: this.formatDate(periodStart),
-        endDate: this.formatDate(periodEnd),
-        payDate: this.formatDate(periodEnd), // Default pay date to end of period
-        frequency: frequency as PayPeriodFrequency,
-        status: PayPeriodStatus.DRAFT,
-        createdBy: userId,
-        userId: userId,
+      // Check if period already exists
+      const existing = await this.payPeriodRepository.findOne({
+        where: {
+          userId: userId,
+          name: name,
+          frequency: frequency as PayPeriodFrequency,
+        },
       });
 
-      periods.push(await this.payPeriodRepository.save(payPeriod));
+      if (!existing) {
+        const payPeriod = this.payPeriodRepository.create({
+          name,
+          startDate: this.formatDate(periodStart),
+          endDate: this.formatDate(periodEnd),
+          payDate: this.formatDate(periodEnd), // Default pay date to end of period
+          frequency: frequency as PayPeriodFrequency,
+          status: PayPeriodStatus.DRAFT,
+          createdBy: userId,
+          userId: userId,
+        });
+
+        periods.push(await this.payPeriodRepository.save(payPeriod));
+      } else {
+        // If exists, just add to returned list without creating new
+        periods.push(existing);
+      }
     }
 
     return periods;
@@ -652,5 +712,113 @@ export class PayPeriodsService {
     }
 
     return `${startMonth} ${startDate.getDate()}, ${startDate.getFullYear()} - ${endMonth} ${endDate.getDate()}, ${endDate.getFullYear()}`;
+  }
+
+  /**
+   * Recalculate statistics for all pay periods belonging to a user.
+   * This is useful for backfilling stats for existing pay periods.
+   */
+  async getCurrentPayPeriods(): Promise<PayPeriod[]> {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    const periods = await this.payPeriodRepository
+      .createQueryBuilder('pp')
+      .where('pp.startDate <= :today', { today })
+      .andWhere('pp.endDate >= :today', { today })
+      .getMany();
+
+    // Calculate totals dynamically for each current period
+    for (const period of periods) {
+      const payrollRecords = await this.payrollRecordRepository.find({
+        where: { payPeriodId: period.id },
+      });
+
+      if (payrollRecords.length > 0) {
+        const totals = payrollRecords.reduce(
+          (acc, record) => ({
+            totalWorkers: acc.totalWorkers + 1,
+            totalGrossAmount:
+              acc.totalGrossAmount + Number(record.grossSalary || 0),
+            totalNetAmount:
+              acc.totalNetAmount + Number(record.netSalary || 0),
+            totalTaxAmount:
+              acc.totalTaxAmount + Number(record.taxAmount || 0),
+          }),
+          {
+            totalWorkers: 0,
+            totalGrossAmount: 0,
+            totalNetAmount: 0,
+            totalTaxAmount: 0,
+          },
+        );
+
+        period.totalWorkers = totals.totalWorkers;
+        period.totalGrossAmount = totals.totalGrossAmount;
+        period.totalNetAmount = totals.totalNetAmount;
+        period.totalTaxAmount = totals.totalTaxAmount;
+      } else {
+        period.totalWorkers = 0;
+        period.totalGrossAmount = 0;
+        period.totalNetAmount = 0;
+        period.totalTaxAmount = 0;
+      }
+    }
+
+    return periods;
+  }
+
+  async recalculateAllPayPeriodStats(
+    userId: string,
+  ): Promise<{ updated: number; message: string }> {
+    // Get all pay periods for this user
+    const payPeriods = await this.payPeriodRepository.find({
+      where: { userId },
+    });
+
+    let updatedCount = 0;
+
+    for (const payPeriod of payPeriods) {
+      // Get all payroll records for this pay period
+      const records = await this.payrollRecordRepository.find({
+        where: { payPeriodId: payPeriod.id },
+      });
+
+      if (records.length === 0) continue;
+
+      // Aggregate statistics
+      const stats = records.reduce(
+        (acc, record) => {
+          acc.totalGrossAmount += Number(record.grossSalary) || 0;
+          acc.totalNetAmount += Number(record.netSalary) || 0;
+          acc.totalWorkers += 1;
+          if (record.status === PayrollStatus.FINALIZED) {
+            acc.processedWorkers += 1;
+          }
+          return acc;
+        },
+        {
+          totalGrossAmount: 0,
+          totalNetAmount: 0,
+          totalWorkers: 0,
+          processedWorkers: 0,
+        },
+      );
+
+      // Update pay period with aggregated statistics
+      await this.payPeriodRepository.update(payPeriod.id, {
+        totalGrossAmount: Math.round(stats.totalGrossAmount * 100) / 100,
+        totalNetAmount: Math.round(stats.totalNetAmount * 100) / 100,
+        totalWorkers: stats.totalWorkers,
+        processedWorkers: stats.processedWorkers,
+      });
+
+      updatedCount++;
+    }
+
+    return {
+      updated: updatedCount,
+      message: `Recalculated statistics for ${updatedCount} pay periods`,
+    };
   }
 }

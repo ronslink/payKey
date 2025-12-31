@@ -17,9 +17,10 @@ import {
 } from '../dto/property.dto';
 import { Property } from '../entities/property.entity';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { PlatinumGuard } from '../../auth/platinum.guard';
 
 @Controller('properties')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PlatinumGuard)
 export class PropertiesController {
   constructor(private readonly propertiesService: PropertiesService) {
     console.log('PropertiesController initialized');

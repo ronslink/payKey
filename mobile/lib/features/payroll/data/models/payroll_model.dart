@@ -100,7 +100,7 @@ abstract class PayrollCalculation with _$PayrollCalculation {
     required String workerName,
 
     /// Base salary before any additions or deductions.
-    required double grossSalary,
+    @Default(0) double grossSalary,
 
     /// Additional bonus payments.
     @Default(0) double bonuses,

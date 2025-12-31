@@ -6,6 +6,7 @@ import '../models/tour_models.dart';
 class _StorageKeys {
   static const String completedTours = 'onboarding_completed_tours';
   static const String dismissedTips = 'onboarding_dismissed_tips';
+  static const String onboardingCompleted = 'onboarding_completed';
 }
 
 /// Notifier for managing tour progress state
@@ -28,11 +29,13 @@ class TourProgressNotifier extends Notifier<TourProgress> {
           prefs.getStringList(_StorageKeys.completedTours)?.toSet() ?? {};
       final dismissedTips =
           prefs.getStringList(_StorageKeys.dismissedTips)?.toSet() ?? {};
+      final onboardingCompleted = prefs.getBool(_StorageKeys.onboardingCompleted) ?? false;
 
       state = TourProgress(
         completedTours: completedTours,
         dismissedTips: dismissedTips,
         isLoaded: true,
+        onboardingCompleted: onboardingCompleted,
       );
     } catch (e) {
       // Log error in production
@@ -94,6 +97,7 @@ class TourProgressNotifier extends Notifier<TourProgress> {
       await Future.wait([
         prefs.remove(_StorageKeys.completedTours),
         prefs.remove(_StorageKeys.dismissedTips),
+        prefs.remove(_StorageKeys.onboardingCompleted),
       ]);
 
       state = const TourProgress(isLoaded: true);
@@ -119,9 +123,26 @@ class TourProgressNotifier extends Notifier<TourProgress> {
     }
   }
 
+  /// Mark onboarding as completed and navigate to home
+  Future<bool> completeOnboarding() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final success = await prefs.setBool(_StorageKeys.onboardingCompleted, true);
+
+      if (success) {
+        state = state.copyWith(onboardingCompleted: true);
+      }
+
+      return success;
+    } catch (e) {
+      return false;
+    }
+  }
+
   /// Check if user should see onboarding (new user detection)
   bool get isNewUser =>
       state.isLoaded &&
+      !state.onboardingCompleted &&
       state.completedTours.isEmpty &&
       state.dismissedTips.isEmpty;
 }
@@ -142,4 +163,13 @@ final hasSeenProvider = Provider.family<bool, String>((ref, key) {
 final canShowTourProvider = Provider<bool>((ref) {
   final progress = ref.watch(tourProgressProvider);
   return progress.isLoaded && progress.canShowTour;
+});
+
+/// Provider to check if user just completed onboarding and should see tour
+/// Returns true when onboarding is completed but dashboard tour hasn't been shown yet
+final showDashboardTourProvider = Provider<bool>((ref) {
+  final progress = ref.watch(tourProgressProvider);
+  return progress.isLoaded &&
+      progress.onboardingCompleted &&
+      !progress.hasSeen(TourKeys.dashboardTour);
 });

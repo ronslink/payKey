@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/leave_request_model.dart';
+import '../../../subscriptions/presentation/providers/feature_access_provider.dart';
 import '../providers/leave_management_provider.dart';
-class LeaveBalancePage extends ConsumerWidget {
+
+class LeaveBalancePage extends ConsumerStatefulWidget {
   final String? selectedWorkerId;
 
   const LeaveBalancePage({
@@ -11,74 +13,178 @@ class LeaveBalancePage extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (selectedWorkerId == null) {
+  ConsumerState<LeaveBalancePage> createState() => _LeaveBalancePageState();
+}
+
+class _LeaveBalancePageState extends ConsumerState<LeaveBalancePage> {
+  @override
+  Widget build(BuildContext context) {
+    // Check feature access
+    final featureAccess = ref.watch(featureAccessProvider('leave_management'));
+
+    if (widget.selectedWorkerId == null) {
       return _buildNoWorkerSelectedState();
     }
 
-    final leaveBalance = ref.watch(leaveBalanceProvider(selectedWorkerId!));
+    final leaveBalance = ref.watch(leaveBalanceProvider(widget.selectedWorkerId!));
 
-    return Column(
-      children: [
-        // Header
-        Container(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              const Icon(Icons.account_balance_wallet, color: Colors.blue),
-              const SizedBox(width: 8),
-              Text(
-                'Leave Balance',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
+    return featureAccess.when(
+      data: (access) => Column(
+        children: [
+          // Preview mode banner
+          if (access.isPreview)
+            _buildPreviewBanner(access.mockNotice ?? 'This is sample data'),
+          
+          // Header
+          Container(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const Icon(Icons.account_balance_wallet, color: Colors.blue),
+                const SizedBox(width: 8),
+                Text(
+                  'Leave Balance',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              const Spacer(),
-              IconButton(
-                // ignore: unused_result
-                onPressed: () => ref.refresh(leaveBalanceProvider(selectedWorkerId!)),
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Refresh Balance',
-              ),
-            ],
+                const Spacer(),
+                IconButton(
+                  // ignore: unused_result
+                  onPressed: () => ref.refresh(leaveBalanceProvider(widget.selectedWorkerId!)),
+                  icon: const Icon(Icons.refresh),
+                  tooltip: 'Refresh Balance',
+                ),
+              ],
+            ),
           ),
-        ),
 
-        // Leave Balance Content
-        Expanded(
-          child: leaveBalance.when(
-            data: (balance) => _buildBalanceContent(context, ref, balance),
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, stackTrace) => Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error, size: 64, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Error loading leave balance',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    error.toString(),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      // ignore: unused_result
-                      ref.refresh(leaveBalanceProvider(selectedWorkerId!));
-                    },
-                    child: const Text('Retry'),
-                  ),
-                ],
+          // Leave Balance Content
+          Expanded(
+            child: leaveBalance.when(
+              data: (balance) => _buildBalanceContent(context, ref, balance),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stackTrace) => Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error, size: 64, color: Colors.red),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Error loading leave balance',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      error.toString(),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () {
+                        // ignore: unused_result
+                        ref.refresh(leaveBalanceProvider(widget.selectedWorkerId!));
+                      },
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
+      loading: () => Column(
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const Icon(Icons.account_balance_wallet, color: Colors.blue),
+                const SizedBox(width: 8),
+                Text(
+                  'Leave Balance',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  onPressed: () => ref.refresh(leaveBalanceProvider(widget.selectedWorkerId!)),
+                  icon: const Icon(Icons.refresh),
+                  tooltip: 'Refresh Balance',
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: leaveBalance.when(
+              data: (balance) => _buildBalanceContent(context, ref, balance),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stackTrace) => Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error, size: 64, color: Colors.red),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Error loading leave balance',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+      error: (_, __) => Column(
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const Icon(Icons.account_balance_wallet, color: Colors.blue),
+                const SizedBox(width: 8),
+                Text(
+                  'Leave Balance',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  onPressed: () => ref.refresh(leaveBalanceProvider(widget.selectedWorkerId!)),
+                  icon: const Icon(Icons.refresh),
+                  tooltip: 'Refresh Balance',
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: leaveBalance.when(
+              data: (balance) => _buildBalanceContent(context, ref, balance),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stackTrace) => Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error, size: 64, color: Colors.red),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Error loading leave balance',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -458,6 +564,42 @@ class LeaveBalancePage extends ConsumerWidget {
           textAlign: TextAlign.center,
         ),
       ],
+    );
+  }
+
+  Widget _buildPreviewBanner(String message) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      color: Colors.amber.withValues(alpha: 0.9),
+      child: Row(
+        children: [
+          const Icon(Icons.info_outline, color: Colors.black87, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: Colors.black87,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              // TODO: Navigate to upgrade screen
+            },
+            child: const Text(
+              'Upgrade',
+              style: TextStyle(
+                color: Colors.black87,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/network/api_service.dart';
 import '../../../settings/providers/settings_provider.dart';
+import '../../../subscriptions/presentation/providers/feature_access_provider.dart';
 import '../../../../core/utils/download_utils.dart';
 import '../../widgets/funding_sources_section.dart';
 import '../../../payroll/presentation/providers/pay_period_provider.dart';
@@ -511,6 +512,20 @@ class _FinancePageState extends ConsumerState<FinancePage>
   }
 
   Widget _buildQuickExportCard(AsyncValue<List<PayPeriod>> payPeriodsAsync) {
+    // Check feature access
+    final featureAccess = ref.watch(featureAccessProvider('accounting_integration'));
+    
+    return featureAccess.when(
+      data: (access) => _buildExportCardContent(payPeriodsAsync, access),
+      loading: () => _buildExportCardContent(payPeriodsAsync, FeatureAccessResult.full()),
+      error: (_, __) => _buildExportCardContent(payPeriodsAsync, FeatureAccessResult.full()),
+    );
+  }
+
+  Widget _buildExportCardContent(AsyncValue<List<PayPeriod>> payPeriodsAsync, FeatureAccessResult access) {
+    final isPreview = access.isPreview;
+    final hasAccess = access.hasAccess;
+    
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(20),
@@ -529,7 +544,7 @@ class _FinancePageState extends ConsumerState<FinancePage>
                 child: const Icon(Icons.file_download_rounded, color: Color(0xFF3B82F6), size: 24),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -538,78 +553,122 @@ class _FinancePageState extends ConsumerState<FinancePage>
                   ],
                 ),
               ),
+              // Feature access indicator
+              if (isPreview)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text('PREVIEW', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.amber)),
+                ),
             ],
           ),
           const SizedBox(height: 20),
-          payPeriodsAsync.when(
-            data: (periods) {
-              final completed = periods.where(
-                (p) => p.status == PayPeriodStatus.completed || p.status == PayPeriodStatus.closed
-              ).toList();
-
-              if (completed.isEmpty) {
-                return Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.info_outline, color: Colors.amber, size: 20),
-                      SizedBox(width: 10),
-                      Expanded(child: Text('No completed periods to export', style: TextStyle(fontSize: 13))),
-                    ],
-                  ),
-                );
-              }
-
-              return Column(
+          
+          // Preview notice banner
+          if (isPreview)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.amber.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
                 children: [
-                  DropdownButtonFormField<String>(
-                    initialValue: _selectedPayPeriodId,
-                    hint: const Text('Select pay period'),
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      filled: true,
-                      fillColor: const Color(0xFFF9FAFB),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    ),
-                    items: completed.map((p) {
-                      final start = DateFormat('MMM d').format(p.startDate);
-                      final end = DateFormat('MMM d, y').format(p.endDate);
-                      return DropdownMenuItem(value: p.id, child: Text('$start - $end'));
-                    }).toList(),
-                    onChanged: (v) => setState(() => _selectedPayPeriodId = v),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _isExporting ? null : _exportPayroll,
-                      icon: _isExporting
-                          ? const SizedBox(
-                              width: 18, height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                            )
-                          : const Icon(Icons.download_rounded, size: 20),
-                      label: Text(_isExporting ? 'Exporting...' : 'Download CSV'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF3B82F6),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        elevation: 0,
-                      ),
-                    ),
-                  ),
+                  const Icon(Icons.info_outline, color: Colors.amber, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(access.mockNotice ?? 'This is sample data. Upgrade to see your real data.', style: TextStyle(fontSize: 13))),
                 ],
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Text('Error: $e'),
-          ),
+              ),
+            ),
+          
+          // Show export UI only if feature is accessible and not in preview mode
+          if (hasAccess && !isPreview) ...[
+            const SizedBox(height: 16),
+            _buildExportPeriodDropdown(payPeriodsAsync),
+          ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildExportPeriodDropdown(AsyncValue<List<PayPeriod>> payPeriodsAsync) {
+    return payPeriodsAsync.when(
+      data: (periods) {
+        final completed = periods.where(
+          (p) => p.status == PayPeriodStatus.completed || p.status == PayPeriodStatus.closed
+        ).toList();
+
+        if (completed.isEmpty) {
+          return Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.amber.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.amber, size: 20),
+                SizedBox(width: 10),
+                Expanded(child: Text('No completed periods to export', style: TextStyle(fontSize: 13))),
+              ],
+            ),
+          );
+        }
+
+        return Column(
+          children: [
+            DropdownButtonFormField<String>(
+              initialValue: _selectedPayPeriodId,
+              hint: const Text('Select pay period'),
+              decoration: InputDecoration(
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                filled: true,
+                fillColor: const Color(0xFFF9FAFB),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              ),
+              items: completed.map((p) {
+                final start = DateFormat('MMM d').format(p.startDate);
+                final end = DateFormat('MMM d, y').format(p.endDate);
+                return DropdownMenuItem(value: p.id, child: Text('$start - $end'));
+              }).toList(),
+              onChanged: (v) => setState(() => _selectedPayPeriodId = v),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _isExporting ? null : _exportPayroll,
+                icon: _isExporting
+                    ? const SizedBox(
+                        width: 18, height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.download_rounded, size: 20),
+                label: Text(_isExporting ? 'Exporting...' : 'Download CSV'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF3B82F6),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(
+        child: Column(
+          children: [
+            const Icon(Icons.error, color: Colors.red),
+            const SizedBox(height: 8),
+            Text('Error loading periods'),
+          ],
+        ),
       ),
     );
   }

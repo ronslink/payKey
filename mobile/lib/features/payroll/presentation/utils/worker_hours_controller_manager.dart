@@ -79,28 +79,40 @@ class WorkerHoursControllerManager {
     required DateTime periodStart,
     required DateTime periodEnd,
   }) {
-    final totalDays = periodEnd.difference(periodStart).inDays + 1;
+    // Normalize dates to ignore time components
+    final pStart_ = DateTime(periodStart.year, periodStart.month, periodStart.day);
+    final pEnd_ = DateTime(periodEnd.year, periodEnd.month, periodEnd.day);
+    final wStart = worker.startDate != null 
+        ? DateTime(worker.startDate!.year, worker.startDate!.month, worker.startDate!.day) 
+        : null;
+    final wEnd = worker.terminatedAt != null 
+        ? DateTime(worker.terminatedAt!.year, worker.terminatedAt!.month, worker.terminatedAt!.day) 
+        : null;
+
+    debugPrint('Calculating defaults for ${worker.name}: Period ${pStart_} - ${pEnd_}, Worker Start: ${wStart}, End: ${wEnd}');
+
+    final totalDays = pEnd_.difference(pStart_).inDays + 1;
     
-    DateTime effectiveStart = periodStart;
-    DateTime effectiveEnd = periodEnd;
+    DateTime effectiveStart = pStart_;
+    DateTime effectiveEnd = pEnd_;
     
     // Adjust for new hire (started after period start)
-    if (worker.startDate != null && worker.startDate!.isAfter(periodStart)) {
-      effectiveStart = worker.startDate!;
+    if (wStart != null && wStart.isAfter(pStart_)) {
+      effectiveStart = wStart;
     }
     
     // Adjust for termination (terminated before period end)
-    if (worker.terminatedAt != null && worker.terminatedAt!.isBefore(periodEnd)) {
-      effectiveEnd = worker.terminatedAt!;
+    if (wEnd != null && wEnd.isBefore(pEnd_)) {
+      effectiveEnd = wEnd;
     }
     
     // If terminated before period started, return 0
-    if (worker.terminatedAt != null && worker.terminatedAt!.isBefore(periodStart)) {
+    if (wEnd != null && wEnd.isBefore(pStart_)) {
       return 0;
     }
     
     // If started after period ended, return 0
-    if (worker.startDate != null && worker.startDate!.isAfter(periodEnd)) {
+    if (wStart != null && wStart.isAfter(pEnd_)) {
       return 0;
     }
     
@@ -168,6 +180,16 @@ class WorkerHoursControllerManager {
       _daysWorkedControllers.remove(id);
       _isPartialPeriod.remove(id);
     }
+  }
+
+  /// Clear all days worked controllers to force recalculation
+  /// Use when pay period changes
+  void clearDaysWorkedControllers() {
+    for (final controller in _daysWorkedControllers.values) {
+      controller.dispose();
+    }
+    _daysWorkedControllers.clear();
+    _isPartialPeriod.clear();
   }
 
   /// Dispose all controllers

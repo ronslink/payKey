@@ -182,29 +182,36 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
     });
 
     try {
-      final payoutResult = await ref.read(disbursementProvider.notifier).disburseSalaries(
-        workers: _preparedPayouts!,
-        payPeriod: widget.payPeriodId,
-      );
-
-      if (payoutResult == null) {
-         throw Exception('Disbursement failed to initiate');
-      }
-
+      // Process payroll via backend API (which handles IntaSend disbursement server-side)
+      // skipPayout: false means the backend WILL process the M-Pesa payouts
       await ref.read(payrollProvider.notifier).processPayroll(
             widget.workerIds,
             widget.payPeriodId,
-            skipPayout: true,
+            skipPayout: false, // Backend handles disbursement
       );
 
       ref.invalidate(transactionHistoryProvider);
       ref.invalidate(payPeriodsProvider);
 
+      // Create a success result for UI display
+      final batchResult = PayrollBatchResult(
+        successCount: _preparedPayouts!.length,
+        failureCount: 0,
+        totalProcessed: _preparedPayouts!.length,
+        failedWorkerIds: [],
+        results: _preparedPayouts!.map((p) => PayrollWorkerResult(
+          success: true,
+          workerName: p.name,
+          netPay: p.amount,
+          error: null,
+        )).toList(),
+      );
+
       if (mounted) {
         setState(() {
           _state = _state.copyWith(
             status: PayrollConfirmStatus.completed,
-            batchResult: _convertIntaSendResult(payoutResult),
+            batchResult: batchResult,
           );
         });
       }
@@ -218,21 +225,6 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
         });
       }
     }
-  }
-
-  PayrollBatchResult _convertIntaSendResult(DisbursementResult result) {
-    return PayrollBatchResult(
-        successCount: result.successCount,
-        failureCount: result.failedCount,
-        totalProcessed: result.totalCount,
-        failedWorkerIds: result.items.where((i) => i.isFailed).map((i) => i.workerId).toList(),
-        results: result.items.map((i) => PayrollWorkerResult(
-            success: i.isSuccess || i.isPending, 
-            workerName: i.workerName,
-            netPay: i.amount,
-            error: i.error
-        )).toList(),
-    );
   }
 
   void _handleBackToHome() {

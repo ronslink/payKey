@@ -103,6 +103,7 @@ class TourProgress {
   final Set<String> dismissedTips;
   final DateTime? lastTourShown;
   final bool isLoaded;
+  final bool onboardingCompleted;
   final String? error;
 
   const TourProgress({
@@ -110,6 +111,7 @@ class TourProgress {
     this.dismissedTips = const {},
     this.lastTourShown,
     this.isLoaded = false,
+    this.onboardingCompleted = false,
     this.error,
   });
 
@@ -119,6 +121,7 @@ class TourProgress {
         dismissedTips = const {},
         lastTourShown = null,
         isLoaded = false,
+        onboardingCompleted = false,
         error = null;
 
   /// Create error state
@@ -127,6 +130,7 @@ class TourProgress {
         dismissedTips = const {},
         lastTourShown = null,
         isLoaded = true,
+        onboardingCompleted = false,
         error = errorMessage;
 
   TourProgress copyWith({
@@ -134,6 +138,7 @@ class TourProgress {
     Set<String>? dismissedTips,
     DateTime? lastTourShown,
     bool? isLoaded,
+    bool? onboardingCompleted,
     String? error,
   }) {
     return TourProgress(
@@ -141,6 +146,7 @@ class TourProgress {
       dismissedTips: dismissedTips ?? this.dismissedTips,
       lastTourShown: lastTourShown ?? this.lastTourShown,
       isLoaded: isLoaded ?? this.isLoaded,
+      onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
       error: error,
     );
   }

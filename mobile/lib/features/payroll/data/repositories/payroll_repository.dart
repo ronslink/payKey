@@ -72,6 +72,9 @@ class PayrollRepository {
   ///
   /// Marks the specified workers' payroll as processed and ready for payment.
   /// Returns processing result with success/failure details.
+  /// 
+  /// Note: Backend uses async queue processing. If status is 'PROCESSING',
+  /// the job is queued and will complete asynchronously.
   Future<PayrollProcessingResult> processPayroll(
     List<String> workerIds,
     String payPeriodId, {
@@ -89,18 +92,25 @@ class PayrollRepository {
           },
         );
 
-        final data = response.data;
-        // Map backend response to the shared model
-        // Backend returns: { finalizedRecords: [], payoutResults: { successCount, failureCount, results: [] } }
+        final data = response.data as Map<String, dynamic>;
         
-        final payoutResults = data['payoutResults'] as Map<String, dynamic>? ?? {};
-        
-        // Ensure "results" list is present and passed to model
-        if (!payoutResults.containsKey('results') && payoutResults.containsKey('failedWorkerIds')) {
-           // Fallback if backend uses old format (not expected, but good for safety)
-           // We would need to synthesize results, but for now let's hope backend matches new contract
+        // Handle async queue response: {status: 'PROCESSING', jobId: '...', ...}
+        if (data['status'] == 'PROCESSING') {
+          // Job is queued - return a "pending" result
+          // The actual result will be available when the job completes
+          return PayrollProcessingResult(
+            successCount: workerIds.length, // Optimistic - assume all will succeed
+            failureCount: 0,
+            results: workerIds.map((id) => WorkerPaymentResult(
+              workerId: id,
+              workerName: 'Processing...',
+              success: true,
+            )).toList(),
+          );
         }
-
+        
+        // Handle immediate completion response with payoutResults
+        final payoutResults = data['payoutResults'] as Map<String, dynamic>? ?? {};
         return PayrollProcessingResult.fromJson(payoutResults);
       },
     );

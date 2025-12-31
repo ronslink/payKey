@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../workers/presentation/providers/workers_provider.dart';
 import '../../../workers/data/models/worker_model.dart';
+import '../../../subscriptions/presentation/providers/feature_access_provider.dart';
 import '../providers/time_tracking_provider.dart';
 import '../../data/models/time_tracking_model.dart';
 import 'worker_timesheet_page.dart';
@@ -65,6 +66,9 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
 
   @override
   Widget build(BuildContext context) {
+    // Check feature access
+    final featureAccess = ref.watch(featureAccessProvider('time_tracking'));
+
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
@@ -85,11 +89,84 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: featureAccess.when(
+        data: (access) => Column(
+          children: [
+            // Preview mode banner
+            if (access.isPreview)
+              _buildPreviewBanner(access.mockNotice ?? 'This is sample data'),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildOverviewTab(),
+                  _buildLiveActionsTab(),
+                ],
+              ),
+            ),
+          ],
+        ),
+        loading: () => Column(
+          children: [
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildOverviewTab(),
+                  _buildLiveActionsTab(),
+                ],
+              ),
+            ),
+          ],
+        ),
+        error: (_, __) => Column(
+          children: [
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildOverviewTab(),
+                  _buildLiveActionsTab(),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPreviewBanner(String message) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      color: Colors.amber.withValues(alpha: 0.9),
+      child: Row(
         children: [
-          _buildOverviewTab(),
-          _buildLiveActionsTab(),
+          const Icon(Icons.info_outline, color: Colors.black87, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: Colors.black87,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              // TODO: Navigate to upgrade screen
+            },
+            child: const Text(
+              'Upgrade',
+              style: TextStyle(
+                color: Colors.black87,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
         ],
       ),
     );
