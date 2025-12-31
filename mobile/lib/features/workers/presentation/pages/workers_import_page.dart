@@ -249,28 +249,67 @@ class _WorkersImportPageState extends ConsumerState<WorkersImportPage> {
           child: Container(
             height: 200,
             decoration: BoxDecoration(
-               color: const Color(0xFFF8FAFC),
-               borderRadius: BorderRadius.circular(16),
-               border: Border.all(color: const Color(0xFFE2E8F0), style: BorderStyle.solid),
-            ),
-             child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                   ShaderMask(
-                     shaderCallback: (bounds) => const LinearGradient(
-                       colors: [Color(0xFF6366F1), Color(0xFFEC4899), Color(0xFF8B5CF6)],
-                       begin: Alignment.topLeft,
-                       end: Alignment.bottomRight,
-                     ).createShader(bounds),
-                     child: const Icon(Icons.cloud_upload_outlined, size: 64, color: Colors.white),
-                   ),
-                   SizedBox(height: 16),
-                   Text(
-                      'Tap to upload Excel file',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Color(0xFF64748B)),
-                   ),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color(0xFFF8FAFC),
+                  const Color(0xFFF1F5F9),
                 ],
-             ),
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color(0xFFE2E8F0),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF6366F1).withValues(alpha: 0.08),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF6366F1).withValues(alpha: 0.4),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(Icons.cloud_upload_outlined, size: 40, color: Colors.white),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Tap to upload Excel file',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF475569),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Supports .xlsx and .xls files',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey.shade500),
+                ),
+              ],
+            ),
           ),
         ),
       ],

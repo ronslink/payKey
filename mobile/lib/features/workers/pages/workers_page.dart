@@ -155,13 +155,27 @@ class _WorkersPageState extends ConsumerState<WorkersPage> {
             onPressed: () => context.push('/properties'),
           ),
         IconButton(
-          icon: ShaderMask(
-            shaderCallback: (bounds) => const LinearGradient(
-              colors: [Color(0xFF6366F1), Color(0xFFEC4899)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ).createShader(bounds),
-            child: const Icon(Icons.upload_file_outlined),
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [const Color(0xFF6366F1).withValues(alpha: 0.15), const Color(0xFFEC4899).withValues(alpha: 0.15)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: const Color(0xFF6366F1).withValues(alpha: 0.3),
+              ),
+            ),
+            child: ShaderMask(
+              shaderCallback: (bounds) => const LinearGradient(
+                colors: [Color(0xFF6366F1), Color(0xFFEC4899), Color(0xFF8B5CF6)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ).createShader(bounds),
+              child: const Icon(Icons.file_upload_outlined, size: 22),
+            ),
           ),
           onPressed: () => context.push(WorkersConstants.importWorkersRoute),
           tooltip: 'Import Workers',
