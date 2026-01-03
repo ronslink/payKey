@@ -56,7 +56,7 @@ class QuickActionButton extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(FinanceTheme.actionButtonPadding),
-        decoration: FinanceTheme.cardDecoration(),
+        decoration: FinanceTheme.cardDecoration(context),
         child: Column(
           children: [
             _buildIcon(context),
@@ -156,6 +156,7 @@ class FundingSourceCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: FinanceTheme.cardDecoration(
+        context,
         isActive: isDefault,
         activeColor: primaryColor,
       ),
@@ -241,7 +242,7 @@ class EmptyTransactionsState extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: FinanceTheme.pagePadding),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: FinanceTheme.cardBackground,
+        color: FinanceTheme.cardBackground(context),
         borderRadius: BorderRadius.circular(FinanceTheme.cardBorderRadius),
         border: Border.all(color: Colors.grey.shade200),
       ),

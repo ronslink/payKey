@@ -22,9 +22,13 @@ class FinanceConstants {
 class FinanceTheme {
   FinanceTheme._();
 
-  // Colors
-  static const Color backgroundColor = Color(0xFFF8FAFC);
-  static const Color cardBackground = Colors.white;
+  // Theme-aware colors
+  static Color backgroundColor(BuildContext context) =>
+      Theme.of(context).scaffoldBackgroundColor;
+
+  static Color cardBackground(BuildContext context) =>
+      Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface;
+
   static const Color successColor = Colors.green;
   static const Color trendUpColor = Colors.greenAccent;
   static const Color trendDownColor = Colors.redAccent;
@@ -42,23 +46,27 @@ class FinanceTheme {
   static const double sectionLabelBottomPadding = 12.0;
 
   // Card decoration
-  static BoxDecoration cardDecoration({
+  static BoxDecoration cardDecoration(
+    BuildContext context, {
     bool isActive = false,
     Color? activeColor,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return BoxDecoration(
-      color: cardBackground,
+      color: cardBackground(context),
       borderRadius: BorderRadius.circular(cardBorderRadius),
       border: Border.all(
-        color: isActive ? (activeColor ?? Colors.blue) : Colors.grey.shade200,
+        color: isActive ? (activeColor ?? Colors.blue) : (isDark ? Colors.grey.shade800 : Colors.grey.shade200),
       ),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.03),
-          blurRadius: 8,
-          offset: const Offset(0, 2),
-        ),
-      ],
+      boxShadow: isDark
+          ? null
+          : [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
     );
   }
 

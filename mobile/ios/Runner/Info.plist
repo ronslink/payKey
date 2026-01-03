@@ -66,5 +66,7 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>PayKey needs access to your photo library to upload documents such as receipts.</string>
 </dict>
 </plist>

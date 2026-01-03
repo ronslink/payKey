@@ -81,7 +81,6 @@ class _FinancePageState extends ConsumerState<FinancePage>
     final settingsAsync = ref.watch(settingsProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F6),
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
@@ -401,7 +400,7 @@ class _FinancePageState extends ConsumerState<FinancePage>
     return Container(
       margin: const EdgeInsets.all(20),
       padding: const EdgeInsets.all(20),
-      decoration: _cardDecoration(),
+      decoration: _cardDecoration(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -529,7 +528,7 @@ class _FinancePageState extends ConsumerState<FinancePage>
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(20),
-      decoration: _cardDecoration(),
+      decoration: _cardDecoration(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -676,7 +675,7 @@ class _FinancePageState extends ConsumerState<FinancePage>
   Widget _buildAccountMappingsCard() {
     return Container(
       margin: const EdgeInsets.all(20),
-      decoration: _cardDecoration(),
+      decoration: _cardDecoration(context),
       child: Column(
         children: [
           InkWell(
@@ -776,7 +775,7 @@ class _FinancePageState extends ConsumerState<FinancePage>
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(20),
-      decoration: _cardDecoration(),
+      decoration: _cardDecoration(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -846,11 +845,12 @@ class _FinancePageState extends ConsumerState<FinancePage>
     );
   }
 
-  BoxDecoration _cardDecoration() {
+  BoxDecoration _cardDecoration(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return BoxDecoration(
-      color: Colors.white,
+      color: Theme.of(context).cardTheme.color ?? (isDark ? const Color(0xFF1E1E1E) : Colors.white),
       borderRadius: BorderRadius.circular(20),
-      boxShadow: [
+      boxShadow: isDark ? null : [
         BoxShadow(
           color: Colors.black.withValues(alpha: 0.04),
           blurRadius: 12,

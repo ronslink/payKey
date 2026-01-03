@@ -83,7 +83,7 @@ class _MpesaTopUpPageState extends State<MpesaTopUpPage> {
           children: [
             Container(
               padding: const EdgeInsets.all(20),
-              decoration: FinanceTheme.cardDecoration(),
+              decoration: FinanceTheme.cardDecoration(context),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -107,7 +107,7 @@ class _MpesaTopUpPageState extends State<MpesaTopUpPage> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       filled: true,
-                      fillColor: Colors.grey.shade50,
+                      fillColor: Theme.of(context).inputDecorationTheme.fillColor ?? Colors.grey.shade50,
                     ),
                   ),
                   const SizedBox(height: 24),

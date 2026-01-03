@@ -42,7 +42,7 @@ class TransactionsList extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: FinanceTheme.pagePadding),
-      decoration: FinanceTheme.cardDecoration(),
+      decoration: FinanceTheme.cardDecoration(context),
       child: Column(
         children: displayItems.asMap().entries.map((entry) {
           final index = entry.key;
