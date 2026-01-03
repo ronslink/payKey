@@ -74,6 +74,21 @@ volumes:
   postgres_data_prod:
   redis_data_prod:
 
+  website:
+    build:
+      context: ./website
+      dockerfile: Dockerfile
+    container_name: paydome_website_prod
+    restart: always
+    ports:
+      - "80:80"
+    networks:
+      - paykey-network-prod
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 networks:
   paykey-network-prod:
