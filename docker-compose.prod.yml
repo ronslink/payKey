@@ -70,10 +70,6 @@ services:
       retries: 3
       start_period: 60s
 
-volumes:
-  postgres_data_prod:
-  redis_data_prod:
-
   website:
     build:
       context: ./website
@@ -89,6 +85,11 @@ volumes:
       interval: 30s
       timeout: 10s
       retries: 3
+
+volumes:
+  postgres_data_prod:
+  redis_data_prod:
+
 
 networks:
   paykey-network-prod:
