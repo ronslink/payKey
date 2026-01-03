@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:mobile/main.dart' as app; 
 import 'package:mobile/features/auth/presentation/pages/login_page.dart';
-import 'package:mobile/features/workers/presentation/pages/worker_list_page.dart';
+
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
