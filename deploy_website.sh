@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # Paydome Website Deployment Script
 
@@ -9,7 +10,7 @@ echo "🚀 Starting Paydome Website Deployment..."
 
 # 2. Rebuild and restart containers
 echo "📦 Building and restarting containers..."
-docker-compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml up -d --build
 
 # 3. Prune unused images to save space
 echo "🧹 Cleaning up..."
