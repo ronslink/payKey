@@ -1,0 +1,11 @@
+00:00 +0: loading D:/payKey/mobile/test/features/payroll/payroll_calculator_test.dart
+00:00 +0: PayrollCalculator Unit Tests calculateNSSF - Lower Tier I only
+00:00 +1: PayrollCalculator Unit Tests calculateNSSF - Between Tiers
+00:00 +2: PayrollCalculator Unit Tests calculateNSSF - Max Tier II
+00:00 +3: PayrollCalculator Unit Tests calculateSHIF - Minimum Contribution
+00:00 +4: PayrollCalculator Unit Tests calculateSHIF - Standard Calculation
+00:00 +5: PayrollCalculator Unit Tests calculateHousingLevy
+00:00 +6: PayrollCalculator Unit Tests calculatePAYE - Below Taxable Threshold
+00:00 +7: PayrollCalculator Unit Tests calculatePAYE - With Insurance Relief (Standard Case)
+00:00 +8: PayrollCalculator Unit Tests calculateNetPay - Simple Case
+00:00 +9: All tests passed!

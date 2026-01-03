@@ -1,0 +1,31 @@
+ M .idea/misc.xml
+ M mobile/android/app/build.gradle.kts
+ M mobile/android/build.gradle.kts
+ M mobile/ios/Runner/AppDelegate.swift
+ M mobile/lib/core/services/geofence_service.dart
+ M mobile/lib/features/payroll/presentation/utils/payroll_calculator.dart
+ M mobile/lib/integrations/intasend/services/intasend_service.dart
+ M mobile/pubspec.lock
+ M mobile/pubspec.yaml
+?? IOS_TESTFLIGHT_SETUP.md
+?? mobile/android/app/src/test/
+?? mobile/android/test_final_output.txt
+?? mobile/android/test_final_output_2.txt
+?? mobile/android/test_final_output_3.txt
+?? mobile/android/test_final_output_4.txt
+?? mobile/android/test_final_output_5.txt
+?? mobile/android/test_final_output_6.txt
+?? mobile/android/test_final_output_7.txt
+?? mobile/android/test_final_output_8.txt
+?? mobile/android/test_final_output_9.txt
+?? mobile/android/test_output.txt
+?? mobile/android/test_output_app.txt
+?? mobile/android/test_output_app_2.txt
+?? mobile/android/test_output_app_3.txt
+?? mobile/android/test_output_app_4.txt
+?? mobile/integration_test/
+?? mobile/ios/Runner/GoogleService-Info.plist
+?? mobile/test/features/payroll/payroll_calculator_test.dart
+?? mobile/test/integrations/
+?? mobile/test_output.txt
+?? status_clean.txt

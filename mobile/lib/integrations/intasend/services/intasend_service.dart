@@ -37,7 +37,7 @@ class IntaSendService {
 
       // IntaSend returns a list of wallets, get the KES one
       if (normalizedData is List && normalizedData.isNotEmpty) {
-        final List<dynamic> list = normalizedData;
+        final list = normalizedData.cast<Map<String, dynamic>>();
         final kesWallet = list.firstWhere(
           (w) => w['currency'] == 'KES' && w['can_disburse'] == true,
           orElse: () => list.firstWhere(
