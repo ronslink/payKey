@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import IOSHelp from './pages/iOSHelp';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 
 function App() {
   return (
@@ -8,6 +9,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/marketing" element={<Home />} />
+        <Route path="/paydome/privacy_policy" element={<PrivacyPolicy />} />
         <Route path="/help" element={<IOSHelp />} />
       </Routes>
     </Router>

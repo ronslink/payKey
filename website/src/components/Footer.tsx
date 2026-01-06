@@ -1,4 +1,5 @@
 import { Globe } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export function Footer() {
     return (
@@ -16,7 +17,7 @@ export function Footer() {
                     </div>
 
                     <div style={{ display: 'flex', gap: '2rem', marginTop: '1rem', fontSize: '0.875rem', color: '#64748b' }}>
-                        <a href="#">Privacy Policy</a>
+                        <Link to="/paydome/privacy_policy">Privacy Policy</Link>
                         <a href="#">Terms of Service</a>
                         <a href="/help">Contact Support</a>
                     </div>
