@@ -58,7 +58,7 @@ services:
     volumes:
       - ./backend:/app
       - /app/node_modules # Prevent overwriting node_modules
-    command: sh -c "npm ci && npm run build && npm prune --production && npm run typeorm:migration:run && npm run start:prod"
+    command: sh -c "npm install -g @nestjs/cli && npm install && npm run build && npm prune --production && npm run typeorm:migration:run && npm run start:prod"
     networks:
       - paykey-network-prod
     healthcheck:
