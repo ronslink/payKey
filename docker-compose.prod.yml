@@ -27,8 +27,6 @@ services:
     container_name: paykey_redis_prod
     restart: always
     command: redis-server --appendonly yes
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data_prod:/data
     networks:

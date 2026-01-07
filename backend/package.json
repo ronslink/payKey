@@ -9,7 +9,7 @@
   },
   "license": "UNLICENSED",
   "scripts": {
-    "build": "node_modules/.bin/nest build",
+    "build": "npx nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "seed": "ts-node data_import/import-sam-olago.ts",
