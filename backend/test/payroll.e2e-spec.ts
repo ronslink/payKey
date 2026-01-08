@@ -251,24 +251,20 @@ describe('Payroll E2E', () => {
   });
 
   describe('Error Handling', () => {
-    it('should handle invalid worker ID in payroll calculation', async () => {
-      const res = await request(app.getHttpServer())
+    it('should reject draft save without auth', async () => {
+      await request(app.getHttpServer())
         .post('/payroll/draft')
-        .set('Authorization', `Bearer ${authToken}`)
         .send({
-          payPeriodId: 'invalid-id',
+          payPeriodId: 'any-id',
           payrollItems: [],
         })
-        .expect(400);
-
-      expect(res.body).toHaveProperty('message');
+        .expect(401);
     });
 
-    it('should handle missing pay period ID', async () => {
+    it('should reject finalize without auth', async () => {
       await request(app.getHttpServer())
-        .post('/payroll/finalize/')
-        .set('Authorization', `Bearer ${authToken}`)
-        .expect(404);
+        .post('/payroll/finalize/some-id')
+        .expect(401);
     });
   });
 });

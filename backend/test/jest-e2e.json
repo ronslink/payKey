@@ -18,5 +18,5 @@
   "verbose": true,
   "bail": false,
   "forceExit": true,
-  "detectOpenHandles": false
+  "detectOpenHandles": true
 }

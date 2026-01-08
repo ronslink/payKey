@@ -25,7 +25,8 @@ export function generateTestPhone(): string {
 }
 
 /**
- * Clean up test data by truncating specific tables
+ * Clean up test data by truncating all tables
+ * Falls back to synchronize(true) if truncate fails
  */
 export async function cleanupTestData(dataSource: DataSource): Promise<void> {
   if (!dataSource.isInitialized) {
@@ -44,8 +45,14 @@ export async function cleanupTestData(dataSource: DataSource): Promise<void> {
       );
     }
   } catch (error: any) {
-    console.error(`Cleanup error:`, error.message);
-    throw error;
+    console.warn(`TRUNCATE failed, falling back to synchronize: ${error.message}`);
+    try {
+      // Drop and recreate all tables - nuclear option
+      await dataSource.synchronize(true);
+    } catch (syncError: any) {
+      console.error(`Synchronize also failed: ${syncError.message}`);
+      throw syncError;
+    }
   }
 }
 
