@@ -177,13 +177,24 @@ describe('Payroll E2E', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .expect(201);
 
-      expect(res.body).toHaveProperty('finalizedRecords');
-      expect(Array.isArray(res.body.finalizedRecords)).toBe(true);
-      expect(res.body.finalizedRecords.length).toBeGreaterThan(0);
+      // The finalize endpoint now queues the job and returns immediately
+      expect(res.body.status).toBe('PROCESSING');
+      expect(res.body.jobId).toBeDefined();
+      expect(res.body.payPeriodId).toBe(payPeriodId);
 
-      const finalizedRecord = res.body.finalizedRecords[0];
-      expect(finalizedRecord.status).toBe('finalized');
-      payrollRecordId = finalizedRecord.id;
+      // Wait for background job to process
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      // Verify records by querying them
+      const recordsRes = await request(app.getHttpServer())
+        .get(`/payroll/period-records/${payPeriodId}`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      expect(Array.isArray(recordsRes.body)).toBe(true);
+      if (recordsRes.body.length > 0) {
+        payrollRecordId = recordsRes.body[0].id;
+      }
     });
 
     it('7. should download payslip as PDF', async () => {

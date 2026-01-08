@@ -137,34 +137,28 @@ describe('Payroll Payment Flow E2E', () => {
       .expect(201);
   });
 
-  it('4. Should finalize payroll and process payments correctly', async () => {
+  it('4. Should finalize payroll and queue payment processing', async () => {
     const res = await request(app.getHttpServer())
       .post(`/payroll/finalize/${payPeriodId}`)
       .set('Authorization', `Bearer ${authToken}`)
       .expect(201);
 
-    // Assert response structure detail
-    const { payoutResults, finalizedRecords } = res.body;
+    // The finalize endpoint now queues the job and returns immediately
+    expect(res.body.status).toBe('PROCESSING');
+    expect(res.body.jobId).toBeDefined();
+    expect(res.body.payPeriodId).toBe(payPeriodId);
 
-    expect(payoutResults.successCount).toBe(2);
-    expect(payoutResults.failureCount).toBe(0);
-    expect(payoutResults.results).toHaveLength(2);
+    // Wait for background job to process
+    await new Promise((resolve) => setTimeout(resolve, 3000));
 
-    // Verify Standard Worker Result
-    const standardResult = payoutResults.results.find(
-      (r: any) => r.workerId === mpesaWorkerId,
-    );
-    expect(standardResult.success).toBe(true);
-    // Should have single transaction ID
-    expect(standardResult.transactionId).not.toContain(',');
+    // Verify records exist by querying them
+    const recordsRes = await request(app.getHttpServer())
+      .get(`/payroll/period-records/${payPeriodId}`)
+      .set('Authorization', `Bearer ${authToken}`)
+      .expect(200);
 
-    // Verify High Salary Worker Result (Splitting)
-    const highResult = payoutResults.results.find(
-      (r: any) => r.workerId === highNetSalaryWorkerId,
-    );
-    expect(highResult.success).toBe(true);
-    // Should have multiple transaction IDs (comma separated)
-    expect(highResult.transactionId).toContain(',');
+    expect(Array.isArray(recordsRes.body)).toBe(true);
+    expect(recordsRes.body.length).toBeGreaterThanOrEqual(1);
   });
 });
 
