@@ -23,7 +23,7 @@ export class PayrollPaymentService {
     private intaSendService: IntaSendService,
     @InjectRepository(PayrollRecord)
     private payrollRecordRepository: Repository<PayrollRecord>,
-  ) { }
+  ) {}
 
   /**
    * Process payouts for a list of finalized payroll records

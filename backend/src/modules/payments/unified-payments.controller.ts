@@ -140,7 +140,7 @@ export class UnifiedPaymentsController {
     @InjectRepository(SubscriptionPayment)
     private readonly subscriptionPaymentRepository: Repository<SubscriptionPayment>,
     private readonly intaSendService: IntaSendService,
-  ) { }
+  ) {}
 
   // ==========================================================================
   // Public Endpoints

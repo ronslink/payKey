@@ -71,7 +71,8 @@ export const FEATURE_ACCESS_MATRIX: FeatureDefinition[] = [
   {
     key: 'payroll_processing',
     name: 'Payroll Processing',
-    description: 'Process payroll and M-Pesa disbursements (FREE tier can preview only)',
+    description:
+      'Process payroll and M-Pesa disbursements (FREE tier can preview only)',
     tiers: ['BASIC', 'GOLD', 'PLATINUM'],
     mockDataAvailable: false,
     displayOrder: 5,

@@ -26,4 +26,4 @@ import { SubscriptionCallbackController } from './subscription-callback.controll
   providers: [FeatureAccessService, MockDataService],
   exports: [FeatureAccessService, MockDataService],
 })
-export class SubscriptionsModule { }
+export class SubscriptionsModule {}

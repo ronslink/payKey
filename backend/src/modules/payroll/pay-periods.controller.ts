@@ -22,7 +22,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @Controller('pay-periods')
 @UseGuards(JwtAuthGuard)
 export class PayPeriodsController {
-  constructor(private readonly payPeriodsService: PayPeriodsService) { }
+  constructor(private readonly payPeriodsService: PayPeriodsService) {}
 
   @Post()
   create(@Request() req: any, @Body() createPayPeriodDto: CreatePayPeriodDto) {
@@ -42,7 +42,9 @@ export class PayPeriodsController {
     const limitNum = parseInt(limit, 10) || 10;
     const yearNum = year ? parseInt(year, 10) : undefined;
 
-    console.log(`📋 PayPeriods findAll: page=${page} (${pageNum}), limit=${limit} (${limitNum})`);
+    console.log(
+      `📋 PayPeriods findAll: page=${page} (${pageNum}), limit=${limit} (${limitNum})`,
+    );
 
     return this.payPeriodsService.findAll(
       req.user.userId,

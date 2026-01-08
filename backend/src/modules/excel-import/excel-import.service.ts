@@ -21,7 +21,7 @@ interface ParsedRow {
 
 @Injectable()
 export class ExcelImportService {
-  constructor(private readonly workersService: WorkersService) { }
+  constructor(private readonly workersService: WorkersService) {}
 
   /**
    * Parse and validate Excel file for employee import
@@ -210,7 +210,7 @@ export class ExcelImportService {
     if (missingHeaders.length > 0) {
       throw new BadRequestException(
         `Missing required columns: ${missingHeaders.join(', ')}. ` +
-        `Required columns are marked with * in the template.`,
+          `Required columns are marked with * in the template.`,
       );
     }
   }

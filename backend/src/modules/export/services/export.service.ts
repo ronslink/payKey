@@ -75,7 +75,8 @@ export class ExportService {
       nssf: parseFloat(t.metadata?.taxBreakdown?.nssf) || 0,
       shif: parseFloat(t.metadata?.taxBreakdown?.nhif) || 0,
       housingLevy: parseFloat(t.metadata?.taxBreakdown?.housingLevy) || 0,
-      totalDeductions: parseFloat(t.metadata?.taxBreakdown?.totalDeductions) || 0,
+      totalDeductions:
+        parseFloat(t.metadata?.taxBreakdown?.totalDeductions) || 0,
       netPay: parseFloat(t.metadata?.netPay) || Number(t.amount) || 0,
     }));
   }
@@ -227,10 +228,23 @@ export class ExportService {
     }
 
     // Calculate and add totals row
-    let totalBasic = 0, totalHouseAllow = 0, totalTransportAllow = 0, totalOvertime = 0, totalOtherAllow = 0;
-    let totalCashPay = 0, totalCarBen = 0, totalOtherNonCash = 0, totalNonCash = 0;
-    let totalGrossPay = 0, totalContrib = 0, totalMortgage = 0, totalTaxable = 0;
-    let totalTaxPayable = 0, totalRelief = 0, totalInsRelief = 0, totalPaye = 0;
+    let totalBasic = 0,
+      totalHouseAllow = 0,
+      totalTransportAllow = 0,
+      totalOvertime = 0,
+      totalOtherAllow = 0;
+    let totalCashPay = 0,
+      totalCarBen = 0,
+      totalOtherNonCash = 0,
+      totalNonCash = 0;
+    let totalGrossPay = 0,
+      totalContrib = 0,
+      totalMortgage = 0,
+      totalTaxable = 0;
+    let totalTaxPayable = 0,
+      totalRelief = 0,
+      totalInsRelief = 0,
+      totalPaye = 0;
 
     for (const r of records) {
       totalBasic += r.grossSalary;
@@ -245,10 +259,10 @@ export class ExportService {
       totalGrossPay += r.grossSalary;
       totalContrib += r.nssf;
       totalMortgage += 0;
-      totalTaxable += (r.grossSalary - r.nssf);
-      totalTaxPayable += (r.paye + 2400);
+      totalTaxable += r.grossSalary - r.nssf;
+      totalTaxPayable += r.paye + 2400;
       totalRelief += 2400;
-      totalInsRelief += (r.shif * 0.15);
+      totalInsRelief += r.shif * 0.15;
       totalPaye += r.paye;
     }
 
@@ -330,7 +344,8 @@ export class ExportService {
   ): Promise<string> {
     const records = await this.getPayrollData(userId, startDate, endDate);
 
-    let csv = 'EMP NO,NAME,ID NUMBER,PHONE,GROSS SALARY,PAYE,NSSF,SHIF,HOUSING LEVY,TOTAL DEDUCTIONS,NET PAY,SIGNATURE\n';
+    let csv =
+      'EMP NO,NAME,ID NUMBER,PHONE,GROSS SALARY,PAYE,NSSF,SHIF,HOUSING LEVY,TOTAL DEDUCTIONS,NET PAY,SIGNATURE\n';
 
     for (const r of records) {
       const empNo = r.workerId.substring(0, 8);
@@ -354,7 +369,9 @@ export class ExportService {
     startDate: Date,
     endDate: Date,
   ): Promise<Export> {
-    console.log(`[Export] Creating export: type=${exportType}, userId=${userId}, dates=${startDate.toISOString()} to ${endDate.toISOString()}`);
+    console.log(
+      `[Export] Creating export: type=${exportType}, userId=${userId}, dates=${startDate.toISOString()} to ${endDate.toISOString()}`,
+    );
 
     let content: string;
     let extension: string;
@@ -362,7 +379,11 @@ export class ExportService {
     try {
       switch (exportType) {
         case ExportType.QUICKBOOKS_IIF:
-          content = await this.generateQuickBooksIIF(userId, startDate, endDate);
+          content = await this.generateQuickBooksIIF(
+            userId,
+            startDate,
+            endDate,
+          );
           extension = 'iif';
           break;
         case ExportType.XERO_CSV:
@@ -386,7 +407,11 @@ export class ExportService {
           extension = 'csv';
           break;
         case ExportType.MUSTER_ROLL_CSV:
-          content = await this.generateMusterRollCSV(userId, startDate, endDate);
+          content = await this.generateMusterRollCSV(
+            userId,
+            startDate,
+            endDate,
+          );
           extension = 'csv';
           break;
         default:
@@ -397,7 +422,9 @@ export class ExportService {
       throw error;
     }
 
-    console.log(`[Export] Generated content length: ${content?.length || 0} chars`);
+    console.log(
+      `[Export] Generated content length: ${content?.length || 0} chars`,
+    );
 
     const fileName = `payroll_export_${exportType.toLowerCase()}_${Date.now()}.${extension}`;
     const filePath = path.join(this.exportsDir, fileName);
@@ -437,7 +464,7 @@ export class ExportService {
       // Clean up the file if DB save fails
       try {
         fs.unlinkSync(filePath);
-      } catch { }
+      } catch {}
       throw new Error(`Failed to save export record: ${error.message}`);
     }
   }

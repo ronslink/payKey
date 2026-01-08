@@ -13,9 +13,19 @@ import type { AuthenticatedRequest } from '../../common/interfaces/user.interfac
 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { SubscriptionPayment, PaymentStatus } from '../subscriptions/entities/subscription-payment.entity';
-import { Subscription, SubscriptionStatus } from '../subscriptions/entities/subscription.entity';
-import { Transaction, TransactionStatus, TransactionType } from './entities/transaction.entity';
+import {
+  SubscriptionPayment,
+  PaymentStatus,
+} from '../subscriptions/entities/subscription-payment.entity';
+import {
+  Subscription,
+  SubscriptionStatus,
+} from '../subscriptions/entities/subscription.entity';
+import {
+  Transaction,
+  TransactionStatus,
+  TransactionType,
+} from './entities/transaction.entity';
 import { User } from '../users/entities/user.entity';
 import {
   PayrollRecord,
@@ -83,7 +93,7 @@ export class PaymentsController {
     @InjectRepository(Subscription)
     private subscriptionRepository: Repository<Subscription>,
     private intaSendService: IntaSendService,
-  ) { }
+  ) {}
 
   // ... (existing callbacks) ...
 
@@ -181,19 +191,28 @@ export class PaymentsController {
 
     // 1. Find Transaction by Provider Ref (Invoice ID) - This is the UNIQUE identifier from IntaSend
     // Note: We removed accountReference matching as it caused stale transaction retrieval.
-    let transaction = await this.transactionsRepository.findOne({
+    const transaction = await this.transactionsRepository.findOne({
       where: { providerRef: invoice_id },
     });
 
     if (transaction) {
-      console.log('🔹 Loaded Transaction Metadata (Raw):', transaction.metadata, 'Type:', typeof transaction.metadata);
+      console.log(
+        '🔹 Loaded Transaction Metadata (Raw):',
+        transaction.metadata,
+        'Type:',
+        typeof transaction.metadata,
+      );
       if (typeof transaction.metadata === 'string') {
-        try { transaction.metadata = JSON.parse(transaction.metadata); } catch (e) { }
+        try {
+          transaction.metadata = JSON.parse(transaction.metadata);
+        } catch (e) {}
       }
     }
 
     if (!transaction) {
-      console.warn(`⚠️ Transaction not found for Invoice: ${invoice_id} / Ref: ${api_ref}`);
+      console.warn(
+        `⚠️ Transaction not found for Invoice: ${invoice_id} / Ref: ${api_ref}`,
+      );
       return { status: 'ignored', reason: 'Transaction not found' };
     }
 
@@ -202,13 +221,16 @@ export class PaymentsController {
       transaction.status = TransactionStatus.SUCCESS;
 
       // If it's a TopUp (Deposit), credit the wallet
-      if (transaction.type === TransactionType.DEPOSIT && transaction.status !== TransactionStatus.SUCCESS) {
+      if (
+        transaction.type === TransactionType.DEPOSIT &&
+        transaction.status !== TransactionStatus.SUCCESS
+      ) {
         // Prevent double credit if already successful?
         // We should check previous status.
         await this.usersRepository.increment(
           { id: transaction.userId },
           'walletBalance',
-          Number(value)
+          Number(value),
         );
       }
     } else if (state === 'FAILED') {
@@ -236,7 +258,10 @@ export class PaymentsController {
       }
     }
 
-    console.log(`🔹 Checking metadata (Type: ${typeof metadata}):`, JSON.stringify(metadata));
+    console.log(
+      `🔹 Checking metadata (Type: ${typeof metadata}):`,
+      JSON.stringify(metadata),
+    );
 
     if (metadata?.subscriptionPaymentId) {
       console.log('✅ Found Subscription Link! Updating Payment...');
@@ -248,26 +273,35 @@ export class PaymentsController {
       await this.subscriptionPaymentRepository.update(subPaymentId, {
         status,
         transactionId: invoice_id,
-        paidDate: isSuccess ? new Date() : undefined
+        paidDate: isSuccess ? new Date() : undefined,
       });
 
       // TRIGGER SUBSCRIPTION ACTIVATION
       if (isSuccess) {
         // find the payment to match logic in checkMpesaPaymentStatus
-        const payment = await this.subscriptionPaymentRepository.findOne({ where: { id: subPaymentId } });
+        const payment = await this.subscriptionPaymentRepository.findOne({
+          where: { id: subPaymentId },
+        });
         if (payment) {
-          const subscription = await this.subscriptionRepository.findOne({ where: { id: payment.subscriptionId } });
+          const subscription = await this.subscriptionRepository.findOne({
+            where: { id: payment.subscriptionId },
+          });
           if (subscription) {
             subscription.status = SubscriptionStatus.ACTIVE;
             await this.subscriptionRepository.save(subscription);
 
             // Update User Tier
             const plan = await this.subscriptionPaymentRepository.manager.query(
-              `SELECT tier FROM subscriptions WHERE id = $1`, [subscription.id]
+              `SELECT tier FROM subscriptions WHERE id = $1`,
+              [subscription.id],
             ); // or just use subscription.tier
 
-            await this.usersRepository.update(payment.userId, { tier: subscription.tier as any });
-            console.log(`🎉 Subscription Activated for User ${payment.userId} to Tier ${subscription.tier}`);
+            await this.usersRepository.update(payment.userId, {
+              tier: subscription.tier as any,
+            });
+            console.log(
+              `🎉 Subscription Activated for User ${payment.userId} to Tier ${subscription.tier}`,
+            );
           }
         }
       }

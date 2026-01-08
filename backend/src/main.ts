@@ -20,9 +20,10 @@ async function bootstrap() {
 
   // Enable CORS for all localhost development ports
   app.enableCors({
-    origin: process.env.NODE_ENV === 'production'
-      ? ['https://paydome.co', 'https://www.paydome.co']
-      : true,
+    origin:
+      process.env.NODE_ENV === 'production'
+        ? ['https://paydome.co', 'https://www.paydome.co']
+        : true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [

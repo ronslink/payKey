@@ -33,7 +33,7 @@ export class WorkersController {
     private readonly workersService: WorkersService,
     private readonly terminationService: TerminationService,
     private readonly leaveManagementService: LeaveManagementService,
-  ) { }
+  ) {}
 
   // ======================================================================================
   // STATIC ROUTES (MUST BE BEFORE DYNAMIC ROUTES)
@@ -169,7 +169,11 @@ export class WorkersController {
     console.log('================================');
 
     try {
-      const result = await this.terminationService.terminateWorker(id, req.user.userId, dto);
+      const result = await this.terminationService.terminateWorker(
+        id,
+        req.user.userId,
+        dto,
+      );
       return result;
     } catch (error: any) {
       console.error('=== Termination Error ===');

@@ -18,7 +18,7 @@ import { ExcelImportService } from './excel-import.service';
 @Controller('excel-import')
 @UseGuards(JwtAuthGuard, TierGuard)
 export class ExcelImportController {
-  constructor(private readonly excelImportService: ExcelImportService) { }
+  constructor(private readonly excelImportService: ExcelImportService) {}
 
   /**
    * Upload and import employees from Excel file

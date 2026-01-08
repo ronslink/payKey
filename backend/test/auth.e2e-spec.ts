@@ -77,23 +77,28 @@ describe('Auth E2E', () => {
   });
 
   describe('Login', () => {
-    // Use fixed credentials that are set before any test runs
-    const loginEmail = 'login.stable@paykey.com';
+    // Use unique email with timestamp to avoid conflicts
+    const loginEmail = `login.stable.${Date.now()}@paykey.com`;
     const loginPassword = 'StablePassword123!';
 
     beforeAll(async () => {
-      // Register user for login tests - use try/catch for idempotency
-      try {
-        await request(app.getHttpServer()).post('/auth/register').send({
+      // Register user for login tests
+      const registerRes = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({
           email: loginEmail,
           password: loginPassword,
           firstName: 'Login',
           lastName: 'Tester',
           businessName: 'Login Test Corp',
-          phone: '+254700000097',
+          phone: `+2547${Date.now().toString().slice(-8)}`,
         });
-      } catch (e) {
-        // User might already exist from previous test run
+
+      // If registration fails (409 conflict), user already exists which is OK
+      if (registerRes.status !== 201 && registerRes.status !== 409) {
+        console.warn(
+          `Registration returned ${registerRes.status}: ${JSON.stringify(registerRes.body)}`,
+        );
       }
     });
 

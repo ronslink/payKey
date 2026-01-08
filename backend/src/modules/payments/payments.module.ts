@@ -53,6 +53,12 @@ import { HttpModule } from '@nestjs/axios';
     PayrollService,
     IntaSendService,
   ],
-  exports: [MpesaService, StripeService, PayrollPaymentService, PayrollService, IntaSendService],
+  exports: [
+    MpesaService,
+    StripeService,
+    PayrollPaymentService,
+    PayrollService,
+    IntaSendService,
+  ],
 })
-export class PaymentsModule { }
+export class PaymentsModule {}

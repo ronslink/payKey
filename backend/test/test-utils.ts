@@ -4,6 +4,7 @@
  */
 
 import { DataSource } from 'typeorm';
+import { INestApplication } from '@nestjs/common';
 
 /**
  * Generate a unique email for test users
@@ -45,7 +46,7 @@ export async function cleanupTestData(dataSource: DataSource): Promise<void> {
       await dataSource.query(
         `DELETE FROM "${entity}" WHERE email LIKE '%@paykey.com' OR email LIKE '%@example.com'`,
       );
-    } catch (error) {
+    } catch (error: any) {
       // Table might not exist or be empty, ignore
       console.log(`Cleanup warning for ${entity}:`, error.message);
     }
@@ -129,7 +130,7 @@ export function createTestUserData(
  * Use this in E2E tests to test Platinum-only features like geofencing
  */
 export async function upgradeUserToPlatinum(
-  app: { get: (token: any) => any },
+  app: INestApplication,
   userId: string,
 ): Promise<void> {
   const dataSource = app.get(DataSource);

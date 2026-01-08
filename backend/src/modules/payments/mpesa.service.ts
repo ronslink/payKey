@@ -98,8 +98,13 @@ export class MpesaService {
     }
 
     // SIMULATION MODE for Sandbox/Dev
-    if (this.baseUrl.includes('sandbox') || process.env.NODE_ENV !== 'production') {
-      this.logger.log(`⚠️ SIMULATION: M-Pesa STK Push for ${phoneNumber} - ${amount}`);
+    if (
+      this.baseUrl.includes('sandbox') ||
+      process.env.NODE_ENV !== 'production'
+    ) {
+      this.logger.log(
+        `⚠️ SIMULATION: M-Pesa STK Push for ${phoneNumber} - ${amount}`,
+      );
       const checkoutRequestId = `ws_CO_SIM_${Date.now()}`;
       const merchantRequestId = `MR_SIM_${Date.now()}`;
 

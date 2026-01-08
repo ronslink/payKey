@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
+import { Worker } from './../src/modules/workers/entities/worker.entity';
 
 /**
  * Workers E2E Tests
@@ -83,7 +84,7 @@ describe('Workers E2E', () => {
       expect(Array.isArray(res.body)).toBe(true);
       expect(res.body.length).toBeGreaterThanOrEqual(1);
 
-      const worker = res.body.find((w: any) => w.id === workerId);
+      const worker = res.body.find((w: Worker) => w.id === workerId);
       expect(worker).toBeDefined();
     });
 

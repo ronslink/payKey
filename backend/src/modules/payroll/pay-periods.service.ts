@@ -35,7 +35,7 @@ export class PayPeriodsService {
     @InjectRepository(TaxSubmission)
     private taxSubmissionRepository: Repository<TaxSubmission>,
     private taxPaymentsService: TaxPaymentsService,
-  ) { }
+  ) {}
 
   async create(
     createPayPeriodDto: CreatePayPeriodDto,
@@ -81,8 +81,20 @@ export class PayPeriodsService {
     let periodName = createPayPeriodDto.name;
     if (!periodName || periodName.trim() === '') {
       const startDate = new Date(createPayPeriodDto.startDate);
-      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'];
+      const monthNames = [
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December',
+      ];
       const month = monthNames[startDate.getMonth()];
       const year = startDate.getFullYear();
       periodName = createPayPeriodDto.isOffCycle
@@ -155,11 +167,17 @@ export class PayPeriodsService {
         const totals = payrollRecords.reduce(
           (acc, record) => ({
             totalWorkers: acc.totalWorkers + 1,
-            totalGrossAmount: acc.totalGrossAmount + Number(record.grossSalary || 0),
+            totalGrossAmount:
+              acc.totalGrossAmount + Number(record.grossSalary || 0),
             totalNetAmount: acc.totalNetAmount + Number(record.netSalary || 0),
             totalTaxAmount: acc.totalTaxAmount + Number(record.taxAmount || 0),
           }),
-          { totalWorkers: 0, totalGrossAmount: 0, totalNetAmount: 0, totalTaxAmount: 0 },
+          {
+            totalWorkers: 0,
+            totalGrossAmount: 0,
+            totalNetAmount: 0,
+            totalTaxAmount: 0,
+          },
         );
 
         // Update the period with calculated totals
@@ -215,9 +233,10 @@ export class PayPeriodsService {
       // Check for overlapping periods (excluding current one, only for this user)
       // Logic: Standard periods cannot overlap other Standard periods. Off-cycle can overlap anything.
 
-      const isOffCycle = updatePayPeriodDto.isOffCycle !== undefined
-        ? updatePayPeriodDto.isOffCycle
-        : payPeriod.isOffCycle;
+      const isOffCycle =
+        updatePayPeriodDto.isOffCycle !== undefined
+          ? updatePayPeriodDto.isOffCycle
+          : payPeriod.isOffCycle;
 
       if (!isOffCycle) {
         const overlapping = await this.payPeriodRepository
@@ -740,10 +759,8 @@ export class PayPeriodsService {
             totalWorkers: acc.totalWorkers + 1,
             totalGrossAmount:
               acc.totalGrossAmount + Number(record.grossSalary || 0),
-            totalNetAmount:
-              acc.totalNetAmount + Number(record.netSalary || 0),
-            totalTaxAmount:
-              acc.totalTaxAmount + Number(record.taxAmount || 0),
+            totalNetAmount: acc.totalNetAmount + Number(record.netSalary || 0),
+            totalTaxAmount: acc.totalTaxAmount + Number(record.taxAmount || 0),
           }),
           {
             totalWorkers: 0,

@@ -23,7 +23,7 @@ export class TierGuard implements CanActivate {
     private reflector: Reflector,
     @Inject(forwardRef(() => UsersService))
     private usersService: UsersService,
-  ) { }
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const requiredTiers = this.reflector.get<string[]>(

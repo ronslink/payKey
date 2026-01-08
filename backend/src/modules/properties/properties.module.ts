@@ -14,4 +14,4 @@ import { UsersModule } from '../users/users.module';
   providers: [PropertiesService],
   exports: [PropertiesService],
 })
-export class PropertiesModule { }
+export class PropertiesModule {}

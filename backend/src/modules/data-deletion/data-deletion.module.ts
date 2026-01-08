@@ -15,22 +15,22 @@ import { Transaction } from '../payments/entities/transaction.entity';
 import { Subscription } from '../subscriptions/entities/subscription.entity';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([
-            DeletionRequest,
-            User,
-            Worker,
-            PayPeriod,
-            PayrollRecord,
-            TimeEntry,
-            LeaveRequest,
-            Property,
-            Transaction,
-            Subscription,
-        ]),
-    ],
-    controllers: [DataDeletionController],
-    providers: [DataDeletionService, DataDeletionScheduler],
-    exports: [DataDeletionService],
+  imports: [
+    TypeOrmModule.forFeature([
+      DeletionRequest,
+      User,
+      Worker,
+      PayPeriod,
+      PayrollRecord,
+      TimeEntry,
+      LeaveRequest,
+      Property,
+      Transaction,
+      Subscription,
+    ]),
+  ],
+  controllers: [DataDeletionController],
+  providers: [DataDeletionService, DataDeletionScheduler],
+  exports: [DataDeletionService],
 })
-export class DataDeletionModule { }
+export class DataDeletionModule {}

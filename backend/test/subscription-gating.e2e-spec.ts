@@ -6,7 +6,7 @@ import { AppModule } from './../src/app.module';
 describe('Subscription Feature Gating E2E', () => {
   let app: INestApplication;
   let authToken: string;
-  let userId: string;
+  // let userId: string; // Unused
   let workerId: string;
 
   beforeAll(async () => {
@@ -35,7 +35,7 @@ describe('Subscription Feature Gating E2E', () => {
       .send({ email, password });
 
     authToken = loginRes.body.access_token;
-    userId = loginRes.body.user.id;
+    // userId = loginRes.body.user.id;
 
     // Create a worker for leave requests
     const workerRes = await request(app.getHttpServer())

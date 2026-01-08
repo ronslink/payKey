@@ -1,4 +1,10 @@
-import { IsEnum, IsOptional, IsString, IsDate, IsBoolean } from 'class-validator';
+import {
+  IsEnum,
+  IsOptional,
+  IsString,
+  IsDate,
+  IsBoolean,
+} from 'class-validator';
 import { PayPeriodStatus } from '../entities/pay-period.entity';
 
 export class UpdatePayPeriodDto {

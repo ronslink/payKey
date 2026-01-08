@@ -24,7 +24,11 @@ import {
 import { SUBSCRIPTION_PLANS } from './subscription-plans.config';
 import { UsersService } from '../users/users.service';
 import { IntaSendService } from '../payments/intasend.service';
-import { Transaction, TransactionStatus, TransactionType } from '../payments/entities/transaction.entity';
+import {
+  Transaction,
+  TransactionStatus,
+  TransactionType,
+} from '../payments/entities/transaction.entity';
 
 @Controller('subscriptions')
 @UseGuards(JwtAuthGuard)
@@ -40,7 +44,7 @@ export class SubscriptionsController {
     private intaSendService: IntaSendService,
     @InjectRepository(Transaction)
     private transactionRepository: Repository<Transaction>,
-  ) { }
+  ) {}
 
   @Get('plans')
   getPlans() {
@@ -489,7 +493,10 @@ export class SubscriptionsController {
           phoneNumber: formattedPhone,
         },
       });
-      console.log('🔹 Creating Transaction with Metadata:', transaction.metadata);
+      console.log(
+        '🔹 Creating Transaction with Metadata:',
+        transaction.metadata,
+      );
       await this.transactionRepository.save(transaction);
 
       return {
