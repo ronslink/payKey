@@ -427,7 +427,7 @@ class _PricingPageState extends ConsumerState<PricingPage> {
                 await ref.read(paymentsProvider.notifier).initiatePayment(
                   phoneController.text, 
                   plan.priceKES,
-                  accountReference: 'PayKey-${plan.name}',
+                  accountReference: 'payDome-${plan.name}',
                   transactionDesc: 'Subscription Upgrade',
                 );
 

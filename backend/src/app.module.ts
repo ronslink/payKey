@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bull';
+import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -27,6 +28,7 @@ import { ExcelImportModule } from './modules/excel-import/excel-import.module';
 import { AppCacheModule } from './modules/cache/cache.module';
 import { AppThrottlerModule } from './modules/throttler/throttler.module';
 import { PropertiesModule } from './modules/properties/properties.module';
+import { DataDeletionModule } from './modules/data-deletion/data-deletion.module';
 
 // Explicit Entity Imports
 // Explicit Entity Imports
@@ -51,6 +53,7 @@ import { Activity } from './modules/activities/entities/activity.entity';
 import { TimeEntry } from './modules/time-tracking/entities/time-entry.entity';
 import { Export } from './modules/export/entities/export.entity';
 import { Holiday } from './modules/holidays/entities/holiday.entity';
+import { DeletionRequest } from './modules/data-deletion/entities/deletion-request.entity';
 
 @Module({
   imports: [
@@ -93,6 +96,7 @@ import { Holiday } from './modules/holidays/entities/holiday.entity';
               TimeEntry,
               Export,
               Holiday,
+              DeletionRequest,
             ],
             synchronize: true,
             logging: ['query', 'error'],
@@ -137,6 +141,7 @@ import { Holiday } from './modules/holidays/entities/holiday.entity';
             TimeEntry,
             Export,
             Holiday,
+            DeletionRequest,
           ],
 
           synchronize: true, // Re-enabled after fixing entity types
@@ -155,6 +160,7 @@ import { Holiday } from './modules/holidays/entities/holiday.entity';
       }),
       inject: [ConfigService],
     }),
+    ScheduleModule.forRoot(),
     AuthModule,
     UsersModule,
     WorkersModule,
@@ -178,6 +184,7 @@ import { Holiday } from './modules/holidays/entities/holiday.entity';
     AppCacheModule,
     AppThrottlerModule,
     PropertiesModule,
+    DataDeletionModule,
   ],
   controllers: [AppController],
   providers: [AppService],

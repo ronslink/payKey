@@ -16,7 +16,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify header elements
-      expect(find.text('PayKey'), findsOneWidget);
+      expect(find.text('payDome'), findsOneWidget);
       expect(find.byIcon(Icons.account_balance_wallet), findsOneWidget);
 
       // Verify input fields exist

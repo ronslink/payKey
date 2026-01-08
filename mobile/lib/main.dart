@@ -60,15 +60,15 @@ import 'features/settings/settings.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const ProviderScope(child: PayKeyApp()));
+  runApp(const ProviderScope(child: PaydomeApp()));
 }
 
 // =============================================================================
 // APP
 // =============================================================================
 
-class PayKeyApp extends ConsumerWidget {
-  const PayKeyApp({super.key});
+class PaydomeApp extends ConsumerWidget {
+  const PaydomeApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -91,7 +91,7 @@ class PayKeyApp extends ConsumerWidget {
 // =============================================================================
 
 abstract class AppConfig {
-  static const String appName = 'PayKey';
+  static const String appName = 'payDome';
   static const String initialRoute = AppRoutes.login;
 }
 

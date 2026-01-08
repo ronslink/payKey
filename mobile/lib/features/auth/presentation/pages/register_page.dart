@@ -71,7 +71,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           ),
           const SizedBox(height: 8),
           const Text(
-            'Join PayKey to manage your workers',
+            'Join payDome to manage your workers',
             style: TextStyle(
               fontSize: 16,
               color: Color(0xFF6B7280),

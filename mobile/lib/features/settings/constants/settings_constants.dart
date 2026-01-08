@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 class AppInfo {
   AppInfo._();
 
-  static const String appName = 'PayKey';
+  static const String appName = 'payDome';
   static const String version = '2.1.0';
-  static const String copyright = '© 2024 PayKey Kenya';
+  static const String copyright = '© 2024 payDome Kenya';
   static const String tagline = 'Your all-in-one payroll solution for domestic workers.';
 
   static String get fullVersion => '$appName v$version';

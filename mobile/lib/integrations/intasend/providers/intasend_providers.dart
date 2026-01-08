@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_service.dart';
-import '../../../core/config/app_environment.dart';
-import '../config/intasend_config.dart';
+
+
 import '../models/intasend_models.dart';
 import '../services/intasend_service.dart';
 
@@ -9,34 +9,7 @@ import '../services/intasend_service.dart';
 // CONFIGURATION
 // =============================================================================
 
-/// Provider for IntaSend environment configuration
-final intaSendEnvironmentProvider = Provider<IntaSendEnvironment>((ref) {
-  // 1. Check for Production/Live Mode
-  if (AppEnvironment.intasendIsLive) {
-    return IntaSendEnvironment.production(
-      publishableKey: AppEnvironment.intasendPubKey,
-      secretKey: AppEnvironment.intasendSecretKey,
-      webhookUrl: '${AppEnvironment.apiUrl}/webhooks/intasend',
-    );
-  }
 
-  // 2. Sandbox Mode
-  // If keys are injected via env, use them. Otherwise fallback to hardcoded test keys.
-  final pubKey = AppEnvironment.intasendPubKey.isNotEmpty 
-      ? AppEnvironment.intasendPubKey 
-      : 'ISPubKey_test_98b2ef28-5e6f-46c8-bae9-0e2acedcbf64';
-      
-  final secretKey = AppEnvironment.intasendSecretKey.isNotEmpty 
-      ? AppEnvironment.intasendSecretKey 
-      : 'ISSecretKey_test_469d4169-737d-4701-8539-ab65dd2ab2ee';
-
-  return IntaSendEnvironment.sandbox(
-    publishableKey: pubKey,
-    secretKey: secretKey,
-    // Use the configured API URL for webhooks
-    webhookUrl: '${AppEnvironment.apiUrl}/webhooks/intasend',
-  );
-});
 
 /// Provider for IntaSend service
 final intaSendServiceProvider = Provider<IntaSendService>((ref) {

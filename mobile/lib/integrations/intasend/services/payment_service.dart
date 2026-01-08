@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/intasend_models.dart';
 import '../providers/intasend_providers.dart';
 
-/// Payment service adapter for PayKey
+/// Payment service adapter for payDome
 /// 
 /// Bridges the gap between app-specific models and IntaSend integration.
 class PaymentService {

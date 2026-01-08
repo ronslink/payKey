@@ -35,11 +35,11 @@ class _InviteMessageBuilder {
 
   const _InviteMessageBuilder({required this.code, this.workerPhone});
 
-  String build() => '''🎉 Welcome to PayKey!
+  String build() => '''🎉 Welcome to payDome!
 
 Your employer has invited you to the Worker Portal.
 
-📱 Download the PayKey app and use this invite code to set up your account:
+📱 Download the payDome app and use this invite code to set up your account:
 
 🔑 Invite Code: $code
 
@@ -102,7 +102,7 @@ class _ShareActionsHandler {
   }
 
   Future<void> sendViaEmail() async {
-    final subject = Uri.encodeComponent('Welcome to PayKey - Your Invite Code');
+    final subject = Uri.encodeComponent('Welcome to payDome - Your Invite Code');
     final body = Uri.encodeComponent(message);
     final uri = Uri.parse('mailto:${email ?? ''}?subject=$subject&body=$body');
 

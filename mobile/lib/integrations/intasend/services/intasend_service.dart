@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../../../core/network/api_service.dart';
 
 import '../models/intasend_models.dart';
+import '../../../core/config/app_environment.dart';
 
 /// IntaSend API service
 ///
@@ -109,6 +110,12 @@ class IntaSendService {
          accountReference: reference,
          transactionDesc: 'Wallet Topup'
        );
+
+       // IntaSend Test Number Check
+       const testNumber = '254708374149';
+       if (!AppEnvironment.intasendIsLive && phoneNumber == testNumber) {
+          // Valid test number in sandbox.
+       }
        
        // Map backend response to StkPushResponse
        final data = response.data;

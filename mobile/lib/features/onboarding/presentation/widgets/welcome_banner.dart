@@ -56,7 +56,7 @@ class WelcomeBanner extends StatelessWidget {
               ),
               const SizedBox(height: OnboardingTheme.paddingSmall),
               const Text(
-                "Let's get you started with PayKey. We'll show you around!",
+                "Let's get you started with payDome. We'll show you around!",
                 style: OnboardingTextStyles.welcomeSubtitle,
               ),
             ],

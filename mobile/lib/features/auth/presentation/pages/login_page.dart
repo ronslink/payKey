@@ -58,7 +58,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           ),
           const SizedBox(height: 24),
           const Text(
-            'PayKey',
+            'payDome',
             style: TextStyle(
               fontSize: 32,
               fontWeight: FontWeight.bold,
@@ -301,7 +301,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         ),
                         const SizedBox(height: 8),
                         const Text(
-                          'Email: testuser@paykey.com\nPassword: testuser123',
+                          'Email: testuser@paydome.com\nPassword: testuser123',
                           style: TextStyle(
                             color: Color(0xFF92400E),
                             fontSize: 12,
