@@ -74,6 +74,7 @@ jobs:
         env:
           DB_HOST: localhost
           DB_PORT: 5435
+          DB_USER: paykey
           DB_USERNAME: paykey
           DB_PASSWORD: password
           DB_NAME: paykey_test

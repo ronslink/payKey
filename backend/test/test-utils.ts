@@ -54,7 +54,8 @@ export async function cleanupTestData(dataSource: DataSource): Promise<void> {
     const tableNames = entities.map((entity) => `"${entity}"`).join(', ');
     await dataSource.query(`TRUNCATE TABLE ${tableNames} RESTART IDENTITY CASCADE;`);
   } catch (error: any) {
-    console.log(`Cleanup error:`, error.message);
+    console.error(`Cleanup error:`, error.message);
+    throw error;
   }
 }
 

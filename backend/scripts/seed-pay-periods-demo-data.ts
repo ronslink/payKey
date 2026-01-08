@@ -22,9 +22,9 @@ async function seedDemoData() {
   try {
     // First, clean existing data
     console.log('Cleaning existing demo data...');
-    await dataSource.getRepository(PayrollRecord).delete({});
-    await dataSource.getRepository(PayPeriod).delete({});
-    await dataSource.getRepository(Worker).delete({});
+    await dataSource.query(
+      'TRUNCATE TABLE "payroll_records", "pay_periods", "workers" RESTART IDENTITY CASCADE;',
+    );
     await dataSource
       .getRepository(User)
       .delete({ email: 'testuser@paykey.com' });
