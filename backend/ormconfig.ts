@@ -5,8 +5,8 @@ export default new DataSource({
   host: process.env.DB_HOST || 'db', // Use 'db' service name in Docker, fallback to localhost for local development
   port: parseInt(process.env.DB_PORT || '5432'),
   username: process.env.DB_USER || process.env.DB_USERNAME || 'paykey',
-  password: process.env.DB_PASSWORD || 'admin',
-  database: process.env.DB_NAME || 'paykey',
+  password: process.env.DB_PASSWORD || 'password',
+  database: process.env.DB_NAME || 'paykey_test',
   entities: ['dist/src/modules/**/*.entity.js'],
   migrations: ['dist/src/migrations/*.js'],
   synchronize: false,
