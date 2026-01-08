@@ -24,6 +24,10 @@ describe('Auth E2E', () => {
 
     app = moduleFixture.createNestApplication();
     await app.init();
+
+    // Clean up DB before starting
+    const dataSource = app.get(DataSource);
+    await cleanupTestData(dataSource);
   });
 
   afterAll(async () => {

@@ -29,6 +29,10 @@ describe('Time Tracking Geofence E2E', () => {
     app = moduleFixture.createNestApplication();
     await app.init();
 
+    // Clean up DB before starting
+    const dataSource = app.get(DataSource);
+    await cleanupTestData(dataSource);
+
     // Register a PLATINUM user (for geofencing to apply)
     const email = `geofence.test.${Date.now()}@paykey.com`;
     const password = 'Password123!';
@@ -78,7 +82,10 @@ describe('Time Tracking Geofence E2E', () => {
         propertyId: propertyId,
       });
 
-    workerId = workerRes.body?.id;
+    if (!workerRes.body?.id) {
+      throw new Error(`Failed to create worker: ${JSON.stringify(workerRes.body)}`);
+    }
+    workerId = workerRes.body.id;
   });
 
   afterAll(async () => {

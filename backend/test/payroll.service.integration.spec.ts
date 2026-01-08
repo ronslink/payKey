@@ -2,9 +2,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { AppModule } from '../src/app.module';
 import { TestDatabaseModule } from './test-database.module';
+import { cleanupTestData } from './test-utils';
 import { WorkersModule } from '../src/modules/workers/workers.module';
 import { TaxesModule } from '../src/modules/taxes/taxes.module';
 import { PayrollModule } from '../src/modules/payroll/payroll.module';
@@ -61,11 +62,9 @@ describe('PayrollService Integration', () => {
     let payPeriodId: string;
 
     beforeEach(async () => {
-      // Clean up any existing data
-      await payrollRecordRepo.delete({});
-      await workerRepo.delete({});
-      await userRepo.delete({});
-      await payPeriodRepo.delete({});
+      // Clean up any existing data using TRUNCATE CASCADE
+      const dataSource = app.get(DataSource);
+      await cleanupTestData(dataSource);
 
       // Create test user
       testUser = await userRepo.save({
@@ -144,11 +143,11 @@ describe('PayrollService Integration', () => {
       // Verify total calculations
       expect(johnRecord.netSalary + janeRecord.netSalary).toBeCloseTo(
         johnRecord.grossSalary +
-          janeRecord.grossSalary -
-          johnRecord.nssf -
-          johnRecord.paye -
-          janeRecord.nssf -
-          janeRecord.paye,
+        janeRecord.grossSalary -
+        johnRecord.nssf -
+        johnRecord.paye -
+        janeRecord.nssf -
+        janeRecord.paye,
         0,
       );
     });
