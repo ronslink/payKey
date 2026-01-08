@@ -34,22 +34,27 @@ export async function cleanupTestData(dataSource: DataSource): Promise<void> {
     'tax_submissions',
     'payroll_records',
     'pay_periods',
+    'leave_requests',
+    'terminations',
+    'time_entries',
+    'activities',
+    'subscription_payments',
     'workers',
     'users',
-    'tax_configs',
-    'tax_tables',
-    'countries',
+    'subscriptions',
+    'properties',
+    'accounting_exports',
+    'exports',
+    'deletion_requests',
+    // country, tax_tables, tax_configs are likely static/seed data, keep them or truncate if needed
   ];
 
-  for (const entity of entities) {
-    try {
-      await dataSource.query(
-        `DELETE FROM "${entity}" WHERE email LIKE '%@paykey.com' OR email LIKE '%@example.com'`,
-      );
-    } catch (error: any) {
-      // Table might not exist or be empty, ignore
-      console.log(`Cleanup warning for ${entity}:`, error.message);
-    }
+  try {
+    // Disable triggers if necessary, but TRUNCATE CASCADE usually handles foreign keys
+    const tableNames = entities.map((entity) => `"${entity}"`).join(', ');
+    await dataSource.query(`TRUNCATE TABLE ${tableNames} RESTART IDENTITY CASCADE;`);
+  } catch (error: any) {
+    console.log(`Cleanup error:`, error.message);
   }
 }
 

@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
+import { cleanupTestData } from './test-utils';
+import { DataSource } from 'typeorm';
 
 describe('Payroll Payment Flow E2E', () => {
   let app: INestApplication;
@@ -45,6 +47,12 @@ describe('Payroll Payment Flow E2E', () => {
 
   afterAll(async () => {
     if (app) {
+      try {
+        const dataSource = app.get(DataSource);
+        await cleanupTestData(dataSource);
+      } catch (error) {
+        console.error('Cleanup failed:', error);
+      }
       await app.close();
     }
   });
@@ -140,7 +148,7 @@ describe('Payroll Payment Flow E2E', () => {
 
     // Verify Standard Worker Result
     const standardResult = payoutResults.results.find(
-      (r) => r.workerId === mpesaWorkerId,
+      (r: any) => r.workerId === mpesaWorkerId,
     );
     expect(standardResult.success).toBe(true);
     // Should have single transaction ID
@@ -148,7 +156,7 @@ describe('Payroll Payment Flow E2E', () => {
 
     // Verify High Salary Worker Result (Splitting)
     const highResult = payoutResults.results.find(
-      (r) => r.workerId === highNetSalaryWorkerId,
+      (r: any) => r.workerId === highNetSalaryWorkerId,
     );
     expect(highResult.success).toBe(true);
     // Should have multiple transaction IDs (comma separated)

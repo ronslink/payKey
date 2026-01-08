@@ -130,7 +130,7 @@ describe('Accounting E2E', () => {
               accountName: 'Salaries Expense',
             },
             {
-              category: 'PAYE',
+              category: 'PAYE_LIABILITY',
               accountCode: '2100',
               accountName: 'PAYE Payable',
             },

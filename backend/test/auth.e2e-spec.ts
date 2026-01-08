@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
+import { cleanupTestData } from './test-utils';
+import { DataSource } from 'typeorm';
 
 /**
  * Authentication E2E Tests
@@ -26,6 +28,12 @@ describe('Auth E2E', () => {
 
   afterAll(async () => {
     if (app) {
+      try {
+        const dataSource = app.get(DataSource);
+        await cleanupTestData(dataSource);
+      } catch (error) {
+        console.error('Cleanup failed:', error);
+      }
       await app.close();
     }
   });
