@@ -9,50 +9,36 @@ import { INestApplication } from '@nestjs/common';
 /**
  * Generate a unique email for test users
  */
-export function generateTestEmail(testName: string): string {
+export function generateTestEmail(prefix: string): string {
   const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 1000);
-  return `${testName}.${timestamp}.${random}@paykey.com`;
+  const random = Math.floor(Math.random() * 10000);
+  return `${prefix}.${timestamp}.${random}@paykey.com`;
 }
 
 /**
  * Generate a unique phone number for test users
  */
 export function generateTestPhone(): string {
-  const timestamp = Date.now().toString().slice(-6);
-  const random = Math.floor(Math.random() * 1000)
-    .toString()
-    .padStart(3, '0');
-  return `+25471${timestamp.slice(-3)}${random}`;
+  // Use a fixed prefix valid for Kenya but randomize the rest clearly
+  const random = Math.floor(Math.random() * 100000000);
+  return `+254${String(random).padStart(9, '0')}`;
 }
 
 /**
  * Clean up test data by truncating specific tables
  */
 export async function cleanupTestData(dataSource: DataSource): Promise<void> {
-  const entities = [
-    'tax_submissions',
-    'payroll_records',
-    'pay_periods',
-    'leave_requests',
-    'terminations',
-    'time_entries',
-    'activities',
-    'subscription_payments',
-    'workers',
-    'users',
-    'subscriptions',
-    'properties',
-    'accounting_exports',
-    'exports',
-    'deletion_requests',
-    // country, tax_tables, tax_configs are likely static/seed data, keep them or truncate if needed
-  ];
+  if (!dataSource.isInitialized) {
+    return;
+  }
 
   try {
-    // Disable triggers if necessary, but TRUNCATE CASCADE usually handles foreign keys
-    const tableNames = entities.map((entity) => `"${entity}"`).join(', ');
-    await dataSource.query(`TRUNCATE TABLE ${tableNames} RESTART IDENTITY CASCADE;`);
+    const entities = dataSource.entityMetadatas;
+    const tableNames = entities.map((entity) => `"${entity.tableName}"`).join(', ');
+
+    if (tableNames.length > 0) {
+      await dataSource.query(`TRUNCATE TABLE ${tableNames} RESTART IDENTITY CASCADE;`);
+    }
   } catch (error: any) {
     console.error(`Cleanup error:`, error.message);
     throw error;

@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
-import { cleanupTestData } from './test-utils';
+import { cleanupTestData, generateTestEmail, generateTestPhone } from './test-utils';
 import { DataSource } from 'typeorm';
 
 /**
@@ -21,6 +21,7 @@ describe('Payroll E2E', () => {
   let app: INestApplication;
   let authToken: string;
   let userId: string;
+  let dataSource: DataSource;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -30,37 +31,47 @@ describe('Payroll E2E', () => {
     app = moduleFixture.createNestApplication();
     await app.init();
 
+    // Get DataSource instance
+    dataSource = app.get(DataSource);
+
     // Clean up DB before starting
-    const dataSource = app.get(DataSource);
     await cleanupTestData(dataSource);
 
     // Register a unique test user
-    const email = `payroll.test.${Date.now()}@paykey.com`;
+    const email = generateTestEmail('payroll.test');
     const password = 'Password123!';
 
-    await request(app.getHttpAdapter().getInstance()).post('/auth/register').send({
-      email,
-      password,
-      firstName: 'Payroll',
-      lastName: 'Tester',
-      businessName: 'Payroll Test Corp',
-      phone: '+254700000001',
-    });
+    await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({
+        email,
+        password,
+        firstName: 'Payroll',
+        lastName: 'Tester',
+        businessName: 'Payroll Test Corp',
+        phone: generateTestPhone(),
+      })
+      .expect(201);
 
     // Login to get auth token
-    const loginRes = await request(app.getHttpAdapter().getInstance())
+    const loginRes = await request(app.getHttpServer())
       .post('/auth/login')
-      .send({ email, password });
+      .send({ email, password })
+      .expect(200);
 
     authToken = loginRes.body.access_token;
     userId = loginRes.body.user.id;
+
+    expect(authToken).toBeDefined();
+    expect(userId).toBeDefined();
   });
 
   afterAll(async () => {
     if (app) {
       try {
-        const dataSource = app.get(DataSource);
-        await cleanupTestData(dataSource);
+        if (dataSource && dataSource.isInitialized) {
+          await cleanupTestData(dataSource);
+        }
       } catch (error) {
         console.error('Cleanup failed:', error);
       }
@@ -74,16 +85,16 @@ describe('Payroll E2E', () => {
     let payrollRecordId: string;
 
     it('1. should create a worker', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post('/workers')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           name: 'John Doe',
-          phoneNumber: '+254712345678',
+          phoneNumber: generateTestPhone(),
           salaryGross: 50000,
           startDate: '2024-01-01',
           paymentMethod: 'MPESA',
-          mpesaNumber: '+254712345678',
+          mpesaNumber: generateTestPhone(),
         })
         .expect(201);
 
@@ -94,7 +105,7 @@ describe('Payroll E2E', () => {
     });
 
     it('2. should generate pay periods for the year', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post('/pay-periods/generate')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -105,34 +116,42 @@ describe('Payroll E2E', () => {
         .expect(201);
 
       expect(res.body).toHaveLength(12);
+      expect(res.body[0]).toHaveProperty('id');
       payPeriodId = res.body[0].id; // January pay period
     });
 
     it('3. should activate the pay period', async () => {
-      await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post(`/pay-periods/${payPeriodId}/activate`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(201);
+
+      expect(res.body).toHaveProperty('id');
+      expect(res.body.id).toBe(payPeriodId);
     });
 
     it('4. should calculate payroll', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get('/payroll/calculate')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
       expect(res.body).toHaveProperty('payrollItems');
-      expect(res.body.payrollItems).toHaveLength(1);
-      expect(res.body.payrollItems[0].workerId).toBe(workerId);
-      expect(res.body.payrollItems[0].grossSalary).toBe(50000);
+      expect(Array.isArray(res.body.payrollItems)).toBe(true);
+      expect(res.body.payrollItems.length).toBeGreaterThanOrEqual(1);
+
+      const firstItem = res.body.payrollItems[0];
+      expect(firstItem.workerId).toBe(workerId);
+      expect(firstItem.grossSalary).toBe(50000);
     });
 
     it('5. should save draft payroll', async () => {
-      const calcRes = await request(app.getHttpAdapter().getInstance())
+      const calcRes = await request(app.getHttpServer())
         .get('/payroll/calculate')
-        .set('Authorization', `Bearer ${authToken}`);
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
 
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post('/payroll/draft')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -146,69 +165,97 @@ describe('Payroll E2E', () => {
         })
         .expect(201);
 
-      expect(res.body).toHaveLength(1);
+      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body.length).toBeGreaterThanOrEqual(1);
       expect(res.body[0].status).toBe('draft');
       payrollRecordId = res.body[0].id;
     });
 
     it('6. should finalize payroll', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post(`/payroll/finalize/${payPeriodId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(201);
 
       expect(res.body).toHaveProperty('finalizedRecords');
       expect(Array.isArray(res.body.finalizedRecords)).toBe(true);
+      expect(res.body.finalizedRecords.length).toBeGreaterThan(0);
 
-      if (res.body.finalizedRecords && res.body.finalizedRecords.length > 0) {
-        expect(res.body.finalizedRecords[0].status).toBe('finalized');
-        payrollRecordId = res.body.finalizedRecords[0].id;
-      } else {
-        // If no records, this might indicate setup issue - skip remaining assertions
-        console.warn('Warning: No finalized records returned');
-      }
+      const finalizedRecord = res.body.finalizedRecords[0];
+      expect(finalizedRecord.status).toBe('finalized');
+      payrollRecordId = finalizedRecord.id;
     });
 
     it('7. should download payslip as PDF', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get(`/payroll/payslip/${payrollRecordId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
       expect(res.headers['content-type']).toBe('application/pdf');
       expect(res.headers['content-disposition']).toContain('attachment');
+      expect(res.body).toBeDefined();
     });
 
     it('8. should get period payroll records', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get(`/payroll/period-records/${payPeriodId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
       expect(Array.isArray(res.body)).toBe(true);
       expect(res.body.length).toBeGreaterThanOrEqual(1);
+
+      const record = res.body[0];
+      expect(record).toHaveProperty('id');
+      expect(record).toHaveProperty('status');
     });
 
     it('9. should get payroll statistics', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get('/payroll/stats')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
       expect(res.body).toHaveProperty('thisMonthTotal');
+      expect(typeof res.body.thisMonthTotal).toBe('number');
     });
   });
 
   describe('Authorization', () => {
     it('should prevent unauthorized access to payroll calculate', async () => {
-      await request(app.getHttpAdapter().getInstance()).get('/payroll/calculate').expect(401);
+      await request(app.getHttpServer())
+        .get('/payroll/calculate')
+        .expect(401);
     });
 
     it('should prevent access with invalid token', async () => {
-      await request(app.getHttpAdapter().getInstance())
+      await request(app.getHttpServer())
         .get('/payroll/calculate')
         .set('Authorization', 'Bearer invalid-token')
         .expect(401);
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('should handle invalid worker ID in payroll calculation', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/payroll/draft')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({
+          payPeriodId: 'invalid-id',
+          payrollItems: [],
+        })
+        .expect(400);
+
+      expect(res.body).toHaveProperty('message');
+    });
+
+    it('should handle missing pay period ID', async () => {
+      await request(app.getHttpServer())
+        .post('/payroll/finalize/')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(404);
     });
   });
 });

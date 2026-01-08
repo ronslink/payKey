@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
-import { cleanupTestData } from './test-utils';
+import { cleanupTestData, generateTestEmail, generateTestPhone } from './test-utils';
 import { DataSource } from 'typeorm';
 
 /**
@@ -43,7 +43,11 @@ describe('Auth E2E', () => {
   });
 
   describe('Registration', () => {
-    const uniqueEmail = `auth.test.${Date.now()}@paykey.com`;
+    let uniqueEmail: string;
+
+    beforeEach(() => {
+      uniqueEmail = generateTestEmail('auth.test');
+    });
 
     it('should register a new user successfully', async () => {
       const res = await request(app.getHttpAdapter().getInstance())
@@ -54,7 +58,7 @@ describe('Auth E2E', () => {
           firstName: 'Auth',
           lastName: 'TestUser',
           businessName: 'Auth Test Corp',
-          phone: '+254700000099',
+          phone: generateTestPhone(),
         })
         .expect(201);
 
@@ -64,6 +68,19 @@ describe('Auth E2E', () => {
     });
 
     it('should reject registration with duplicate email', async () => {
+      // Create user first
+      await request(app.getHttpAdapter().getInstance())
+        .post('/auth/register')
+        .send({
+          email: uniqueEmail,
+          password: 'Password123!',
+          firstName: 'Original',
+          lastName: 'User',
+          businessName: 'Original Corp',
+          phone: generateTestPhone(),
+        });
+
+      // Try to register duplicate
       await request(app.getHttpAdapter().getInstance())
         .post('/auth/register')
         .send({
@@ -72,7 +89,7 @@ describe('Auth E2E', () => {
           firstName: 'Duplicate',
           lastName: 'User',
           businessName: 'Duplicate Corp',
-          phone: '+254700000098',
+          phone: generateTestPhone(),
         })
         .expect(409); // Conflict
     });
@@ -90,7 +107,7 @@ describe('Auth E2E', () => {
 
   describe('Login', () => {
     // Use unique email with timestamp to avoid conflicts
-    const loginEmail = `login.stable.${Date.now()}@paykey.com`;
+    const loginEmail = generateTestEmail('login.stable');
     const loginPassword = 'StablePassword123!';
 
     beforeAll(async () => {
@@ -103,7 +120,7 @@ describe('Auth E2E', () => {
           firstName: 'Login',
           lastName: 'Tester',
           businessName: 'Login Test Corp',
-          phone: `+2547${Date.now().toString().slice(-8)}`,
+          phone: generateTestPhone(),
         });
 
       // If registration fails (409 conflict), user already exists which is OK
