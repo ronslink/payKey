@@ -2,7 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
-import { upgradeUserToPlatinum, extractUserIdFromToken, cleanupTestData } from './test-utils';
+import {
+  upgradeUserToPlatinum,
+  extractUserIdFromToken,
+  cleanupTestData,
+} from './test-utils';
 import { DataSource } from 'typeorm';
 
 describe('Time Tracking Geofence E2E', () => {
@@ -83,7 +87,9 @@ describe('Time Tracking Geofence E2E', () => {
       });
 
     if (!workerRes.body?.id) {
-      throw new Error(`Failed to create worker: ${JSON.stringify(workerRes.body)}`);
+      throw new Error(
+        `Failed to create worker: ${JSON.stringify(workerRes.body)}`,
+      );
     }
     workerId = workerRes.body.id;
   });
@@ -237,4 +243,3 @@ describe('Time Tracking Geofence E2E', () => {
     });
   });
 });
-

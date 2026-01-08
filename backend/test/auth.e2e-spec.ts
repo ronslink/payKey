@@ -2,7 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
-import { cleanupTestData, generateTestEmail, generateTestPhone } from './test-utils';
+import {
+  cleanupTestData,
+  generateTestEmail,
+  generateTestPhone,
+} from './test-utils';
 import { DataSource } from 'typeorm';
 
 /**
@@ -69,16 +73,14 @@ describe('Auth E2E', () => {
 
     it('should reject registration with duplicate email', async () => {
       // Create user first
-      await request(app.getHttpServer())
-        .post('/auth/register')
-        .send({
-          email: uniqueEmail,
-          password: 'Password123!',
-          firstName: 'Original',
-          lastName: 'User',
-          businessName: 'Original Corp',
-          phone: generateTestPhone(),
-        });
+      await request(app.getHttpServer()).post('/auth/register').send({
+        email: uniqueEmail,
+        password: 'Password123!',
+        firstName: 'Original',
+        lastName: 'User',
+        businessName: 'Original Corp',
+        phone: generateTestPhone(),
+      });
 
       // Try to register duplicate
       await request(app.getHttpServer())
@@ -166,4 +168,3 @@ describe('Auth E2E', () => {
     });
   });
 });
-

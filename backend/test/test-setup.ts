@@ -5,9 +5,29 @@
 
 // Set up test environment variables before any tests run
 process.env.NODE_ENV = 'test';
+process.env.DB_HOST = process.env.DB_HOST || 'localhost';
+process.env.DB_PORT = process.env.DB_PORT || '5432';
+process.env.DB_USER = process.env.DB_USER || 'paykey';
+process.env.DB_USERNAME = process.env.DB_USERNAME || 'paykey';
+process.env.DB_PASSWORD = process.env.DB_PASSWORD || 'password';
+process.env.DB_NAME = process.env.DB_NAME || 'paykey_test';
 process.env.DB_DATABASE = 'paykey_test';
 
+// Validate required environment variables
+const requiredEnvVars = ['DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'];
+const missingEnvVars = requiredEnvVars.filter((envVar) => !process.env[envVar]);
+
+if (missingEnvVars.length > 0) {
+  console.warn(
+    `⚠️  Warning: Missing environment variables: ${missingEnvVars.join(', ')}`,
+  );
+  console.warn('Using default values for testing.');
+}
+
 console.log('🚀 Starting E2E test suite...');
+console.log(
+  `📊 Database: ${process.env.DB_USER}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`,
+);
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {

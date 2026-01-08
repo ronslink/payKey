@@ -234,4 +234,3 @@ describe('Pay Periods E2E', () => {
     });
   });
 });
-

@@ -180,4 +180,3 @@ describe('Worker Termination E2E', () => {
     expect(parseFloat(submission.totalHousingLevy)).toBeGreaterThan(0);
   });
 });
-

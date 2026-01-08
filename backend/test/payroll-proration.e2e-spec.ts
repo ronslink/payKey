@@ -297,4 +297,3 @@ describe('Payroll Proration E2E', () => {
     });
   });
 });
-

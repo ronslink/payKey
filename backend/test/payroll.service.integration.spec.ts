@@ -143,11 +143,11 @@ describe('PayrollService Integration', () => {
       // Verify total calculations
       expect(johnRecord.netSalary + janeRecord.netSalary).toBeCloseTo(
         johnRecord.grossSalary +
-        janeRecord.grossSalary -
-        johnRecord.nssf -
-        johnRecord.paye -
-        janeRecord.nssf -
-        janeRecord.paye,
+          janeRecord.grossSalary -
+          johnRecord.nssf -
+          johnRecord.paye -
+          janeRecord.nssf -
+          janeRecord.paye,
         0,
       );
     });

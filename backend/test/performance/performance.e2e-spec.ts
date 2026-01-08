@@ -248,4 +248,3 @@ describe('Performance Tests', () => {
     }
   }, 180000); // 3 minute timeout for large test
 });
-

@@ -2,7 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
-import { cleanupTestData, generateTestEmail, generateTestPhone } from './test-utils';
+import {
+  cleanupTestData,
+  generateTestEmail,
+  generateTestPhone,
+} from './test-utils';
 import { DataSource } from 'typeorm';
 
 describe('Payroll Complete Flow E2E', () => {
@@ -30,16 +34,14 @@ describe('Payroll Complete Flow E2E', () => {
     const email = generateTestEmail('complete.flow');
     const password = 'Password123!';
 
-    await request(app.getHttpServer())
-      .post('/auth/register')
-      .send({
-        email,
-        password,
-        firstName: 'Complete',
-        lastName: 'Tester',
-        businessName: 'Complete Flows Ltd',
-        phone: generateTestPhone(),
-      });
+    await request(app.getHttpServer()).post('/auth/register').send({
+      email,
+      password,
+      firstName: 'Complete',
+      lastName: 'Tester',
+      businessName: 'Complete Flows Ltd',
+      phone: generateTestPhone(),
+    });
 
     // Login
     const loginRes = await request(app.getHttpServer())
@@ -159,7 +161,9 @@ describe('Payroll Complete Flow E2E', () => {
       const record = recordsRes.body[0];
       payrollRecordId = record.id;
       // Record may still be processing or finalized
-      expect(['draft', 'finalized', 'processing'].includes(record.status)).toBe(true);
+      expect(['draft', 'finalized', 'processing'].includes(record.status)).toBe(
+        true,
+      );
     }
   });
 
@@ -190,4 +194,3 @@ describe('Payroll Complete Flow E2E', () => {
     );
   });
 });
-

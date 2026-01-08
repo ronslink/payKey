@@ -169,4 +169,3 @@ describe('Reports Generation E2E', () => {
     });
   });
 });
-

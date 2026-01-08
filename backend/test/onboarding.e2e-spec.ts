@@ -264,4 +264,3 @@ describe('Onboarding E2E', () => {
     });
   });
 });
-

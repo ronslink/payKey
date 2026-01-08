@@ -34,10 +34,14 @@ export async function cleanupTestData(dataSource: DataSource): Promise<void> {
 
   try {
     const entities = dataSource.entityMetadatas;
-    const tableNames = entities.map((entity) => `"${entity.tableName}"`).join(', ');
+    const tableNames = entities
+      .map((entity) => `"${entity.tableName}"`)
+      .join(', ');
 
     if (tableNames.length > 0) {
-      await dataSource.query(`TRUNCATE TABLE ${tableNames} RESTART IDENTITY CASCADE;`);
+      await dataSource.query(
+        `TRUNCATE TABLE ${tableNames} RESTART IDENTITY CASCADE;`,
+      );
     }
   } catch (error: any) {
     console.error(`Cleanup error:`, error.message);

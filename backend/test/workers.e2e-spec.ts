@@ -32,8 +32,8 @@ describe('Workers E2E', () => {
     const email = `workers.test.${Date.now()}@paykey.com`;
     const password = 'Password123!';
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await request(app.getHttpServer())
+    // Register the user
+    const registerRes = await request(app.getHttpServer())
       .post('/auth/register')
       .send({
         email,
@@ -44,13 +44,30 @@ describe('Workers E2E', () => {
         phone: '+254700000100',
       });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // Ensure registration was successful (201) or user already exists (400)
+    if (registerRes.status !== 201 && registerRes.status !== 400) {
+      throw new Error(
+        `Registration failed with status ${registerRes.status}: ${JSON.stringify(registerRes.body)}`,
+      );
+    }
+
+    // Login to get auth token
     const loginRes = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email, password });
 
+    if (loginRes.status !== 200) {
+      throw new Error(
+        `Login failed with status ${loginRes.status}: ${JSON.stringify(loginRes.body)}`,
+      );
+    }
+
     const loginResponse = loginRes.body as LoginResponse;
     authToken = loginResponse.access_token;
+
+    if (!authToken) {
+      throw new Error('Failed to obtain auth token from login response');
+    }
   });
 
   afterAll(async () => {
@@ -70,7 +87,6 @@ describe('Workers E2E', () => {
         jobTitle: 'Software Engineer',
       };
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const res = await request(app.getHttpServer())
         .post('/workers')
         .set('Authorization', `Bearer ${authToken}`)
@@ -83,7 +99,6 @@ describe('Workers E2E', () => {
     });
 
     it('should get worker statistics', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const res = await request(app.getHttpServer())
         .get('/workers/stats')
         .set('Authorization', `Bearer ${authToken}`)
@@ -95,10 +110,7 @@ describe('Workers E2E', () => {
     });
 
     it('should return 401 without auth token', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await request(app.getHttpServer())
-        .get('/workers')
-        .expect(401);
+      await request(app.getHttpServer()).get('/workers').expect(401);
     });
   });
 });

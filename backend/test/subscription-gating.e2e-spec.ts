@@ -137,4 +137,3 @@ describe('Subscription Feature Gating E2E', () => {
     });
   });
 });
-

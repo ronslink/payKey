@@ -57,25 +57,43 @@ describe('Accounting E2E', () => {
     const email = `accounting.test.${Date.now()}@paykey.com`;
     const password = 'Password123!';
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-    await request(app.getHttpServer()).post('/auth/register').send({
-      email,
-      password,
-      firstName: 'Accounting',
-      lastName: 'Tester',
-      businessName: 'Accounting Test Corp',
-      phone: '+254700000500',
-    });
+    // Register the user
+    const registerRes = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({
+        email,
+        password,
+        firstName: 'Accounting',
+        lastName: 'Tester',
+        businessName: 'Accounting Test Corp',
+        phone: '+254700000500',
+      });
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    // Ensure registration was successful (201) or user already exists (400)
+    if (registerRes.status !== 201 && registerRes.status !== 400) {
+      throw new Error(
+        `Registration failed with status ${registerRes.status}: ${JSON.stringify(registerRes.body)}`,
+      );
+    }
+
+    // Login to get auth token
     const loginRes = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email, password });
 
+    if (loginRes.status !== 200) {
+      throw new Error(
+        `Login failed with status ${loginRes.status}: ${JSON.stringify(loginRes.body)}`,
+      );
+    }
+
     authToken = (loginRes.body as LoginResponse).access_token;
 
+    if (!authToken) {
+      throw new Error('Failed to obtain auth token from login response');
+    }
+
     // Create a pay period for export tests
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     const periodRes = await request(app.getHttpServer())
       .post('/pay-periods/generate')
       .set('Authorization', `Bearer ${authToken}`)
@@ -213,4 +231,3 @@ describe('Accounting E2E', () => {
     });
   });
 });
-

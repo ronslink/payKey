@@ -108,17 +108,17 @@ import { DeletionRequest } from './modules/data-deletion/entities/deletion-reque
         const dbUser =
           configService.get('DB_USER') ||
           configService.get('DB_USERNAME') ||
-          'postgres';
+          'paykey';
         return {
           type: 'postgres',
           host: dbHost,
           port: parseInt(configService.get('DB_PORT', '5432')),
           username: configService.get(
             'DB_USER',
-            configService.get('DB_USERNAME', 'postgres'),
+            configService.get('DB_USERNAME', 'paykey'),
           ),
-          password: configService.get('DB_PASSWORD', 'admin'),
-          database: configService.get('DB_NAME', 'paykey'),
+          password: configService.get('DB_PASSWORD', 'password'),
+          database: configService.get('DB_NAME', 'paykey_test'),
           entities: [
             User,
             Worker,

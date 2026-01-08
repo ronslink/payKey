@@ -2,7 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
-import { cleanupTestData, generateTestEmail, generateTestPhone } from './test-utils';
+import {
+  cleanupTestData,
+  generateTestEmail,
+  generateTestPhone,
+} from './test-utils';
 import { DataSource } from 'typeorm';
 
 /**
@@ -235,9 +239,7 @@ describe('Payroll E2E', () => {
 
   describe('Authorization', () => {
     it('should prevent unauthorized access to payroll calculate', async () => {
-      await request(app.getHttpServer())
-        .get('/payroll/calculate')
-        .expect(401);
+      await request(app.getHttpServer()).get('/payroll/calculate').expect(401);
     });
 
     it('should prevent access with invalid token', async () => {
@@ -270,4 +272,3 @@ describe('Payroll E2E', () => {
     });
   });
 });
-

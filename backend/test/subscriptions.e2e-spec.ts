@@ -123,4 +123,3 @@ describe('Subscription Payments E2E', () => {
     });
   });
 });
-
