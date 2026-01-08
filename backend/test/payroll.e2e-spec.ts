@@ -32,7 +32,7 @@ describe('Payroll E2E', () => {
     const email = `payroll.test.${Date.now()}@paykey.com`;
     const password = 'Password123!';
 
-    await request(app.getHttpServer()).post('/auth/register').send({
+    await request(app.getHttpAdapter().getInstance()).post('/auth/register').send({
       email,
       password,
       firstName: 'Payroll',
@@ -42,7 +42,7 @@ describe('Payroll E2E', () => {
     });
 
     // Login to get auth token
-    const loginRes = await request(app.getHttpServer())
+    const loginRes = await request(app.getHttpAdapter().getInstance())
       .post('/auth/login')
       .send({ email, password });
 
@@ -62,7 +62,7 @@ describe('Payroll E2E', () => {
     let payrollRecordId: string;
 
     it('1. should create a worker', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .post('/workers')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -82,7 +82,7 @@ describe('Payroll E2E', () => {
     });
 
     it('2. should generate pay periods for the year', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .post('/pay-periods/generate')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -97,14 +97,14 @@ describe('Payroll E2E', () => {
     });
 
     it('3. should activate the pay period', async () => {
-      await request(app.getHttpServer())
+      await request(app.getHttpAdapter().getInstance())
         .post(`/pay-periods/${payPeriodId}/activate`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(201);
     });
 
     it('4. should calculate payroll', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/payroll/calculate')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -116,11 +116,11 @@ describe('Payroll E2E', () => {
     });
 
     it('5. should save draft payroll', async () => {
-      const calcRes = await request(app.getHttpServer())
+      const calcRes = await request(app.getHttpAdapter().getInstance())
         .get('/payroll/calculate')
         .set('Authorization', `Bearer ${authToken}`);
 
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .post('/payroll/draft')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -140,7 +140,7 @@ describe('Payroll E2E', () => {
     });
 
     it('6. should finalize payroll', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .post(`/payroll/finalize/${payPeriodId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(201);
@@ -158,7 +158,7 @@ describe('Payroll E2E', () => {
     });
 
     it('7. should download payslip as PDF', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get(`/payroll/payslip/${payrollRecordId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -168,7 +168,7 @@ describe('Payroll E2E', () => {
     });
 
     it('8. should get period payroll records', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get(`/payroll/period-records/${payPeriodId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -178,7 +178,7 @@ describe('Payroll E2E', () => {
     });
 
     it('9. should get payroll statistics', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/payroll/stats')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -189,14 +189,15 @@ describe('Payroll E2E', () => {
 
   describe('Authorization', () => {
     it('should prevent unauthorized access to payroll calculate', async () => {
-      await request(app.getHttpServer()).get('/payroll/calculate').expect(401);
+      await request(app.getHttpAdapter().getInstance()).get('/payroll/calculate').expect(401);
     });
 
     it('should prevent access with invalid token', async () => {
-      await request(app.getHttpServer())
+      await request(app.getHttpAdapter().getInstance())
         .get('/payroll/calculate')
         .set('Authorization', 'Bearer invalid-token')
         .expect(401);
     });
   });
 });
+

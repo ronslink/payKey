@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { PayrollRecord } from '../payroll/entities/payroll-record.entity';
+import {
+  PayrollRecord,
+  PayrollStatus,
+} from '../payroll/entities/payroll-record.entity';
 import {
   AccountMapping,
   AccountCategory,
@@ -51,7 +54,7 @@ export class AccountingExportService {
       where: {
         payPeriodId,
         userId,
-        status: 'finalized' as any,
+        status: PayrollStatus.FINALIZED,
       },
       relations: ['worker'],
     });
@@ -258,7 +261,13 @@ export class AccountingExportService {
       return this.getDefaultAccountMappings();
     }
 
-    const result: any = {};
+    const result: Record<
+      AccountCategory,
+      { accountCode: string; accountName: string }
+    > = {} as Record<
+      AccountCategory,
+      { accountCode: string; accountName: string }
+    >;
     for (const mapping of mappings) {
       result[mapping.category] = {
         accountCode: mapping.accountCode,
@@ -282,6 +291,10 @@ export class AccountingExportService {
     { accountCode: string; accountName: string }
   > {
     return {
+      [AccountCategory.GROSS_SALARY]: {
+        accountCode: '6000',
+        accountName: 'Gross Salary',
+      },
       [AccountCategory.SALARY_EXPENSE]: {
         accountCode: '6100',
         accountName: 'Salaries and Wages',

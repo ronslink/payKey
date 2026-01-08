@@ -43,7 +43,7 @@ describe('Employee Portal - Payslips & Leave E2E', () => {
       businessName: 'Payslip Test Corp',
     });
 
-    await request(app.getHttpServer()).post('/auth/register').send({
+    await request(app.getHttpAdapter().getInstance()).post('/auth/register').send({
       email: employerData.email,
       password: employerData.password,
       firstName: employerData.firstName,
@@ -52,14 +52,14 @@ describe('Employee Portal - Payslips & Leave E2E', () => {
       phone: employerData.phone,
     });
 
-    const loginRes = await request(app.getHttpServer())
+    const loginRes = await request(app.getHttpAdapter().getInstance())
       .post('/auth/login')
       .send({ email: employerData.email, password: employerData.password });
 
     employerToken = loginRes.body.access_token;
 
     // Get employer user ID
-    const profileRes = await request(app.getHttpServer())
+    const profileRes = await request(app.getHttpAdapter().getInstance())
       .get('/users/profile')
       .set('Authorization', `Bearer ${employerToken}`);
 
@@ -72,7 +72,7 @@ describe('Employee Portal - Payslips & Leave E2E', () => {
       name: 'Payslip Worker',
     });
 
-    const workerRes = await request(app.getHttpServer())
+    const workerRes = await request(app.getHttpAdapter().getInstance())
       .post('/workers')
       .set('Authorization', `Bearer ${employerToken}`)
       .send({
@@ -88,7 +88,7 @@ describe('Employee Portal - Payslips & Leave E2E', () => {
     }
 
     // Generate invite code for worker
-    const inviteRes = await request(app.getHttpServer())
+    const inviteRes = await request(app.getHttpAdapter().getInstance())
       .post(`/employee-portal/invite/${workerId}`)
       .set('Authorization', `Bearer ${employerToken}`);
 
@@ -96,7 +96,7 @@ describe('Employee Portal - Payslips & Leave E2E', () => {
       inviteCode = inviteRes.body.inviteCode;
 
       // Have employee claim account
-      await request(app.getHttpServer())
+      await request(app.getHttpAdapter().getInstance())
         .post('/employee-portal/claim-account')
         .send({
           phoneNumber: workerData.phoneNumber,
@@ -105,7 +105,7 @@ describe('Employee Portal - Payslips & Leave E2E', () => {
         });
 
       // Login as employee
-      const empLoginRes = await request(app.getHttpServer())
+      const empLoginRes = await request(app.getHttpAdapter().getInstance())
         .post('/employee-portal/login')
         .send({
           phoneNumber: workerData.phoneNumber,
@@ -118,7 +118,7 @@ describe('Employee Portal - Payslips & Leave E2E', () => {
     }
 
     // Create a pay period and process payroll
-    const payPeriodRes = await request(app.getHttpServer())
+    const payPeriodRes = await request(app.getHttpAdapter().getInstance())
       .post('/pay-periods')
       .set('Authorization', `Bearer ${employerToken}`)
       .send({
@@ -134,11 +134,11 @@ describe('Employee Portal - Payslips & Leave E2E', () => {
       payPeriodId = payPeriodRes.body.id || payPeriodRes.body.payPeriodId;
 
       // Try to calculate and process payroll
-      await request(app.getHttpServer())
+      await request(app.getHttpAdapter().getInstance())
         .post(`/pay-periods/${payPeriodId}/calculate`)
         .set('Authorization', `Bearer ${employerToken}`);
 
-      await request(app.getHttpServer())
+      await request(app.getHttpAdapter().getInstance())
         .post(`/pay-periods/${payPeriodId}/process`)
         .set('Authorization', `Bearer ${employerToken}`);
     }
@@ -157,7 +157,7 @@ describe('Employee Portal - Payslips & Leave E2E', () => {
         return;
       }
 
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/employee-portal/my-payslips')
         .set('Authorization', `Bearer ${employeeToken}`);
 
@@ -179,7 +179,7 @@ describe('Employee Portal - Payslips & Leave E2E', () => {
         return;
       }
 
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get(`/employee-portal/my-payslips/${payPeriodId}`)
         .set('Authorization', `Bearer ${employeeToken}`);
 
@@ -196,7 +196,7 @@ describe('Employee Portal - Payslips & Leave E2E', () => {
       // Try to access a different worker's payslip (using a fake ID)
       const fakeWorkerId = 'other-worker-123';
 
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get(`/employee-portal/my-payslips/${fakeWorkerId}`)
         .set('Authorization', `Bearer ${employeeToken}`);
 
@@ -212,7 +212,7 @@ describe('Employee Portal - Payslips & Leave E2E', () => {
         return;
       }
 
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/employee-portal/my-leave-balance')
         .set('Authorization', `Bearer ${employeeToken}`);
 
@@ -234,7 +234,7 @@ describe('Employee Portal - Payslips & Leave E2E', () => {
         return;
       }
 
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .post('/employee-portal/request-leave')
         .set('Authorization', `Bearer ${employeeToken}`)
         .send({
@@ -259,7 +259,7 @@ describe('Employee Portal - Payslips & Leave E2E', () => {
         return;
       }
 
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/employee-portal/my-leave-requests')
         .set('Authorization', `Bearer ${employeeToken}`)
         .expect(200);
@@ -278,7 +278,7 @@ describe('Employee Portal - Payslips & Leave E2E', () => {
       }
 
       // First, create a leave request
-      const createRes = await request(app.getHttpServer())
+      const createRes = await request(app.getHttpAdapter().getInstance())
         .post('/employee-portal/request-leave')
         .set('Authorization', `Bearer ${employeeToken}`)
         .send({
@@ -292,7 +292,7 @@ describe('Employee Portal - Payslips & Leave E2E', () => {
         const requestId = createRes.body.id;
 
         // Try to cancel it
-        const cancelRes = await request(app.getHttpServer())
+        const cancelRes = await request(app.getHttpAdapter().getInstance())
           .post(`/employee-portal/cancel-leave/${requestId}`)
           .set('Authorization', `Bearer ${employeeToken}`);
 
@@ -311,7 +311,7 @@ describe('Employee Portal - Payslips & Leave E2E', () => {
       // Try to cancel a fake leave request ID
       const fakeRequestId = 'other-employee-leave-123';
 
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .post(`/employee-portal/cancel-leave/${fakeRequestId}`)
         .set('Authorization', `Bearer ${employeeToken}`);
 
@@ -330,7 +330,7 @@ describe('Employee Portal - Payslips & Leave E2E', () => {
       // Employee should only see their own profile
       // This test verifies that trying to access another employee's data fails
 
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/employee-portal/my-profile')
         .set('Authorization', `Bearer ${employeeToken}`)
         .expect(200);
@@ -348,7 +348,7 @@ describe('Employee Portal - Payslips & Leave E2E', () => {
 
   describe('Authorization', () => {
     it('should require authentication for payslip access', async () => {
-      const res = await request(app.getHttpServer()).get(
+      const res = await request(app.getHttpAdapter().getInstance()).get(
         '/employee-portal/my-payslips',
       );
 
@@ -357,13 +357,13 @@ describe('Employee Portal - Payslips & Leave E2E', () => {
     });
 
     it('should require authentication for leave balance', async () => {
-      await request(app.getHttpServer())
+      await request(app.getHttpAdapter().getInstance())
         .get('/employee-portal/my-leave-balance')
         .expect(401);
     });
 
     it('should require authentication for leave requests', async () => {
-      await request(app.getHttpServer())
+      await request(app.getHttpAdapter().getInstance())
         .post('/employee-portal/request-leave')
         .send({
           leaveType: 'ANNUAL',
@@ -374,3 +374,4 @@ describe('Employee Portal - Payslips & Leave E2E', () => {
     });
   });
 });
+

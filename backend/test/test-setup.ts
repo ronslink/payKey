@@ -3,56 +3,11 @@
  * Global test setup for E2E tests
  */
 
-import { cleanupTestData } from './test-utils';
+// Set up test environment variables before any tests run
+process.env.NODE_ENV = 'test';
+process.env.DB_DATABASE = 'paykey_test';
 
-const testDataSource: any = null;
-
-/**
- * Global setup - runs once before all tests
- */
-beforeAll(async () => {
-  // Set up test environment variables
-  process.env.NODE_ENV = 'test';
-  process.env.DB_DATABASE = 'paykey_test';
-
-  console.log('🚀 Starting E2E test suite...');
-});
-
-/**
- * Global teardown - runs once after all tests
- */
-afterAll(async () => {
-  console.log('🧹 Cleaning up E2E test suite...');
-
-  // Clean up any remaining test data
-  if (testDataSource) {
-    try {
-      await cleanupTestData(testDataSource);
-    } catch (error) {
-      console.warn('⚠️ Error during cleanup:', error.message);
-    }
-  }
-
-  // Close database connections
-  if (testDataSource && testDataSource.isInitialized) {
-    await testDataSource.destroy();
-  }
-});
-
-/**
- * Setup before each test
- */
-beforeEach(async () => {
-  // Reset any global state if needed
-});
-
-/**
- * Cleanup after each test
- */
-afterEach(async () => {
-  // Clean up test data after each test
-  // This will help prevent data pollution between tests
-});
+console.log('🚀 Starting E2E test suite...');
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
@@ -120,3 +75,6 @@ expect.extend({
     }
   },
 });
+
+// Export empty object to make this a valid module
+export {};

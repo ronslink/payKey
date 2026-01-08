@@ -3,6 +3,34 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
 
+// Type interfaces for API responses
+interface LoginResponse {
+  access_token: string;
+}
+
+interface PayPeriod {
+  id: string;
+}
+
+interface PayPeriodsResponse {
+  periods: PayPeriod[];
+}
+
+interface ExportFormat {
+  id: string;
+  name: string;
+}
+
+interface FormatsResponse {
+  formats: ExportFormat[];
+}
+
+interface AccountMapping {
+  category: string;
+  accountCode: string;
+  accountName: string;
+}
+
 /**
  * Accounting E2E Tests
  *
@@ -29,7 +57,8 @@ describe('Accounting E2E', () => {
     const email = `accounting.test.${Date.now()}@paykey.com`;
     const password = 'Password123!';
 
-    await request(app.getHttpServer()).post('/auth/register').send({
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    await request(app.getHttpAdapter().getInstance()).post('/auth/register').send({
       email,
       password,
       firstName: 'Accounting',
@@ -38,14 +67,16 @@ describe('Accounting E2E', () => {
       phone: '+254700000500',
     });
 
-    const loginRes = await request(app.getHttpServer())
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    const loginRes = await request(app.getHttpAdapter().getInstance())
       .post('/auth/login')
       .send({ email, password });
 
-    authToken = loginRes.body.access_token;
+    authToken = (loginRes.body as LoginResponse).access_token;
 
     // Create a pay period for export tests
-    const periodRes = await request(app.getHttpServer())
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    const periodRes = await request(app.getHttpAdapter().getInstance())
       .post('/pay-periods/generate')
       .set('Authorization', `Bearer ${authToken}`)
       .send({
@@ -53,8 +84,9 @@ describe('Accounting E2E', () => {
         frequency: 'MONTHLY',
       });
 
-    if (periodRes.body.periods && periodRes.body.periods.length > 0) {
-      payPeriodId = periodRes.body.periods[0].id;
+    const periodsResponse = periodRes.body as PayPeriodsResponse;
+    if (periodsResponse.periods && periodsResponse.periods.length > 0) {
+      payPeriodId = periodsResponse.periods[0].id;
     }
   });
 
@@ -66,7 +98,8 @@ describe('Accounting E2E', () => {
 
   describe('Account Mappings', () => {
     it('should get default account mappings', async () => {
-      const res = await request(app.getHttpServer())
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/accounting/mappings/defaults')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -75,7 +108,8 @@ describe('Accounting E2E', () => {
     });
 
     it('should get user account mappings', async () => {
-      const res = await request(app.getHttpServer())
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/accounting/mappings')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -84,7 +118,8 @@ describe('Accounting E2E', () => {
     });
 
     it('should save account mappings', async () => {
-      const res = await request(app.getHttpServer())
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      const res = await request(app.getHttpAdapter().getInstance())
         .post('/accounting/mappings')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -99,7 +134,7 @@ describe('Accounting E2E', () => {
               accountCode: '2100',
               accountName: 'PAYE Payable',
             },
-          ],
+          ] as AccountMapping[],
         });
 
       // May succeed or fail based on DB schema
@@ -109,20 +144,23 @@ describe('Accounting E2E', () => {
 
   describe('Export Formats', () => {
     it('should get available export formats', async () => {
-      const res = await request(app.getHttpServer())
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/accounting/formats')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
-      expect(res.body).toHaveProperty('formats');
-      expect(Array.isArray(res.body.formats)).toBe(true);
-      expect(res.body.formats.some((f: any) => f.id === 'CSV')).toBe(true);
+      const formatsResponse = res.body as FormatsResponse;
+      expect(formatsResponse).toHaveProperty('formats');
+      expect(Array.isArray(formatsResponse.formats)).toBe(true);
+      expect(formatsResponse.formats.some((f) => f.id === 'CSV')).toBe(true);
     });
   });
 
   describe('Export History', () => {
     it('should get export history', async () => {
-      const res = await request(app.getHttpServer())
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/accounting/history')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -138,7 +176,8 @@ describe('Accounting E2E', () => {
         return;
       }
 
-      const res = await request(app.getHttpServer())
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      const res = await request(app.getHttpAdapter().getInstance())
         .post(`/accounting/export/${payPeriodId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({ format: 'CSV' });
@@ -155,7 +194,8 @@ describe('Accounting E2E', () => {
         return;
       }
 
-      const res = await request(app.getHttpServer())
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      const res = await request(app.getHttpAdapter().getInstance())
         .post(`/accounting/journal-entries/${payPeriodId}`)
         .set('Authorization', `Bearer ${authToken}`);
 
@@ -166,9 +206,11 @@ describe('Accounting E2E', () => {
 
   describe('Authorization', () => {
     it('should prevent unauthorized access', async () => {
-      await request(app.getHttpServer())
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      await request(app.getHttpAdapter().getInstance())
         .get('/accounting/mappings')
         .expect(401);
     });
   });
 });
+

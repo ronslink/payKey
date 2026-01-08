@@ -21,7 +21,7 @@ describe('Subscription Feature Gating E2E', () => {
     const email = `gating.test.${Date.now()}@paykey.com`;
     const password = 'Password123!';
 
-    await request(app.getHttpServer()).post('/auth/register').send({
+    await request(app.getHttpAdapter().getInstance()).post('/auth/register').send({
       email,
       password,
       firstName: 'Gating',
@@ -30,7 +30,7 @@ describe('Subscription Feature Gating E2E', () => {
       phone: '+254700000020',
     });
 
-    const loginRes = await request(app.getHttpServer())
+    const loginRes = await request(app.getHttpAdapter().getInstance())
       .post('/auth/login')
       .send({ email, password });
 
@@ -38,7 +38,7 @@ describe('Subscription Feature Gating E2E', () => {
     // userId = loginRes.body.user.id;
 
     // Create a worker for leave requests
-    const workerRes = await request(app.getHttpServer())
+    const workerRes = await request(app.getHttpAdapter().getInstance())
       .post('/workers')
       .set('Authorization', `Bearer ${authToken}`)
       .send({
@@ -61,7 +61,7 @@ describe('Subscription Feature Gating E2E', () => {
   describe('Platinum-Only Features', () => {
     it('Should restrict leave management for non-Platinum users', async () => {
       // Leave management is gated to PLATINUM tier via PlatinumGuard
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/workers/leave-requests')
         .set('Authorization', `Bearer ${authToken}`);
 
@@ -70,7 +70,7 @@ describe('Subscription Feature Gating E2E', () => {
     });
 
     it('Should restrict creating leave requests for non-Platinum users', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .post(`/workers/${workerId}/leave-requests`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -84,7 +84,7 @@ describe('Subscription Feature Gating E2E', () => {
     });
 
     it('Should restrict leave balance check for non-Platinum users', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get(`/workers/${workerId}/leave-balance`)
         .set('Authorization', `Bearer ${authToken}`);
 
@@ -98,7 +98,7 @@ describe('Subscription Feature Gating E2E', () => {
       // The exact behavior depends on the user's subscription tier
 
       // Creating workers should work until the limit is reached
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .post('/workers')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -117,7 +117,7 @@ describe('Subscription Feature Gating E2E', () => {
 
   describe('Feature Access Endpoint', () => {
     it('Should return feature access list for current subscription', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/features')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -128,7 +128,7 @@ describe('Subscription Feature Gating E2E', () => {
     });
 
     it('Should check access to a specific feature', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/features/access/basic_payroll')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -137,3 +137,4 @@ describe('Subscription Feature Gating E2E', () => {
     });
   });
 });
+

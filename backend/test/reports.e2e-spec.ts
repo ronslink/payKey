@@ -36,7 +36,7 @@ describe('Reports E2E', () => {
     const email = `reports.test.${Date.now()}@paykey.com`;
     const password = 'Password123!';
 
-    await request(app.getHttpServer()).post('/auth/register').send({
+    await request(app.getHttpAdapter().getInstance()).post('/auth/register').send({
       email,
       password,
       firstName: 'Reports',
@@ -45,14 +45,14 @@ describe('Reports E2E', () => {
       phone: '+254700000900',
     });
 
-    const loginRes = await request(app.getHttpServer())
+    const loginRes = await request(app.getHttpAdapter().getInstance())
       .post('/auth/login')
       .send({ email, password });
 
     authToken = loginRes.body.access_token;
 
     // Create a pay period for period-specific reports
-    const periodRes = await request(app.getHttpServer())
+    const periodRes = await request(app.getHttpAdapter().getInstance())
       .post('/pay-periods/generate')
       .set('Authorization', `Bearer ${authToken}`)
       .send({
@@ -73,7 +73,7 @@ describe('Reports E2E', () => {
 
   describe('Dashboard', () => {
     it('should get dashboard metrics', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/reports/dashboard')
         .set('Authorization', `Bearer ${authToken}`);
 
@@ -84,7 +84,7 @@ describe('Reports E2E', () => {
 
   describe('Payroll Reports', () => {
     it('should get monthly payroll report', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/reports/payroll?year=2024&month=1')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -98,7 +98,7 @@ describe('Reports E2E', () => {
         return;
       }
 
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get(`/reports/payroll-summary?payPeriodId=${payPeriodId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -109,7 +109,7 @@ describe('Reports E2E', () => {
 
   describe('Workers Reports', () => {
     it('should get workers summary', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/reports/workers')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -120,7 +120,7 @@ describe('Reports E2E', () => {
 
   describe('Leave Reports', () => {
     it('should get leave report for year', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/reports/leave?year=2024')
         .set('Authorization', `Bearer ${authToken}`);
 
@@ -131,7 +131,7 @@ describe('Reports E2E', () => {
 
   describe('Tax Reports', () => {
     it('should get tax summary for year', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/reports/tax?year=2024')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -147,7 +147,7 @@ describe('Reports E2E', () => {
         return;
       }
 
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get(`/reports/statutory?payPeriodId=${payPeriodId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -161,7 +161,7 @@ describe('Reports E2E', () => {
         return;
       }
 
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get(`/reports/muster-roll?payPeriodId=${payPeriodId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -172,7 +172,7 @@ describe('Reports E2E', () => {
 
   describe('P9 Reports (Employer)', () => {
     it('should get P9 report for all workers', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/reports/p9?year=2024')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -183,7 +183,7 @@ describe('Reports E2E', () => {
 
   describe('P10 Reports', () => {
     it('should get P10 report for year', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/reports/p10?year=2024')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -194,7 +194,7 @@ describe('Reports E2E', () => {
 
   describe('Employee P9 (My P9)', () => {
     it('should get employee P9 report', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/reports/my-p9?year=2024')
         .set('Authorization', `Bearer ${authToken}`);
 
@@ -205,7 +205,8 @@ describe('Reports E2E', () => {
 
   describe('Authorization', () => {
     it('should prevent unauthorized access to reports', async () => {
-      await request(app.getHttpServer()).get('/reports/dashboard').expect(401);
+      await request(app.getHttpAdapter().getInstance()).get('/reports/dashboard').expect(401);
     });
   });
 });
+

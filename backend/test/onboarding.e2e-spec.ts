@@ -44,7 +44,7 @@ describe('Onboarding E2E', () => {
       });
 
       // Register new user
-      const registerRes = await request(app.getHttpServer())
+      const registerRes = await request(app.getHttpAdapter().getInstance())
         .post('/auth/register')
         .send({
           email: userData.email,
@@ -58,7 +58,7 @@ describe('Onboarding E2E', () => {
       expect([200, 201]).toContain(registerRes.status);
 
       // Login to get token
-      const loginRes = await request(app.getHttpServer())
+      const loginRes = await request(app.getHttpAdapter().getInstance())
         .post('/auth/login')
         .send({
           email: userData.email,
@@ -69,7 +69,7 @@ describe('Onboarding E2E', () => {
       const authToken = loginRes.body.access_token;
 
       // Check initial profile - onboarding should be incomplete
-      const profileRes = await request(app.getHttpServer())
+      const profileRes = await request(app.getHttpAdapter().getInstance())
         .get('/users/profile')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -99,7 +99,7 @@ describe('Onboarding E2E', () => {
       userPassword = userData.password;
 
       // Register user
-      await request(app.getHttpServer()).post('/auth/register').send({
+      await request(app.getHttpAdapter().getInstance()).post('/auth/register').send({
         email: userData.email,
         password: userData.password,
         firstName: userData.firstName,
@@ -109,7 +109,7 @@ describe('Onboarding E2E', () => {
       });
 
       // Login
-      const loginRes = await request(app.getHttpServer())
+      const loginRes = await request(app.getHttpAdapter().getInstance())
         .post('/auth/login')
         .send({ email: userData.email, password: userData.password });
 
@@ -117,7 +117,7 @@ describe('Onboarding E2E', () => {
     });
 
     it('should update basic business information', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .patch('/users/profile')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -130,7 +130,7 @@ describe('Onboarding E2E', () => {
     });
 
     it('should update compliance information (KRA PIN)', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .patch('/users/compliance')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -142,7 +142,7 @@ describe('Onboarding E2E', () => {
     });
 
     it('should update identity information', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .patch('/users/profile')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -156,7 +156,7 @@ describe('Onboarding E2E', () => {
 
     it('should mark onboarding complete when all required fields filled', async () => {
       // Update with all required fields
-      await request(app.getHttpServer())
+      await request(app.getHttpAdapter().getInstance())
         .patch('/users/profile')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -172,7 +172,7 @@ describe('Onboarding E2E', () => {
         });
 
       // Check onboarding status
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/users/profile')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -182,14 +182,14 @@ describe('Onboarding E2E', () => {
 
     it('should persist onboarding status across sessions', async () => {
       // Logout (just get new token)
-      const loginRes = await request(app.getHttpServer())
+      const loginRes = await request(app.getHttpAdapter().getInstance())
         .post('/auth/login')
         .send({ email: userEmail, password: userPassword });
 
       const newToken = loginRes.body.access_token;
 
       // Check profile with new token
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/users/profile')
         .set('Authorization', `Bearer ${newToken}`)
         .expect(200);
@@ -208,7 +208,7 @@ describe('Onboarding E2E', () => {
       });
 
       // Register
-      await request(app.getHttpServer()).post('/auth/register').send({
+      await request(app.getHttpAdapter().getInstance()).post('/auth/register').send({
         email: userData.email,
         password: userData.password,
         firstName: userData.firstName,
@@ -218,14 +218,14 @@ describe('Onboarding E2E', () => {
       });
 
       // Login
-      const loginRes = await request(app.getHttpServer())
+      const loginRes = await request(app.getHttpAdapter().getInstance())
         .post('/auth/login')
         .send({ email: userData.email, password: userData.password });
 
       const authToken = loginRes.body.access_token;
 
       // Update only partial info (not all required fields)
-      await request(app.getHttpServer())
+      await request(app.getHttpAdapter().getInstance())
         .patch('/users/profile')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -234,7 +234,7 @@ describe('Onboarding E2E', () => {
         });
 
       // Check status
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/users/profile')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -246,7 +246,7 @@ describe('Onboarding E2E', () => {
 
   describe('Authorization', () => {
     it('should require authentication for profile updates', async () => {
-      await request(app.getHttpServer())
+      await request(app.getHttpAdapter().getInstance())
         .patch('/users/profile')
         .send({
           firstName: 'Unauthorized',
@@ -255,7 +255,7 @@ describe('Onboarding E2E', () => {
     });
 
     it('should require authentication for compliance updates', async () => {
-      await request(app.getHttpServer())
+      await request(app.getHttpAdapter().getInstance())
         .patch('/users/compliance')
         .send({
           kraPin: 'A123456789X',
@@ -264,3 +264,4 @@ describe('Onboarding E2E', () => {
     });
   });
 });
+

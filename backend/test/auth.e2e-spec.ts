@@ -34,7 +34,7 @@ describe('Auth E2E', () => {
     const uniqueEmail = `auth.test.${Date.now()}@paykey.com`;
 
     it('should register a new user successfully', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .post('/auth/register')
         .send({
           email: uniqueEmail,
@@ -52,7 +52,7 @@ describe('Auth E2E', () => {
     });
 
     it('should reject registration with duplicate email', async () => {
-      await request(app.getHttpServer())
+      await request(app.getHttpAdapter().getInstance())
         .post('/auth/register')
         .send({
           email: uniqueEmail,
@@ -66,7 +66,7 @@ describe('Auth E2E', () => {
     });
 
     it('should reject registration with missing required fields', async () => {
-      await request(app.getHttpServer())
+      await request(app.getHttpAdapter().getInstance())
         .post('/auth/register')
         .send({
           email: 'incomplete@paykey.com',
@@ -83,7 +83,7 @@ describe('Auth E2E', () => {
 
     beforeAll(async () => {
       // Register user for login tests
-      const registerRes = await request(app.getHttpServer())
+      const registerRes = await request(app.getHttpAdapter().getInstance())
         .post('/auth/register')
         .send({
           email: loginEmail,
@@ -103,7 +103,7 @@ describe('Auth E2E', () => {
     });
 
     it('should login successfully with valid credentials', async () => {
-      const res = await request(app.getHttpServer()).post('/auth/login').send({
+      const res = await request(app.getHttpAdapter().getInstance()).post('/auth/login').send({
         email: loginEmail,
         password: loginPassword,
       });
@@ -114,7 +114,7 @@ describe('Auth E2E', () => {
     });
 
     it('should reject login with wrong password', async () => {
-      await request(app.getHttpServer())
+      await request(app.getHttpAdapter().getInstance())
         .post('/auth/login')
         .send({
           email: loginEmail,
@@ -124,7 +124,7 @@ describe('Auth E2E', () => {
     });
 
     it('should reject login with non-existent email', async () => {
-      await request(app.getHttpServer())
+      await request(app.getHttpAdapter().getInstance())
         .post('/auth/login')
         .send({
           email: 'nonexistent@paykey.com',
@@ -134,3 +134,4 @@ describe('Auth E2E', () => {
     });
   });
 });
+

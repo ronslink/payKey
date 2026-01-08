@@ -21,7 +21,7 @@ describe('Worker Termination E2E', () => {
     const email = `term.test.${Date.now()}@paykey.com`;
     const password = 'Password123!';
 
-    await request(app.getHttpServer()).post('/auth/register').send({
+    await request(app.getHttpAdapter().getInstance()).post('/auth/register').send({
       email,
       password,
       firstName: 'Term',
@@ -31,7 +31,7 @@ describe('Worker Termination E2E', () => {
     });
 
     // Login
-    const loginRes = await request(app.getHttpServer())
+    const loginRes = await request(app.getHttpAdapter().getInstance())
       .post('/auth/login')
       .send({ email, password });
 
@@ -46,7 +46,7 @@ describe('Worker Termination E2E', () => {
   });
 
   it('1. Should add a worker to verify termination', async () => {
-    const res = await request(app.getHttpServer())
+    const res = await request(app.getHttpAdapter().getInstance())
       .post('/workers')
       .set('Authorization', `Bearer ${authToken}`)
       .send({
@@ -66,7 +66,7 @@ describe('Worker Termination E2E', () => {
 
   it('1.5. Should generate pay periods for the year', async () => {
     const year = new Date().getFullYear();
-    await request(app.getHttpServer())
+    await request(app.getHttpAdapter().getInstance())
       .post('/pay-periods/generate')
       .set('Authorization', `Bearer ${authToken}`)
       .send({
@@ -78,7 +78,7 @@ describe('Worker Termination E2E', () => {
   });
 
   it('2. Should default to only showing active workers', async () => {
-    const res = await request(app.getHttpServer())
+    const res = await request(app.getHttpAdapter().getInstance())
       .get('/workers')
       .set('Authorization', `Bearer ${authToken}`)
       .expect(200);
@@ -89,7 +89,7 @@ describe('Worker Termination E2E', () => {
   });
 
   it('3. Should calculate final payment before termination', async () => {
-    const res = await request(app.getHttpServer())
+    const res = await request(app.getHttpAdapter().getInstance())
       .post(`/workers/${workerId}/calculate-final-payment`)
       .set('Authorization', `Bearer ${authToken}`)
       .send({
@@ -102,7 +102,7 @@ describe('Worker Termination E2E', () => {
   });
 
   it('4. Should terminate the worker', async () => {
-    const res = await request(app.getHttpServer())
+    const res = await request(app.getHttpAdapter().getInstance())
       .post(`/workers/${workerId}/terminate`)
       .set('Authorization', `Bearer ${authToken}`)
       .send({
@@ -119,7 +119,7 @@ describe('Worker Termination E2E', () => {
   });
 
   it('5. Should verify worker status is inactive', async () => {
-    const res = await request(app.getHttpServer())
+    const res = await request(app.getHttpAdapter().getInstance())
       .get(`/workers/${workerId}`)
       .set('Authorization', `Bearer ${authToken}`)
       .expect(200);
@@ -129,7 +129,7 @@ describe('Worker Termination E2E', () => {
   });
 
   it('6. Should not show terminated worker in default list', async () => {
-    const res = await request(app.getHttpServer())
+    const res = await request(app.getHttpAdapter().getInstance())
       .get('/workers')
       .set('Authorization', `Bearer ${authToken}`)
       .expect(200);
@@ -139,7 +139,7 @@ describe('Worker Termination E2E', () => {
   });
 
   it('7. Should verify termination history', async () => {
-    const res = await request(app.getHttpServer())
+    const res = await request(app.getHttpAdapter().getInstance())
       .get('/workers/terminated/history')
       .set('Authorization', `Bearer ${authToken}`)
       .expect(200);
@@ -151,7 +151,7 @@ describe('Worker Termination E2E', () => {
 
   it('8. Should verify payroll record and tax submission created', async () => {
     // Get all payroll records
-    const payrollRes = await request(app.getHttpServer())
+    const payrollRes = await request(app.getHttpAdapter().getInstance())
       .get('/payroll-records')
       .set('Authorization', `Bearer ${authToken}`)
       .expect(200);
@@ -166,7 +166,7 @@ describe('Worker Termination E2E', () => {
     expect(parseFloat(record.grossSalary)).toBeGreaterThan(0);
 
     // Get tax submissions
-    const taxRes = await request(app.getHttpServer())
+    const taxRes = await request(app.getHttpAdapter().getInstance())
       .get('/taxes/submissions')
       .set('Authorization', `Bearer ${authToken}`)
       .expect(200);
@@ -180,3 +180,4 @@ describe('Worker Termination E2E', () => {
     expect(parseFloat(submission.totalHousingLevy)).toBeGreaterThan(0);
   });
 });
+

@@ -30,7 +30,7 @@ describe('Feature Access E2E', () => {
     const email = `features.test.${Date.now()}@paykey.com`;
     const password = 'Password123!';
 
-    await request(app.getHttpServer()).post('/auth/register').send({
+    await request(app.getHttpAdapter().getInstance()).post('/auth/register').send({
       email,
       password,
       firstName: 'Features',
@@ -39,7 +39,7 @@ describe('Feature Access E2E', () => {
       phone: '+254700000300',
     });
 
-    const loginRes = await request(app.getHttpServer())
+    const loginRes = await request(app.getHttpAdapter().getInstance())
       .post('/auth/login')
       .send({ email, password });
 
@@ -54,7 +54,7 @@ describe('Feature Access E2E', () => {
 
   describe('Feature Access Endpoints', () => {
     it('should get all features for user', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/features')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -68,7 +68,7 @@ describe('Feature Access E2E', () => {
     });
 
     it('should check access to a specific feature', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/features/access/basic_payroll')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -78,7 +78,7 @@ describe('Feature Access E2E', () => {
     });
 
     it('should get trial status', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/features/trial-status')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -87,7 +87,7 @@ describe('Feature Access E2E', () => {
     });
 
     it('should get upgrade benefits for PROFESSIONAL tier', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/features/upgrade-benefits/professional')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -99,7 +99,7 @@ describe('Feature Access E2E', () => {
     });
 
     it('should get upgrade benefits for ENTERPRISE tier', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/features/upgrade-benefits/enterprise')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -109,7 +109,7 @@ describe('Feature Access E2E', () => {
     });
 
     it('should check if user can add worker', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/features/can-add-worker')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -120,7 +120,7 @@ describe('Feature Access E2E', () => {
 
   describe('Mock Data Endpoints (Premium Feature Previews)', () => {
     it('should get reports data', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/features/data/reports')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -130,7 +130,7 @@ describe('Feature Access E2E', () => {
     });
 
     it('should get time tracking data', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/features/data/time-tracking')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -140,7 +140,7 @@ describe('Feature Access E2E', () => {
     });
 
     it('should get leave management data', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/features/data/leave')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -150,7 +150,7 @@ describe('Feature Access E2E', () => {
     });
 
     it('should get properties data', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/features/data/properties')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -161,7 +161,7 @@ describe('Feature Access E2E', () => {
     });
 
     it('should get accounting data', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/features/data/accounting')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -171,7 +171,7 @@ describe('Feature Access E2E', () => {
     });
 
     it('should get P9 data', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/features/data/p9')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -181,7 +181,7 @@ describe('Feature Access E2E', () => {
     });
 
     it('should get P9 data for specific year', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/features/data/p9/2024')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -191,7 +191,7 @@ describe('Feature Access E2E', () => {
     });
 
     it('should get advanced reports data', async () => {
-      const res = await request(app.getHttpServer())
+      const res = await request(app.getHttpAdapter().getInstance())
         .get('/features/data/advanced-reports')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -203,14 +203,15 @@ describe('Feature Access E2E', () => {
 
   describe('Authorization', () => {
     it('should prevent unauthorized access to features', async () => {
-      await request(app.getHttpServer()).get('/features').expect(401);
+      await request(app.getHttpAdapter().getInstance()).get('/features').expect(401);
     });
 
     it('should prevent access with invalid token', async () => {
-      await request(app.getHttpServer())
+      await request(app.getHttpAdapter().getInstance())
         .get('/features')
         .set('Authorization', 'Bearer invalid-token')
         .expect(401);
     });
   });
 });
+
