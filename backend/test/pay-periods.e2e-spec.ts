@@ -28,7 +28,7 @@ describe('Pay Periods E2E', () => {
     const email = `payperiods.test.${Date.now()}@paykey.com`;
     const password = 'Password123!';
 
-    await request(app.getHttpAdapter().getInstance()).post('/auth/register').send({
+    await request(app.getHttpServer()).post('/auth/register').send({
       email,
       password,
       firstName: 'PayPeriods',
@@ -37,7 +37,7 @@ describe('Pay Periods E2E', () => {
       phone: '+254700000200',
     });
 
-    const loginRes = await request(app.getHttpAdapter().getInstance())
+    const loginRes = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email, password });
 
@@ -52,7 +52,7 @@ describe('Pay Periods E2E', () => {
 
   describe('Pay Period Generation', () => {
     it('should generate monthly pay periods for a year', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post('/pay-periods/generate')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -68,7 +68,7 @@ describe('Pay Periods E2E', () => {
     });
 
     it('should generate weekly pay periods', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post('/pay-periods/generate')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -88,7 +88,7 @@ describe('Pay Periods E2E', () => {
 
     beforeAll(async () => {
       // Generate periods for CRUD tests
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post('/pay-periods/generate')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -101,7 +101,7 @@ describe('Pay Periods E2E', () => {
     });
 
     it('should list pay periods with pagination', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get('/pay-periods')
         .set('Authorization', `Bearer ${authToken}`)
         .query({ page: 1, limit: 10 })
@@ -113,7 +113,7 @@ describe('Pay Periods E2E', () => {
     });
 
     it('should get a single pay period', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get(`/pay-periods/${payPeriodId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -124,7 +124,7 @@ describe('Pay Periods E2E', () => {
     });
 
     it('should update a pay period', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .patch(`/pay-periods/${payPeriodId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -142,7 +142,7 @@ describe('Pay Periods E2E', () => {
 
     beforeAll(async () => {
       // Create a worker first (needed for payroll processing)
-      const workerRes = await request(app.getHttpAdapter().getInstance())
+      const workerRes = await request(app.getHttpServer())
         .post('/workers')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -155,7 +155,7 @@ describe('Pay Periods E2E', () => {
       workerId = workerRes.body.id;
 
       // Generate periods for lifecycle tests
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post('/pay-periods/generate')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -168,7 +168,7 @@ describe('Pay Periods E2E', () => {
     });
 
     it('should activate a pay period', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post(`/pay-periods/${payPeriodId}/activate`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(201);
@@ -177,7 +177,7 @@ describe('Pay Periods E2E', () => {
     });
 
     it('should get pay period statistics', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get(`/pay-periods/${payPeriodId}/statistics`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -189,7 +189,7 @@ describe('Pay Periods E2E', () => {
     it('should process a pay period', async () => {
       // Note: Process might fail if period doesn't meet requirements
       // Using try-catch to handle state machine restrictions
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post(`/pay-periods/${payPeriodId}/process`)
         .set('Authorization', `Bearer ${authToken}`);
 
@@ -199,7 +199,7 @@ describe('Pay Periods E2E', () => {
 
     it('should complete a pay period', async () => {
       // Note: Complete might fail if period doesn't meet requirements
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post(`/pay-periods/${payPeriodId}/complete`)
         .set('Authorization', `Bearer ${authToken}`);
 
@@ -208,7 +208,7 @@ describe('Pay Periods E2E', () => {
     });
 
     it('should close a pay period', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post(`/pay-periods/${payPeriodId}/close`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(201);
@@ -219,11 +219,11 @@ describe('Pay Periods E2E', () => {
 
   describe('Authorization', () => {
     it('should prevent unauthorized access to pay periods', async () => {
-      await request(app.getHttpAdapter().getInstance()).get('/pay-periods').expect(401);
+      await request(app.getHttpServer()).get('/pay-periods').expect(401);
     });
 
     it('should prevent generation without auth', async () => {
-      await request(app.getHttpAdapter().getInstance())
+      await request(app.getHttpServer())
         .post('/pay-periods/generate')
         .send({
           frequency: 'MONTHLY',

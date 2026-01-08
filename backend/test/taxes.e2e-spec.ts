@@ -34,7 +34,7 @@ describe('Taxes E2E', () => {
       businessName: 'Taxes Test Corp',
     });
 
-    await request(app.getHttpAdapter().getInstance()).post('/auth/register').send({
+    await request(app.getHttpServer()).post('/auth/register').send({
       email: userData.email,
       password: userData.password,
       firstName: userData.firstName,
@@ -43,14 +43,14 @@ describe('Taxes E2E', () => {
       phone: userData.phone,
     });
 
-    const loginRes = await request(app.getHttpAdapter().getInstance())
+    const loginRes = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: userData.email, password: userData.password });
 
     authToken = loginRes.body.access_token;
 
     // Create a pay period for submission tests
-    const periodRes = await request(app.getHttpAdapter().getInstance())
+    const periodRes = await request(app.getHttpServer())
       .post('/pay-periods/generate')
       .set('Authorization', `Bearer ${authToken}`)
       .send({
@@ -71,7 +71,7 @@ describe('Taxes E2E', () => {
 
   describe('Tax Calculation', () => {
     it('should calculate taxes for gross salary', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post('/taxes/calculate')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -87,7 +87,7 @@ describe('Taxes E2E', () => {
 
   describe('Compliance', () => {
     it('should get compliance status', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get('/taxes/compliance')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -97,7 +97,7 @@ describe('Taxes E2E', () => {
     });
 
     it('should get upcoming tax deadlines', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get('/taxes/deadlines')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -108,7 +108,7 @@ describe('Taxes E2E', () => {
 
   describe('Tax Table', () => {
     it('should get current tax table', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get('/taxes/current')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -120,7 +120,7 @@ describe('Taxes E2E', () => {
 
   describe('Tax Submissions', () => {
     it('should list tax submissions', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get('/taxes/submissions')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -134,7 +134,7 @@ describe('Taxes E2E', () => {
         return;
       }
 
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post(`/taxes/submissions/generate/${payPeriodId}`)
         .set('Authorization', `Bearer ${authToken}`);
 
@@ -148,7 +148,7 @@ describe('Taxes E2E', () => {
         return;
       }
 
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get(`/taxes/submissions/period/${payPeriodId}`)
         .set('Authorization', `Bearer ${authToken}`);
 
@@ -159,7 +159,7 @@ describe('Taxes E2E', () => {
 
   describe('Authorization', () => {
     it('should prevent unauthorized access', async () => {
-      await request(app.getHttpAdapter().getInstance()).get('/taxes/compliance').expect(401);
+      await request(app.getHttpServer()).get('/taxes/compliance').expect(401);
     });
   });
 });

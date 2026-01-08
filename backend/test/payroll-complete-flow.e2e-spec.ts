@@ -23,7 +23,7 @@ describe('Payroll Complete Flow E2E', () => {
     const email = `complete.flow.${Date.now()}@paykey.com`;
     const password = 'Password123!';
 
-    const registerRes = await request(app.getHttpAdapter().getInstance())
+    const registerRes = await request(app.getHttpServer())
       .post('/auth/register')
       .send({
         email,
@@ -35,7 +35,7 @@ describe('Payroll Complete Flow E2E', () => {
       });
 
     // Login
-    const loginRes = await request(app.getHttpAdapter().getInstance())
+    const loginRes = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email, password });
 
@@ -50,7 +50,7 @@ describe('Payroll Complete Flow E2E', () => {
   });
 
   it('1. Should add a worker', async () => {
-    const res = await request(app.getHttpAdapter().getInstance())
+    const res = await request(app.getHttpServer())
       .post('/workers')
       .set('Authorization', `Bearer ${authToken}`)
       .send({
@@ -69,7 +69,7 @@ describe('Payroll Complete Flow E2E', () => {
 
   it('2. Should generate pay periods', async () => {
     const year = 2024;
-    const res = await request(app.getHttpAdapter().getInstance())
+    const res = await request(app.getHttpServer())
       .post('/pay-periods/generate')
       .set('Authorization', `Bearer ${authToken}`)
       .send({
@@ -85,7 +85,7 @@ describe('Payroll Complete Flow E2E', () => {
   });
 
   it('3. Should activate pay period', async () => {
-    await request(app.getHttpAdapter().getInstance())
+    await request(app.getHttpServer())
       .post(`/pay-periods/${payPeriodId}/activate`)
       .set('Authorization', `Bearer ${authToken}`)
       .expect(201);
@@ -93,7 +93,7 @@ describe('Payroll Complete Flow E2E', () => {
 
   it('4. Should calculate and save draft payroll', async () => {
     // First calculate
-    const calcRes = await request(app.getHttpAdapter().getInstance())
+    const calcRes = await request(app.getHttpServer())
       .get('/payroll/calculate')
       .set('Authorization', `Bearer ${authToken}`)
       .expect(200);
@@ -104,7 +104,7 @@ describe('Payroll Complete Flow E2E', () => {
     expect(items[0].grossSalary).toBe(50000);
 
     // Save as draft
-    const saveRes = await request(app.getHttpAdapter().getInstance())
+    const saveRes = await request(app.getHttpServer())
       .post('/payroll/draft')
       .set('Authorization', `Bearer ${authToken}`)
       .send({
@@ -119,7 +119,7 @@ describe('Payroll Complete Flow E2E', () => {
 
   it('5. Should finalize payroll (Process Payments & Taxes)', async () => {
     // Using explicit finalize endpoint from PayrollController
-    const res = await request(app.getHttpAdapter().getInstance())
+    const res = await request(app.getHttpServer())
       .post(`/payroll/finalize/${payPeriodId}`)
       .set('Authorization', `Bearer ${authToken}`)
       .expect(201);
@@ -139,7 +139,7 @@ describe('Payroll Complete Flow E2E', () => {
   });
 
   it('6. Should verify verification of tax submission', async () => {
-    const res = await request(app.getHttpAdapter().getInstance())
+    const res = await request(app.getHttpServer())
       .get('/taxes/submissions')
       .set('Authorization', `Bearer ${authToken}`)
       .expect(200);
@@ -154,7 +154,7 @@ describe('Payroll Complete Flow E2E', () => {
   it('7. Should download payslip', async () => {
     expect(payrollRecordId).toBeDefined();
 
-    const res = await request(app.getHttpAdapter().getInstance())
+    const res = await request(app.getHttpServer())
       .get(`/payroll/payslip/${payrollRecordId}`)
       .set('Authorization', `Bearer ${authToken}`)
       .expect(200);

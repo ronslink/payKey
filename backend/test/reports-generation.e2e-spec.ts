@@ -20,7 +20,7 @@ describe('Reports Generation E2E', () => {
     const email = `reports.test.${Date.now()}@paykey.com`;
     const password = 'Password123!';
 
-    await request(app.getHttpAdapter().getInstance()).post('/auth/register').send({
+    await request(app.getHttpServer()).post('/auth/register').send({
       email,
       password,
       firstName: 'Reports',
@@ -29,14 +29,14 @@ describe('Reports Generation E2E', () => {
       phone: '+254700000030',
     });
 
-    const loginRes = await request(app.getHttpAdapter().getInstance())
+    const loginRes = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email, password });
 
     authToken = loginRes.body.access_token;
 
     // Create a worker for payroll data
-    await request(app.getHttpAdapter().getInstance())
+    await request(app.getHttpServer())
       .post('/workers')
       .set('Authorization', `Bearer ${authToken}`)
       .send({
@@ -48,7 +48,7 @@ describe('Reports Generation E2E', () => {
       });
 
     // Generate pay periods
-    const ppRes = await request(app.getHttpAdapter().getInstance())
+    const ppRes = await request(app.getHttpServer())
       .post('/pay-periods/generate')
       .set('Authorization', `Bearer ${authToken}`)
       .send({
@@ -61,16 +61,16 @@ describe('Reports Generation E2E', () => {
       payPeriodId = ppRes.body[0].id;
 
       // Activate and process payroll for report data
-      await request(app.getHttpAdapter().getInstance())
+      await request(app.getHttpServer())
         .post(`/pay-periods/${payPeriodId}/activate`)
         .set('Authorization', `Bearer ${authToken}`);
 
-      const calcRes = await request(app.getHttpAdapter().getInstance())
+      const calcRes = await request(app.getHttpServer())
         .get('/payroll/calculate')
         .set('Authorization', `Bearer ${authToken}`);
 
       if (calcRes.body?.payrollItems?.length > 0) {
-        await request(app.getHttpAdapter().getInstance())
+        await request(app.getHttpServer())
           .post('/payroll/draft')
           .set('Authorization', `Bearer ${authToken}`)
           .send({
@@ -78,7 +78,7 @@ describe('Reports Generation E2E', () => {
             payrollItems: calcRes.body.payrollItems,
           });
 
-        await request(app.getHttpAdapter().getInstance())
+        await request(app.getHttpServer())
           .post(`/payroll/finalize/${payPeriodId}`)
           .set('Authorization', `Bearer ${authToken}`);
       }
@@ -98,7 +98,7 @@ describe('Reports Generation E2E', () => {
         return;
       }
 
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get(`/reports/payroll/${payPeriodId}`)
         .set('Authorization', `Bearer ${authToken}`);
 
@@ -112,7 +112,7 @@ describe('Reports Generation E2E', () => {
     it('Should export payroll as PDF', async () => {
       if (!payPeriodId) return;
 
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get(`/reports/payroll/${payPeriodId}/pdf`)
         .set('Authorization', `Bearer ${authToken}`);
 
@@ -125,7 +125,7 @@ describe('Reports Generation E2E', () => {
   describe('Tax Reports', () => {
     it('Should get P9 tax report', async () => {
       const year = 2024;
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get(`/reports/p9/${year}`)
         .set('Authorization', `Bearer ${authToken}`);
 
@@ -133,7 +133,7 @@ describe('Reports Generation E2E', () => {
     });
 
     it('Should get tax submissions list', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get('/taxes/submissions')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -144,7 +144,7 @@ describe('Reports Generation E2E', () => {
 
   describe('Statutory Exports', () => {
     it('Should generate KRA P10 export', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get('/reports/statutory/p10?year=2024&month=1')
         .set('Authorization', `Bearer ${authToken}`);
 
@@ -153,7 +153,7 @@ describe('Reports Generation E2E', () => {
     });
 
     it('Should generate NSSF export', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get('/reports/statutory/nssf?year=2024&month=1')
         .set('Authorization', `Bearer ${authToken}`);
 
@@ -161,7 +161,7 @@ describe('Reports Generation E2E', () => {
     });
 
     it('Should generate SHIF export', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get('/reports/statutory/shif?year=2024&month=1')
         .set('Authorization', `Bearer ${authToken}`);
 

@@ -29,7 +29,7 @@ describe('Payroll Proration E2E', () => {
     const email = `proration.test.${Date.now()}@paykey.com`;
     const password = 'Password123!';
 
-    await request(app.getHttpAdapter().getInstance()).post('/auth/register').send({
+    await request(app.getHttpServer()).post('/auth/register').send({
       email,
       password,
       firstName: 'Proration',
@@ -39,7 +39,7 @@ describe('Payroll Proration E2E', () => {
     });
 
     // Login to get auth token
-    const loginRes = await request(app.getHttpAdapter().getInstance())
+    const loginRes = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email, password });
 
@@ -61,7 +61,7 @@ describe('Payroll Proration E2E', () => {
 
     it('1. should create workers with different start/termination dates', async () => {
       // Worker 1: Full period (started before January)
-      const fullPeriodRes = await request(app.getHttpAdapter().getInstance())
+      const fullPeriodRes = await request(app.getHttpServer())
         .post('/workers')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -76,7 +76,7 @@ describe('Payroll Proration E2E', () => {
       fullPeriodWorkerId = fullPeriodRes.body.id;
 
       // Worker 2: New hire mid-month (started Jan 15)
-      const newHireRes = await request(app.getHttpAdapter().getInstance())
+      const newHireRes = await request(app.getHttpServer())
         .post('/workers')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -91,7 +91,7 @@ describe('Payroll Proration E2E', () => {
       newHireWorkerId = newHireRes.body.id;
 
       // Worker 3: Terminated mid-month
-      const terminatedRes = await request(app.getHttpAdapter().getInstance())
+      const terminatedRes = await request(app.getHttpServer())
         .post('/workers')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -107,7 +107,7 @@ describe('Payroll Proration E2E', () => {
     });
 
     it('2. should generate January 2024 pay period', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post('/pay-periods/generate')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -124,7 +124,7 @@ describe('Payroll Proration E2E', () => {
     });
 
     it('3. should calculate payroll with full period (backend handles all workers)', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post('/payroll/calculate')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -156,7 +156,7 @@ describe('Payroll Proration E2E', () => {
       // Prorated salary: 60000 * (17/31) = 32,903.23
       const proratedGross = Math.round((60000 * 17) / 31);
 
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post('/payroll/draft')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -183,7 +183,7 @@ describe('Payroll Proration E2E', () => {
 
     it('5. should terminate worker and verify exclusion from payroll', async () => {
       // Terminate the worker
-      const terminateRes = await request(app.getHttpAdapter().getInstance())
+      const terminateRes = await request(app.getHttpServer())
         .post(`/workers/${terminatedWorkerId}/terminate`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -203,7 +203,7 @@ describe('Payroll Proration E2E', () => {
       expect(terminateRes.status).toBe(201);
 
       // Calculate payroll - terminated worker should not appear (isActive = false)
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get('/payroll/calculate')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -219,7 +219,7 @@ describe('Payroll Proration E2E', () => {
       // Test that taxes are calculated on the prorated amount
       const proratedGross = 32903; // ~17 days of 60,000/month
 
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post('/payroll/calculate')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -245,7 +245,7 @@ describe('Payroll Proration E2E', () => {
 
     it('7. should handle zero days worked (death scenario)', async () => {
       // Simulate death scenario: worker died before period started
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post('/payroll/draft')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -269,7 +269,7 @@ describe('Payroll Proration E2E', () => {
   describe('Edge Cases', () => {
     it('should handle February leap year proration', async () => {
       // Create pay period for February 2024 (leap year - 29 days)
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post('/pay-periods/generate')
         .set('Authorization', `Bearer ${authToken}`)
         .send({

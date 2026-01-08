@@ -29,7 +29,7 @@ describe('Payroll Payment Flow E2E', () => {
     const email = `payment.flow.${Date.now()}@paykey.com`;
     const password = 'Password123!';
 
-    const registerRes = await request(app.getHttpAdapter().getInstance())
+    const registerRes = await request(app.getHttpServer())
       .post('/auth/register')
       .send({
         email,
@@ -41,7 +41,7 @@ describe('Payroll Payment Flow E2E', () => {
       });
 
     // Login
-    const loginRes = await request(app.getHttpAdapter().getInstance())
+    const loginRes = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email, password });
 
@@ -63,7 +63,7 @@ describe('Payroll Payment Flow E2E', () => {
 
   it('1. Should add workers (Standard and High Salary)', async () => {
     // 1. Standard M-Pesa Worker
-    const res1 = await request(app.getHttpAdapter().getInstance())
+    const res1 = await request(app.getHttpServer())
       .post('/workers')
       .set('Authorization', `Bearer ${authToken}`)
       .send({
@@ -83,7 +83,7 @@ describe('Payroll Payment Flow E2E', () => {
     // PAYE (~30%) = ~90k.
     // Net = ~210k.
     // Splitting should happen.
-    const res2 = await request(app.getHttpAdapter().getInstance())
+    const res2 = await request(app.getHttpServer())
       .post('/workers')
       .set('Authorization', `Bearer ${authToken}`)
       .send({
@@ -100,7 +100,7 @@ describe('Payroll Payment Flow E2E', () => {
 
   it('2. Should generate and activate pay period', async () => {
     const year = 2024;
-    const res = await request(app.getHttpAdapter().getInstance())
+    const res = await request(app.getHttpServer())
       .post('/pay-periods/generate')
       .set('Authorization', `Bearer ${authToken}`)
       .send({
@@ -112,14 +112,14 @@ describe('Payroll Payment Flow E2E', () => {
 
     payPeriodId = res.body[0].id; // Feb 2024
 
-    await request(app.getHttpAdapter().getInstance())
+    await request(app.getHttpServer())
       .post(`/pay-periods/${payPeriodId}/activate`)
       .set('Authorization', `Bearer ${authToken}`)
       .expect(201);
   });
 
   it('3. Should calculate and draft payroll', async () => {
-    const calcRes = await request(app.getHttpAdapter().getInstance())
+    const calcRes = await request(app.getHttpServer())
       .get('/payroll/calculate')
       .set('Authorization', `Bearer ${authToken}`)
       .expect(200);
@@ -127,7 +127,7 @@ describe('Payroll Payment Flow E2E', () => {
     const items = calcRes.body.payrollItems;
     expect(items).toHaveLength(2);
 
-    await request(app.getHttpAdapter().getInstance())
+    await request(app.getHttpServer())
       .post('/payroll/draft')
       .set('Authorization', `Bearer ${authToken}`)
       .send({
@@ -138,7 +138,7 @@ describe('Payroll Payment Flow E2E', () => {
   });
 
   it('4. Should finalize payroll and process payments correctly', async () => {
-    const res = await request(app.getHttpAdapter().getInstance())
+    const res = await request(app.getHttpServer())
       .post(`/payroll/finalize/${payPeriodId}`)
       .set('Authorization', `Bearer ${authToken}`)
       .expect(201);

@@ -37,7 +37,7 @@ describe('Time Tracking Geofence E2E', () => {
     const email = `geofence.test.${Date.now()}@paykey.com`;
     const password = 'Password123!';
 
-    await request(app.getHttpAdapter().getInstance()).post('/auth/register').send({
+    await request(app.getHttpServer()).post('/auth/register').send({
       email,
       password,
       firstName: 'Geo',
@@ -46,7 +46,7 @@ describe('Time Tracking Geofence E2E', () => {
       phone: '+254700000010',
     });
 
-    const loginRes = await request(app.getHttpAdapter().getInstance())
+    const loginRes = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email, password });
 
@@ -56,7 +56,7 @@ describe('Time Tracking Geofence E2E', () => {
     // For now, we'll test the rejection flow when location is missing
 
     // Create a property with geofence coordinates
-    const propRes = await request(app.getHttpAdapter().getInstance())
+    const propRes = await request(app.getHttpServer())
       .post('/properties')
       .set('Authorization', `Bearer ${authToken}`)
       .send({
@@ -70,7 +70,7 @@ describe('Time Tracking Geofence E2E', () => {
     propertyId = propRes.body?.id;
 
     // Create worker assigned to property
-    const workerRes = await request(app.getHttpAdapter().getInstance())
+    const workerRes = await request(app.getHttpServer())
       .post('/workers')
       .set('Authorization', `Bearer ${authToken}`)
       .send({
@@ -102,7 +102,7 @@ describe('Time Tracking Geofence E2E', () => {
 
   it('Should allow clock-in without location for non-PLATINUM user', async () => {
     // Default users are not PLATINUM, so geofencing should NOT apply
-    const res = await request(app.getHttpAdapter().getInstance())
+    const res = await request(app.getHttpServer())
       .post(`/time-tracking/clock-in/${workerId}`)
       .set('Authorization', `Bearer ${authToken}`)
       .send({});
@@ -112,7 +112,7 @@ describe('Time Tracking Geofence E2E', () => {
   });
 
   it('Should allow clock-out for active entry', async () => {
-    const res = await request(app.getHttpAdapter().getInstance())
+    const res = await request(app.getHttpServer())
       .post(`/time-tracking/clock-out/${workerId}`)
       .set('Authorization', `Bearer ${authToken}`)
       .send({});
@@ -134,7 +134,7 @@ describe('Time Tracking Geofence E2E', () => {
       const email = `platinum.geofence.${Date.now()}@paykey.com`;
       const password = 'Password123!';
 
-      await request(app.getHttpAdapter().getInstance()).post('/auth/register').send({
+      await request(app.getHttpServer()).post('/auth/register').send({
         email,
         password,
         firstName: 'Platinum',
@@ -143,7 +143,7 @@ describe('Time Tracking Geofence E2E', () => {
         phone: '+254700000011',
       });
 
-      const loginRes = await request(app.getHttpAdapter().getInstance())
+      const loginRes = await request(app.getHttpServer())
         .post('/auth/login')
         .send({ email, password });
 
@@ -156,7 +156,7 @@ describe('Time Tracking Geofence E2E', () => {
       }
 
       // Create a property with geofence
-      const propRes = await request(app.getHttpAdapter().getInstance())
+      const propRes = await request(app.getHttpServer())
         .post('/properties')
         .set('Authorization', `Bearer ${platinumToken}`)
         .send({
@@ -170,7 +170,7 @@ describe('Time Tracking Geofence E2E', () => {
       const platPropertyId = propRes.body?.id;
 
       // Create worker assigned to property
-      const workerRes = await request(app.getHttpAdapter().getInstance())
+      const workerRes = await request(app.getHttpServer())
         .post('/workers')
         .set('Authorization', `Bearer ${platinumToken}`)
         .send({
@@ -191,7 +191,7 @@ describe('Time Tracking Geofence E2E', () => {
         return;
       }
 
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post(`/time-tracking/clock-in/${platinumWorkerId}`)
         .set('Authorization', `Bearer ${platinumToken}`)
         .send({});
@@ -206,7 +206,7 @@ describe('Time Tracking Geofence E2E', () => {
         return;
       }
 
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post(`/time-tracking/clock-in/${platinumWorkerId}`)
         .set('Authorization', `Bearer ${platinumToken}`)
         .send({
@@ -224,7 +224,7 @@ describe('Time Tracking Geofence E2E', () => {
         return;
       }
 
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post(`/time-tracking/clock-in/${platinumWorkerId}`)
         .set('Authorization', `Bearer ${platinumToken}`)
         .send({

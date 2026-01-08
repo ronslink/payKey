@@ -38,7 +38,7 @@ describe('Employee Portal E2E', () => {
       businessName: 'Portal Test Corp',
     });
 
-    await request(app.getHttpAdapter().getInstance()).post('/auth/register').send({
+    await request(app.getHttpServer()).post('/auth/register').send({
       email: userData.email,
       password: userData.password,
       firstName: userData.firstName,
@@ -47,7 +47,7 @@ describe('Employee Portal E2E', () => {
       phone: userData.phone,
     });
 
-    const loginRes = await request(app.getHttpAdapter().getInstance())
+    const loginRes = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: userData.email, password: userData.password });
 
@@ -58,7 +58,7 @@ describe('Employee Portal E2E', () => {
       name: 'Portal Worker',
     });
 
-    const workerRes = await request(app.getHttpAdapter().getInstance())
+    const workerRes = await request(app.getHttpServer())
       .post('/workers')
       .set('Authorization', `Bearer ${employerToken}`)
       .send({
@@ -87,7 +87,7 @@ describe('Employee Portal E2E', () => {
         return;
       }
 
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post(`/employee-portal/invite/${workerId}`)
         .set('Authorization', `Bearer ${employerToken}`)
         .expect(201);
@@ -103,7 +103,7 @@ describe('Employee Portal E2E', () => {
         return;
       }
 
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get(`/employee-portal/invite-status/${workerId}`)
         .set('Authorization', `Bearer ${employerToken}`)
         .expect(200);
@@ -120,7 +120,7 @@ describe('Employee Portal E2E', () => {
         return;
       }
 
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post('/employee-portal/claim-account')
         .send({
           phoneNumber: '+254712345888',
@@ -133,7 +133,7 @@ describe('Employee Portal E2E', () => {
     });
 
     it('should reject claim with invalid invite code', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post('/employee-portal/claim-account')
         .send({
           phoneNumber: '+254712345999',
@@ -152,7 +152,7 @@ describe('Employee Portal E2E', () => {
       }
 
       // Generate a new invite code
-      const inviteRes = await request(app.getHttpAdapter().getInstance())
+      const inviteRes = await request(app.getHttpServer())
         .post(`/employee-portal/invite/${workerId}`)
         .set('Authorization', `Bearer ${employerToken}`);
 
@@ -172,7 +172,7 @@ describe('Employee Portal E2E', () => {
       expect(testInviteCode).toBeDefined();
 
       // Try to claim with the code (should work now, within expiration)
-      const claimRes = await request(app.getHttpAdapter().getInstance())
+      const claimRes = await request(app.getHttpServer())
         .post('/employee-portal/claim-account')
         .send({
           phoneNumber: '+254712340000',
@@ -187,7 +187,7 @@ describe('Employee Portal E2E', () => {
 
   describe('Employee - Login (Public)', () => {
     it('should reject login with non-existent phone', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post('/employee-portal/login')
         .send({
           phoneNumber: '+254799999999',
@@ -206,7 +206,7 @@ describe('Employee Portal E2E', () => {
       }
 
       // Try login (may fail if account wasn't claimed successfully earlier)
-      const loginRes = await request(app.getHttpAdapter().getInstance())
+      const loginRes = await request(app.getHttpServer())
         .post('/employee-portal/login')
         .send({
           phoneNumber: '+254712345888', // Same phone from claim test
@@ -232,7 +232,7 @@ describe('Employee Portal E2E', () => {
       const worker1Phone = generateTestPhone();
       const worker2Phone = generateTestPhone();
 
-      const worker1Res = await request(app.getHttpAdapter().getInstance())
+      const worker1Res = await request(app.getHttpServer())
         .post('/workers')
         .set('Authorization', `Bearer ${employerToken}`)
         .send({
@@ -243,7 +243,7 @@ describe('Employee Portal E2E', () => {
           email: generateTestEmail('worker1'),
         });
 
-      const worker2Res = await request(app.getHttpAdapter().getInstance())
+      const worker2Res = await request(app.getHttpServer())
         .post('/workers')
         .set('Authorization', `Bearer ${employerToken}`)
         .send({
@@ -268,11 +268,11 @@ describe('Employee Portal E2E', () => {
       const worker2Id = worker2Res.body.id;
 
       // Generate invites for both
-      const invite1Res = await request(app.getHttpAdapter().getInstance())
+      const invite1Res = await request(app.getHttpServer())
         .post(`/employee-portal/invite/${worker1Id}`)
         .set('Authorization', `Bearer ${employerToken}`);
 
-      const invite2Res = await request(app.getHttpAdapter().getInstance())
+      const invite2Res = await request(app.getHttpServer())
         .post(`/employee-portal/invite/${worker2Id}`)
         .set('Authorization', `Bearer ${employerToken}`);
 
@@ -287,7 +287,7 @@ describe('Employee Portal E2E', () => {
       }
 
       // Both claim accounts
-      await request(app.getHttpAdapter().getInstance())
+      await request(app.getHttpServer())
         .post('/employee-portal/claim-account')
         .send({
           phoneNumber: worker1Phone,
@@ -295,7 +295,7 @@ describe('Employee Portal E2E', () => {
           pin: '1111',
         });
 
-      await request(app.getHttpAdapter().getInstance())
+      await request(app.getHttpServer())
         .post('/employee-portal/claim-account')
         .send({
           phoneNumber: worker2Phone,
@@ -304,7 +304,7 @@ describe('Employee Portal E2E', () => {
         });
 
       // Login as worker 1
-      const login1Res = await request(app.getHttpAdapter().getInstance())
+      const login1Res = await request(app.getHttpServer())
         .post('/employee-portal/login')
         .send({
           phoneNumber: worker1Phone,
@@ -319,7 +319,7 @@ describe('Employee Portal E2E', () => {
       const worker1Token = login1Res.body.accessToken;
 
       // Worker 1 should see their own profile
-      const profile1Res = await request(app.getHttpAdapter().getInstance())
+      const profile1Res = await request(app.getHttpServer())
         .get('/employee-portal/my-profile')
         .set('Authorization', `Bearer ${worker1Token}`)
         .expect(200);
@@ -348,13 +348,13 @@ describe('Employee Portal E2E', () => {
 
   describe('Authorization', () => {
     it('should require auth for employer invite endpoints', async () => {
-      await request(app.getHttpAdapter().getInstance())
+      await request(app.getHttpServer())
         .post('/employee-portal/invite/some-id')
         .expect(401);
     });
 
     it('should require auth for employee profile endpoints', async () => {
-      await request(app.getHttpAdapter().getInstance())
+      await request(app.getHttpServer())
         .get('/employee-portal/my-profile')
         .expect(401);
     });

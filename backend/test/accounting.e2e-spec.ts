@@ -58,7 +58,7 @@ describe('Accounting E2E', () => {
     const password = 'Password123!';
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-    await request(app.getHttpAdapter().getInstance()).post('/auth/register').send({
+    await request(app.getHttpServer()).post('/auth/register').send({
       email,
       password,
       firstName: 'Accounting',
@@ -68,7 +68,7 @@ describe('Accounting E2E', () => {
     });
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-    const loginRes = await request(app.getHttpAdapter().getInstance())
+    const loginRes = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email, password });
 
@@ -76,7 +76,7 @@ describe('Accounting E2E', () => {
 
     // Create a pay period for export tests
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-    const periodRes = await request(app.getHttpAdapter().getInstance())
+    const periodRes = await request(app.getHttpServer())
       .post('/pay-periods/generate')
       .set('Authorization', `Bearer ${authToken}`)
       .send({
@@ -99,7 +99,7 @@ describe('Accounting E2E', () => {
   describe('Account Mappings', () => {
     it('should get default account mappings', async () => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get('/accounting/mappings/defaults')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -109,7 +109,7 @@ describe('Accounting E2E', () => {
 
     it('should get user account mappings', async () => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get('/accounting/mappings')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -119,7 +119,7 @@ describe('Accounting E2E', () => {
 
     it('should save account mappings', async () => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post('/accounting/mappings')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -145,7 +145,7 @@ describe('Accounting E2E', () => {
   describe('Export Formats', () => {
     it('should get available export formats', async () => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get('/accounting/formats')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -160,7 +160,7 @@ describe('Accounting E2E', () => {
   describe('Export History', () => {
     it('should get export history', async () => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get('/accounting/history')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -177,7 +177,7 @@ describe('Accounting E2E', () => {
       }
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post(`/accounting/export/${payPeriodId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({ format: 'CSV' });
@@ -195,7 +195,7 @@ describe('Accounting E2E', () => {
       }
 
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post(`/accounting/journal-entries/${payPeriodId}`)
         .set('Authorization', `Bearer ${authToken}`);
 
@@ -207,7 +207,7 @@ describe('Accounting E2E', () => {
   describe('Authorization', () => {
     it('should prevent unauthorized access', async () => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-      await request(app.getHttpAdapter().getInstance())
+      await request(app.getHttpServer())
         .get('/accounting/mappings')
         .expect(401);
     });

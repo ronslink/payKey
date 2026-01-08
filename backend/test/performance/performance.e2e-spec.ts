@@ -39,7 +39,7 @@ describe('Performance Tests', () => {
     const testPassword = 'PerformanceTest123!';
 
     // Register test user
-    await request(app.getHttpAdapter().getInstance()).post('/auth/register').send({
+    await request(app.getHttpServer()).post('/auth/register').send({
       email: testEmail,
       password: testPassword,
       firstName: 'Performance',
@@ -49,7 +49,7 @@ describe('Performance Tests', () => {
     });
 
     // Login to get auth token
-    const loginRes = await request(app.getHttpAdapter().getInstance())
+    const loginRes = await request(app.getHttpServer())
       .post('/auth/login')
       .send({
         email: testEmail,
@@ -97,7 +97,7 @@ describe('Performance Tests', () => {
 
     const startTime = Date.now();
 
-    const response = await request(app.getHttpAdapter().getInstance())
+    const response = await request(app.getHttpServer())
       .post('/payroll/calculate')
       .set('Authorization', `Bearer ${authToken}`)
       .send({ userId: testUserId });
@@ -153,7 +153,7 @@ describe('Performance Tests', () => {
 
     const startTime = Date.now();
 
-    const response = await request(app.getHttpAdapter().getInstance())
+    const response = await request(app.getHttpServer())
       .post('/payroll/calculate')
       .set('Authorization', `Bearer ${authToken}`)
       .send({ userId: testUserId });
@@ -217,7 +217,7 @@ describe('Performance Tests', () => {
 
     const startTime = Date.now();
 
-    const response = await request(app.getHttpAdapter().getInstance())
+    const response = await request(app.getHttpServer())
       .post('/payroll/calculate')
       .set('Authorization', `Bearer ${authToken}`)
       .send({ userId: testUserId });

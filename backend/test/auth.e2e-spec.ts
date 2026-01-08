@@ -50,7 +50,7 @@ describe('Auth E2E', () => {
     });
 
     it('should register a new user successfully', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post('/auth/register')
         .send({
           email: uniqueEmail,
@@ -69,7 +69,7 @@ describe('Auth E2E', () => {
 
     it('should reject registration with duplicate email', async () => {
       // Create user first
-      await request(app.getHttpAdapter().getInstance())
+      await request(app.getHttpServer())
         .post('/auth/register')
         .send({
           email: uniqueEmail,
@@ -81,7 +81,7 @@ describe('Auth E2E', () => {
         });
 
       // Try to register duplicate
-      await request(app.getHttpAdapter().getInstance())
+      await request(app.getHttpServer())
         .post('/auth/register')
         .send({
           email: uniqueEmail,
@@ -95,7 +95,7 @@ describe('Auth E2E', () => {
     });
 
     it('should reject registration with missing required fields', async () => {
-      await request(app.getHttpAdapter().getInstance())
+      await request(app.getHttpServer())
         .post('/auth/register')
         .send({
           email: 'incomplete@paykey.com',
@@ -106,13 +106,16 @@ describe('Auth E2E', () => {
   });
 
   describe('Login', () => {
-    // Use unique email with timestamp to avoid conflicts
-    const loginEmail = generateTestEmail('login.stable');
+    // Declare variables at describe scope, initialize in beforeAll
+    let loginEmail: string;
     const loginPassword = 'StablePassword123!';
 
     beforeAll(async () => {
+      // Generate email after cleanup has occurred
+      loginEmail = generateTestEmail('login.stable');
+
       // Register user for login tests
-      const registerRes = await request(app.getHttpAdapter().getInstance())
+      const registerRes = await request(app.getHttpServer())
         .post('/auth/register')
         .send({
           email: loginEmail,
@@ -123,7 +126,7 @@ describe('Auth E2E', () => {
           phone: generateTestPhone(),
         });
 
-      // If registration fails (409 conflict), user already exists which is OK
+      // If registration fails unexpectedly, log it
       if (registerRes.status !== 201 && registerRes.status !== 409) {
         console.warn(
           `Registration returned ${registerRes.status}: ${JSON.stringify(registerRes.body)}`,
@@ -132,7 +135,7 @@ describe('Auth E2E', () => {
     });
 
     it('should login successfully with valid credentials', async () => {
-      const res = await request(app.getHttpAdapter().getInstance()).post('/auth/login').send({
+      const res = await request(app.getHttpServer()).post('/auth/login').send({
         email: loginEmail,
         password: loginPassword,
       });
@@ -143,7 +146,7 @@ describe('Auth E2E', () => {
     });
 
     it('should reject login with wrong password', async () => {
-      await request(app.getHttpAdapter().getInstance())
+      await request(app.getHttpServer())
         .post('/auth/login')
         .send({
           email: loginEmail,
@@ -153,7 +156,7 @@ describe('Auth E2E', () => {
     });
 
     it('should reject login with non-existent email', async () => {
-      await request(app.getHttpAdapter().getInstance())
+      await request(app.getHttpServer())
         .post('/auth/login')
         .send({
           email: 'nonexistent@paykey.com',

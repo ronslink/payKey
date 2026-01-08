@@ -33,7 +33,7 @@ describe('Workers E2E', () => {
     const password = 'Password123!';
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await request(app.getHttpAdapter().getInstance())
+    await request(app.getHttpServer())
       .post('/auth/register')
       .send({
         email,
@@ -45,7 +45,7 @@ describe('Workers E2E', () => {
       });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const loginRes = await request(app.getHttpAdapter().getInstance())
+    const loginRes = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email, password });
 
@@ -71,7 +71,7 @@ describe('Workers E2E', () => {
       };
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .post('/workers')
         .set('Authorization', `Bearer ${authToken}`)
         .send(workerData)
@@ -84,7 +84,7 @@ describe('Workers E2E', () => {
 
     it('should get worker statistics', async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get('/workers/stats')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -96,7 +96,7 @@ describe('Workers E2E', () => {
 
     it('should return 401 without auth token', async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await request(app.getHttpAdapter().getInstance())
+      await request(app.getHttpServer())
         .get('/workers')
         .expect(401);
     });

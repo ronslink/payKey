@@ -28,7 +28,7 @@ describe('Subscription Payments E2E', () => {
     const email = `subscriptions.test.${Date.now()}@paykey.com`;
     const password = 'Password123!';
 
-    await request(app.getHttpAdapter().getInstance()).post('/auth/register').send({
+    await request(app.getHttpServer()).post('/auth/register').send({
       email,
       password,
       firstName: 'Subscriptions',
@@ -37,7 +37,7 @@ describe('Subscription Payments E2E', () => {
       phone: '+254700000600',
     });
 
-    const loginRes = await request(app.getHttpAdapter().getInstance())
+    const loginRes = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email, password });
 
@@ -52,7 +52,7 @@ describe('Subscription Payments E2E', () => {
 
   describe('Subscription Plans', () => {
     it('should list available subscription plans', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get('/payments/subscriptions/plans')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -67,7 +67,7 @@ describe('Subscription Payments E2E', () => {
 
   describe('Current Subscription', () => {
     it('should get current subscription (defaults to FREE)', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get('/payments/subscriptions/current')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -80,7 +80,7 @@ describe('Subscription Payments E2E', () => {
 
   describe('Usage Tracking', () => {
     it('should get usage statistics', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get('/payments/subscriptions/usage')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -94,7 +94,7 @@ describe('Subscription Payments E2E', () => {
 
   describe('Payment History', () => {
     it('should get payment history', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get('/payments/subscriptions/payment-history')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -105,7 +105,7 @@ describe('Subscription Payments E2E', () => {
 
   describe('Stripe Integration', () => {
     it('should get Stripe status', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get('/payments/subscriptions/stripe-status')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -117,7 +117,7 @@ describe('Subscription Payments E2E', () => {
 
   describe('Authorization', () => {
     it('should prevent unauthorized access', async () => {
-      await request(app.getHttpAdapter().getInstance())
+      await request(app.getHttpServer())
         .get('/payments/subscriptions/current')
         .expect(401);
     });

@@ -27,7 +27,7 @@ describe('User Profile E2E', () => {
     const email = `profile.test.${Date.now()}@paykey.com`;
     const password = 'Password123!';
 
-    await request(app.getHttpAdapter().getInstance()).post('/auth/register').send({
+    await request(app.getHttpServer()).post('/auth/register').send({
       email,
       password,
       firstName: 'Profile',
@@ -36,7 +36,7 @@ describe('User Profile E2E', () => {
       phone: '+254700000400',
     });
 
-    const loginRes = await request(app.getHttpAdapter().getInstance())
+    const loginRes = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email, password });
 
@@ -51,7 +51,7 @@ describe('User Profile E2E', () => {
 
   describe('Profile Endpoints', () => {
     it('should get user profile', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get('/users/profile')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -62,7 +62,7 @@ describe('User Profile E2E', () => {
     });
 
     it('should update user profile', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .patch('/users/profile')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -77,7 +77,7 @@ describe('User Profile E2E', () => {
     });
 
     it('should update compliance profile', async () => {
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .patch('/users/compliance')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -90,7 +90,7 @@ describe('User Profile E2E', () => {
 
     it('should track onboarding status after profile completion', async () => {
       // Update profile with all required onboarding fields
-      await request(app.getHttpAdapter().getInstance())
+      await request(app.getHttpServer())
         .patch('/users/profile')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
@@ -104,7 +104,7 @@ describe('User Profile E2E', () => {
           isResident: true,
         });
 
-      const res = await request(app.getHttpAdapter().getInstance())
+      const res = await request(app.getHttpServer())
         .get('/users/profile')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
@@ -116,7 +116,7 @@ describe('User Profile E2E', () => {
 
   describe('Authorization', () => {
     it('should prevent unauthorized access to profile', async () => {
-      await request(app.getHttpAdapter().getInstance()).get('/users/profile').expect(401);
+      await request(app.getHttpServer()).get('/users/profile').expect(401);
     });
   });
 });
