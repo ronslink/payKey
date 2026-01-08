@@ -104,6 +104,9 @@ export class User {
   @Column({ default: false, name: 'isOnboardingCompleted' })
   isOnboardingCompleted: boolean;
 
+  @Column({ default: false })
+  isResident: boolean;
+
   // New Compliance & Payment Fields
   @Column({ nullable: true })
   businessName: string;

@@ -151,13 +151,19 @@ export class DataDeletionService {
 
         if (workerIds.length > 0) {
             // Delete time entries for workers
-            await queryRunner.manager.delete(TimeEntry, { workerId: { $in: workerIds } });
+            for (const workerId of workerIds) {
+                await queryRunner.manager.delete(TimeEntry, { workerId });
+            }
 
             // Delete leave requests for workers
-            await queryRunner.manager.delete(LeaveRequest, { workerId: { $in: workerIds } });
+            for (const workerId of workerIds) {
+                await queryRunner.manager.delete(LeaveRequest, { workerId });
+            }
 
             // Delete payroll records for workers
-            await queryRunner.manager.delete(PayrollRecord, { workerId: { $in: workerIds } });
+            for (const workerId of workerIds) {
+                await queryRunner.manager.delete(PayrollRecord, { workerId });
+            }
         }
 
         // Delete pay periods
