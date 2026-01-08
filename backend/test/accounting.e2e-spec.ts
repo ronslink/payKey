@@ -81,7 +81,7 @@ describe('Accounting E2E', () => {
       .post('/auth/login')
       .send({ email, password });
 
-    if (loginRes.status !== 200) {
+    if (loginRes.status !== 200 && loginRes.status !== 201) {
       throw new Error(
         `Login failed with status ${loginRes.status}: ${JSON.stringify(loginRes.body)}`,
       );
