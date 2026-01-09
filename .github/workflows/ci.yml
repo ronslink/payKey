@@ -76,6 +76,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install PostgreSQL Client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
       - name: Create .env.test file
         run: |
           cat > .env.test << 'EOF'
@@ -106,6 +111,12 @@ jobs:
             sleep 1
           done
           echo "PostgreSQL is up and running!"
+
+      - name: Create root role (Safety Net)
+        run: |
+          echo "Creating 'root' role to fix persistent connection error..."
+          PGPASSWORD=password psql -U paykey -h localhost -d paykey_test -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'root') THEN CREATE ROLE root WITH LOGIN SUPERUSER PASSWORD 'password'; END IF; END \$\$;"
+          echo "Root role check/creation complete."
 
       - name: Verify database connection
         run: |
