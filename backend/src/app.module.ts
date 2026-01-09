@@ -105,20 +105,48 @@ import { DeletionRequest } from './modules/data-deletion/entities/deletion-reque
 
         const dbHost = configService.get('DB_HOST', 'db');
         const dbPort = configService.get('DB_PORT', '5432');
-        const dbUser =
-          configService.get('DB_USER') ||
-          configService.get('DB_USERNAME') ||
-          'paykey';
+
+        // In CI environments, prioritize process.env over ConfigService
+        // This ensures GitHub Actions environment variables are used correctly
+        const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
+
+        const username = isCI
+          ? (process.env.DB_USER || process.env.DB_USERNAME || 'paykey')
+          : (configService.get('DB_USER') || configService.get('DB_USERNAME') || 'paykey');
+
+        const password = isCI
+          ? (process.env.DB_PASSWORD || 'password')
+          : configService.get('DB_PASSWORD', 'password');
+
+        const database = isCI
+          ? (process.env.DB_NAME || 'paykey_test')
+          : configService.get('DB_NAME', 'paykey_test');
+
+        const host = isCI
+          ? (process.env.DB_HOST || 'localhost')
+          : dbHost;
+
+        const port = isCI
+          ? parseInt(process.env.DB_PORT || '5432')
+          : parseInt(dbPort);
+
+        // Log config in CI for debugging
+        if (isCI) {
+          console.log('🔧 CI Database Config:', {
+            host,
+            port,
+            username,
+            database,
+          });
+        }
+
         return {
           type: 'postgres',
-          host: dbHost,
-          port: parseInt(configService.get('DB_PORT', '5432')),
-          username: configService.get(
-            'DB_USER',
-            configService.get('DB_USERNAME', 'paykey'),
-          ),
-          password: configService.get('DB_PASSWORD', 'password'),
-          database: configService.get('DB_NAME', 'paykey_test'),
+          host,
+          port,
+          username,
+          password,
+          database,
           entities: [
             User,
             Worker,
