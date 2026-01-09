@@ -219,6 +219,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Debug Secrets
+        run: |
+          if [ -z "${{ secrets.DOCKER_USERNAME }}" ]; then echo "::error::DOCKER_USERNAME secret is MISSING or empty."; else echo "DOCKER_USERNAME secret is present."; fi
+          if [ -z "${{ secrets.DOCKER_PASSWORD }}" ]; then echo "::error::DOCKER_PASSWORD secret is MISSING or empty."; else echo "DOCKER_PASSWORD secret is present."; fi
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
