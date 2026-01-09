@@ -71,9 +71,14 @@ export const getDatabaseConfig = (configService: ConfigService): TypeOrmModuleOp
     };
 
     // Get username with multiple fallbacks
+    // In CI, force 'postgres' user if DB_USER/DB_USERNAME are missing or explicitly set to root, 
+    // OR if we suspect permissions issues. To be safe, let's stick to env vars but add logging.
+
+    // Safer strategy: If CI, and no explicit user, default to 'postgres' (superuser) instead of 'paykey'
+    const defaultUser = isCI ? 'postgres' : 'paykey';
     const username = getConfig('DB_USERNAME') ||
         getConfig('DB_USER') ||
-        'paykey';
+        defaultUser;
 
     const password = getConfig('DB_PASSWORD', 'password');
     const host = getConfig('DB_HOST', 'localhost');
