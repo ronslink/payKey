@@ -3,6 +3,8 @@
  * Global test setup for E2E tests
  */
 
+import { DataSource } from 'typeorm';
+
 // Set up test environment variables before any tests run
 process.env.NODE_ENV = 'test';
 process.env.DB_HOST = process.env.DB_HOST || 'localhost';
@@ -28,6 +30,74 @@ console.log('🚀 Starting E2E test suite...');
 console.log(
   `📊 Database: ${process.env.DB_USER}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`,
 );
+
+/**
+ * Global database cleanup before ALL tests
+ * This runs once at the very start of the test suite
+ */
+let globalDataSource: DataSource | null = null;
+
+beforeAll(async () => {
+  console.log('🧹 Running global database cleanup...');
+
+  try {
+    globalDataSource = new DataSource({
+      type: 'postgres',
+      host: process.env.DB_HOST,
+      port: parseInt(process.env.DB_PORT || '5432'),
+      username: process.env.DB_USER || process.env.DB_USERNAME,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+      synchronize: false,
+      logging: false,
+    });
+
+    await globalDataSource.initialize();
+
+    // Tables to truncate in order (respecting FK constraints - children first)
+    const tablesToTruncate = [
+      'payroll_records',
+      'pay_periods',
+      'time_entries',
+      'leave_requests',
+      'terminations',
+      'workers',
+      'tax_submissions',
+      'tax_payments',
+      'subscription_payments',
+      'subscriptions',
+      'transactions',
+      'account_mappings',
+      'accounting_exports',
+      'activities',
+      'exports',
+      'holidays',
+      'deletion_requests',
+      'properties',
+      'users',
+    ];
+
+    for (const table of tablesToTruncate) {
+      try {
+        await globalDataSource.query(`DELETE FROM "${table}"`);
+      } catch {
+        // Table might not exist, continue
+      }
+    }
+
+    console.log('✅ Global database cleanup complete');
+  } catch (error: any) {
+    console.warn(`⚠️ Global cleanup warning: ${error.message}`);
+    // Don't fail the test suite if cleanup fails - individual tests will handle their own cleanup
+  }
+});
+
+afterAll(async () => {
+  if (globalDataSource && globalDataSource.isInitialized) {
+    await globalDataSource.destroy();
+    console.log('🔌 Global database connection closed');
+  }
+});
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
@@ -97,4 +167,4 @@ expect.extend({
 });
 
 // Export empty object to make this a valid module
-export {};
+export { };
