@@ -25,15 +25,42 @@ export function generateTestPhone(): string {
 }
 
 /**
- * Clean up test data by truncating all tables
- * Falls back to synchronize(true) if truncate fails
+ * Clean up test data using multiple strategies:
+ * 1. Try TRUNCATE CASCADE
+ * 2. Fall back to individual DELETE statements
+ * 3. Last resort: synchronize(true)
  */
 export async function cleanupTestData(dataSource: DataSource): Promise<void> {
   if (!dataSource.isInitialized) {
+    console.warn('DataSource not initialized, skipping cleanup');
     return;
   }
 
+  // Tables in order respecting foreign key constraints (children first)
+  const tablesToDelete = [
+    'payroll_records',
+    'pay_periods',
+    'time_entries',
+    'leave_requests',
+    'terminations',
+    'workers',
+    'tax_submissions',
+    'tax_payments',
+    'subscription_payments',
+    'subscriptions',
+    'transactions',
+    'account_mappings',
+    'accounting_exports',
+    'activities',
+    'exports',
+    'holidays',
+    'deletion_requests',
+    'properties',
+    'users', // Delete users last due to FK references
+  ];
+
   try {
+    // Strategy 1: Try TRUNCATE CASCADE on all tables
     const entities = dataSource.entityMetadatas;
     const tableNames = entities
       .map((entity) => `"${entity.tableName}"`)
@@ -43,16 +70,32 @@ export async function cleanupTestData(dataSource: DataSource): Promise<void> {
       await dataSource.query(
         `TRUNCATE TABLE ${tableNames} RESTART IDENTITY CASCADE;`,
       );
+      return; // Success!
     }
-  } catch (error: any) {
-    console.warn(`TRUNCATE failed, falling back to synchronize: ${error.message}`);
-    try {
-      // Drop and recreate all tables - nuclear option
-      await dataSource.synchronize(true);
-    } catch (syncError: any) {
-      console.error(`Synchronize also failed: ${syncError.message}`);
-      throw syncError;
+  } catch (truncateError: any) {
+    console.warn(`TRUNCATE failed: ${truncateError.message}`);
+  }
+
+  try {
+    // Strategy 2: Individual DELETE statements in order
+    for (const table of tablesToDelete) {
+      try {
+        await dataSource.query(`DELETE FROM "${table}"`);
+      } catch {
+        // Table might not exist, continue
+      }
     }
+    return; // Success!
+  } catch (deleteError: any) {
+    console.warn(`DELETE failed: ${deleteError.message}`);
+  }
+
+  try {
+    // Strategy 3: Nuclear option - drop and recreate all tables
+    await dataSource.synchronize(true);
+  } catch (syncError: any) {
+    console.error(`All cleanup strategies failed: ${syncError.message}`);
+    throw syncError;
   }
 }
 
