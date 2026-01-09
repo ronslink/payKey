@@ -3,8 +3,12 @@ name: PayKey CI/CD
 on:
   push:
     branches: [main, develop]
+    paths-ignore:
+      - 'website/**'
   pull_request:
     branches: [main, develop]
+    paths-ignore:
+      - 'website/**'
   workflow_dispatch:
 
 env:
@@ -275,6 +279,5 @@ jobs:
 
             docker-compose pull backend
             docker-compose up -d --no-deps backend
-            docker-compose up -d --build --no-deps website
             docker image prune -f
             echo "✅ Deployment complete: $(date)"
