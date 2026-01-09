@@ -29,6 +29,7 @@ import { AppCacheModule } from './modules/cache/cache.module';
 import { AppThrottlerModule } from './modules/throttler/throttler.module';
 import { PropertiesModule } from './modules/properties/properties.module';
 import { DataDeletionModule } from './modules/data-deletion/data-deletion.module';
+import { getDatabaseConfig } from './config/database.config';
 
 // Explicit Entity Imports
 // Explicit Entity Imports
@@ -65,118 +66,7 @@ import { DeletionRequest } from './modules/data-deletion/entities/deletion-reque
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => {
-        const dbUrl = configService.get('DATABASE_URL');
-        if (dbUrl) {
-          return {
-            type: 'postgres',
-            url: dbUrl,
-            ssl: {
-              rejectUnauthorized: false,
-            },
-            entities: [
-              User,
-              Worker,
-              PayPeriod,
-              PayrollRecord,
-              Transaction,
-              TaxTable,
-              TaxSubmission,
-              TaxPayment,
-              TaxConfig,
-              Subscription,
-              SubscriptionPayment,
-              Property,
-              Country,
-              LeaveRequest,
-              Termination,
-              AccountMapping,
-              AccountingExport,
-              Activity,
-              TimeEntry,
-              Export,
-              Holiday,
-              DeletionRequest,
-            ],
-            synchronize: true,
-            logging: ['query', 'error'],
-          };
-        }
-
-        const dbHost = configService.get('DB_HOST', 'db');
-        const dbPort = configService.get('DB_PORT', '5432');
-
-        // In CI environments, prioritize process.env over ConfigService
-        // This ensures GitHub Actions environment variables are used correctly
-        // Check for any truthy value of CI or GITHUB_ACTIONS (could be 'true', true, '1', etc.)
-        const isCI = !!(process.env.CI || process.env.GITHUB_ACTIONS);
-
-        const username = isCI
-          ? (process.env.DB_USER || process.env.DB_USERNAME || 'paykey')
-          : (configService.get('DB_USER') || configService.get('DB_USERNAME') || 'paykey');
-
-        const password = isCI
-          ? (process.env.DB_PASSWORD || 'password')
-          : configService.get('DB_PASSWORD', 'password');
-
-        const database = isCI
-          ? (process.env.DB_NAME || 'paykey_test')
-          : configService.get('DB_NAME', 'paykey_test');
-
-        const host = isCI
-          ? (process.env.DB_HOST || 'localhost')
-          : dbHost;
-
-        const port = isCI
-          ? parseInt(process.env.DB_PORT || '5432')
-          : parseInt(dbPort);
-
-        // Log config in CI for debugging
-        if (isCI) {
-          console.log('🔧 CI Database Config:', {
-            host,
-            port,
-            username,
-            database,
-          });
-        }
-
-        return {
-          type: 'postgres',
-          host,
-          port,
-          username,
-          password,
-          database,
-          entities: [
-            User,
-            Worker,
-            PayPeriod,
-            PayrollRecord,
-            Transaction,
-            TaxTable,
-            TaxSubmission,
-            TaxPayment,
-            TaxConfig,
-            Subscription,
-            SubscriptionPayment,
-            Property,
-            Country,
-            LeaveRequest,
-            Termination,
-            AccountMapping,
-            AccountingExport,
-            Activity,
-            TimeEntry,
-            Export,
-            Holiday,
-            DeletionRequest,
-          ],
-
-          synchronize: true, // Re-enabled after fixing entity types
-          logging: ['query', 'error'],
-        };
-      },
+      useFactory: getDatabaseConfig,
       inject: [ConfigService],
     }),
     BullModule.forRootAsync({
