@@ -5,23 +5,31 @@
 
 import { DataSource } from 'typeorm';
 import { INestApplication } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 
 /**
- * Generate a unique email for test users
+ * Generate a cryptographically unique ID for test data
+ */
+function generateUniqueId(): string {
+  return randomBytes(8).toString('hex');
+}
+
+/**
+ * Generate a unique email for test users using crypto random
  */
 export function generateTestEmail(prefix: string): string {
+  const uniqueId = generateUniqueId();
   const timestamp = Date.now();
-  const random = Math.floor(Math.random() * 10000);
-  return `${prefix}.${timestamp}.${random}@paykey.com`;
+  return `${prefix}.${timestamp}.${uniqueId}@paykey.com`;
 }
 
 /**
  * Generate a unique phone number for test users
  */
 export function generateTestPhone(): string {
-  // Use a fixed prefix valid for Kenya but randomize the rest clearly
-  const random = Math.floor(Math.random() * 100000000);
-  return `+254${String(random).padStart(9, '0')}`;
+  // Use crypto random for better uniqueness
+  const randomPart = parseInt(randomBytes(4).toString('hex'), 16) % 100000000;
+  return `+254${String(randomPart).padStart(9, '0').slice(0, 9)}`;
 }
 
 /**
