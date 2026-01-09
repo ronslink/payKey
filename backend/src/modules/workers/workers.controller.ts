@@ -9,6 +9,7 @@ import {
   Request,
   Res,
   Delete,
+  HttpCode,
 } from '@nestjs/common';
 import { WorkersService } from './workers.service';
 import { CreateWorkerDto } from './dto/create-worker.dto';
@@ -33,7 +34,7 @@ export class WorkersController {
     private readonly workersService: WorkersService,
     private readonly terminationService: TerminationService,
     private readonly leaveManagementService: LeaveManagementService,
-  ) {}
+  ) { }
 
   // ======================================================================================
   // STATIC ROUTES (MUST BE BEFORE DYNAMIC ROUTES)
@@ -55,6 +56,7 @@ export class WorkersController {
 
   @Post()
   @UseGuards(SubscriptionGuard)
+  @HttpCode(201)
   create(
     @Request() req: AuthenticatedRequest,
     @Body() createWorkerDto: CreateWorkerDto,
