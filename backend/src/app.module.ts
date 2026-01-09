@@ -108,7 +108,8 @@ import { DeletionRequest } from './modules/data-deletion/entities/deletion-reque
 
         // In CI environments, prioritize process.env over ConfigService
         // This ensures GitHub Actions environment variables are used correctly
-        const isCI = process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true';
+        // Check for any truthy value of CI or GITHUB_ACTIONS (could be 'true', true, '1', etc.)
+        const isCI = !!(process.env.CI || process.env.GITHUB_ACTIONS);
 
         const username = isCI
           ? (process.env.DB_USER || process.env.DB_USERNAME || 'paykey')
