@@ -17,19 +17,20 @@ jobs:
   backend-ci:
     name: Backend CI
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: ./backend
 
     services:
       postgres:
-        image: postgres:15-alpine
+        image: postgres:15
         env:
           POSTGRES_USER: paykey
           POSTGRES_PASSWORD: password
           POSTGRES_DB: paykey_test
         ports:
-          - 5435:5432
+          - 5432:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -46,21 +47,24 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
-    # Environment variables set at job level for all steps
+    # Set environment variables at JOB level (critical!)
     env:
       NODE_ENV: test
       DB_HOST: localhost
-      DB_PORT: 5435
+      DB_PORT: 5432
       DB_USER: paykey
       DB_USERNAME: paykey
       DB_PASSWORD: password
       DB_NAME: paykey_test
+      DB_LOGGING: false
       REDIS_HOST: localhost
       REDIS_PORT: 6379
       JWT_SECRET: test_secret_key_for_ci_cd_pipeline_12345
+      JWT_EXPIRATION: 1h
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -69,25 +73,51 @@ jobs:
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: npm ci
 
       - name: Create .env.test file
         run: |
-          cat > .env.test << EOF
+          cat > .env.test << 'EOF'
           NODE_ENV=test
           DB_HOST=localhost
-          DB_PORT=5435
+          DB_PORT=5432
           DB_USER=paykey
           DB_USERNAME=paykey
           DB_PASSWORD=password
           DB_NAME=paykey_test
+          DB_LOGGING=false
           REDIS_HOST=localhost
           REDIS_PORT=6379
           JWT_SECRET=test_secret_key_for_ci_cd_pipeline_12345
+          JWT_EXPIRATION=1h
           EOF
 
-      - name: Debug Environment
+      - name: Verify .env.test created
+        run: |
+          echo "=== .env.test contents ==="
+          cat .env.test
+
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          echo "Waiting for PostgreSQL to be ready..."
+          until PGPASSWORD=password psql -U paykey -h localhost -d paykey_test -c "SELECT 1" > /dev/null 2>&1; do
+            echo "PostgreSQL is unavailable - sleeping"
+            sleep 1
+          done
+          echo "PostgreSQL is up and running!"
+
+      - name: Verify database connection
+        run: |
+          echo "=== Database Connection Info ==="
+          PGPASSWORD=password psql -U paykey -h localhost -d paykey_test -c "
+            SELECT 
+              current_user as user, 
+              current_database() as database,
+              version() as version;
+          "
+
+      - name: Debug environment
         run: |
           echo "=== Environment Variables ==="
           echo "NODE_ENV: $NODE_ENV"
@@ -96,13 +126,8 @@ jobs:
           echo "DB_USER: $DB_USER"
           echo "DB_USERNAME: $DB_USERNAME"
           echo "DB_NAME: $DB_NAME"
-          echo ""
-          echo "=== .env.test Contents ==="
-          cat .env.test
-
-      - name: Verify database connection
-        run: |
-          PGPASSWORD=$DB_PASSWORD psql -U $DB_USER -h $DB_HOST -p $DB_PORT -d $DB_NAME -c "SELECT current_user, current_database();"
+          echo "CI: $CI"
+          echo "GITHUB_ACTIONS: $GITHUB_ACTIONS"
 
       - name: Lint
         run: npm run lint
@@ -117,6 +142,20 @@ jobs:
 
       - name: Run E2E Tests
         run: npm run test:e2e
+        timeout-minutes: 10
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            backend/coverage/
+            backend/test-results/
+
+      - name: Cleanup
+        if: always()
+        run: echo "Test run completed"
 
   # ============================================
   # Mobile CI

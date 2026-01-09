@@ -108,6 +108,34 @@ export async function cleanupTestData(dataSource: DataSource): Promise<void> {
 }
 
 /**
+ * Verify database connection and log connection details in CI
+ */
+export async function verifyDatabaseConnection(dataSource: DataSource): Promise<void> {
+  if (!dataSource.isInitialized) {
+    throw new Error('DataSource is not initialized');
+  }
+
+  try {
+    const result = await dataSource.query('SELECT current_user, current_database()');
+
+    // Log connection details in CI for debugging
+    if (process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true') {
+      console.log('✅ CI Database Connection Verified:', {
+        host: (dataSource.options as any).host,
+        port: (dataSource.options as any).port,
+        username: (dataSource.options as any).username,
+        database: (dataSource.options as any).database,
+        currentUser: result[0]?.current_user,
+        currentDatabase: result[0]?.current_database,
+      });
+    }
+  } catch (error: any) {
+    console.error('❌ Database connection verification failed:', error.message);
+    throw error;
+  }
+}
+
+/**
  * Start a database transaction for test isolation
  */
 export async function startTestTransaction(dataSource: DataSource) {
