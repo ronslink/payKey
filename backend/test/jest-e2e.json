@@ -12,6 +12,7 @@
   },
   "testTimeout": 30000,
   "setupFilesAfterEnv": [
+    "<rootDir>/env-setup.ts",
     "<rootDir>/test-setup.ts"
   ],
   "maxWorkers": 1,
