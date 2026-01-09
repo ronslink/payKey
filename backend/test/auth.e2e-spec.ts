@@ -80,7 +80,8 @@ describe('Auth E2E', () => {
         lastName: 'User',
         businessName: 'Original Corp',
         phone: generateTestPhone(),
-      });
+      })
+        .expect(201);
 
       // Try to register duplicate
       await request(app.getHttpServer())
