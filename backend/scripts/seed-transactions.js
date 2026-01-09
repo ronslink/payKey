@@ -9,7 +9,7 @@ const dataSource = new DataSource({
   host: 'localhost',
   port: 5432,
   username: 'postgres',
-  password: 'admin',
+  password: process.env.DB_PASSWORD || 'admin',
   database: 'paykey',
   entities: [Transaction, User],
   synchronize: false,

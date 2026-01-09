@@ -5,8 +5,8 @@ async function fixUserTable() {
   const client = new Client({
     host: 'localhost',
     database: 'paykey',
-    user: 'postgres',
-    password: 'admin',
+    user: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASSWORD || 'admin',
     port: 5432,
     // Add connection timeout
     connectionTimeoutMillis: 5000,
