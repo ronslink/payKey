@@ -32,7 +32,8 @@
     "knip:fix": "knip --fix",
     "typeorm:migration:generate": "typeorm-ts-node-commonjs migration:generate -d ormconfig.ts",
     "typeorm:migration:run": "typeorm-ts-node-commonjs migration:run -d ormconfig.ts",
-    "typeorm:migration:revert": "typeorm-ts-node-commonjs migration:revert -d ormconfig.ts"
+    "typeorm:migration:revert": "typeorm-ts-node-commonjs migration:revert -d ormconfig.ts",
+    "typeorm:schema:sync": "typeorm-ts-node-commonjs schema:sync -d ormconfig.ts"
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.1",
