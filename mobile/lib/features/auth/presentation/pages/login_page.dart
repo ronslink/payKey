@@ -15,6 +15,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -84,6 +85,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     required String hint,
     TextInputType? keyboardType,
     bool obscureText = false,
+    Widget? suffixIcon,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -103,6 +105,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           obscureText: obscureText,
           decoration: InputDecoration(
             hintText: hint,
+            suffixIcon: suffixIcon,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: Color(0xFFD1D5DB)),
@@ -193,7 +196,18 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         controller: _passwordController,
                         label: 'Password',
                         hint: 'Enter your password',
-                        obscureText: true,
+                        obscureText: _obscurePassword,
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                            color: Colors.grey,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
+                        ),
                       ),
                       const SizedBox(height: 32),
                       ElevatedButton(

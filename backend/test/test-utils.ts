@@ -44,76 +44,33 @@ export async function cleanupTestData(dataSource: DataSource): Promise<void> {
     return;
   }
 
-  // Tables to delete in order (CHILDREN FIRST, then PARENTS)
-  // This respects foreign key constraints
-  const tablesToDelete = [
-    // Payroll-related (deepest children first)
-    'payroll_records',        // References: pay_periods, workers
-    'tax_submissions',        // References: pay_periods
-    'tax_payments',           // References: pay_periods
-    'pay_periods',            // References: users
-
-    // Worker-related (children before workers)
-    'time_entries',           // References: workers
-    'leave_requests',         // References: workers
-    'terminations',           // References: workers
-    'transactions',           // References: workers
-    'workers',                // References: users
-
-    // Subscription-related
-    'subscription_payments',  // References: subscriptions
-    'subscriptions',          // References: users
-
-    // Other tables
-    'account_mappings',       // References: users
-    'accounting_exports',     // References: users
-    'activities',             // References: users
-    'exports',                // References: users
-    'holidays',               // No FK to users
-    'deletion_requests',      // References: users
-    'properties',             // References: users
-
-    // Users table LAST (parent of many tables)
-    'users',
-  ];
-
   try {
-    // Strategy 1: Try TRUNCATE CASCADE on all tables
-    const entities = dataSource.entityMetadatas;
-    const tableNames = entities
-      .map((entity) => `"${entity.tableName}"`)
+    // Dynamic Cleanup: Get all user tables in the public schema
+    const tables = await dataSource.query(`
+      SELECT tablename 
+      FROM pg_tables 
+      WHERE schemaname = 'public' 
+      AND tablename != 'migrations' -- Preserve migrations if needed, or truncate them too
+    `);
+
+    if (tables.length === 0) {
+      return;
+    }
+
+    // Construct a list of table names, quoted
+    const tableNames = tables
+      .map((t: any) => `"${t.tablename}"`)
       .join(', ');
 
-    if (tableNames.length > 0) {
-      await dataSource.query(
-        `TRUNCATE TABLE ${tableNames} RESTART IDENTITY CASCADE;`,
-      );
-      return; // Success!
-    }
-  } catch (truncateError: any) {
-    console.warn(`TRUNCATE failed: ${truncateError.message}`);
-  }
+    // TRUNCATE all tables with CASCADE to handle foreign keys automatically
+    await dataSource.query(
+      `TRUNCATE TABLE ${tableNames} RESTART IDENTITY CASCADE;`,
+    );
 
-  try {
-    // Strategy 2: Individual DELETE statements in order
-    for (const table of tablesToDelete) {
-      try {
-        await dataSource.query(`DELETE FROM "${table}"`);
-      } catch {
-        // Table might not exist, continue
-      }
-    }
-    return; // Success!
-  } catch (deleteError: any) {
-    console.warn(`DELETE failed: ${deleteError.message}`);
-  }
-
-  try {
-    // Strategy 3: Nuclear option - drop and recreate all tables
-    await dataSource.synchronize(true);
-  } catch (syncError: any) {
-    console.error(`All cleanup strategies failed: ${syncError.message}`);
-    throw syncError;
+  } catch (error: any) {
+    console.warn(`Dynamic cleanup failed: ${error.message}`);
+    // Fallback? Ideally shouldn't fail if DB is up.
+    throw error;
   }
 }
 

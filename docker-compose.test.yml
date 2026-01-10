@@ -1,15 +1,17 @@
 services:
   db_test:
-    image: postgres:15-alpine
+    image: postgres:17-alpine
     container_name: paykey_db_test
     environment:
-      POSTGRES_USER: paykey
-      POSTGRES_PASSWORD: password
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Tina76
       POSTGRES_DB: paykey_test
-    tmpfs:
-      - /var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data_test:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U paykey -d paykey_test" ]
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d paykey_test" ]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -19,6 +21,8 @@ services:
   redis_test:
     image: redis:7-alpine
     container_name: paykey_redis_test
+    ports:
+      - "6380:6379"
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
       interval: 5s
@@ -38,9 +42,9 @@ services:
       NODE_ENV: test
       DB_HOST: db_test
       DB_PORT: 5432
-      DB_USER: paykey
-      DB_USERNAME: paykey
-      DB_PASSWORD: password
+      DB_USER: postgres
+      DB_USERNAME: postgres
+      DB_PASSWORD: Tina76
       DB_NAME: paykey_test
       REDIS_HOST: redis_test
       REDIS_PORT: 6379
@@ -57,3 +61,6 @@ services:
 networks:
   paykey-test-network:
     driver: bridge
+
+volumes:
+  postgres_data_test:

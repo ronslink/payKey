@@ -19,6 +19,7 @@ abstract class AppTheme {
       primary: _seedColor,
       secondary: _secondaryColor,
       surface: Colors.white,
+      onSurface: _textPrimary, // Ensure text on surface is dark
       surfaceContainerHighest: _backgroundColor,
       brightness: Brightness.light,
     ),
@@ -112,7 +113,8 @@ abstract class AppTheme {
         borderSide: const BorderSide(color: _seedColor, width: 2),
       ),
       labelStyle: GoogleFonts.inter(color: _textSecondary),
-      hintStyle: GoogleFonts.inter(color: Colors.grey.shade400),
+      floatingLabelStyle: GoogleFonts.inter(color: _seedColor),
+      hintStyle: GoogleFonts.inter(color: Colors.grey.shade500), // Darker hint for better visibility
     ),
   );
 
@@ -130,6 +132,7 @@ abstract class AppTheme {
       primary: _seedColor,
       secondary: _secondaryColor,
       surface: _darkSurface,
+      onSurface: _darkTextPrimary, // Ensure text on surface is light
       surfaceContainerHighest: _darkBackground,
       brightness: Brightness.dark,
     ),
@@ -223,7 +226,8 @@ abstract class AppTheme {
         borderSide: const BorderSide(color: _seedColor, width: 2),
       ),
       labelStyle: GoogleFonts.inter(color: _darkTextSecondary),
-      hintStyle: GoogleFonts.inter(color: Colors.grey.shade600),
+      floatingLabelStyle: GoogleFonts.inter(color: _seedColor),
+      hintStyle: GoogleFonts.inter(color: Colors.grey.shade500),
     ),
     
     // Bottom Sheet Theme

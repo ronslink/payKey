@@ -1,3 +1,4 @@
+import React from 'react';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { ArrowRight, Shield, Globe, Smartphone } from 'lucide-react';
@@ -97,7 +98,7 @@ export default function Home() {
     );
 }
 
-function FeatureCard({ icon, title, description }: { icon: any, title: string, description: string }) {
+function FeatureCard({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) {
     return (
         <div style={{ padding: '2rem', background: '#020617', borderRadius: '16px', border: '1px solid #1e293b' }}>
             <div style={{ marginBottom: '1rem' }}>{icon}</div>

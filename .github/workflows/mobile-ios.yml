@@ -1,0 +1,55 @@
+name: Mobile iOS CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'mobile/**'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'mobile/**'
+  workflow_dispatch:
+
+jobs:
+  ios-build:
+    name: Build iOS App
+    runs-on: macos-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: ./mobile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Install Pods
+        run: |
+          cd ios
+          pod install
+
+      - name: Run Analysis
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run Tests
+        run: flutter test --exclude-tags=manual
+
+      - name: Build iOS (No Codesign)
+        # Building without codesign to check compilation.
+        # For actual release, we need secrets/certs setup (Fastlane recommended).
+        run: flutter build ios --release --no-codesign
+
+      - name: Upload App Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-app-bundle
+          path: mobile/build/ios/iphoneos/Runner.app

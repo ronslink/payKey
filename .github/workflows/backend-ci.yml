@@ -1,4 +1,4 @@
-name: PayKey CI/CD
+name: Backend CI/CD
 
 on:
   push:
@@ -28,7 +28,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:15
+        image: postgres:17-alpine
         env:
           POSTGRES_USER: paykey
           POSTGRES_PASSWORD: password
@@ -177,39 +177,7 @@ jobs:
         if: always()
         run: echo "Test run completed"
 
-  # ============================================
-  # Mobile CI
-  # ============================================
-  mobile-ci:
-    name: Mobile CI
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./mobile
 
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-
-      - name: Install Dependencies
-        run: flutter pub get
-
-      - name: Run Analysis
-        run: flutter analyze --no-fatal-infos
-
-      - name: Run Tests
-        run: flutter test --exclude-tags=manual
 
   # ============================================
   # Build Docker Image (main branch only)
@@ -254,7 +222,7 @@ jobs:
   deploy:
     name: Deploy to Production
     runs-on: ubuntu-latest
-    needs: [docker-build, mobile-ci]
+    needs: [docker-build]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment: PROD
 
@@ -269,15 +237,25 @@ jobs:
           script: |
             cd /opt/paykey
             
-            # Update/Append IntaSend Secrets to .env
-            # Note: This simple append assumes cleanup or distinct management. 
-            # Ideally, use a dedicated config management strategy.
+            # Ensure deploy directory exists (normally synced, but safe to check)
+            # In a real setup, we would rsync the deploy/ folder to the server here.
+            # For now, we assume the repo is pulled or we create the files on the fly.
+            # BETTER APPROACH: We should scp the deploy files or git pull.
+            # Assuming git pull for simplicity if repo is there:
+            git pull origin main
+
+            # Update/Append Secrets
             sed -i '/INTASEND_/d' .env || true
             echo "INTASEND_PUBLISHABLE_KEY=$INTRASEND_PUBLISHABLE_KEY" >> .env
             echo "INTASEND_SECRET_KEY=$INTRASEND_SECRET" >> .env
             echo "INTASEND_IS_LIVE=true" >> .env
 
-            docker-compose pull backend
-            docker-compose up -d --no-deps backend
+            # 1. Start Infrastructure (DB, Redis, Network)
+            docker-compose -f deploy/docker-compose.infra.yml up -d
+
+            # 2. Deploy Backend
+            docker-compose -f deploy/docker-compose.backend.yml pull backend
+            docker-compose -f deploy/docker-compose.backend.yml up -d backend
+            
             docker image prune -f
             echo "✅ Deployment complete: $(date)"

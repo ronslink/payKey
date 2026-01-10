@@ -5,7 +5,7 @@ services:
     restart: always
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: admin
+      POSTGRES_PASSWORD: Tina76
       POSTGRES_DB: paykey
     ports:
       - "5435:5432"
@@ -31,7 +31,9 @@ services:
       - paykey-network
 
   backend:
-    image: node:20-alpine
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
     container_name: paykey_backend
     restart: always
     ports:
@@ -41,7 +43,7 @@ services:
       - DB_HOST=db
       - DB_PORT=5432
       - DB_USER=postgres
-      - DB_PASSWORD=admin
+      - DB_PASSWORD=Tina76
       - DB_NAME=paykey
       - REDIS_HOST=redis
       - REDIS_PORT=6379
@@ -71,8 +73,24 @@ services:
         condition: service_started
     working_dir: /app
     volumes:
-      - ./backend:/app
-    command: sh -c "npm install -g npm@11.7.0 && npm install && npm run typeorm:migration:run && npm run start:dev"
+      # - ./backend:/app:cached  <-- REMOVED TO FIX ERROR -35
+      - /app/node_modules
+    command: sh -c "npm run start:dev"
+    networks:
+      - paykey-network
+
+  website:
+    image: node:20-alpine
+    container_name: paykey_website
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./website:/app
+      - /app/node_modules
+    working_dir: /app
+    environment:
+      - VITE_API_URL=http://localhost:3000
+    command: sh -c "npm install && npm run dev -- --host"
     networks:
       - paykey-network
 
