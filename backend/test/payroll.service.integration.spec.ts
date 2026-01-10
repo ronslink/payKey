@@ -143,11 +143,11 @@ describe('PayrollService Integration', () => {
       // Verify total calculations
       expect(johnRecord.netSalary + janeRecord.netSalary).toBeCloseTo(
         johnRecord.grossSalary +
-          janeRecord.grossSalary -
-          johnRecord.nssf -
-          johnRecord.paye -
-          janeRecord.nssf -
-          janeRecord.paye,
+        janeRecord.grossSalary -
+        johnRecord.nssf -
+        johnRecord.paye -
+        janeRecord.nssf -
+        janeRecord.paye,
         0,
       );
     });
@@ -332,54 +332,7 @@ describe('PayrollService Integration', () => {
     });
   });
 
-  describe('Performance Benchmarks', () => {
-    let testUser: User;
-    const PERFORMANCE_WORKER_COUNT = 50;
-
-    beforeAll(async () => {
-      testUser = await userRepo.save({
-        email: 'performance-test@paykey.com',
-        passwordHash: '$2b$10$abcdefghijklmnopqrstuvwxyz',
-        firstName: 'Performance',
-        lastName: 'Test',
-        countryCode: 'KE',
-        isOnboardingCompleted: true,
-      });
-
-      // Create multiple workers for performance testing
-      const workers = [];
-      for (let i = 0; i < PERFORMANCE_WORKER_COUNT; i++) {
-        const worker = await workersService.create(testUser.id, {
-          name: `Worker ${i}`,
-          phoneNumber: `+2547123456${i.toString().padStart(2, '0')}`,
-          salaryGross: 30000 + i * 1000, // Varying salaries
-          startDate: '2024-01-01',
-          jobTitle: `Position ${i}`,
-        });
-        workers.push(worker);
-      }
-    });
-
-    it('should process payroll for 50 workers in under 30 seconds', async () => {
-      const startTime = Date.now();
-
-      const payPeriod = await payrollService.runPayroll(
-        testUser.id,
-        new Date('2024-01-31'),
-      );
-
-      const endTime = Date.now();
-      const duration = endTime - startTime;
-
-      // 30 seconds = 30000ms
-      expect(duration).toBeLessThan(30000);
-
-      // Verify all workers were processed
-      const recordCount = await payrollRecordRepo.count({
-        where: { payPeriodId: payPeriod.id },
-      });
-
-      expect(recordCount).toBe(PERFORMANCE_WORKER_COUNT);
-    });
-  });
+  // Performance Benchmarks have been moved to:
+  // test/performance/payroll-performance.e2e-spec.ts
+  // Run them with: npm run test:performance
 });
