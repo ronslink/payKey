@@ -51,6 +51,9 @@ services:
       - REDIS_PORT=6379
       - JWT_SECRET=${JWT_SECRET}
       - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-7d}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - FRONTEND_URL=${FRONTEND_URL:-https://paydome.co}
     depends_on:
       db:
         condition: service_healthy
