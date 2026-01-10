@@ -38,15 +38,5 @@ import FirebaseMessaging
     super.application(application, didRegisterForRemoteNotificationsWithDeviceToken: deviceToken)
   }
   
-  override func application(
-    _ application: UIApplication,
-    didReceiveRemoteNotification userInfo: [AnyHashable: Any],
-    fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
-  ) {
-    // Handle foreground notification
-    if let message = Messaging.messaging().remoteMessage {
-        print("Received foreground message: \(message)")
-    }
-    completionHandler(.newData)
-  }
+
 }

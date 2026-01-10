@@ -4,6 +4,7 @@
  */
 
 import { DataSource } from 'typeorm';
+import { cleanupTestData } from './test-utils';
 
 // Set up test environment variables before any tests run
 process.env.NODE_ENV = 'test';
@@ -54,46 +55,10 @@ beforeAll(async () => {
 
     await globalDataSource.initialize();
 
-    // Tables to delete in order (CHILDREN FIRST, then PARENTS)
-    // This respects foreign key constraints
-    const tablesToDelete = [
-      // Payroll-related (deepest children first)
-      'payroll_records',        // References: pay_periods, workers
-      'tax_submissions',        // References: pay_periods
-      'tax_payments',           // References: pay_periods
-      'pay_periods',            // References: users
+    await globalDataSource.initialize();
 
-      // Worker-related (children before workers)
-      'time_entries',           // References: workers
-      'leave_requests',         // References: workers
-      'terminations',           // References: workers
-      'transactions',           // References: workers
-      'workers',                // References: users
-
-      // Subscription-related
-      'subscription_payments',  // References: subscriptions
-      'subscriptions',          // References: users
-
-      // Other tables
-      'account_mappings',       // References: users
-      'accounting_exports',     // References: users
-      'activities',             // References: users
-      'exports',                // References: users
-      'holidays',               // No FK to users
-      'deletion_requests',      // References: users
-      'properties',             // References: users
-
-      // Users table LAST (parent of many tables)
-      'users',
-    ];
-
-    for (const table of tablesToDelete) {
-      try {
-        await globalDataSource.query(`DELETE FROM "${table}"`);
-      } catch {
-        // Table might not exist, continue
-      }
-    }
+    // Use the central cleanup utility
+    await cleanupTestData(globalDataSource);
 
     console.log('✅ Global database cleanup complete');
   } catch (error: any) {

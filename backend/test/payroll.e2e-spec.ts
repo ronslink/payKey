@@ -61,7 +61,7 @@ describe('Payroll E2E', () => {
     const loginRes = await request(app.getHttpServer())
       .post('/auth/login')
       .send({ email, password })
-      .expect(200);
+      .expect(201);
 
     authToken = loginRes.body.access_token;
     userId = loginRes.body.user.id;
