@@ -16,7 +16,7 @@ jobs:
           host: ${{ secrets.DO_HOST }}
           username: ${{ secrets.DO_USERNAME }}
           key: ${{ secrets.DO_SSH_KEY }}
-          envs: DO_HOST, DO_USERNAME, DO_SSH_KEY, DB_USER, DB_PASSWORD, DB_NAME, JWT_SECRET, INTASEND_PUBLISHABLE_KEY, INTASEND_SECRET
+          envs: DO_HOST, DO_USERNAME, DO_SSH_KEY, DB_USER, DB_PASSWORD, DB_NAME, JWT_SECRET, INTASEND_PUBLISHABLE_KEY, INTASEND_SECRET, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
           script: |
             cd /opt/paykey
             
@@ -41,6 +41,8 @@ jobs:
             INTASEND_PUBLISHABLE_KEY=$INTASEND_PUBLISHABLE_KEY
             INTASEND_SECRET_KEY=$INTASEND_SECRET
             INTASEND_IS_LIVE=true
+            STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY
+            STRIPE_WEBHOOK_SECRET=$STRIPE_WEBHOOK_SECRET
             EOF
             
             # 3. Load Environment Variables for Docker Compose Substitution
