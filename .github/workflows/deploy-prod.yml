@@ -16,7 +16,7 @@ jobs:
           host: ${{ secrets.DO_HOST }}
           username: ${{ secrets.DO_USERNAME }}
           key: ${{ secrets.DO_SSH_KEY }}
-          envs: DO_HOST, DO_USERNAME, DO_SSH_KEY, DB_USER, DB_PASSWORD, DB_NAME, JWT_SECRET, INTASEND_PUBLISHABLE_KEY, INTASEND_SECRET, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
+          envs: DO_HOST, DO_USERNAME, DO_SSH_KEY, DATABASE_URL, JWT_SECRET, INTASEND_PUBLISHABLE_KEY, INTASEND_SECRET, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
           script: |
             cd /opt/paykey
             
@@ -25,15 +25,11 @@ jobs:
             # 1. Update Codebase
             git pull origin main
 
-            # 2. Generate .env file from Secrets (Single Source of Truth)
+            # 2. Generate .env file from Secrets (Using Managed Database)
             echo "🔐 Generating secure .env file..."
             cat <<EOF > .env
             NODE_ENV=production
-            DB_HOST=db
-            DB_PORT=5432
-            DB_USER=$DB_USER
-            DB_PASSWORD=$DB_PASSWORD
-            DB_NAME=$DB_NAME
+            DATABASE_URL=$DATABASE_URL
             REDIS_HOST=redis
             REDIS_PORT=6379
             JWT_SECRET=$JWT_SECRET
@@ -43,6 +39,7 @@ jobs:
             INTASEND_IS_LIVE=true
             STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY
             STRIPE_WEBHOOK_SECRET=$STRIPE_WEBHOOK_SECRET
+            NODE_EXTRA_CA_CERTS=/app/ca-certificate.crt
             EOF
             
             # 3. Load Environment Variables for Docker Compose Substitution

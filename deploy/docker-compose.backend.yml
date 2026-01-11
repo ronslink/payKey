@@ -1,0 +1,37 @@
+# Backend service for production (uses managed DigitalOcean PostgreSQL)
+# Usage: docker-compose -f deploy/docker-compose.backend.yml up -d
+
+services:
+  backend:
+    image: ghcr.io/ronslink/paykey-backend:latest
+    container_name: paykey_backend_prod
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-7d}
+      - INTASEND_PUBLISHABLE_KEY=${INTASEND_PUBLISHABLE_KEY}
+      - INTASEND_SECRET_KEY=${INTASEND_SECRET_KEY}
+      - INTASEND_IS_LIVE=true
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - NODE_EXTRA_CA_CERTS=/app/ca-certificate.crt
+    volumes:
+      - /opt/paykey/ca-certificate.crt:/app/ca-certificate.crt:ro
+    networks:
+      - paykey-network-prod
+    healthcheck:
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:3000/api" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+networks:
+  paykey-network-prod:
+    external: true
