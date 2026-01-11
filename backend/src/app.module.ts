@@ -75,6 +75,7 @@ import { DeletionRequest } from './modules/data-deletion/entities/deletion-reque
         redis: {
           host: configService.get('REDIS_HOST', 'localhost'),
           port: parseInt(configService.get('REDIS_PORT', '6379')),
+          password: configService.get('REDIS_PASSWORD'),
         },
       }),
       inject: [ConfigService],

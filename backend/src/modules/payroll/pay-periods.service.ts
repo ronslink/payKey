@@ -35,7 +35,7 @@ export class PayPeriodsService {
     @InjectRepository(TaxSubmission)
     private taxSubmissionRepository: Repository<TaxSubmission>,
     private taxPaymentsService: TaxPaymentsService,
-  ) {}
+  ) { }
 
   async create(
     createPayPeriodDto: CreatePayPeriodDto,
@@ -137,7 +137,14 @@ export class PayPeriodsService {
     queryBuilder.where('pp.userId = :userId', { userId });
 
     if (status) {
-      queryBuilder.andWhere('pp.status = :status', { status });
+      if (status === PayPeriodStatus.COMPLETED) {
+        // Include both COMPLETED and CLOSED when filtering for COMPLETED
+        queryBuilder.andWhere('pp.status IN (:...statuses)', {
+          statuses: [PayPeriodStatus.COMPLETED, PayPeriodStatus.CLOSED],
+        });
+      } else {
+        queryBuilder.andWhere('pp.status = :status', { status });
+      }
     }
 
     if (frequency) {
