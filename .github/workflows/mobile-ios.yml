@@ -4,11 +4,17 @@ on:
   push:
     branches: [main, develop]
     paths:
-      - 'mobile/**'
+      - 'mobile/ios/**'
+      - 'mobile/lib/**'
+      - 'mobile/pubspec.yaml'
+      - 'mobile/pubspec.lock'
   pull_request:
     branches: [main, develop]
     paths:
-      - 'mobile/**'
+      - 'mobile/ios/**'
+      - 'mobile/lib/**'
+      - 'mobile/pubspec.yaml'
+      - 'mobile/pubspec.lock'
   workflow_dispatch:
 
 jobs:
