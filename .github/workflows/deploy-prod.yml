@@ -16,10 +16,13 @@ jobs:
           host: ${{ secrets.DO_HOST }}
           username: ${{ secrets.DO_USERNAME }}
           key: ${{ secrets.DO_SSH_KEY }}
-          envs: DO_HOST, DO_USERNAME, DO_SSH_KEY, DATABASE_URL, JWT_SECRET, INTASEND_PUBLISHABLE_KEY, INTASEND_SECRET, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
+          envs: DO_HOST, DO_USERNAME, DO_SSH_KEY, DATABASE_URL, JWT_SECRET, INTASEND_PUBLISHABLE_KEY, INTASEND_SECRET, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, CR_PAT
           script: |
             cd /opt/paykey
             
+            # 0. Authenticate with Registry
+            echo $CR_PAT | docker login ghcr.io -u ronslink --password-stdin
+
             echo "🚀 Starting Full Production Deployment..."
             
             # 1. Update Codebase
