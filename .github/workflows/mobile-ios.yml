@@ -1,20 +1,8 @@
 name: Mobile iOS CI
 
+# Manual trigger only - iOS builds are expensive and slow
+# Run manually from GitHub Actions tab when needed
 on:
-  push:
-    branches: [main, develop]
-    paths:
-      - 'mobile/ios/**'
-      - 'mobile/lib/**'
-      - 'mobile/pubspec.yaml'
-      - 'mobile/pubspec.lock'
-  pull_request:
-    branches: [main, develop]
-    paths:
-      - 'mobile/ios/**'
-      - 'mobile/lib/**'
-      - 'mobile/pubspec.yaml'
-      - 'mobile/pubspec.lock'
   workflow_dispatch:
 
 jobs:

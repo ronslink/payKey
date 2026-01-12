@@ -1,14 +1,7 @@
 name: Mobile Android CI
 
+# Manual trigger only - run from GitHub Actions tab when needed
 on:
-  push:
-    branches: [main, develop]
-    paths:
-      - 'mobile/**'
-  pull_request:
-    branches: [main, develop]
-    paths:
-      - 'mobile/**'
   workflow_dispatch:
 
 jobs:
