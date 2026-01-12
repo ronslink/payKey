@@ -72,11 +72,11 @@ describe('PayrollService', () => {
         },
         {
           provide: getRepositoryToken(LeaveRequest),
-          useValue: { find: jest.fn() },
+          useValue: { find: jest.fn().mockResolvedValue([]) },
         },
         {
           provide: getRepositoryToken(TimeEntry),
-          useValue: { find: jest.fn() },
+          useValue: { find: jest.fn().mockResolvedValue([]) },
         },
         {
           provide: TaxesService,
@@ -103,6 +103,15 @@ describe('PayrollService', () => {
             transaction: jest.fn((cb) =>
               cb({ save: jest.fn(), findOne: jest.fn() }),
             ),
+          },
+        },
+        {
+          provide: 'BullQueue_payouts',
+          useValue: {
+            add: jest.fn().mockResolvedValue({ id: 'job-1' }),
+            process: jest.fn(),
+            on: jest.fn(),
+            emit: jest.fn(),
           },
         },
       ],

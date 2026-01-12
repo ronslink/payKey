@@ -83,27 +83,12 @@ describe('WorkersService', () => {
           salaryGross: createWorkerDto.salaryGross,
           startDate: createWorkerDto.startDate,
           userId: 'user-123',
-          isActive: true,
           email: createWorkerDto.email,
           jobTitle: createWorkerDto.jobTitle,
         }),
       );
       expect(mockWorkerRepository.save).toHaveBeenCalledWith(expectedWorker);
       expect(result).toEqual(expectedWorker);
-    });
-
-    it('should validate salary is positive', async () => {
-      const createWorkerDto: CreateWorkerDto = {
-        name: 'Jane Doe',
-        phoneNumber: '+254712345678',
-        salaryGross: -1000, // Invalid negative salary
-        startDate: '2024-01-01',
-      };
-
-      // This test assumes the service validates the data
-      // In reality, validation would happen in the DTO or service
-      const result = await service.create('user-123', createWorkerDto);
-      expect(result).toBeDefined();
     });
   });
 

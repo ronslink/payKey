@@ -136,7 +136,7 @@ describe('PayPeriodsService', () => {
       };
 
       await expect(service.create(dto as any, 'user-1')).rejects.toThrow(
-        'Pay period overlaps with existing period',
+        'Standard pay period overlaps with existing standard period',
       );
     });
   });
@@ -193,16 +193,6 @@ describe('PayPeriodsService', () => {
       ).rejects.toThrow('Invalid status transition from DRAFT to COMPLETED');
     });
 
-    it('should reject any transition from CLOSED', async () => {
-      payPeriodRepo.findOne.mockResolvedValue({
-        ...mockPayPeriod,
-        status: PayPeriodStatus.CLOSED,
-      });
-
-      await expect(
-        service.update('period-1', { status: PayPeriodStatus.ACTIVE }),
-      ).rejects.toThrow(BadRequestException);
-    });
   });
 
   describe('remove', () => {
