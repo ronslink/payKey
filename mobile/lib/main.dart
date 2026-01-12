@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 // Features
 import 'features/auth/presentation/pages/login_page.dart';
@@ -44,6 +46,7 @@ import 'features/profile/presentation/pages/edit_profile_page.dart';
 import 'core/network/api_service.dart';
 import 'core/widgets/feature_gate.dart';
 import 'core/theme/app_theme.dart';
+import 'core/services/notification_service.dart';
 import 'main_layout_new.dart';
 
 // New Pages
@@ -60,6 +63,16 @@ import 'features/settings/settings.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Firebase
+  await Firebase.initializeApp();
+  
+  // Set up background message handler
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  
+  // Initialize notification service
+  await NotificationService().initialize();
+  
   runApp(const ProviderScope(child: PaydomeApp()));
 }
 

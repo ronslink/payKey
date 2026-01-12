@@ -1,7 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
+import * as admin from 'firebase-admin';
+import * as path from 'path';
+import * as fs from 'fs';
 
 export enum NotificationType {
   SMS = 'SMS',
@@ -19,6 +22,7 @@ export enum NotificationStatus {
 interface NotificationRequest {
   recipientPhone?: string;
   recipientEmail?: string;
+  recipientToken?: string; // FCM device token for push
   subject?: string;
   message: string;
   type: NotificationType;
@@ -26,14 +30,55 @@ interface NotificationRequest {
   metadata?: Record<string, any>;
 }
 
+interface PushNotificationRequest {
+  token: string;
+  title: string;
+  body: string;
+  data?: Record<string, string>;
+}
+
 @Injectable()
-export class NotificationsService {
+export class NotificationsService implements OnModuleInit {
   private readonly logger = new Logger(NotificationsService.name);
+  private firebaseInitialized = false;
 
   constructor(
     private configService: ConfigService,
     private httpService: HttpService,
-  ) {}
+  ) { }
+
+  onModuleInit() {
+    this.initializeFirebase();
+  }
+
+  private initializeFirebase(): void {
+    try {
+      const serviceAccountPath = this.configService.get<string>(
+        'FIREBASE_SERVICE_ACCOUNT_PATH',
+        './firebase-service-account.json',
+      );
+
+      const absolutePath = path.resolve(serviceAccountPath);
+
+      if (fs.existsSync(absolutePath)) {
+        const serviceAccount = JSON.parse(fs.readFileSync(absolutePath, 'utf8'));
+
+        if (!admin.apps.length) {
+          admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount),
+          });
+          this.firebaseInitialized = true;
+          this.logger.log('Firebase Admin SDK initialized successfully');
+        }
+      } else {
+        this.logger.warn(
+          `Firebase service account file not found at ${absolutePath}. Push notifications will be mocked.`,
+        );
+      }
+    } catch (error) {
+      this.logger.error('Failed to initialize Firebase Admin SDK:', error);
+    }
+  }
 
   async sendNotification(notificationRequest: NotificationRequest): Promise<{
     success: boolean;
@@ -78,7 +123,6 @@ export class NotificationsService {
       );
     }
 
-    // Simulate SMS sending (replace with actual SMS provider integration)
     const smsProvider =
       (this.configService.get('SMS_PROVIDER') as string) || 'MOCK';
 
@@ -95,9 +139,6 @@ export class NotificationsService {
 
       case 'AFRICANSTALKING':
         return await this.sendSMSViaAfricanStalking(notificationRequest);
-
-      case 'TWILIO':
-        return await this.sendSMSViaTwilio(notificationRequest);
 
       default:
         throw new Error(`Unsupported SMS provider: ${smsProvider}`);
@@ -117,41 +158,50 @@ export class NotificationsService {
     ) as string;
 
     if (!apiKey || !username) {
-      throw new Error('African Stalking credentials not configured');
+      throw new Error('Africa\'s Talking credentials not configured');
     }
 
     try {
+      // Use sandbox endpoint if username is 'sandbox'
+      const isSandbox = username.toLowerCase() === 'sandbox';
+      const apiUrl = isSandbox
+        ? 'https://api.sandbox.africastalking.com/version1/messaging'
+        : 'https://api.africastalking.com/version1/messaging';
+
       const response = await lastValueFrom(
         this.httpService.post(
-          'https://api.africastalking.com/version1/messaging',
-          {
+          apiUrl,
+          new URLSearchParams({
             username,
-            to: notificationRequest.recipientPhone,
+            to: notificationRequest.recipientPhone!,
             message: notificationRequest.message,
-          },
+          }).toString(),
           {
             headers: {
-              Authorization: `Bearer ${apiKey}`,
+              apiKey: apiKey,
               'Content-Type': 'application/x-www-form-urlencoded',
+              Accept: 'application/json',
             },
           },
         ),
       );
 
       const result = response.data as {
-        status: string;
-        message: string;
-        messages: Array<{ messageId: string }>;
+        SMSMessageData: {
+          Message: string;
+          Recipients: Array<{ messageId: string; status: string }>;
+        };
       };
-      if (result.status === 'Success') {
+
+      if (result.SMSMessageData?.Recipients?.[0]?.status === 'Success') {
         return {
           success: true,
-          messageId: result.messages[0].messageId,
+          messageId: result.SMSMessageData.Recipients[0].messageId,
         };
       } else {
         return {
           success: false,
-          error: result.message || 'Failed to send SMS',
+          error: result.SMSMessageData?.Message || 'Failed to send SMS',
         };
       }
     } catch (error) {
@@ -162,18 +212,6 @@ export class NotificationsService {
         error: errorMessage,
       };
     }
-  }
-
-  private async sendSMSViaTwilio(
-    _notificationRequest: NotificationRequest,
-  ): Promise<{
-    success: boolean;
-    messageId?: string;
-    error?: string;
-  }> {
-    // Implementation for Twilio SMS
-    // This would require Twilio SDK and credentials
-    throw new Error('Twilio SMS implementation not configured');
   }
 
   private async sendEmail(notificationRequest: NotificationRequest): Promise<{
@@ -187,16 +225,79 @@ export class NotificationsService {
       );
     }
 
-    // For MVP, we'll simulate email sending
-    // In production, integrate with services like SendGrid, AWS SES, or similar
-    this.logger.log(`MOCK EMAIL sent to ${notificationRequest.recipientEmail}`);
-    this.logger.log(`Subject: ${notificationRequest.subject}`);
-    this.logger.log(`Message: ${notificationRequest.message}`);
+    const emailProvider =
+      (this.configService.get('EMAIL_PROVIDER') as string) || 'MOCK';
 
-    return {
-      success: true,
-      messageId: `email_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    };
+    switch (emailProvider.toUpperCase()) {
+      case 'SENDGRID':
+        return await this.sendEmailViaSendGrid(notificationRequest);
+
+      case 'MOCK':
+      default:
+        this.logger.log(`MOCK EMAIL sent to ${notificationRequest.recipientEmail}`);
+        this.logger.log(`Subject: ${notificationRequest.subject}`);
+        this.logger.log(`Message: ${notificationRequest.message}`);
+        return {
+          success: true,
+          messageId: `email_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        };
+    }
+  }
+
+  private async sendEmailViaSendGrid(
+    notificationRequest: NotificationRequest,
+  ): Promise<{
+    success: boolean;
+    messageId?: string;
+    error?: string;
+  }> {
+    const apiKey = this.configService.get('SENDGRID_API_KEY') as string;
+    const fromEmail = this.configService.get('SENDGRID_FROM_EMAIL', 'noreply@paydome.co') as string;
+
+    if (!apiKey) {
+      throw new Error('SendGrid API key not configured');
+    }
+
+    try {
+      const response = await lastValueFrom(
+        this.httpService.post(
+          'https://api.sendgrid.com/v3/mail/send',
+          {
+            personalizations: [
+              {
+                to: [{ email: notificationRequest.recipientEmail }],
+              },
+            ],
+            from: { email: fromEmail },
+            subject: notificationRequest.subject,
+            content: [
+              {
+                type: 'text/plain',
+                value: notificationRequest.message,
+              },
+            ],
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+            },
+          },
+        ),
+      );
+
+      return {
+        success: true,
+        messageId: response.headers['x-message-id'] || `sendgrid_${Date.now()}`,
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to send email';
+      return {
+        success: false,
+        error: errorMessage,
+      };
+    }
   }
 
   private async sendPushNotification(
@@ -206,16 +307,78 @@ export class NotificationsService {
     messageId?: string;
     error?: string;
   }> {
-    // Implementation for push notifications (Firebase, etc.)
-    // For MVP, we'll simulate this as well
-    this.logger.log(
-      `MOCK PUSH notification sent: ${notificationRequest.message}`,
-    );
+    if (!notificationRequest.recipientToken) {
+      this.logger.warn('No FCM token provided for push notification');
+      return {
+        success: false,
+        error: 'No FCM token provided',
+      };
+    }
 
-    return {
-      success: true,
-      messageId: `push_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    };
+    if (!this.firebaseInitialized) {
+      this.logger.log(
+        `MOCK PUSH notification sent: ${notificationRequest.message}`,
+      );
+      return {
+        success: true,
+        messageId: `push_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      };
+    }
+
+    try {
+      const message: admin.messaging.Message = {
+        token: notificationRequest.recipientToken,
+        notification: {
+          title: notificationRequest.subject || 'PayDome',
+          body: notificationRequest.message,
+        },
+        data: notificationRequest.metadata as Record<string, string> | undefined,
+        android: {
+          priority: 'high',
+          notification: {
+            sound: 'default',
+          },
+        },
+        apns: {
+          payload: {
+            aps: {
+              sound: 'default',
+            },
+          },
+        },
+      };
+
+      const response = await admin.messaging().send(message);
+      this.logger.log(`Push notification sent successfully: ${response}`);
+
+      return {
+        success: true,
+        messageId: response,
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to send push notification';
+      this.logger.error('Push notification failed:', error);
+      return {
+        success: false,
+        error: errorMessage,
+      };
+    }
+  }
+
+  // Public method for sending push to a specific device token
+  async sendPushToDevice(request: PushNotificationRequest): Promise<{
+    success: boolean;
+    messageId?: string;
+    error?: string;
+  }> {
+    return this.sendNotification({
+      recipientToken: request.token,
+      subject: request.title,
+      message: request.body,
+      type: NotificationType.PUSH,
+      metadata: request.data,
+    });
   }
 
   // Helper methods for common notifications
@@ -272,7 +435,7 @@ export class NotificationsService {
     pendingWorkers: number,
     dueDate: Date,
   ): Promise<{ success: boolean; error?: string }> {
-    const subject = 'PayKey - Payroll Processing Reminder';
+    const subject = 'PayDome - Payroll Processing Reminder';
     const message = `Hi ${employerName}, you have ${pendingWorkers} workers pending payroll processing. Due date: ${dueDate.toDateString()}. Please process payments to avoid delays.`;
 
     const result = await this.sendNotification({
@@ -291,7 +454,7 @@ export class NotificationsService {
     recipientName: string,
     tier: string,
   ): Promise<{ success: boolean; error?: string }> {
-    const message = `Welcome to PayKey, ${recipientName}! You're now on the ${tier} plan. Start by adding your first worker.`;
+    const message = `Welcome to PayDome, ${recipientName}! You're now on the ${tier} plan. Start by adding your first worker.`;
 
     const result = await this.sendNotification({
       recipientPhone,

@@ -55,6 +55,8 @@ import { TimeEntry } from './modules/time-tracking/entities/time-entry.entity';
 import { Export } from './modules/export/entities/export.entity';
 import { Holiday } from './modules/holidays/entities/holiday.entity';
 import { DeletionRequest } from './modules/data-deletion/entities/deletion-request.entity';
+import { Notification } from './modules/notifications/entities/notification.entity';
+import { DeviceToken } from './modules/notifications/entities/device-token.entity';
 
 @Module({
   imports: [

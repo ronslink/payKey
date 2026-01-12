@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 // Domain imports - adjust paths as needed
 import '../../auth/presentation/providers/auth_provider.dart';
 import '../../subscriptions/presentation/providers/subscription_provider.dart';
+import '../../properties/data/models/property_model.dart';
+import '../../properties/presentation/providers/properties_provider.dart';
 import '../providers/settings_provider.dart';
 
 // Local imports
@@ -160,7 +162,14 @@ class _SettingsContent extends ConsumerWidget {
   // ===========================================================================
 
   List<SettingItem> _buildPreferencesItems(BuildContext context, WidgetRef ref) {
-    return [
+    final subscriptionAsync = ref.watch(userSubscriptionProvider);
+    final isPlatinum = subscriptionAsync.when(
+      data: (sub) => sub?.plan.tier == 'PLATINUM',
+      loading: () => false,
+      error: (_, __) => false,
+    );
+
+    final items = <SettingItem>[
       SettingItem(
         icon: Icons.dark_mode_outlined,
         title: 'Dark Mode',
@@ -186,15 +195,17 @@ class _SettingsContent extends ConsumerWidget {
         subtitle: EmploymentTypeLabels.format(settings.defaultEmploymentType),
         onTap: () => _showEmploymentTypePicker(context, ref),
       ),
-      SettingItem(
-        icon: Icons.home_outlined,
-        title: 'Default Property',
-        subtitle: settings.defaultPropertyId != null
-            ? 'Property selected'
-            : 'Not configured',
-        onTap: () => context.push(SettingsRoutes.properties),
-      ),
     ];
+
+    // Only show property setting for PLATINUM users
+    if (isPlatinum) {
+      items.add(_DefaultPropertySetting(
+        settings: settings,
+        onTap: () => _showPropertyPicker(context, ref),
+      ));
+    }
+
+    return items;
   }
 
   void _showFrequencyPicker(BuildContext context, WidgetRef ref) {
@@ -401,6 +412,203 @@ class _SettingsContent extends ConsumerWidget {
         content: Text('$feature coming soon'),
         behavior: SnackBarBehavior.floating,
       ),
+    );
+  }
+
+  // ===========================================================================
+  // PROPERTY PICKER
+  // ===========================================================================
+
+  void _showPropertyPicker(BuildContext context, WidgetRef ref) {
+    final propertiesAsync = ref.watch(propertiesProvider);
+    
+    propertiesAsync.when(
+      data: (properties) {
+        if (properties.isEmpty) {
+          // No properties - navigate to add property
+          _showNoPropertiesDialog(context);
+          return;
+        }
+        
+        if (properties.length == 1) {
+          // Single property - auto-select it
+          ref.read(settingsProvider.notifier).updateDefaultProperty(properties.first.id);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Default property set to: ${properties.first.name}'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          return;
+        }
+        
+        // Multiple properties - show picker
+        _showPropertySelectionSheet(context, ref, properties);
+      },
+      loading: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Loading properties...')),
+        );
+      },
+      error: (error, _) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading properties: $error')),
+        );
+      },
+    );
+  }
+
+  void _showNoPropertiesDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('No Properties'),
+        content: const Text('You need to add a property first to set it as default.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              context.push('/properties/add');
+            },
+            child: const Text('Add Property'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPropertySelectionSheet(
+    BuildContext context, 
+    WidgetRef ref, 
+    List<PropertyModel> properties
+  ) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Select Default Property',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...properties.map((property) {
+                final isSelected = property.id == settings.defaultPropertyId;
+                return ListTile(
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.home_work,
+                      color: Color(0xFF3B82F6),
+                    ),
+                  ),
+                  title: Text(
+                    property.name,
+                    style: TextStyle(
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                  subtitle: Text(
+                    property.address,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  trailing: isSelected 
+                      ? const Icon(Icons.check_circle, color: Color(0xFF10B981))
+                      : const Icon(Icons.radio_button_unchecked, color: Colors.grey),
+                  onTap: () {
+                    ref.read(settingsProvider.notifier).updateDefaultProperty(property.id);
+                    Navigator.pop(ctx);
+                    _showSavedSnackbar(context, 'Default property updated');
+                  },
+                );
+              }),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Widget for the default property setting in preferences
+class _DefaultPropertySetting extends ConsumerWidget {
+  final UserSettings settings;
+  final VoidCallback onTap;
+
+  const _DefaultPropertySetting({
+    required this.settings,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final propertiesAsync = ref.watch(propertiesProvider);
+    
+    return SettingItem(
+      icon: Icons.home_outlined,
+      title: 'Default Property',
+      subtitle: _getSubtitle(propertiesAsync),
+      trailing: propertiesAsync.when(
+        data: (properties) {
+          if (properties.length > 1) {
+            return const Icon(Icons.chevron_right, color: Colors.grey);
+          }
+          return null;
+        },
+        loading: () => const SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+        error: (_) => const Icon(Icons.error_outline, color: Colors.red),
+      ),
+      onTap: onTap,
+    );
+  }
+
+  String _getSubtitle(AsyncValue<List<PropertyModel>> propertiesAsync) {
+    return propertiesAsync.when(
+      data: (properties) {
+        if (properties.isEmpty) {
+          return 'No properties - tap to add';
+        }
+        if (settings.defaultPropertyId == null) {
+          if (properties.length == 1) {
+            return 'Auto-set to: ${properties.first.name}';
+          }
+          return 'Tap to select';
+        }
+        
+        // Find the selected property
+        final selectedProperty = properties.firstWhere(
+          (p) => p.id == settings.defaultPropertyId,
+          orElse: () => properties.first,
+        );
+        return selectedProperty.name;
+      },
+      loading: () => 'Loading...',
+      error: (_) => 'Error loading',
     );
   }
 }

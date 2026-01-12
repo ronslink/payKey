@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/models/worker_model.dart';
+import '../../properties/presentation/providers/properties_provider.dart';
+import '../../../settings/providers/settings_provider.dart';
 import '../providers/workers_provider.dart';
 
 // =============================================================================
@@ -153,6 +155,14 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
   }
 
   CreateWorkerRequest _buildCreateRequest() {
+    // Get default property ID from settings (only for PLATINUM users)
+    final settings = ref.read(settingsProvider);
+    final defaultPropertyId = settings.when(
+      data: (s) => s.defaultPropertyId,
+      loading: () => null,
+      error: (_, __) => null,
+    );
+    
     return CreateWorkerRequest(
       name: _controllers.name.trimmedText,
       phoneNumber: _controllers.phone.trimmedText,
@@ -177,6 +187,8 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
       emergencyContactPhone: _controllers.emergencyPhone.nullableText,
       emergencyContactRelationship: _controllers.emergencyRelationship.nullableText,
       dateOfBirth: _dateOfBirth,
+      // Link worker to default property (only if PLATINUM user has one set)
+      propertyId: defaultPropertyId,
     );
   }
 

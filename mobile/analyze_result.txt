@@ -1,0 +1,42 @@
+Resolving dependencies...
+Downloading packages...
+  _fe_analyzer_shared 91.0.0 (93.0.0 available)
+  analyzer 8.4.1 (10.0.0 available)
+  characters 1.4.0 (1.4.1 available)
+  code_builder 4.11.0 (4.11.1 available)
+  equatable 2.0.7 (2.0.8 available)
+  ffi 2.1.4 (2.1.5 available)
+  file_picker 8.3.7 (10.3.8 available)
+  fl_chart 0.66.2 (1.1.1 available)
+  flutter_launcher_icons 0.13.1 (0.14.4 available)
+  flutter_riverpod 3.0.3 (3.1.0 available)
+  freezed 3.2.3 (3.2.4 available)
+  geolocator_linux 0.2.3 (0.2.4 available)
+  google_fonts 6.3.3 (7.0.0 available)
+  hugeicons 0.0.11 (1.1.4 available)
+  json_serializable 6.11.2 (6.11.3 available)
+  matcher 0.12.17 (0.12.18 available)
+  material_color_utilities 0.11.1 (0.13.0 available)
+  package_info_plus 8.3.1 (9.0.0 available)
+  riverpod 3.0.3 (3.1.0 available)
+  share_plus 10.1.4 (12.0.1 available)
+  share_plus_platform_interface 5.0.2 (6.1.0 available)
+  source_helper 1.3.8 (1.3.9 available)
+  test 1.26.3 (1.29.0 available)
+  test_api 0.7.7 (0.7.9 available)
+  test_core 0.6.12 (0.6.15 available)
+  watcher 1.2.0 (1.2.1 available)
+Got dependencies!
+26 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+Analyzing mobile...                                             
+
+  error - The argument type '_DefaultPropertySetting' can't be assigned to the parameter type 'SettingItem'.  - lib\features\settings\pages\settings_page.dart:202:17 - argument_type_not_assignable
+  error - A value of type 'SettingItem' can't be returned from the method 'build' because it has a return type of 'Widget' - lib\features\settings\pages\settings_page.dart:568:12 - return_of_invalid_type
+  error - The argument type 'Icon Function(Object)' can't be assigned to the parameter type 'Widget? Function(Object, StackTrace)'.  - lib\features\settings\pages\settings_page.dart:584:16 - argument_type_not_assignable
+  error - The argument type 'String Function(Object)' can't be assigned to the parameter type 'String Function(Object, StackTrace)'.  - lib\features\settings\pages\settings_page.dart:611:14 - argument_type_not_assignable
+warning - Unused import: '../../properties/data/repositories/properties_repository.dart' - lib\features\settings\providers\settings_provider.dart:5:8 - unused_import
+warning - Unused import: '../../properties/data/models/property_model.dart' - lib\features\settings\providers\settings_provider.dart:6:8 - unused_import
+  error - Target of URI doesn't exist: '../../properties/presentation/providers/properties_provider.dart' - lib\features\workers\presentation\pages\worker_form_page.dart:5:8 - uri_does_not_exist
+
+7 issues found. (ran in 4.3s)
