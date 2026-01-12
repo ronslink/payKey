@@ -11,6 +11,7 @@ import { PaymentsModule } from '../payments/payments.module';
 import { Transaction } from '../payments/entities/transaction.entity';
 
 import { SubscriptionCallbackController } from './subscription-callback.controller';
+import { ImportFeatureGuard } from './import-feature.guard';
 
 @Module({
   imports: [
@@ -23,7 +24,7 @@ import { SubscriptionCallbackController } from './subscription-callback.controll
     FeatureAccessController,
     SubscriptionCallbackController,
   ],
-  providers: [FeatureAccessService, MockDataService],
-  exports: [FeatureAccessService, MockDataService],
+  providers: [FeatureAccessService, MockDataService, ImportFeatureGuard],
+  exports: [FeatureAccessService, MockDataService, ImportFeatureGuard],
 })
 export class SubscriptionsModule {}

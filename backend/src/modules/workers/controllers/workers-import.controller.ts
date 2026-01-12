@@ -12,7 +12,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
-import { SubscriptionGuard } from '../../subscriptions/subscription.guard';
+import { ImportFeatureGuard } from '../../subscriptions/import-feature.guard';
 import { WorkersService } from '../workers.service';
 import type { AuthenticatedRequest } from '../../../common/interfaces/user.interface';
 import * as ExcelJS from 'exceljs';
@@ -34,7 +34,7 @@ export class WorkersImportController {
   ) {}
 
   @Get('template')
-  @UseGuards(SubscriptionGuard)
+  @UseGuards(ImportFeatureGuard)
   async getTemplate(@Res() res: Response) {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Workers Import Template');
@@ -160,7 +160,7 @@ export class WorkersImportController {
   }
 
   @Post('import')
-  @UseGuards(SubscriptionGuard)
+  @UseGuards(ImportFeatureGuard)
   @UseInterceptors(FileInterceptor('file'))
   async importFromExcel(
     @Request() req: AuthenticatedRequest,

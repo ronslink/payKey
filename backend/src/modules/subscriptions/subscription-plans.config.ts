@@ -5,6 +5,7 @@ export interface SubscriptionPlan {
   priceKES: number;
   workerLimit: number;
   features: string[];
+  importAccess: boolean;
   isPopular?: boolean;
 }
 
@@ -16,6 +17,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     priceKES: 0,
     workerLimit: 3,
     features: ['Up to 3 workers', 'Automatic tax calculations'],
+    importAccess: false,
   },
   {
     tier: 'BASIC',
@@ -29,6 +31,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
       'M-Pesa payments',
       'P9 Tax Cards',
     ],
+    importAccess: false,
     isPopular: true,
   },
   {
@@ -45,7 +48,9 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
       'Advanced reporting',
       'Accounting exports',
       'Priority support',
+      'Excel worker import',
     ],
+    importAccess: true,
   },
   {
     tier: 'PLATINUM',
@@ -65,7 +70,9 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
       'Priority support',
       'Automatic tax payments to KRA',
       'Multi-property management',
+      'Excel worker import',
     ],
+    importAccess: true,
   },
 ];
 
@@ -82,4 +89,10 @@ export function canAddWorker(
   const plan = getPlanByTier(tier);
   if (!plan) return false;
   return currentWorkerCount < plan.workerLimit;
+}
+
+export function canImport(tier: string): boolean {
+  const plan = getPlanByTier(tier);
+  if (!plan) return false;
+  return plan.importAccess;
 }
