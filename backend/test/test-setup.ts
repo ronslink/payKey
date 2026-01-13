@@ -47,7 +47,7 @@ beforeAll(async () => {
       host: process.env.DB_HOST || 'localhost',
       port: parseInt(process.env.DB_PORT || '5432'),
       username: process.env.DB_USER || process.env.DB_USERNAME || 'postgres',
-      password: process.env.DB_PASSWORD || 'password',
+      password: process.env.DB_PASSWORD || 'Tina76',
       database: process.env.DB_NAME || 'paykey_test',
       synchronize: false,
       logging: false,
@@ -61,8 +61,9 @@ beforeAll(async () => {
     await cleanupTestData(globalDataSource);
 
     console.log('✅ Global database cleanup complete');
-  } catch (error: any) {
-    console.warn(`⚠️ Global cleanup warning: ${error.message}`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.warn(`⚠️ Global cleanup warning: ${errorMessage}`);
     // Don't fail the test suite if cleanup fails - individual tests will handle their own cleanup
   }
 });

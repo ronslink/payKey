@@ -2,6 +2,12 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
+import { TestHelpers, createTestHelpers } from './helpers/test-helpers';
+import {
+  SubscriptionPlan,
+  CurrentSubscriptionResponse,
+  UsageResponse,
+} from './types/test-types';
 
 /**
  * Subscription Payments E2E Tests
@@ -11,9 +17,12 @@ import { AppModule } from './../src/app.module';
  * - Get current subscription
  * - Usage tracking
  * - Payment history
+ * 
+ * Uses TestHelpers for type-safe test user creation.
  */
 describe('Subscription Payments E2E', () => {
   let app: INestApplication;
+  let helpers: TestHelpers;
   let authToken: string;
 
   beforeAll(async () => {
@@ -24,24 +33,18 @@ describe('Subscription Payments E2E', () => {
     app = moduleFixture.createNestApplication();
     await app.init();
 
-    // Register and login test user
-    const email = `subscriptions.test.${Date.now()}@paykey.com`;
-    const password = 'Password123!';
+    // Create test helpers instance
+    helpers = createTestHelpers(app);
 
-    await request(app.getHttpServer()).post('/auth/register').send({
-      email,
-      password,
+    // Register and login test user
+    const testUser = await helpers.createTestUser({
+      emailPrefix: 'subscriptions.test',
       firstName: 'Subscriptions',
       lastName: 'Tester',
       businessName: 'Subscriptions Test Corp',
-      phone: '+254700000600',
     });
 
-    const loginRes = await request(app.getHttpServer())
-      .post('/auth/login')
-      .send({ email, password });
-
-    authToken = loginRes.body.access_token;
+    authToken = testUser.token;
   });
 
   afterAll(async () => {
@@ -57,11 +60,12 @@ describe('Subscription Payments E2E', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
-      expect(Array.isArray(res.body)).toBe(true);
-      expect(res.body.length).toBeGreaterThan(0);
-      expect(res.body[0]).toHaveProperty('tier');
-      expect(res.body[0]).toHaveProperty('name');
-      expect(res.body[0]).toHaveProperty('price_usd');
+      const plans = res.body as SubscriptionPlan[];
+      expect(Array.isArray(plans)).toBe(true);
+      expect(plans.length).toBeGreaterThan(0);
+      expect(plans[0]).toHaveProperty('tier');
+      expect(plans[0]).toHaveProperty('name');
+      expect(plans[0]).toHaveProperty('price_usd');
     });
   });
 
@@ -72,9 +76,10 @@ describe('Subscription Payments E2E', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
-      expect(res.body).toHaveProperty('tier');
+      const subscription = res.body as CurrentSubscriptionResponse;
+      expect(subscription).toHaveProperty('tier');
       // New users should be on FREE tier
-      expect(res.body.tier).toBe('FREE');
+      expect(subscription.tier).toBe('FREE');
     });
   });
 
@@ -85,10 +90,11 @@ describe('Subscription Payments E2E', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
-      expect(res.body).toHaveProperty('currentPlan');
-      expect(res.body).toHaveProperty('workerUsage');
-      expect(res.body).toHaveProperty('workerLimit');
-      expect(res.body).toHaveProperty('usagePercentage');
+      const usage = res.body as UsageResponse;
+      expect(usage).toHaveProperty('currentPlan');
+      expect(usage).toHaveProperty('workerUsage');
+      expect(usage).toHaveProperty('workerLimit');
+      expect(usage).toHaveProperty('usagePercentage');
     });
   });
 

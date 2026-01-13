@@ -2,15 +2,35 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
-import {
-  cleanupTestData,
-  generateTestEmail,
-  generateTestPhone,
-} from './test-utils';
+import { TestHelpers, createTestHelpers } from './helpers/test-helpers';
+import { cleanupTestData, generateTestPhone } from './test-utils';
 import { DataSource } from 'typeorm';
+import {
+  WorkerResponse,
+  PayPeriodResponse,
+  PayrollCalculationResponse,
+  SavedPayrollRecord,
+  FinalizeResponse,
+  TaxSubmissionResponse,
+} from './types/test-types';
 
+/**
+ * Payroll Complete Flow E2E Tests
+ * 
+ * Tests the complete end-to-end payroll workflow:
+ * 1. Add a worker
+ * 2. Generate pay periods
+ * 3. Activate pay period
+ * 4. Calculate and save draft payroll
+ * 5. Finalize payroll
+ * 6. Query tax submissions
+ * 7. Download payslip
+ * 
+ * Uses TestHelpers for type-safe operations.
+ */
 describe('Payroll Complete Flow E2E', () => {
   let app: INestApplication;
+  let helpers: TestHelpers;
   let authToken: string;
   let userId: string;
   let payPeriodId: string;
@@ -30,26 +50,19 @@ describe('Payroll Complete Flow E2E', () => {
     dataSource = app.get(DataSource);
     await cleanupTestData(dataSource);
 
-    // Register a new user
-    const email = generateTestEmail('complete.flow');
-    const password = 'Password123!';
+    // Create test helpers instance
+    helpers = createTestHelpers(app);
 
-    await request(app.getHttpServer()).post('/auth/register').send({
-      email,
-      password,
+    // Register and login test user
+    const testUser = await helpers.createTestUser({
+      emailPrefix: 'complete.flow',
       firstName: 'Complete',
       lastName: 'Tester',
       businessName: 'Complete Flows Ltd',
-      phone: generateTestPhone(),
     });
 
-    // Login
-    const loginRes = await request(app.getHttpServer())
-      .post('/auth/login')
-      .send({ email, password });
-
-    authToken = loginRes.body.access_token;
-    userId = loginRes.body.user.id;
+    authToken = testUser.token;
+    userId = testUser.userId;
   });
 
   afterAll(async () => {
@@ -66,20 +79,23 @@ describe('Payroll Complete Flow E2E', () => {
   });
 
   it('1. Should add a worker', async () => {
+    const workerPhone = generateTestPhone();
+
     const res = await request(app.getHttpServer())
       .post('/workers')
       .set('Authorization', `Bearer ${authToken}`)
       .send({
         name: 'Jane Doe',
-        phoneNumber: '+254712345678',
+        phoneNumber: workerPhone,
         salaryGross: 50000,
         startDate: '2024-01-01',
         paymentMethod: 'MPESA',
-        mpesaNumber: '+254712345678',
+        mpesaNumber: workerPhone,
       })
       .expect(201);
 
-    workerId = res.body.id;
+    const worker = res.body as WorkerResponse;
+    workerId = worker.id;
     expect(workerId).toBeDefined();
   });
 
@@ -95,9 +111,10 @@ describe('Payroll Complete Flow E2E', () => {
       })
       .expect(201);
 
-    expect(res.body).toHaveLength(12);
+    const periods = res.body as PayPeriodResponse[];
+    expect(periods).toHaveLength(12);
     // Save January status
-    payPeriodId = res.body[0].id;
+    payPeriodId = periods[0].id;
   });
 
   it('3. Should activate pay period', async () => {
@@ -114,7 +131,8 @@ describe('Payroll Complete Flow E2E', () => {
       .set('Authorization', `Bearer ${authToken}`)
       .expect(200);
 
-    const items = calcRes.body.payrollItems;
+    const calculation = calcRes.body as PayrollCalculationResponse;
+    const items = calculation.payrollItems;
     expect(items).toHaveLength(1);
     expect(items[0].workerId).toBe(workerId);
     expect(items[0].grossSalary).toBe(50000);
@@ -129,8 +147,9 @@ describe('Payroll Complete Flow E2E', () => {
       })
       .expect(201);
 
-    expect(saveRes.body).toHaveLength(1);
-    expect(saveRes.body[0].status).toBe('draft');
+    const savedRecords = saveRes.body as SavedPayrollRecord[];
+    expect(savedRecords).toHaveLength(1);
+    expect(savedRecords[0].status).toBe('draft');
   });
 
   it('5. Should finalize payroll (Process Payments & Taxes)', async () => {
@@ -140,11 +159,12 @@ describe('Payroll Complete Flow E2E', () => {
       .set('Authorization', `Bearer ${authToken}`)
       .expect(201);
 
+    const finalizeResponse = res.body as FinalizeResponse;
+
     // The finalize endpoint now queues the job and returns immediately
-    // Response structure: { status: 'PROCESSING', message: string, jobId: string, payPeriodId: string }
-    expect(res.body.status).toBe('PROCESSING');
-    expect(res.body.jobId).toBeDefined();
-    expect(res.body.payPeriodId).toBe(payPeriodId);
+    expect(finalizeResponse.status).toBe('PROCESSING');
+    expect(finalizeResponse.jobId).toBeDefined();
+    expect(finalizeResponse.payPeriodId).toBe(payPeriodId);
 
     // For E2E testing, we need to wait for the job to complete or query the records
     // Wait a bit for the background job to process
@@ -156,13 +176,14 @@ describe('Payroll Complete Flow E2E', () => {
       .set('Authorization', `Bearer ${authToken}`)
       .expect(200);
 
-    expect(Array.isArray(recordsRes.body)).toBe(true);
-    if (recordsRes.body.length > 0) {
-      const record = recordsRes.body[0];
+    const records = recordsRes.body as SavedPayrollRecord[];
+    expect(Array.isArray(records)).toBe(true);
+    if (records.length > 0) {
+      const record = records[0];
       payrollRecordId = record.id;
       // Record may still be processing or finalized
       expect(['draft', 'finalized', 'processing'].includes(record.status)).toBe(
-        true,
+        true
       );
     }
   });
@@ -176,11 +197,13 @@ describe('Payroll Complete Flow E2E', () => {
       .set('Authorization', `Bearer ${authToken}`)
       .expect(200);
 
+    const submissions = res.body as TaxSubmissionResponse[];
+
     // With async finalization, submission may not exist yet
-    expect(Array.isArray(res.body)).toBe(true);
+    expect(Array.isArray(submissions)).toBe(true);
 
     // If submission exists, verify it has expected fields
-    const submission = res.body.find((s: any) => s.payPeriodId === payPeriodId);
+    const submission = submissions.find((s) => s.payPeriodId === payPeriodId);
     if (submission) {
       expect(submission).toHaveProperty('totalPaye');
     }
@@ -196,7 +219,7 @@ describe('Payroll Complete Flow E2E', () => {
 
     expect(res.header['content-type']).toBe('application/pdf');
     expect(res.header['content-disposition']).toContain(
-      'attachment; filename="payslip-',
+      'attachment; filename="payslip-'
     );
   });
 });

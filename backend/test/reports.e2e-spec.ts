@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
+import { TestHelpers, createTestHelpers } from './helpers/test-helpers';
+import { PayPeriodResponse } from './types/test-types';
 
 /**
  * Reports E2E Tests
@@ -18,9 +20,12 @@ import { AppModule } from './../src/app.module';
  * - P9 reports (employer)
  * - P10 reports
  * - Employee P9 (individual)
+ * 
+ * Uses TestHelpers for type-safe test user creation.
  */
 describe('Reports E2E', () => {
   let app: INestApplication;
+  let helpers: TestHelpers;
   let authToken: string;
   let payPeriodId: string;
 
@@ -32,24 +37,18 @@ describe('Reports E2E', () => {
     app = moduleFixture.createNestApplication();
     await app.init();
 
-    // Register and login test user
-    const email = `reports.test.${Date.now()}@paykey.com`;
-    const password = 'Password123!';
+    // Create test helpers instance
+    helpers = createTestHelpers(app);
 
-    await request(app.getHttpServer()).post('/auth/register').send({
-      email,
-      password,
+    // Register and login test user
+    const testUser = await helpers.createTestUser({
+      emailPrefix: 'reports.test',
       firstName: 'Reports',
       lastName: 'Tester',
       businessName: 'Reports Test Corp',
-      phone: '+254700000900',
     });
 
-    const loginRes = await request(app.getHttpServer())
-      .post('/auth/login')
-      .send({ email, password });
-
-    authToken = loginRes.body.access_token;
+    authToken = testUser.token;
 
     // Create a pay period for period-specific reports
     const periodRes = await request(app.getHttpServer())
@@ -60,8 +59,13 @@ describe('Reports E2E', () => {
         frequency: 'MONTHLY',
       });
 
-    if (periodRes.body.periods && periodRes.body.periods.length > 0) {
-      payPeriodId = periodRes.body.periods[0].id;
+    interface GeneratedPeriodsResponse {
+      periods: PayPeriodResponse[];
+    }
+
+    const periodsResponse = periodRes.body as GeneratedPeriodsResponse;
+    if (periodsResponse.periods && periodsResponse.periods.length > 0) {
+      payPeriodId = periodsResponse.periods[0].id;
     }
   });
 

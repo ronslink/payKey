@@ -2,11 +2,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
-
-// Type interfaces for API responses
-interface LoginResponse {
-  access_token: string;
-}
+import { TestHelpers, createTestHelpers } from './helpers/test-helpers';
+import { generateTestPhone, generateTestEmail } from './test-utils';
+import { WorkerResponse, WorkerStatsResponse } from './types/test-types';
 
 /**
  * Workers E2E Tests
@@ -15,9 +13,12 @@ interface LoginResponse {
  * - Create, read, update, delete workers
  * - Worker statistics
  * - Leave request workflow
+ * 
+ * Uses TestHelpers for type-safe test user and worker creation.
  */
 describe('Workers E2E', () => {
   let app: INestApplication;
+  let helpers: TestHelpers;
   let authToken: string;
 
   beforeAll(async () => {
@@ -28,46 +29,18 @@ describe('Workers E2E', () => {
     app = moduleFixture.createNestApplication();
     await app.init();
 
-    // Register and login test user
-    const email = `workers.test.${Date.now()}@paykey.com`;
-    const password = 'Password123!';
+    // Create test helpers instance
+    helpers = createTestHelpers(app);
 
-    // Register the user
-    const registerRes = await request(app.getHttpServer())
-      .post('/auth/register')
-      .send({
-        email,
-        password,
-        firstName: 'Workers',
-        lastName: 'Tester',
-        businessName: 'Workers Test Corp',
-        phone: '+254700000100',
-      });
+    // Register and login test user using helpers
+    const testUser = await helpers.createTestUser({
+      emailPrefix: 'workers.test',
+      firstName: 'Workers',
+      lastName: 'Tester',
+      businessName: 'Workers Test Corp',
+    });
 
-    // Ensure registration was successful (201) or user already exists (400)
-    if (registerRes.status !== 201 && registerRes.status !== 400) {
-      throw new Error(
-        `Registration failed with status ${registerRes.status}: ${JSON.stringify(registerRes.body)}`,
-      );
-    }
-
-    // Login to get auth token
-    const loginRes = await request(app.getHttpServer())
-      .post('/auth/login')
-      .send({ email, password });
-
-    if (loginRes.status !== 200 && loginRes.status !== 201) {
-      throw new Error(
-        `Login failed with status ${loginRes.status}: ${JSON.stringify(loginRes.body)}`,
-      );
-    }
-
-    const loginResponse = loginRes.body as LoginResponse;
-    authToken = loginResponse.access_token;
-
-    if (!authToken) {
-      throw new Error('Failed to obtain auth token from login response');
-    }
+    authToken = testUser.token;
   });
 
   afterAll(async () => {
@@ -78,10 +51,13 @@ describe('Workers E2E', () => {
 
   describe('Worker CRUD Operations', () => {
     it('should create a new worker', async () => {
+      const workerPhone = generateTestPhone();
+      const workerEmail = generateTestEmail('john.doe');
+
       const workerData = {
         name: 'John Doe',
-        phoneNumber: '+254700000001',
-        email: `john.doe.${Date.now()}@paykey.com`,
+        phoneNumber: workerPhone,
+        email: workerEmail,
         salaryGross: 50000,
         startDate: '2024-01-15',
         jobTitle: 'Software Engineer',
@@ -93,9 +69,10 @@ describe('Workers E2E', () => {
         .send(workerData)
         .expect(201);
 
-      expect(res.body).toHaveProperty('id');
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      expect(res.body.name).toBe(workerData.name);
+      // Type-safe response handling
+      const worker = res.body as WorkerResponse;
+      expect(worker.id).toBeDefined();
+      expect(worker.name).toBe(workerData.name);
     });
 
     it('should get worker statistics', async () => {
@@ -104,9 +81,10 @@ describe('Workers E2E', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
-      expect(res.body).toHaveProperty('totalWorkers');
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      expect(typeof res.body.totalWorkers).toBe('number');
+      // Type-safe response handling
+      const stats = res.body as WorkerStatsResponse;
+      expect(stats.totalWorkers).toBeDefined();
+      expect(typeof stats.totalWorkers).toBe('number');
     });
 
     it('should return 401 without auth token', async () => {

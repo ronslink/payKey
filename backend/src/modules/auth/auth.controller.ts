@@ -13,7 +13,7 @@ import { LoginDto } from './dto/login.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService) { }
 
   @Post('register')
   @UsePipes(new ValidationPipe())
@@ -25,11 +25,19 @@ export class AuthController {
       const errorMessage = error instanceof Error ? error.message : '';
       if (
         errorMessage.includes('duplicate') ||
-        errorMessage.includes('unique')
+        errorMessage.includes('unique') ||
+        errorMessage.includes('already exists')
       ) {
         throw new HttpException('Email already exists', HttpStatus.CONFLICT);
       }
-      throw new HttpException('Registration failed', HttpStatus.BAD_REQUEST);
+
+      console.error('Registration error:', error);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      throw new HttpException('Registration failed', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
   @Post('login')

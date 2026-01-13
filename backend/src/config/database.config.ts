@@ -80,7 +80,7 @@ export const getDatabaseConfig = (configService: ConfigService): TypeOrmModuleOp
         getConfig('DB_USER') ||
         defaultUser;
 
-    const password = getConfig('DB_PASSWORD', 'password');
+    const password = getConfig('DB_PASSWORD', 'Tina76');
     const host = getConfig('DB_HOST', 'localhost');
     const port = parseInt(getConfig('DB_PORT', '5432'));
     const database = getConfig('DB_NAME', isTest ? 'paykey_test' : 'paykey');

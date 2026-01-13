@@ -2,6 +2,15 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
+import { TestHelpers, createTestHelpers } from './helpers/test-helpers';
+import { generateTestPhone } from './test-utils';
+import {
+  WorkerResponse,
+  PayPeriodResponse,
+  PayrollCalculationResponse,
+  PayrollItem,
+  SavedPayrollRecord,
+} from './types/test-types';
 
 /**
  * Payroll Proration E2E Tests
@@ -11,9 +20,12 @@ import { AppModule } from './../src/app.module';
  * 2. Termination mid-month (worker terminated before period end)
  * 3. Full period (no proration)
  * 4. Backend calculation with daysWorked parameter
+ * 
+ * Uses TestHelpers for type-safe operations.
  */
 describe('Payroll Proration E2E', () => {
   let app: INestApplication;
+  let helpers: TestHelpers;
   let authToken: string;
   let userId: string;
 
@@ -25,26 +37,19 @@ describe('Payroll Proration E2E', () => {
     app = moduleFixture.createNestApplication();
     await app.init();
 
-    // Register a unique test user
-    const email = `proration.test.${Date.now()}@paykey.com`;
-    const password = 'Password123!';
+    // Create test helpers instance
+    helpers = createTestHelpers(app);
 
-    await request(app.getHttpServer()).post('/auth/register').send({
-      email,
-      password,
+    // Register and login test user
+    const testUser = await helpers.createTestUser({
+      emailPrefix: 'proration.test',
       firstName: 'Proration',
       lastName: 'Tester',
       businessName: 'Proration Test Corp',
-      phone: '+254700000002',
     });
 
-    // Login to get auth token
-    const loginRes = await request(app.getHttpServer())
-      .post('/auth/login')
-      .send({ email, password });
-
-    authToken = loginRes.body.access_token;
-    userId = loginRes.body.user.id;
+    authToken = testUser.token;
+    userId = testUser.userId;
   });
 
   afterAll(async () => {
@@ -61,49 +66,58 @@ describe('Payroll Proration E2E', () => {
 
     it('1. should create workers with different start/termination dates', async () => {
       // Worker 1: Full period (started before January)
+      const fullPeriodPhone = generateTestPhone();
       const fullPeriodRes = await request(app.getHttpServer())
         .post('/workers')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           name: 'Full Period Worker',
-          phoneNumber: '+254712345001',
+          phoneNumber: fullPeriodPhone,
           salaryGross: 60000, // KES 60,000/month
           startDate: '2023-12-01', // Started before test period
           paymentMethod: 'MPESA',
-          mpesaNumber: '+254712345001',
+          mpesaNumber: fullPeriodPhone,
         })
         .expect(201);
-      fullPeriodWorkerId = fullPeriodRes.body.id;
+
+      const fullPeriodWorker = fullPeriodRes.body as WorkerResponse;
+      fullPeriodWorkerId = fullPeriodWorker.id;
 
       // Worker 2: New hire mid-month (started Jan 15)
+      const newHirePhone = generateTestPhone();
       const newHireRes = await request(app.getHttpServer())
         .post('/workers')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           name: 'New Hire Worker',
-          phoneNumber: '+254712345002',
+          phoneNumber: newHirePhone,
           salaryGross: 60000, // KES 60,000/month
           startDate: '2024-01-15', // Started mid-January
           paymentMethod: 'MPESA',
-          mpesaNumber: '+254712345002',
+          mpesaNumber: newHirePhone,
         })
         .expect(201);
-      newHireWorkerId = newHireRes.body.id;
+
+      const newHireWorker = newHireRes.body as WorkerResponse;
+      newHireWorkerId = newHireWorker.id;
 
       // Worker 3: Terminated mid-month
+      const terminatedPhone = generateTestPhone();
       const terminatedRes = await request(app.getHttpServer())
         .post('/workers')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           name: 'Terminated Worker',
-          phoneNumber: '+254712345003',
+          phoneNumber: terminatedPhone,
           salaryGross: 60000, // KES 60,000/month
           startDate: '2023-06-01',
           paymentMethod: 'MPESA',
-          mpesaNumber: '+254712345003',
+          mpesaNumber: terminatedPhone,
         })
         .expect(201);
-      terminatedWorkerId = terminatedRes.body.id;
+
+      const terminatedWorker = terminatedRes.body as WorkerResponse;
+      terminatedWorkerId = terminatedWorker.id;
     });
 
     it('2. should generate January 2024 pay period', async () => {
@@ -117,10 +131,11 @@ describe('Payroll Proration E2E', () => {
         })
         .expect(201);
 
-      expect(res.body).toHaveLength(1);
-      payPeriodId = res.body[0].id;
-      expect(res.body[0].startDate).toContain('2024-01-01');
-      expect(res.body[0].endDate).toContain('2024-01-31');
+      const periods = res.body as PayPeriodResponse[];
+      expect(periods).toHaveLength(1);
+      payPeriodId = periods[0].id;
+      expect(periods[0].startDate).toContain('2024-01-01');
+      expect(periods[0].endDate).toContain('2024-01-31');
     });
 
     it('3. should calculate payroll with full period (backend handles all workers)', async () => {
@@ -132,23 +147,24 @@ describe('Payroll Proration E2E', () => {
         })
         .expect(201);
 
-      expect(res.body).toHaveProperty('payrollItems');
-      expect(res.body.payrollItems.length).toBeGreaterThanOrEqual(2);
+      const calculation = res.body as PayrollCalculationResponse;
+      expect(calculation).toHaveProperty('payrollItems');
+      expect(calculation.payrollItems.length).toBeGreaterThanOrEqual(2);
 
       // Full period worker should have full salary
-      const fullPeriodItem = res.body.payrollItems.find(
-        (item: any) => item.workerId === fullPeriodWorkerId,
+      const fullPeriodItem = calculation.payrollItems.find(
+        (item: PayrollItem) => item.workerId === fullPeriodWorkerId
       );
       expect(fullPeriodItem).toBeDefined();
-      expect(fullPeriodItem.grossSalary).toBe(60000);
+      expect(fullPeriodItem?.grossSalary).toBe(60000);
 
       // New hire should also show full salary (proration is client-side calculation)
       // Backend returns base salary, client applies proration
-      const newHireItem = res.body.payrollItems.find(
-        (item: any) => item.workerId === newHireWorkerId,
+      const newHireItem = calculation.payrollItems.find(
+        (item: PayrollItem) => item.workerId === newHireWorkerId
       );
       expect(newHireItem).toBeDefined();
-      expect(newHireItem.grossSalary).toBe(60000);
+      expect(newHireItem?.grossSalary).toBe(60000);
     });
 
     it('4. should save draft with prorated gross salary', async () => {
@@ -178,7 +194,8 @@ describe('Payroll Proration E2E', () => {
         })
         .expect(201);
 
-      expect(res.body).toHaveLength(2);
+      const records = res.body as SavedPayrollRecord[];
+      expect(records).toHaveLength(2);
     });
 
     it('5. should terminate worker and verify exclusion from payroll', async () => {
@@ -197,7 +214,7 @@ describe('Payroll Proration E2E', () => {
         console.log(
           'Termination response:',
           terminateRes.status,
-          terminateRes.body,
+          terminateRes.body
         );
       }
       expect(terminateRes.status).toBe(201);
@@ -208,17 +225,17 @@ describe('Payroll Proration E2E', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
+      const calculation = res.body as PayrollCalculationResponse;
+
       // Verify terminated worker is excluded
-      const terminatedItem = res.body.payrollItems.find(
-        (item: any) => item.workerId === terminatedWorkerId,
+      const terminatedItem = calculation.payrollItems.find(
+        (item: PayrollItem) => item.workerId === terminatedWorkerId
       );
       expect(terminatedItem).toBeUndefined();
     });
 
     it('6. should verify tax calculations with prorated salary', async () => {
       // Test that taxes are calculated on the prorated amount
-      const proratedGross = 32903; // ~17 days of 60,000/month
-
       const res = await request(app.getHttpServer())
         .post('/payroll/calculate')
         .set('Authorization', `Bearer ${authToken}`)
@@ -227,7 +244,8 @@ describe('Payroll Proration E2E', () => {
         })
         .expect(201);
 
-      const item = res.body.payrollItems[0];
+      const calculation = res.body as PayrollCalculationResponse;
+      const item = calculation.payrollItems[0];
       expect(item).toHaveProperty('taxBreakdown');
 
       // Verify tax breakdown structure
@@ -239,7 +257,7 @@ describe('Payroll Proration E2E', () => {
 
       // Net pay should be gross minus deductions
       expect(item.netPay).toBe(
-        item.grossSalary - item.taxBreakdown.totalDeductions,
+        item.grossSalary - item.taxBreakdown.totalDeductions
       );
     });
 
@@ -261,8 +279,9 @@ describe('Payroll Proration E2E', () => {
         })
         .expect(201);
 
+      const records = res.body as SavedPayrollRecord[];
       // Should accept zero salary
-      expect(res.body[0].grossSalary).toBe(0);
+      expect(parseFloat(String(records[0].grossSalary))).toBe(0);
     });
   });
 
@@ -279,13 +298,14 @@ describe('Payroll Proration E2E', () => {
         })
         .expect(201);
 
-      expect(res.body[0].endDate).toContain('2024-02-29');
+      const periods = res.body as PayPeriodResponse[];
+      expect(periods[0].endDate).toContain('2024-02-29');
 
       // February should have 29 days
       const start = new Date('2024-02-01');
       const end = new Date('2024-02-29');
       const days = Math.ceil(
-        (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
+        (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
       );
       expect(days).toBe(28); // difference is 28, +1 = 29 days total
     });

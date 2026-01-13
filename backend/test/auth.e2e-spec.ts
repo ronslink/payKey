@@ -2,12 +2,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
-import {
-  cleanupTestData,
-  generateTestEmail,
-  generateTestPhone,
-} from './test-utils';
+import { TestHelpers, createTestHelpers } from './helpers/test-helpers';
 import { DataSource } from 'typeorm';
+import { cleanupTestData, generateTestEmail, generateTestPhone } from './test-utils';
 
 /**
  * Authentication E2E Tests
@@ -20,6 +17,7 @@ import { DataSource } from 'typeorm';
  */
 describe('Auth E2E', () => {
   let app: INestApplication;
+  let helpers: TestHelpers;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -29,6 +27,9 @@ describe('Auth E2E', () => {
     app = moduleFixture.createNestApplication();
     await app.init();
 
+    // Create test helpers
+    helpers = createTestHelpers(app);
+
     // Clean up DB before starting
     const dataSource = app.get(DataSource);
     await cleanupTestData(dataSource);
@@ -36,65 +37,51 @@ describe('Auth E2E', () => {
 
   afterAll(async () => {
     if (app) {
-      try {
-        const dataSource = app.get(DataSource);
-        await cleanupTestData(dataSource);
-      } catch (error) {
-        console.error('Cleanup failed:', error);
-      }
       await app.close();
     }
   });
 
   describe('Registration', () => {
-    let uniqueEmail: string;
-
-    beforeEach(() => {
-      uniqueEmail = generateTestEmail('auth.test');
-    });
-
     it('should register a new user successfully', async () => {
+      const email = generateTestEmail('auth.new');
+      const phone = generateTestPhone();
+
       const res = await request(app.getHttpServer())
         .post('/auth/register')
         .send({
-          email: uniqueEmail,
+          email,
           password: 'Password123!',
           firstName: 'Auth',
-          lastName: 'TestUser',
-          businessName: 'Auth Test Corp',
-          phone: generateTestPhone(),
+          lastName: 'New',
+          businessName: 'Auth New Corp',
+          phone,
         })
         .expect(201);
 
       expect(res.body).toHaveProperty('access_token');
       expect(res.body).toHaveProperty('user');
-      expect(res.body.user.email).toBe(uniqueEmail);
+      expect(res.body.user.email).toBe(email);
+      // Now that DTO has phone, we might expect it in response if User entity returns it
     });
 
     it('should reject registration with duplicate email', async () => {
-      // Create user first
-      await request(app.getHttpServer()).post('/auth/register').send({
-        email: uniqueEmail,
-        password: 'Password123!',
-        firstName: 'Original',
-        lastName: 'User',
-        businessName: 'Original Corp',
-        phone: generateTestPhone(),
-      })
-        .expect(201);
+      // 1. Create a user first using Helper (handles setup robustly)
+      const { email, password } = await helpers.createTestUser({
+        emailPrefix: 'auth.dup',
+      });
 
-      // Try to register duplicate
+      // 2. Try to register with same email
       await request(app.getHttpServer())
         .post('/auth/register')
         .send({
-          email: uniqueEmail,
-          password: 'Password123!',
+          email,
+          password: 'AnotherPassword123!',
           firstName: 'Duplicate',
-          lastName: 'User',
-          businessName: 'Duplicate Corp',
-          phone: generateTestPhone(),
+          lastName: 'Attempt',
+          businessName: 'Copy Corp',
+          phone: generateTestPhone(), // Different phone
         })
-        .expect(409); // Conflict
+        .expect(409);
     });
 
     it('should reject registration with missing required fields', async () => {
@@ -102,57 +89,40 @@ describe('Auth E2E', () => {
         .post('/auth/register')
         .send({
           email: 'incomplete@paykey.com',
-          // Missing password, firstName, lastName
+          // Missing password
         })
         .expect(400);
     });
   });
 
   describe('Login', () => {
-    // Declare variables at describe scope, initialize in beforeAll
-    let loginEmail: string;
-    const loginPassword = 'StablePassword123!';
+    let testUser: { email: string; password: string };
 
     beforeAll(async () => {
-      // Generate email after cleanup has occurred
-      loginEmail = generateTestEmail('login.stable');
-
-      // Register user for login tests
-      const registerRes = await request(app.getHttpServer())
-        .post('/auth/register')
-        .send({
-          email: loginEmail,
-          password: loginPassword,
-          firstName: 'Login',
-          lastName: 'Tester',
-          businessName: 'Login Test Corp',
-          phone: generateTestPhone(),
-        });
-
-      // If registration fails unexpectedly, log it
-      if (registerRes.status !== 201 && registerRes.status !== 409) {
-        console.warn(
-          `Registration returned ${registerRes.status}: ${JSON.stringify(registerRes.body)}`,
-        );
-      }
+      // Create a stable user for login tests
+      testUser = await helpers.createTestUser({
+        emailPrefix: 'auth.login',
+      });
     });
 
     it('should login successfully with valid credentials', async () => {
-      const res = await request(app.getHttpServer()).post('/auth/login').send({
-        email: loginEmail,
-        password: loginPassword,
-      });
+      const res = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({
+          email: testUser.email,
+          password: testUser.password,
+        });
 
+      expect(res.status).toBeOneOf([200, 201]);
       expect(res.body).toHaveProperty('access_token');
-      expect(res.body).toHaveProperty('user');
-      expect(res.body.user.email).toBe(loginEmail);
+      expect(res.body.user.email).toBe(testUser.email);
     });
 
     it('should reject login with wrong password', async () => {
       await request(app.getHttpServer())
         .post('/auth/login')
         .send({
-          email: loginEmail,
+          email: testUser.email,
           password: 'WrongPassword123!',
         })
         .expect(401);

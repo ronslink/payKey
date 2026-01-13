@@ -26,4 +26,12 @@ export class CreateUserDto {
   @IsOptional()
   @IsEnum(UserTier)
   tier?: UserTier;
+
+  @IsOptional()
+  @IsString()
+  phone?: string;
+
+  @IsOptional()
+  @IsString()
+  businessName?: string;
 }

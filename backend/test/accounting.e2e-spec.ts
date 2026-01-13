@@ -2,34 +2,15 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
-
-// Type interfaces for API responses
-interface LoginResponse {
-  access_token: string;
-}
-
-interface PayPeriod {
-  id: string;
-}
-
-interface PayPeriodsResponse {
-  periods: PayPeriod[];
-}
-
-interface ExportFormat {
-  id: string;
-  name: string;
-}
-
-interface FormatsResponse {
-  formats: ExportFormat[];
-}
-
-interface AccountMapping {
-  category: string;
-  accountCode: string;
-  accountName: string;
-}
+import { TestHelpers, createTestHelpers } from './helpers/test-helpers';
+import {
+  AccountMappingsResponse,
+  AccountMappingDefaultsResponse,
+  FormatsResponse,
+  ExportHistoryResponse,
+  AccountMapping,
+  PayPeriodResponse,
+} from './types/test-types';
 
 /**
  * Accounting E2E Tests
@@ -39,9 +20,12 @@ interface AccountMapping {
  * - Payroll export (CSV format)
  * - Export history
  * - Journal entries generation
+ * 
+ * Uses TestHelpers for type-safe test user creation.
  */
 describe('Accounting E2E', () => {
   let app: INestApplication;
+  let helpers: TestHelpers;
   let authToken: string;
   let payPeriodId: string;
 
@@ -53,45 +37,18 @@ describe('Accounting E2E', () => {
     app = moduleFixture.createNestApplication();
     await app.init();
 
-    // Register and login test user
-    const email = `accounting.test.${Date.now()}@paykey.com`;
-    const password = 'Password123!';
+    // Create test helpers instance
+    helpers = createTestHelpers(app);
 
-    // Register the user
-    const registerRes = await request(app.getHttpServer())
-      .post('/auth/register')
-      .send({
-        email,
-        password,
-        firstName: 'Accounting',
-        lastName: 'Tester',
-        businessName: 'Accounting Test Corp',
-        phone: '+254700000500',
-      });
+    // Register and login test user using helpers
+    const testUser = await helpers.createTestUser({
+      emailPrefix: 'accounting.test',
+      firstName: 'Accounting',
+      lastName: 'Tester',
+      businessName: 'Accounting Test Corp',
+    });
 
-    // Ensure registration was successful (201) or user already exists (400)
-    if (registerRes.status !== 201 && registerRes.status !== 400) {
-      throw new Error(
-        `Registration failed with status ${registerRes.status}: ${JSON.stringify(registerRes.body)}`,
-      );
-    }
-
-    // Login to get auth token
-    const loginRes = await request(app.getHttpServer())
-      .post('/auth/login')
-      .send({ email, password });
-
-    if (loginRes.status !== 200 && loginRes.status !== 201) {
-      throw new Error(
-        `Login failed with status ${loginRes.status}: ${JSON.stringify(loginRes.body)}`,
-      );
-    }
-
-    authToken = (loginRes.body as LoginResponse).access_token;
-
-    if (!authToken) {
-      throw new Error('Failed to obtain auth token from login response');
-    }
+    authToken = testUser.token;
 
     // Create a pay period for export tests
     const periodRes = await request(app.getHttpServer())
@@ -102,7 +59,11 @@ describe('Accounting E2E', () => {
         frequency: 'MONTHLY',
       });
 
-    const periodsResponse = periodRes.body as PayPeriodsResponse;
+    interface GeneratedPeriodsResponse {
+      periods: PayPeriodResponse[];
+    }
+
+    const periodsResponse = periodRes.body as GeneratedPeriodsResponse;
     if (periodsResponse.periods && periodsResponse.periods.length > 0) {
       payPeriodId = periodsResponse.periods[0].id;
     }
@@ -116,44 +77,43 @@ describe('Accounting E2E', () => {
 
   describe('Account Mappings', () => {
     it('should get default account mappings', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       const res = await request(app.getHttpServer())
         .get('/accounting/mappings/defaults')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
-      expect(res.body).toHaveProperty('defaults');
+      const defaults = res.body as AccountMappingDefaultsResponse;
+      expect(defaults).toHaveProperty('defaults');
     });
 
     it('should get user account mappings', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       const res = await request(app.getHttpServer())
         .get('/accounting/mappings')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
-      expect(res.body).toHaveProperty('mappings');
+      const mappings = res.body as AccountMappingsResponse;
+      expect(mappings).toHaveProperty('mappings');
     });
 
     it('should save account mappings', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      const mappingsData: AccountMapping[] = [
+        {
+          category: 'GROSS_SALARY',
+          accountCode: '5100',
+          accountName: 'Salaries Expense',
+        },
+        {
+          category: 'PAYE_LIABILITY',
+          accountCode: '2100',
+          accountName: 'PAYE Payable',
+        },
+      ];
+
       const res = await request(app.getHttpServer())
         .post('/accounting/mappings')
         .set('Authorization', `Bearer ${authToken}`)
-        .send({
-          mappings: [
-            {
-              category: 'GROSS_SALARY',
-              accountCode: '5100',
-              accountName: 'Salaries Expense',
-            },
-            {
-              category: 'PAYE_LIABILITY',
-              accountCode: '2100',
-              accountName: 'PAYE Payable',
-            },
-          ] as AccountMapping[],
-        });
+        .send({ mappings: mappingsData });
 
       // May succeed or fail based on DB schema
       expect([200, 201, 500]).toContain(res.status);
@@ -162,7 +122,6 @@ describe('Accounting E2E', () => {
 
   describe('Export Formats', () => {
     it('should get available export formats', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       const res = await request(app.getHttpServer())
         .get('/accounting/formats')
         .set('Authorization', `Bearer ${authToken}`)
@@ -177,13 +136,13 @@ describe('Accounting E2E', () => {
 
   describe('Export History', () => {
     it('should get export history', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       const res = await request(app.getHttpServer())
         .get('/accounting/history')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
-      expect(res.body).toHaveProperty('history');
+      const history = res.body as ExportHistoryResponse;
+      expect(history).toHaveProperty('history');
     });
   });
 
@@ -194,7 +153,6 @@ describe('Accounting E2E', () => {
         return;
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       const res = await request(app.getHttpServer())
         .post(`/accounting/export/${payPeriodId}`)
         .set('Authorization', `Bearer ${authToken}`)
@@ -212,7 +170,6 @@ describe('Accounting E2E', () => {
         return;
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       const res = await request(app.getHttpServer())
         .post(`/accounting/journal-entries/${payPeriodId}`)
         .set('Authorization', `Bearer ${authToken}`);
@@ -224,7 +181,6 @@ describe('Accounting E2E', () => {
 
   describe('Authorization', () => {
     it('should prevent unauthorized access', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       await request(app.getHttpServer())
         .get('/accounting/mappings')
         .expect(401);

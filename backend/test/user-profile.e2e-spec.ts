@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
+import { TestHelpers, createTestHelpers } from './helpers/test-helpers';
+import { UserResponse } from './types/test-types';
 
 /**
  * User Profile / Onboarding E2E Tests
@@ -10,9 +12,12 @@ import { AppModule } from './../src/app.module';
  * - Get user profile
  * - Update profile (personal info, compliance data)
  * - Onboarding completion tracking
+ * 
+ * Uses TestHelpers for type-safe test user creation.
  */
 describe('User Profile E2E', () => {
   let app: INestApplication;
+  let helpers: TestHelpers;
   let authToken: string;
 
   beforeAll(async () => {
@@ -23,24 +28,18 @@ describe('User Profile E2E', () => {
     app = moduleFixture.createNestApplication();
     await app.init();
 
-    // Register and login test user
-    const email = `profile.test.${Date.now()}@paykey.com`;
-    const password = 'Password123!';
+    // Create test helpers instance
+    helpers = createTestHelpers(app);
 
-    await request(app.getHttpServer()).post('/auth/register').send({
-      email,
-      password,
+    // Register and login test user
+    const testUser = await helpers.createTestUser({
+      emailPrefix: 'profile.test',
       firstName: 'Profile',
       lastName: 'Tester',
       businessName: 'Profile Test Corp',
-      phone: '+254700000400',
     });
 
-    const loginRes = await request(app.getHttpServer())
-      .post('/auth/login')
-      .send({ email, password });
-
-    authToken = loginRes.body.access_token;
+    authToken = testUser.token;
   });
 
   afterAll(async () => {
@@ -56,9 +55,10 @@ describe('User Profile E2E', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
-      expect(res.body).toHaveProperty('email');
-      expect(res.body).toHaveProperty('firstName');
-      expect(res.body).toHaveProperty('lastName');
+      const profile = res.body as UserResponse;
+      expect(profile).toHaveProperty('email');
+      expect(profile).toHaveProperty('firstName');
+      expect(profile).toHaveProperty('lastName');
     });
 
     it('should update user profile', async () => {
@@ -72,8 +72,9 @@ describe('User Profile E2E', () => {
         })
         .expect(200);
 
-      expect(res.body.firstName).toBe('Updated');
-      expect(res.body.lastName).toBe('Name');
+      const profile = res.body as UserResponse;
+      expect(profile.firstName).toBe('Updated');
+      expect(profile.lastName).toBe('Name');
     });
 
     it('should update compliance profile', async () => {

@@ -2,12 +2,17 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
-import {
-  cleanupTestData,
-  generateTestEmail,
-  generateTestPhone,
-} from './test-utils';
+import { cleanupTestData, generateTestPhone } from './test-utils';
+import { TestHelpers, createTestHelpers } from './helpers/test-helpers';
 import { DataSource } from 'typeorm';
+import {
+  WorkerResponse,
+  PayPeriodResponse,
+  PayrollCalculationResponse,
+  PayrollItem,
+  SavedPayrollRecord,
+  FinalizeResponse,
+} from './types/test-types';
 
 /**
  * Payroll E2E Tests
@@ -20,9 +25,12 @@ import { DataSource } from 'typeorm';
  * 5. Save draft payroll
  * 6. Finalize payroll
  * 7. Download payslip
+ * 
+ * Uses TestHelpers for type-safe operations.
  */
 describe('Payroll E2E', () => {
   let app: INestApplication;
+  let helpers: TestHelpers;
   let authToken: string;
   let userId: string;
   let dataSource: DataSource;
@@ -41,30 +49,19 @@ describe('Payroll E2E', () => {
     // Clean up DB before starting
     await cleanupTestData(dataSource);
 
-    // Register a unique test user
-    const email = generateTestEmail('payroll.test');
-    const password = 'Password123!';
+    // Create test helpers instance
+    helpers = createTestHelpers(app);
 
-    await request(app.getHttpServer())
-      .post('/auth/register')
-      .send({
-        email,
-        password,
-        firstName: 'Payroll',
-        lastName: 'Tester',
-        businessName: 'Payroll Test Corp',
-        phone: generateTestPhone(),
-      })
-      .expect(201);
+    // Register and login test user
+    const testUser = await helpers.createTestUser({
+      emailPrefix: 'payroll.test',
+      firstName: 'Payroll',
+      lastName: 'Tester',
+      businessName: 'Payroll Test Corp',
+    });
 
-    // Login to get auth token
-    const loginRes = await request(app.getHttpServer())
-      .post('/auth/login')
-      .send({ email, password })
-      .expect(201);
-
-    authToken = loginRes.body.access_token;
-    userId = loginRes.body.user.id;
+    authToken = testUser.token;
+    userId = testUser.userId;
 
     expect(authToken).toBeDefined();
     expect(userId).toBeDefined();
@@ -89,23 +86,26 @@ describe('Payroll E2E', () => {
     let payrollRecordId: string;
 
     it('1. should create a worker', async () => {
+      const workerPhone = generateTestPhone();
+
       const res = await request(app.getHttpServer())
         .post('/workers')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           name: 'John Doe',
-          phoneNumber: generateTestPhone(),
+          phoneNumber: workerPhone,
           salaryGross: 50000,
           startDate: '2024-01-01',
           paymentMethod: 'MPESA',
-          mpesaNumber: generateTestPhone(),
+          mpesaNumber: workerPhone,
         })
         .expect(201);
 
-      expect(res.body).toHaveProperty('id');
-      expect(res.body.name).toBe('John Doe');
-      expect(res.body.salaryGross).toBe(50000);
-      workerId = res.body.id;
+      const worker = res.body as WorkerResponse;
+      expect(worker).toHaveProperty('id');
+      expect(worker.name).toBe('John Doe');
+      expect(worker.salaryGross).toBe(50000);
+      workerId = worker.id;
     });
 
     it('2. should generate pay periods for the year', async () => {
@@ -119,9 +119,10 @@ describe('Payroll E2E', () => {
         })
         .expect(201);
 
-      expect(res.body).toHaveLength(12);
-      expect(res.body[0]).toHaveProperty('id');
-      payPeriodId = res.body[0].id; // January pay period
+      const periods = res.body as PayPeriodResponse[];
+      expect(periods).toHaveLength(12);
+      expect(periods[0]).toHaveProperty('id');
+      payPeriodId = periods[0].id; // January pay period
     });
 
     it('3. should activate the pay period', async () => {
@@ -130,8 +131,9 @@ describe('Payroll E2E', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .expect(201);
 
-      expect(res.body).toHaveProperty('id');
-      expect(res.body.id).toBe(payPeriodId);
+      const period = res.body as PayPeriodResponse;
+      expect(period).toHaveProperty('id');
+      expect(period.id).toBe(payPeriodId);
     });
 
     it('4. should calculate payroll', async () => {
@@ -140,11 +142,12 @@ describe('Payroll E2E', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
-      expect(res.body).toHaveProperty('payrollItems');
-      expect(Array.isArray(res.body.payrollItems)).toBe(true);
-      expect(res.body.payrollItems.length).toBeGreaterThanOrEqual(1);
+      const calculation = res.body as PayrollCalculationResponse;
+      expect(calculation).toHaveProperty('payrollItems');
+      expect(Array.isArray(calculation.payrollItems)).toBe(true);
+      expect(calculation.payrollItems.length).toBeGreaterThanOrEqual(1);
 
-      const firstItem = res.body.payrollItems[0];
+      const firstItem = calculation.payrollItems[0];
       expect(firstItem.workerId).toBe(workerId);
       expect(firstItem.grossSalary).toBe(50000);
     });
@@ -155,24 +158,27 @@ describe('Payroll E2E', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
+      const calculation = calcRes.body as PayrollCalculationResponse;
+
       const res = await request(app.getHttpServer())
         .post('/payroll/draft')
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           payPeriodId,
-          payrollItems: calcRes.body.payrollItems.map(
-            (item: { workerId: string; grossSalary: number }) => ({
+          payrollItems: calculation.payrollItems.map(
+            (item: PayrollItem) => ({
               workerId: item.workerId,
               grossSalary: item.grossSalary,
-            }),
+            })
           ),
         })
         .expect(201);
 
-      expect(Array.isArray(res.body)).toBe(true);
-      expect(res.body.length).toBeGreaterThanOrEqual(1);
-      expect(res.body[0].status).toBe('draft');
-      payrollRecordId = res.body[0].id;
+      const savedRecords = res.body as SavedPayrollRecord[];
+      expect(Array.isArray(savedRecords)).toBe(true);
+      expect(savedRecords.length).toBeGreaterThanOrEqual(1);
+      expect(savedRecords[0].status).toBe('draft');
+      payrollRecordId = savedRecords[0].id;
     });
 
     it('6. should finalize payroll', async () => {
@@ -181,10 +187,12 @@ describe('Payroll E2E', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .expect(201);
 
+      const finalizeResponse = res.body as FinalizeResponse;
+
       // The finalize endpoint now queues the job and returns immediately
-      expect(res.body.status).toBe('PROCESSING');
-      expect(res.body.jobId).toBeDefined();
-      expect(res.body.payPeriodId).toBe(payPeriodId);
+      expect(finalizeResponse.status).toBe('PROCESSING');
+      expect(finalizeResponse.jobId).toBeDefined();
+      expect(finalizeResponse.payPeriodId).toBe(payPeriodId);
 
       // Wait for background job to process
       await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -195,9 +203,10 @@ describe('Payroll E2E', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
-      expect(Array.isArray(recordsRes.body)).toBe(true);
-      if (recordsRes.body.length > 0) {
-        payrollRecordId = recordsRes.body[0].id;
+      const records = recordsRes.body as SavedPayrollRecord[];
+      expect(Array.isArray(records)).toBe(true);
+      if (records.length > 0) {
+        payrollRecordId = records[0].id;
       }
     });
 
@@ -218,22 +227,28 @@ describe('Payroll E2E', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
-      expect(Array.isArray(res.body)).toBe(true);
-      expect(res.body.length).toBeGreaterThanOrEqual(1);
+      const records = res.body as SavedPayrollRecord[];
+      expect(Array.isArray(records)).toBe(true);
+      expect(records.length).toBeGreaterThanOrEqual(1);
 
-      const record = res.body[0];
+      const record = records[0];
       expect(record).toHaveProperty('id');
       expect(record).toHaveProperty('status');
     });
 
     it('9. should get payroll statistics', async () => {
+      interface PayrollStats {
+        thisMonthTotal: number;
+      }
+
       const res = await request(app.getHttpServer())
         .get('/payroll/stats')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
-      expect(res.body).toHaveProperty('thisMonthTotal');
-      expect(typeof res.body.thisMonthTotal).toBe('number');
+      const stats = res.body as PayrollStats;
+      expect(stats).toHaveProperty('thisMonthTotal');
+      expect(typeof stats.thisMonthTotal).toBe('number');
     });
   });
 

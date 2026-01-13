@@ -46,7 +46,7 @@ export async function cleanupTestData(dataSource: DataSource): Promise<void> {
 
   try {
     // Dynamic Cleanup: Get all user tables in the public schema
-    const tables = await dataSource.query(`
+    const tables: { tablename: string }[] = await dataSource.query(`
       SELECT tablename 
       FROM pg_tables 
       WHERE schemaname = 'public' 
@@ -59,7 +59,7 @@ export async function cleanupTestData(dataSource: DataSource): Promise<void> {
 
     // Construct a list of table names, quoted
     const tableNames = tables
-      .map((t: any) => `"${t.tablename}"`)
+      .map((t) => `"${t.tablename}"`)
       .join(', ');
 
     // TRUNCATE all tables with CASCADE to handle foreign keys automatically
@@ -67,8 +67,9 @@ export async function cleanupTestData(dataSource: DataSource): Promise<void> {
       `TRUNCATE TABLE ${tableNames} RESTART IDENTITY CASCADE;`,
     );
 
-  } catch (error: any) {
-    console.warn(`Dynamic cleanup failed: ${error.message}`);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.warn(`Dynamic cleanup failed: ${errorMessage}`);
     // Fallback? Ideally shouldn't fail if DB is up.
     throw error;
   }
@@ -83,21 +84,23 @@ export async function verifyDatabaseConnection(dataSource: DataSource): Promise<
   }
 
   try {
-    const result = await dataSource.query('SELECT current_user, current_database()');
+    const result: { current_user: string; current_database: string }[] = await dataSource.query('SELECT current_user, current_database()');
 
     // Log connection details in CI for debugging
     if (process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true') {
+      const options = dataSource.options as { host?: string; port?: number; username?: string; database?: string };
       console.log('✅ CI Database Connection Verified:', {
-        host: (dataSource.options as any).host,
-        port: (dataSource.options as any).port,
-        username: (dataSource.options as any).username,
-        database: (dataSource.options as any).database,
+        host: options.host,
+        port: options.port,
+        username: options.username,
+        database: options.database,
         currentUser: result[0]?.current_user,
         currentDatabase: result[0]?.current_database,
       });
     }
-  } catch (error: any) {
-    console.error('❌ Database connection verification failed:', error.message);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('❌ Database connection verification failed:', errorMessage);
     throw error;
   }
 }

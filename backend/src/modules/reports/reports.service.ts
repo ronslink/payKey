@@ -7,7 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository, Between, In } from 'typeorm';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { Worker } from '../workers/entities/worker.entity';
@@ -50,7 +50,7 @@ export class ReportsService {
     @InjectRepository(TaxSubmission)
     private taxSubmissionRepository: Repository<TaxSubmission>,
     @Optional() @Inject(CACHE_MANAGER) private cacheManager?: Cache,
-  ) {}
+  ) { }
 
   async getMonthlyPayrollReport(userId: string, year: number, month: number) {
     const startDate = new Date(year, month - 1, 1);
@@ -119,8 +119,26 @@ export class ReportsService {
 
     const workerIds = workers.map((w) => w.id);
 
+    // Handle empty workers array to avoid invalid UUID query
+    if (workerIds.length === 0) {
+      return {
+        year,
+        totalLeaveRequests: 0,
+        approvedLeaves: 0,
+        pendingLeaves: 0,
+        rejectedLeaves: 0,
+        totalLeaveDays: 0,
+        leaveTypeBreakdown: {
+          annual: 0,
+          sick: 0,
+          maternity: 0,
+          other: 0,
+        },
+      };
+    }
+
     const leaveRequests = await this.leaveRequestRepository.find({
-      where: { workerId: workerIds as any },
+      where: { workerId: In(workerIds) },
       relations: ['worker'],
     });
 
@@ -293,11 +311,16 @@ export class ReportsService {
       take: 10,
     });
 
-    const leaveRequests = await this.leaveRequestRepository.find({
-      where: { workerId: workers.map((w) => w.id) as any },
-      order: { createdAt: 'DESC' },
-      take: 5,
-    });
+    // Handle empty workers array to avoid invalid UUID query
+    const workerIds = workers.map((w) => w.id);
+    const leaveRequests = workerIds.length > 0
+      ? await this.leaveRequestRepository.find({
+        where: { workerId: In(workerIds) },
+        order: { createdAt: 'DESC' },
+        take: 5,
+        relations: ['worker'],
+      })
+      : [];
 
     const currentMonth = new Date();
     const currentMonthTransactions = await this.transactionsRepository

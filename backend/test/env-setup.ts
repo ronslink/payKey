@@ -15,7 +15,7 @@ process.env.DB_HOST = process.env.DB_HOST || 'localhost';
 process.env.DB_PORT = process.env.DB_PORT || '5432';
 process.env.DB_USER = process.env.DB_USER || 'postgres';
 process.env.DB_USERNAME = process.env.DB_USERNAME || 'postgres';
-process.env.DB_PASSWORD = process.env.DB_PASSWORD || 'password';
+process.env.DB_PASSWORD = process.env.DB_PASSWORD || 'Tina76';
 process.env.DB_NAME = process.env.DB_NAME || 'paykey_test';
 process.env.DB_DATABASE = process.env.DB_NAME || 'paykey_test';
 
