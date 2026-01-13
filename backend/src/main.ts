@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import * as crypto from 'crypto';
+import { json, urlencoded } from 'express';
 
 // Fix for Node.js 18 compatibility with TypeORM
 if (!globalThis.crypto) {
@@ -9,7 +10,19 @@ if (!globalThis.crypto) {
 }
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    bodyParser: false, // Disable default parser to handle raw body manually
+  });
+
+  // Middleware to capture raw body for webhook verification
+  const rawBodyBuffer = (req: any, res: any, buf: Buffer, encoding: string) => {
+    if (buf && buf.length) {
+      req.rawBody = buf;
+    }
+  };
+
+  app.use(json({ verify: rawBodyBuffer }));
+  app.use(urlencoded({ verify: rawBodyBuffer, extended: true }));
 
   // Trust proxy (required for Cloudflare/reverse proxies to get real client IP)
   // Only enable in production where we're behind a reverse proxy

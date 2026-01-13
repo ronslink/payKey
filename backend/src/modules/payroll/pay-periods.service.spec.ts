@@ -192,7 +192,6 @@ describe('PayPeriodsService', () => {
         service.update('period-1', { status: PayPeriodStatus.COMPLETED }),
       ).rejects.toThrow('Invalid status transition from DRAFT to COMPLETED');
     });
-
   });
 
   describe('remove', () => {

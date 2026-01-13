@@ -12,6 +12,7 @@ import {
   PayrollStatus,
 } from '../payroll/entities/payroll-record.entity';
 import { PaymentMethod } from '../workers/entities/worker.entity';
+import { User } from '../users/entities/user.entity';
 
 @Injectable()
 export class PayrollPaymentService {
@@ -23,7 +24,9 @@ export class PayrollPaymentService {
     private intaSendService: IntaSendService,
     @InjectRepository(PayrollRecord)
     private payrollRecordRepository: Repository<PayrollRecord>,
-  ) {}
+    @InjectRepository(User)
+    private usersRepository: Repository<User>,
+  ) { }
 
   /**
    * Process payouts for a list of finalized payroll records
@@ -59,11 +62,7 @@ export class PayrollPaymentService {
     const BATCH_SIZE = 10;
     for (let i = 0; i < mobileRecords.length; i += BATCH_SIZE) {
       const batch = mobileRecords.slice(i, i + BATCH_SIZE);
-      const batchPromises = batch.map(async (record) => {
-        return this.processMobilePayment(record);
-      });
-
-      const batchResults = await Promise.all(batchPromises);
+      const batchResults = await this.processMobileBatch(batch);
       allResults.push(...batchResults);
     }
 
@@ -103,103 +102,162 @@ export class PayrollPaymentService {
 
   private readonly MPESA_LIMIT = 150000;
 
-  private async processMobilePayment(record: PayrollRecord) {
-    try {
+  private async processMobileBatch(records: PayrollRecord[]) {
+    if (records.length === 0) return [];
+
+    const results: any[] = [];
+    const allTransactions: Transaction[] = [];
+    const intaSendPayload: {
+      account: string;
+      amount: number;
+      narrative: string;
+      name: string;
+      recordId: string;
+    }[] = [];
+    let totalBatchAmount = 0;
+
+    // 1. Prepare Transactions (Splitting logic)
+    for (const record of records) {
       if (record.status !== PayrollStatus.FINALIZED) {
-        throw new Error(`Payroll record ${record.id} is not finalized`);
-      }
-
-      let remainingAmount = Number(record.netSalary);
-      const transactions: string[] = [];
-      const errors: string[] = [];
-
-      // Smart Splitting Loop
-      while (remainingAmount > 0) {
-        const currentAmount = Math.min(remainingAmount, this.MPESA_LIMIT);
-
-        // Create pending transaction for this chunk
-        const transaction = this.transactionRepository.create({
-          userId: record.userId,
-          workerId: record.workerId,
-          amount: currentAmount,
-          currency: 'KES',
-          type: TransactionType.SALARY_PAYOUT,
-          status: TransactionStatus.PENDING,
-          metadata: {
-            payrollRecordId: record.id,
-            workerName: record.worker.name,
-            provider: 'MPESA',
-            isSplit: Number(record.netSalary) > this.MPESA_LIMIT,
-            splitChunk: currentAmount,
-            taxBreakdown: record.taxBreakdown,
-            grossSalary: record.grossSalary,
-            netPay: record.netSalary,
-          },
-        });
-        const savedTransaction =
-          await this.transactionRepository.save(transaction);
-
-        // Send B2C for this chunk via IntaSend
-        const b2cResult = await this.intaSendService.sendMoney(
-          record.worker.phoneNumber,
-          currentAmount,
-          `Salary Payment${Number(record.netSalary) > this.MPESA_LIMIT ? ' (Part)' : ''}`,
-        );
-
-        if (b2cResult.tracking_id) {
-          savedTransaction.providerRef = b2cResult.tracking_id;
-          await this.transactionRepository.save(savedTransaction);
-        }
-
-        // IntaSend usually returns { status: 'Preview', ... } or tracking details.
-        // Assuming success structure handling:
-        if (b2cResult.status === 'Failed' || b2cResult.error) {
-          // If a chunk fails, we log it and potentially stop or continue.
-          // For safety, we'll mark this chunk failed and stop processing the rest to avoid partial mess if possible,
-          // OR we could try to process other chunks.
-          // Safest to stop and report error so admin can handle the rest manually.
-          errors.push(b2cResult.error);
-          break; // Stop splitting on first error
-        } else {
-          transactions.push(savedTransaction.id);
-          remainingAmount -= currentAmount;
-        }
-      }
-
-      if (errors.length > 0) {
-        record.paymentStatus = 'failed';
-        await this.payrollRecordRepository.save(record);
-        return {
+        results.push({
           workerId: record.workerId,
           workerName: record.worker.name,
           success: false,
-          error: `Partial/Full Failure: ${errors.join(', ')}. Processed ${transactions.length} chunks.`,
-        };
+          error: `Record ${record.id} is not finalized`
+        });
+        continue;
       }
 
-      // In dev mode, B2C is simulated and succeeds immediately
-      // In production, status would be 'processing' until callback confirms
-      record.status = PayrollStatus.FINALIZED; // Confirm finalized status
-      record.paymentStatus =
-        process.env.NODE_ENV !== 'production' ? 'paid' : 'processing';
-      record.paymentDate = new Date();
-      record.finalizedAt = record.finalizedAt || new Date(); // Ensure finalizedAt is set
-      await this.payrollRecordRepository.save(record);
+      let remainingAmount = Number(record.netSalary);
+      try {
+        while (remainingAmount > 0) {
+          const currentAmount = Math.min(remainingAmount, this.MPESA_LIMIT);
 
-      return {
-        workerId: record.workerId,
-        workerName: record.worker.name,
-        success: true,
-        transactionId: transactions.join(','), // Return all IDs
-      };
-    } catch (error) {
-      return {
-        workerId: record.workerId,
-        workerName: record.worker?.name || 'Unknown',
-        success: false,
-        error: error.message || 'Processing failed',
-      };
+          // Store info for IntaSend
+          intaSendPayload.push({
+            account: record.worker.phoneNumber,
+            amount: currentAmount,
+            narrative: `Salary Payment${Number(record.netSalary) > this.MPESA_LIMIT ? ' (Part)' : ''}`,
+            name: 'Worker',
+            recordId: record.id
+          });
+
+          // Create Transaction Entity
+          const transaction = this.transactionRepository.create({
+            userId: record.userId,
+            workerId: record.workerId,
+            amount: currentAmount,
+            currency: 'KES',
+            type: TransactionType.SALARY_PAYOUT,
+            status: TransactionStatus.PENDING,
+            metadata: {
+              payrollRecordId: record.id,
+              workerName: record.worker.name,
+              provider: 'MPESA',
+              isSplit: Number(record.netSalary) > this.MPESA_LIMIT,
+              splitChunk: currentAmount,
+              taxBreakdown: record.taxBreakdown,
+              grossSalary: record.grossSalary,
+              netPay: record.netSalary,
+            },
+          });
+
+          allTransactions.push(transaction);
+          totalBatchAmount += currentAmount;
+          remainingAmount -= currentAmount;
+        }
+      } catch (err) {
+        results.push({
+          workerId: record.workerId,
+          workerName: record.worker.name,
+          success: false,
+          error: `Preparation Failed: ${err.message}`
+        });
+      }
     }
+
+    if (allTransactions.length === 0) return results;
+
+    const firstUserId = records[0].userId;
+
+    // 2. Deduct Bundle Amount
+    try {
+      await this.usersRepository.decrement({ id: firstUserId }, 'walletBalance', totalBatchAmount);
+    } catch (e) {
+      this.logger.error(`Failed to deduct batch amount ${totalBatchAmount}`, e);
+      records.forEach(r => {
+        results.push({
+          workerId: r.workerId,
+          workerName: r.worker.name,
+          success: false,
+          error: 'Insufficient Funds or Wallet Error'
+        });
+      });
+      return results;
+    }
+
+    // 3. Save Pending Transactions
+    const savedTransactions = await this.transactionRepository.save(allTransactions);
+
+    // 4. Send Bulk Request
+    try {
+      const b2cResponse = await this.intaSendService.sendMoney(intaSendPayload);
+
+      const trackingId = b2cResponse.tracking_id;
+      const status = this.intaSendService['isLive'] ? 'processing' : 'paid';
+
+      const finalStatus = process.env.NODE_ENV === 'production' ? 'processing' : 'paid';
+
+      // Update all transactions with tracking_id
+      for (const tx of savedTransactions) {
+        tx.providerRef = trackingId;
+        // tx.status remains PENDING until webhook
+        if (finalStatus === 'paid') tx.status = TransactionStatus.SUCCESS;
+      }
+      await this.transactionRepository.save(savedTransactions);
+
+      // Update Records
+      for (const record of records) {
+        record.paymentStatus = finalStatus;
+        record.paymentDate = new Date();
+        await this.payrollRecordRepository.save(record);
+
+        results.push({
+          workerId: record.workerId,
+          workerName: record.worker.name,
+          success: true,
+          transactionId: trackingId, // Batch ID
+          message: 'Batch processing initiated'
+        });
+      }
+
+    } catch (e) {
+      this.logger.error('Bulk Payout Failed', e);
+
+      // Refund
+      await this.usersRepository.increment({ id: firstUserId }, 'walletBalance', totalBatchAmount);
+
+      // Mark Transactions Failed
+      for (const tx of savedTransactions) {
+        tx.status = TransactionStatus.FAILED;
+        tx.metadata = { ...tx.metadata, error: e.message };
+      }
+      await this.transactionRepository.save(savedTransactions);
+
+      // Update Records Logic (Mark failed)
+      for (const record of records) {
+        record.paymentStatus = 'failed';
+        await this.payrollRecordRepository.save(record);
+        results.push({
+          workerId: record.workerId,
+          workerName: record.worker.name,
+          success: false,
+          error: e.message
+        });
+      }
+    }
+
+    return results;
   }
 
   private async processBankPayment(record: PayrollRecord) {
@@ -227,27 +285,28 @@ export class PayrollPaymentService {
         workerId: record.workerId,
         workerName: record.worker.name,
         success: true,
-        message: 'Bank transfer simulated',
+        transactionId: transaction.id,
       };
     } catch (error) {
       return {
         workerId: record.workerId,
-        workerName: record.worker?.name,
+        workerName: record.worker?.name || 'Unknown',
         success: false,
-        error: error.message,
+        error: error.message || 'Processing failed',
       };
     }
   }
 
+  /**
+   * Helper to generate a simple CSV bank file content
+   */
   private generateBankFileContent(records: PayrollRecord[]): string {
-    // Simple CSV format: Account Name, Account Number, Amount, Currency
-    const header = 'Worker Name,Account Number,Amount,Currency\n';
+    const headers = 'Account Name,Account Number,Bank,Amount,Reference\n';
     const rows = records
       .map((r) => {
-        // Assuming account number is in worker details or metadata. Using phone as fallback/placeholder
-        return `${r.worker.name},${r.worker.phoneNumber || 'N/A'},${r.netSalary},KES`;
+        return `${r.worker.name},${r.worker.bankAccount},${r.worker.bankName},${r.netSalary},SALARY`;
       })
       .join('\n');
-    return header + rows;
+    return headers + rows;
   }
 }

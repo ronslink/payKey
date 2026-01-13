@@ -12,7 +12,7 @@ import { UserResponse } from './types/test-types';
  * - Get user profile
  * - Update profile (personal info, compliance data)
  * - Onboarding completion tracking
- * 
+ *
  * Uses TestHelpers for type-safe test user creation.
  */
 describe('User Profile E2E', () => {

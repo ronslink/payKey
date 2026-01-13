@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner, Table } from 'typeorm';
 
-export class RecreateTaxPaymentsTable1733560000000
-  implements MigrationInterface
-{
+export class RecreateTaxPaymentsTable1733560000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Drop existing table which has incorrect schema
     await queryRunner.dropTable('tax_payments', true);

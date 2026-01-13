@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner, Table } from 'typeorm';
 
-export class CreateTaxSubmissionsTable1733570000000
-  implements MigrationInterface
-{
+export class CreateTaxSubmissionsTable1733570000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Create new table matching the TaxSubmission Entity definition
     await queryRunner.createTable(

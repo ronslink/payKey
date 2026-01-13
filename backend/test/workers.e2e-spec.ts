@@ -13,7 +13,7 @@ import { WorkerResponse, WorkerStatsResponse } from './types/test-types';
  * - Create, read, update, delete workers
  * - Worker statistics
  * - Leave request workflow
- * 
+ *
  * Uses TestHelpers for type-safe test user and worker creation.
  */
 describe('Workers E2E', () => {

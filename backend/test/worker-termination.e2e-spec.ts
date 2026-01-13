@@ -14,13 +14,13 @@ import {
 
 /**
  * Worker Termination E2E Tests
- * 
+ *
  * Tests the complete worker termination flow:
  * - Adding a worker
  * - Calculating final payment
  * - Terminating the worker
  * - Verifying status changes and records
- * 
+ *
  * Uses TestHelpers for type-safe operations.
  */
 describe('Worker Termination E2E', () => {
@@ -183,7 +183,7 @@ describe('Worker Termination E2E', () => {
 
     // Find the record for this worker
     const record = payrollRecords.find(
-      (p) => p.workerId === workerId && p.status === 'finalized'
+      (p) => p.workerId === workerId && p.status === 'finalized',
     );
     expect(record).toBeDefined();
     expect(parseFloat(String(record?.grossSalary))).toBeGreaterThan(0);
@@ -198,7 +198,7 @@ describe('Worker Termination E2E', () => {
 
     // Find submission for the PayPeriod of the record
     const submission = taxSubmissions.find(
-      (s) => s.payPeriod.id === record?.payPeriodId
+      (s) => s.payPeriod.id === record?.payPeriodId,
     );
     expect(submission).toBeDefined();
     // Check Housing Levy which is 1.5% of gross, so must be > 0 for any salary

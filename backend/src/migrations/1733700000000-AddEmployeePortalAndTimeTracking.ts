@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner, Table, TableColumn } from 'typeorm';
 
-export class AddEmployeePortalAndTimeTracking1733700000000
-  implements MigrationInterface
-{
+export class AddEmployeePortalAndTimeTracking1733700000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // ========================================
     // Create time_entries table

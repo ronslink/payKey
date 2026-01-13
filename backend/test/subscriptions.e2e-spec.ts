@@ -17,7 +17,7 @@ import {
  * - Get current subscription
  * - Usage tracking
  * - Payment history
- * 
+ *
  * Uses TestHelpers for type-safe test user creation.
  */
 describe('Subscription Payments E2E', () => {

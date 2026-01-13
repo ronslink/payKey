@@ -1,8 +1,6 @@
 import { MigrationInterface, QueryRunner, TableColumn } from 'typeorm';
 
-export class AddEmployerComplianceFields1733800000000
-  implements MigrationInterface
-{
+export class AddEmployerComplianceFields1733800000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // 1. Rename nhifNumber to shifNumber in users table
     // Note: We check if column exists first to be safe, although in migration sequence it should.

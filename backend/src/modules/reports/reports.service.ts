@@ -50,7 +50,7 @@ export class ReportsService {
     @InjectRepository(TaxSubmission)
     private taxSubmissionRepository: Repository<TaxSubmission>,
     @Optional() @Inject(CACHE_MANAGER) private cacheManager?: Cache,
-  ) { }
+  ) {}
 
   async getMonthlyPayrollReport(userId: string, year: number, month: number) {
     const startDate = new Date(year, month - 1, 1);
@@ -313,14 +313,15 @@ export class ReportsService {
 
     // Handle empty workers array to avoid invalid UUID query
     const workerIds = workers.map((w) => w.id);
-    const leaveRequests = workerIds.length > 0
-      ? await this.leaveRequestRepository.find({
-        where: { workerId: In(workerIds) },
-        order: { createdAt: 'DESC' },
-        take: 5,
-        relations: ['worker'],
-      })
-      : [];
+    const leaveRequests =
+      workerIds.length > 0
+        ? await this.leaveRequestRepository.find({
+            where: { workerId: In(workerIds) },
+            order: { createdAt: 'DESC' },
+            take: 5,
+            relations: ['worker'],
+          })
+        : [];
 
     const currentMonth = new Date();
     const currentMonthTransactions = await this.transactionsRepository

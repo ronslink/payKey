@@ -20,7 +20,7 @@ import {
  * 2. Termination mid-month (worker terminated before period end)
  * 3. Full period (no proration)
  * 4. Backend calculation with daysWorked parameter
- * 
+ *
  * Uses TestHelpers for type-safe operations.
  */
 describe('Payroll Proration E2E', () => {
@@ -153,7 +153,7 @@ describe('Payroll Proration E2E', () => {
 
       // Full period worker should have full salary
       const fullPeriodItem = calculation.payrollItems.find(
-        (item: PayrollItem) => item.workerId === fullPeriodWorkerId
+        (item: PayrollItem) => item.workerId === fullPeriodWorkerId,
       );
       expect(fullPeriodItem).toBeDefined();
       expect(fullPeriodItem?.grossSalary).toBe(60000);
@@ -161,7 +161,7 @@ describe('Payroll Proration E2E', () => {
       // New hire should also show full salary (proration is client-side calculation)
       // Backend returns base salary, client applies proration
       const newHireItem = calculation.payrollItems.find(
-        (item: PayrollItem) => item.workerId === newHireWorkerId
+        (item: PayrollItem) => item.workerId === newHireWorkerId,
       );
       expect(newHireItem).toBeDefined();
       expect(newHireItem?.grossSalary).toBe(60000);
@@ -214,7 +214,7 @@ describe('Payroll Proration E2E', () => {
         console.log(
           'Termination response:',
           terminateRes.status,
-          terminateRes.body
+          terminateRes.body,
         );
       }
       expect(terminateRes.status).toBe(201);
@@ -229,7 +229,7 @@ describe('Payroll Proration E2E', () => {
 
       // Verify terminated worker is excluded
       const terminatedItem = calculation.payrollItems.find(
-        (item: PayrollItem) => item.workerId === terminatedWorkerId
+        (item: PayrollItem) => item.workerId === terminatedWorkerId,
       );
       expect(terminatedItem).toBeUndefined();
     });
@@ -257,7 +257,7 @@ describe('Payroll Proration E2E', () => {
 
       // Net pay should be gross minus deductions
       expect(item.netPay).toBe(
-        item.grossSalary - item.taxBreakdown.totalDeductions
+        item.grossSalary - item.taxBreakdown.totalDeductions,
       );
     });
 
@@ -305,7 +305,7 @@ describe('Payroll Proration E2E', () => {
       const start = new Date('2024-02-01');
       const end = new Date('2024-02-29');
       const days = Math.ceil(
-        (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+        (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
       );
       expect(days).toBe(28); // difference is 28, +1 = 29 days total
     });

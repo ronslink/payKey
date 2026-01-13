@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
+import * as crypto from 'crypto';
 
 // IntaSend sandbox requires this specific phone number for B2C payouts
 const INTASEND_SANDBOX_TEST_PHONE = '254708374149';
@@ -61,24 +62,31 @@ export class IntaSendService {
     }
   }
 
-  verifyWebhookSignature(signature: string, payload: any): boolean {
-    // TODO: Implement actual IntaSend signature verification
-    // Logic: HMAC-SHA256 of the payload using the secret key
-    // For now, we return true to unblock, but this needs to be implemented.
-    // Actually, let's try to implement a basic check if possible, or just log for now if we aren't sure of the exact algorithm.
-    // IntaSend Docs say: "The signature is generated using HMAC with SHA256 algorithm."
-    // We will need 'crypto' module.
+  verifyWebhookSignature(signature: string, rawBody: Buffer): boolean {
+    if (!signature) {
+      this.logger.warn('⚠️ Webhook missing X-IntaSend-Signature header');
+      return false; // Fail secure
+    }
 
-    if (!signature) return false;
+    if (!rawBody) {
+      this.logger.warn(
+        '⚠️ Webhook missing raw body. Ensure main.ts captures it.',
+      );
+      return false;
+    }
 
-    // We can't verify properly without seeing the raw body or knowing the exact structure IntaSend signs.
-    // Usually it's the raw request body. NestJS Body parser might have already parsed it.
-    // For strict security, we'd need raw body access.
-    // Given current setup, let's at least compare against the secret we hold.
-    // NOTE: Without raw body, this is an estimation. Checking against `this.secretKey` ensures we only accept events for the key we are currently using.
+    // Use current secret key (Sandbox or Live depending on init)
+    const hmac = crypto
+      .createHmac('sha256', this.secretKey)
+      .update(rawBody)
+      .digest('hex');
 
-    // Since we might not have raw body easily here without middleware, we will return true for now BUT log the key being used.
-    // Ideally: crypto.createHmac('sha256', this.secretKey).update(rawBody).digest('hex');
+    if (hmac !== signature) {
+      this.logger.warn(
+        `⛔ Invalid Webhook Signature. Expected: ${hmac}, Received: ${signature}`,
+      );
+      return false;
+    }
 
     return true;
   }
@@ -176,26 +184,35 @@ export class IntaSendService {
   /**
    * Send Money (B2C / Payroll)
    */
+  /**
+   * Send Money (B2C / Payroll) - Supports Bulk
+   */
   async sendMoney(
-    phoneNumber: string,
-    amount: number,
-    reason: string = 'Salary Payment',
+    transactions: {
+      account: string;
+      amount: number;
+      narrative?: string;
+      name?: string;
+    }[],
   ) {
-    // In Sandbox mode, IntaSend requires using their test phone number for B2C payouts
-    const effectivePhone = this.isLive
-      ? phoneNumber
-      : INTASEND_SANDBOX_TEST_PHONE;
-
-    if (!this.isLive && phoneNumber !== INTASEND_SANDBOX_TEST_PHONE) {
-      this.logger.log(
-        `⚠️ SANDBOX: Overriding phone ${phoneNumber} -> ${INTASEND_SANDBOX_TEST_PHONE} (IntaSend requirement)`,
-      );
-    }
-
     const url = `${this.baseUrl}/v1/send-money/initiate/`;
     this.logger.log(
-      `Initiating IntaSend Payout to ${effectivePhone} for ${amount}`,
+      `Initiating IntaSend Payout for ${transactions.length} record(s)`,
     );
+
+    // Sandbox override logic
+    const formattedTransactions = transactions.map((t) => {
+      const effectivePhone = this.isLive
+        ? t.account
+        : INTASEND_SANDBOX_TEST_PHONE;
+
+      return {
+        name: t.name || 'Worker',
+        account: effectivePhone,
+        amount: t.amount,
+        narrative: t.narrative || 'Salary Payment',
+      };
+    });
 
     try {
       const response = await lastValueFrom(
@@ -204,18 +221,11 @@ export class IntaSendService {
           {
             provider: 'MPESA-B2C',
             currency: 'KES',
-            transactions: [
-              {
-                name: 'Worker',
-                account: effectivePhone,
-                amount: amount,
-                narrative: reason,
-              },
-            ],
+            transactions: formattedTransactions,
           },
           {
             headers: {
-              Authorization: `Bearer ${this.secretKey}`, // Payouts usually require Secret Key
+              Authorization: `Bearer ${this.secretKey}`,
             },
           },
         ),
@@ -230,6 +240,29 @@ export class IntaSendService {
       throw new Error(
         `IntaSend Payout failed: ${JSON.stringify(error.response?.data)}`,
       );
+    }
+  }
+
+  /**
+   * Check Payout Status
+   */
+  async checkPayoutStatus(trackingId: string) {
+    const url = `${this.baseUrl}/v1/send-money/status/${trackingId}/`;
+    try {
+      const response = await lastValueFrom(
+        this.httpService.get(url, {
+          headers: {
+            Authorization: `Bearer ${this.secretKey}`,
+          },
+        }),
+      );
+      return response.data;
+    } catch (error) {
+      this.logger.error(
+        `Failed to check status for ${trackingId}`,
+        error.response?.data || error.message,
+      );
+      throw error;
     }
   }
 

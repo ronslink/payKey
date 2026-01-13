@@ -5,9 +5,7 @@ import {
   TableForeignKey,
 } from 'typeorm';
 
-export class CreateLeaveRequestsTable1734000000000
-  implements MigrationInterface
-{
+export class CreateLeaveRequestsTable1734000000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Check if table already exists (for idempotency)
     const tableExists = await queryRunner.hasTable('leave_requests');

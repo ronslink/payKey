@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/models/worker_model.dart';
-import '../../properties/presentation/providers/properties_provider.dart';
+
 import '../../../settings/providers/settings_provider.dart';
 import '../providers/workers_provider.dart';
 

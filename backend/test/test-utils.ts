@@ -58,15 +58,12 @@ export async function cleanupTestData(dataSource: DataSource): Promise<void> {
     }
 
     // Construct a list of table names, quoted
-    const tableNames = tables
-      .map((t) => `"${t.tablename}"`)
-      .join(', ');
+    const tableNames = tables.map((t) => `"${t.tablename}"`).join(', ');
 
     // TRUNCATE all tables with CASCADE to handle foreign keys automatically
     await dataSource.query(
       `TRUNCATE TABLE ${tableNames} RESTART IDENTITY CASCADE;`,
     );
-
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.warn(`Dynamic cleanup failed: ${errorMessage}`);
@@ -78,17 +75,25 @@ export async function cleanupTestData(dataSource: DataSource): Promise<void> {
 /**
  * Verify database connection and log connection details in CI
  */
-export async function verifyDatabaseConnection(dataSource: DataSource): Promise<void> {
+export async function verifyDatabaseConnection(
+  dataSource: DataSource,
+): Promise<void> {
   if (!dataSource.isInitialized) {
     throw new Error('DataSource is not initialized');
   }
 
   try {
-    const result: { current_user: string; current_database: string }[] = await dataSource.query('SELECT current_user, current_database()');
+    const result: { current_user: string; current_database: string }[] =
+      await dataSource.query('SELECT current_user, current_database()');
 
     // Log connection details in CI for debugging
     if (process.env.CI === 'true' || process.env.GITHUB_ACTIONS === 'true') {
-      const options = dataSource.options as { host?: string; port?: number; username?: string; database?: string };
+      const options = dataSource.options as {
+        host?: string;
+        port?: number;
+        username?: string;
+        database?: string;
+      };
       console.log('✅ CI Database Connection Verified:', {
         host: options.host,
         port: options.port,

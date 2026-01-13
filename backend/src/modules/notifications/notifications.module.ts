@@ -7,12 +7,9 @@ import { Notification } from './entities/notification.entity';
 import { DeviceToken } from './entities/device-token.entity';
 
 @Module({
-    imports: [
-        HttpModule,
-        TypeOrmModule.forFeature([Notification, DeviceToken]),
-    ],
-    controllers: [NotificationsController],
-    providers: [NotificationsService],
-    exports: [NotificationsService],
+  imports: [HttpModule, TypeOrmModule.forFeature([Notification, DeviceToken])],
+  controllers: [NotificationsController],
+  providers: [NotificationsService],
+  exports: [NotificationsService],
 })
-export class NotificationsModule { }
+export class NotificationsModule {}

@@ -16,7 +16,7 @@ import {
 
 /**
  * Payroll Complete Flow E2E Tests
- * 
+ *
  * Tests the complete end-to-end payroll workflow:
  * 1. Add a worker
  * 2. Generate pay periods
@@ -25,7 +25,7 @@ import {
  * 5. Finalize payroll
  * 6. Query tax submissions
  * 7. Download payslip
- * 
+ *
  * Uses TestHelpers for type-safe operations.
  */
 describe('Payroll Complete Flow E2E', () => {
@@ -183,7 +183,7 @@ describe('Payroll Complete Flow E2E', () => {
       payrollRecordId = record.id;
       // Record may still be processing or finalized
       expect(['draft', 'finalized', 'processing'].includes(record.status)).toBe(
-        true
+        true,
       );
     }
   });
@@ -219,7 +219,7 @@ describe('Payroll Complete Flow E2E', () => {
 
     expect(res.header['content-type']).toBe('application/pdf');
     expect(res.header['content-disposition']).toContain(
-      'attachment; filename="payslip-'
+      'attachment; filename="payslip-',
     );
   });
 });

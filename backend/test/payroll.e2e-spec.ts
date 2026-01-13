@@ -25,7 +25,7 @@ import {
  * 5. Save draft payroll
  * 6. Finalize payroll
  * 7. Download payslip
- * 
+ *
  * Uses TestHelpers for type-safe operations.
  */
 describe('Payroll E2E', () => {
@@ -165,12 +165,10 @@ describe('Payroll E2E', () => {
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           payPeriodId,
-          payrollItems: calculation.payrollItems.map(
-            (item: PayrollItem) => ({
-              workerId: item.workerId,
-              grossSalary: item.grossSalary,
-            })
-          ),
+          payrollItems: calculation.payrollItems.map((item: PayrollItem) => ({
+            workerId: item.workerId,
+            grossSalary: item.grossSalary,
+          })),
         })
         .expect(201);
 

@@ -4,7 +4,11 @@ import request from 'supertest';
 import { AppModule } from './../src/app.module';
 import { TestHelpers, createTestHelpers } from './helpers/test-helpers';
 import { DataSource } from 'typeorm';
-import { cleanupTestData, generateTestEmail, generateTestPhone } from './test-utils';
+import {
+  cleanupTestData,
+  generateTestEmail,
+  generateTestPhone,
+} from './test-utils';
 
 /**
  * Authentication E2E Tests
@@ -106,12 +110,10 @@ describe('Auth E2E', () => {
     });
 
     it('should login successfully with valid credentials', async () => {
-      const res = await request(app.getHttpServer())
-        .post('/auth/login')
-        .send({
-          email: testUser.email,
-          password: testUser.password,
-        });
+      const res = await request(app.getHttpServer()).post('/auth/login').send({
+        email: testUser.email,
+        password: testUser.password,
+      });
 
       expect(res.status).toBeOneOf([200, 201]);
       expect(res.body).toHaveProperty('access_token');

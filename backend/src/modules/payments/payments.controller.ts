@@ -1,10 +1,13 @@
 import {
   Controller,
+  Get,
   Post,
   Body,
+  Param,
   Headers,
   UseGuards,
   Request,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { MpesaService } from './mpesa.service';
 import { IntaSendService } from './intasend.service';
@@ -93,9 +96,66 @@ export class PaymentsController {
     @InjectRepository(Subscription)
     private subscriptionRepository: Repository<Subscription>,
     private intaSendService: IntaSendService,
-  ) {}
+  ) { }
 
-  // ... (existing callbacks) ...
+  @Post('callback')
+  async handleMpesaCallback(@Body() body: MpesaCallbackData) {
+    console.log('M-Pesa Callback Received:', JSON.stringify(body));
+
+    const callback = body.Body.stkCallback;
+    if (!callback) {
+      return { ResultCode: 1, ResultDesc: 'Invalid Payload' };
+    }
+
+    const { MerchantRequestID, ResultCode, ResultDesc } = callback;
+
+    const transaction = await this.transactionsRepository.findOne({
+      where: { providerRef: MerchantRequestID },
+    });
+
+    if (!transaction) {
+      console.warn(`Transaction not found for M-Pesa Callback: ${MerchantRequestID}`);
+      return { ResultCode: 0, ResultDesc: 'Transaction Not Found' };
+    }
+
+    if (transaction.status !== TransactionStatus.PENDING) {
+      return { ResultCode: 0, ResultDesc: 'Already Processed' };
+    }
+
+    if (ResultCode === 0) {
+      transaction.status = TransactionStatus.SUCCESS;
+
+      // Credit User Wallet
+      // Note: check for double crediting handled by status check above
+      await this.usersRepository.increment(
+        { id: transaction.userId },
+        'walletBalance',
+        Number(transaction.amount) // Ensure number
+      );
+    } else {
+      transaction.status = TransactionStatus.FAILED;
+    }
+
+    transaction.metadata = {
+      ...(typeof transaction.metadata === 'string'
+        ? JSON.parse(transaction.metadata)
+        : transaction.metadata),
+      resultDesc: ResultDesc,
+      callback: body,
+    };
+
+    await this.transactionsRepository.save(transaction);
+
+    return { ResultCode: 0, ResultDesc: 'Success' };
+  }
+
+  @Post('b2c-callback')
+  async handleB2CCallback(@Body() body: MpesaB2CCallbackData) {
+    console.log('M-Pesa B2C Callback Received:', JSON.stringify(body));
+    // Delegate to service if needed, or handle here
+    // Currently PayKey uses IntaSend for B2C, so this might be legacy or direct M-Pesa.
+    return { ResultCode: 0, ResultDesc: 'Accepted' };
+  }
 
   @Post('initiate-stk')
   @UseGuards(JwtAuthGuard)
@@ -126,11 +186,15 @@ export class PaymentsController {
     },
   ) {
     // IntaSend Logic
-    return this.intaSendService.sendMoney(
-      body.phoneNumber,
-      body.amount,
-      body.remarks || 'Payment',
-    );
+    // Note: This endpoint processes single payment legacy style.
+    // Ideally should be updated to use bulk if needed, but keeping for backward compat.
+    return this.intaSendService.sendMoney([
+      {
+        account: body.phoneNumber,
+        amount: body.amount,
+        narrative: body.remarks || 'Payment',
+      }
+    ]);
   }
 
   /**
@@ -166,149 +230,116 @@ export class PaymentsController {
       newBalance: user?.walletBalance ?? 0,
     };
   }
+
+  @Get('intasend/status/:trackingId')
+  async checkPayoutStatus(@Param('trackingId') trackingId: string) {
+    const status = await this.intaSendService.checkPayoutStatus(trackingId);
+    return status;
+  }
+
   @Post('intasend/webhook')
-  async handleIntaSendWebhook(@Body() body: any) {
+  async handleIntaSendWebhook(@Request() req: any, @Body() body: any) {
     console.log('🔹 IntaSend Webhook Received:', JSON.stringify(body, null, 2));
 
-    // Handle Challenge (if IntaSend sends one, though usually it's direct POST)
     if (body.challenge) {
       return { challenge: body.challenge };
     }
 
     // VERIFY SIGNATURE
-    // Note: In a real app, you might want to use a Guard or Middleware for this.
-    // For now, we do it here explicitly.
-    // We cannot easily get the raw body here without custom middleware in NestJS,
-    // so we rely on the service to do a best-effort check or we might need to rely on the secret matching only.
-    // For now, let's log.
-    // const signature = req.headers['x-intasend-signature'];
-    // if (!this.intaSendService.verifyWebhookSignature(signature, body)) {
-    //    console.error('⛔ Invalid Webhook Signature');
-    //    throw new UnauthorizedException('Invalid Signature');
-    // }
-
-    const { invoice_id, state, api_ref, value, account } = body;
-
-    // 1. Find Transaction by Provider Ref (Invoice ID) - This is the UNIQUE identifier from IntaSend
-    // Note: We removed accountReference matching as it caused stale transaction retrieval.
-    const transaction = await this.transactionsRepository.findOne({
-      where: { providerRef: invoice_id },
-    });
-
-    if (transaction) {
-      console.log(
-        '🔹 Loaded Transaction Metadata (Raw):',
-        transaction.metadata,
-        'Type:',
-        typeof transaction.metadata,
-      );
-      if (typeof transaction.metadata === 'string') {
-        try {
-          transaction.metadata = JSON.parse(transaction.metadata);
-        } catch (e) {}
-      }
+    const signature = (req.headers['x-intasend-signature'] as string) || '';
+    if (!this.intaSendService.verifyWebhookSignature(signature, req.rawBody)) {
+      console.error('⛔ Invalid Webhook Signature');
+      throw new UnauthorizedException('Invalid Signature');
     }
 
-    if (!transaction) {
+    const { invoice_id, tracking_id, state, api_ref, value } = body;
+
+    // 1. Find Transactions (Handing Bulk by tracking_id)
+    // We search for ANY transaction matching invoice_id OR tracking_id
+    const transactions = await this.transactionsRepository.find({
+      where: [
+        ...(invoice_id ? [{ providerRef: invoice_id }] : []),
+        ...(tracking_id ? [{ providerRef: tracking_id }] : []),
+      ],
+    });
+
+    if (transactions.length === 0) {
       console.warn(
-        `⚠️ Transaction not found for Invoice: ${invoice_id} / Ref: ${api_ref}`,
+        `⚠️ Transaction not found for Invoice: ${invoice_id} / Tracking: ${tracking_id}`,
       );
       return { status: 'ignored', reason: 'Transaction not found' };
     }
 
-    // 2. Update Status
-    if (state === 'COMPLETE' || state === 'COMPLETED') {
-      transaction.status = TransactionStatus.SUCCESS;
+    // 2. Idempotency Check (Check first one)
+    const firstTx = transactions[0];
+    if (
+      firstTx.status === TransactionStatus.SUCCESS ||
+      firstTx.status === TransactionStatus.FAILED
+    ) {
+      console.log(`🔹 Idempotency: Transaction(s) ${firstTx.providerRef} already final. Skipping.`);
+      return { status: 'ignored', reason: 'Already finalized' };
+    }
 
-      // If it's a TopUp (Deposit), credit the wallet
+    // 3. Determine New Status
+    let newStatus = TransactionStatus.PENDING;
+    if (state === 'COMPLETE' || state === 'COMPLETED') {
+      newStatus = TransactionStatus.SUCCESS;
+    } else if (state === 'FAILED') {
+      newStatus = TransactionStatus.FAILED;
+    }
+
+    // 4. Update ALL matching transactions
+    for (const tx of transactions) {
+      tx.status = newStatus;
+      tx.metadata = {
+        ...(typeof tx.metadata === 'string' ? JSON.parse(tx.metadata) : tx.metadata),
+        webhookEvent: body,
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Handle Deposit Logic (Only credit once per transaction)
+      // Note: tracking_id based bulk payouts are usually TYPE=PAYOUT, not DEPOSIT.
+      // DEPOSITS usually have unique invoice_id.
       if (
-        transaction.type === TransactionType.DEPOSIT &&
-        transaction.status !== TransactionStatus.SUCCESS
+        tx.type === TransactionType.DEPOSIT &&
+        newStatus === TransactionStatus.SUCCESS
       ) {
-        // Prevent double credit if already successful?
-        // We should check previous status.
         await this.usersRepository.increment(
-          { id: transaction.userId },
+          { id: tx.userId },
           'walletBalance',
-          Number(value),
+          Number(value || tx.amount),
         );
       }
-    } else if (state === 'FAILED') {
-      transaction.status = TransactionStatus.FAILED;
-    } else if (state === 'PROCESSING') {
-      transaction.status = TransactionStatus.PENDING;
     }
 
-    // 3. Update Transaction Metadata
-    transaction.metadata = {
-      ...transaction.metadata,
-      webhookEvent: body,
-      updatedAt: new Date().toISOString(),
-    };
+    await this.transactionsRepository.save(transactions);
 
-    await this.transactionsRepository.save(transaction);
-
-    // 4. Handle Subscription Logic if relevant
-    let metadata = transaction.metadata;
-    if (typeof metadata === 'string') {
-      try {
-        metadata = JSON.parse(metadata);
-      } catch (e) {
-        console.error('Failed to parse metadata string:', e);
-      }
-    }
-
-    console.log(
-      `🔹 Checking metadata (Type: ${typeof metadata}):`,
-      JSON.stringify(metadata),
-    );
-
-    if (metadata?.subscriptionPaymentId) {
-      console.log('✅ Found Subscription Link! Updating Payment...');
-      const subPaymentId = metadata.subscriptionPaymentId;
-      // Normalizing status check: IntaSend sends "COMPLETE" or "COMPLETED"
-      const isSuccess = state === 'COMPLETE' || state === 'COMPLETED';
+    // 5. Subscription Logic (Legacy/Single handling)
+    if (firstTx.metadata?.subscriptionPaymentId) {
+      const subPaymentId = firstTx.metadata.subscriptionPaymentId;
+      const isSuccess = newStatus === TransactionStatus.SUCCESS;
       const status = isSuccess ? PaymentStatus.COMPLETED : PaymentStatus.FAILED;
 
       await this.subscriptionPaymentRepository.update(subPaymentId, {
         status,
-        transactionId: invoice_id,
+        transactionId: invoice_id || tracking_id,
         paidDate: isSuccess ? new Date() : undefined,
       });
 
-      // TRIGGER SUBSCRIPTION ACTIVATION
       if (isSuccess) {
-        // find the payment to match logic in checkMpesaPaymentStatus
-        const payment = await this.subscriptionPaymentRepository.findOne({
-          where: { id: subPaymentId },
-        });
+        const payment = await this.subscriptionPaymentRepository.findOne({ where: { id: subPaymentId } });
         if (payment) {
-          const subscription = await this.subscriptionRepository.findOne({
-            where: { id: payment.subscriptionId },
-          });
+          const subscription = await this.subscriptionRepository.findOne({ where: { id: payment.subscriptionId } });
           if (subscription) {
             subscription.status = SubscriptionStatus.ACTIVE;
             await this.subscriptionRepository.save(subscription);
-
-            // Update User Tier
-            const plan = await this.subscriptionPaymentRepository.manager.query(
-              `SELECT tier FROM subscriptions WHERE id = $1`,
-              [subscription.id],
-            ); // or just use subscription.tier
-
-            await this.usersRepository.update(payment.userId, {
-              tier: subscription.tier as any,
-            });
-            console.log(
-              `🎉 Subscription Activated for User ${payment.userId} to Tier ${subscription.tier}`,
-            );
+            await this.usersRepository.update(payment.userId, { tier: subscription.tier as any });
+            console.log(`🎉 Subscription Activated for User ${payment.userId}`);
           }
         }
       }
-    } else {
-      console.log('⚠️ No subscriptionPaymentId in metadata');
     }
 
-    return { status: 'received' };
+    return { status: 'success', updated: transactions.length };
   }
 }

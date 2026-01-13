@@ -20,7 +20,7 @@ import {
  * - Payroll export (CSV format)
  * - Export history
  * - Journal entries generation
- * 
+ *
  * Uses TestHelpers for type-safe test user creation.
  */
 describe('Accounting E2E', () => {

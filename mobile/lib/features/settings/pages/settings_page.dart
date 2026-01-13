@@ -199,10 +199,7 @@ class _SettingsContent extends ConsumerWidget {
 
     // Only show property setting for PLATINUM users
     if (isPlatinum) {
-      items.add(_DefaultPropertySetting(
-        settings: settings,
-        onTap: () => _showPropertyPicker(context, ref),
-      ));
+      items.add(_buildDefaultPropertyItem(context, ref));
     }
 
     return items;
@@ -549,20 +546,7 @@ class _SettingsContent extends ConsumerWidget {
       },
     );
   }
-}
-
-/// Widget for the default property setting in preferences
-class _DefaultPropertySetting extends ConsumerWidget {
-  final UserSettings settings;
-  final VoidCallback onTap;
-
-  const _DefaultPropertySetting({
-    required this.settings,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  SettingItem _buildDefaultPropertyItem(BuildContext context, WidgetRef ref) {
     final propertiesAsync = ref.watch(propertiesProvider);
     
     return SettingItem(
@@ -581,9 +565,9 @@ class _DefaultPropertySetting extends ConsumerWidget {
           height: 20,
           child: CircularProgressIndicator(strokeWidth: 2),
         ),
-        error: (_) => const Icon(Icons.error_outline, color: Colors.red),
+        error: (_, __) => const Icon(Icons.error_outline, color: Colors.red),
       ),
-      onTap: onTap,
+      onTap: () => _showPropertyPicker(context, ref),
     );
   }
 
@@ -608,7 +592,9 @@ class _DefaultPropertySetting extends ConsumerWidget {
         return selectedProperty.name;
       },
       loading: () => 'Loading...',
-      error: (_) => 'Error loading',
+      error: (_, __) => 'Error loading',
     );
   }
 }
+
+

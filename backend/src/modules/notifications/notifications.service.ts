@@ -45,7 +45,7 @@ export class NotificationsService implements OnModuleInit {
   constructor(
     private configService: ConfigService,
     private httpService: HttpService,
-  ) { }
+  ) {}
 
   onModuleInit() {
     this.initializeFirebase();
@@ -61,7 +61,9 @@ export class NotificationsService implements OnModuleInit {
       const absolutePath = path.resolve(serviceAccountPath);
 
       if (fs.existsSync(absolutePath)) {
-        const serviceAccount = JSON.parse(fs.readFileSync(absolutePath, 'utf8'));
+        const serviceAccount = JSON.parse(
+          fs.readFileSync(absolutePath, 'utf8'),
+        );
 
         if (!admin.apps.length) {
           admin.initializeApp({
@@ -158,7 +160,7 @@ export class NotificationsService implements OnModuleInit {
     ) as string;
 
     if (!apiKey || !username) {
-      throw new Error('Africa\'s Talking credentials not configured');
+      throw new Error("Africa's Talking credentials not configured");
     }
 
     try {
@@ -234,7 +236,9 @@ export class NotificationsService implements OnModuleInit {
 
       case 'MOCK':
       default:
-        this.logger.log(`MOCK EMAIL sent to ${notificationRequest.recipientEmail}`);
+        this.logger.log(
+          `MOCK EMAIL sent to ${notificationRequest.recipientEmail}`,
+        );
         this.logger.log(`Subject: ${notificationRequest.subject}`);
         this.logger.log(`Message: ${notificationRequest.message}`);
         return {
@@ -252,7 +256,10 @@ export class NotificationsService implements OnModuleInit {
     error?: string;
   }> {
     const apiKey = this.configService.get('SENDGRID_API_KEY') as string;
-    const fromEmail = this.configService.get('SENDGRID_FROM_EMAIL', 'noreply@paydome.co') as string;
+    const fromEmail = this.configService.get(
+      'SENDGRID_FROM_EMAIL',
+      'noreply@paydome.co',
+    );
 
     if (!apiKey) {
       throw new Error('SendGrid API key not configured');
@@ -332,7 +339,9 @@ export class NotificationsService implements OnModuleInit {
           title: notificationRequest.subject || 'PayDome',
           body: notificationRequest.message,
         },
-        data: notificationRequest.metadata as Record<string, string> | undefined,
+        data: notificationRequest.metadata as
+          | Record<string, string>
+          | undefined,
         android: {
           priority: 'high',
           notification: {
@@ -357,7 +366,9 @@ export class NotificationsService implements OnModuleInit {
       };
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : 'Failed to send push notification';
+        error instanceof Error
+          ? error.message
+          : 'Failed to send push notification';
       this.logger.error('Push notification failed:', error);
       return {
         success: false,

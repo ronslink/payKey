@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/network/api_service.dart';
-import '../../properties/data/repositories/properties_repository.dart';
-import '../../properties/data/models/property_model.dart';
 
 /// User settings model
 class UserSettings {

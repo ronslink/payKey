@@ -20,7 +20,7 @@ import { PayPeriodResponse } from './types/test-types';
  * - P9 reports (employer)
  * - P10 reports
  * - Employee P9 (individual)
- * 
+ *
  * Uses TestHelpers for type-safe test user creation.
  */
 describe('Reports E2E', () => {
