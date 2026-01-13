@@ -50,7 +50,7 @@ export class ReportsService {
     @InjectRepository(TaxSubmission)
     private taxSubmissionRepository: Repository<TaxSubmission>,
     @Optional() @Inject(CACHE_MANAGER) private cacheManager?: Cache,
-  ) {}
+  ) { }
 
   async getMonthlyPayrollReport(userId: string, year: number, month: number) {
     const startDate = new Date(year, month - 1, 1);
@@ -230,6 +230,7 @@ export class ReportsService {
       totals.totalDeductions += totalDeductions;
 
       return {
+        id: record.id,
         workerName: record.worker?.name || 'Unknown',
         workerId: record.workerId,
         grossPay: gross,
@@ -316,11 +317,11 @@ export class ReportsService {
     const leaveRequests =
       workerIds.length > 0
         ? await this.leaveRequestRepository.find({
-            where: { workerId: In(workerIds) },
-            order: { createdAt: 'DESC' },
-            take: 5,
-            relations: ['worker'],
-          })
+          where: { workerId: In(workerIds) },
+          order: { createdAt: 'DESC' },
+          take: 5,
+          relations: ['worker'],
+        })
         : [];
 
     const currentMonth = new Date();
@@ -841,7 +842,214 @@ export class ReportsService {
     return { stream: archive, filename: `P9_Returns_${year}.zip` };
   }
 
+  /**
+   * Generate Payslip PDF for a single payroll record
+   */
+  async generatePayslipPdf(payrollRecordId: string): Promise<Buffer> {
+    const record = await this.payrollRecordRepository.findOne({
+      where: { id: payrollRecordId },
+      relations: ['worker', 'payPeriod'],
+    });
+
+    if (!record) {
+      throw new NotFoundException('Payroll record not found');
+    }
+
+    return new Promise((resolve, reject) => {
+      const doc = new PDFDocument({ margin: 50 });
+      const buffers: Buffer[] = [];
+
+      doc.on('data', (buffer: any) => buffers.push(buffer));
+      doc.on('end', () => resolve(Buffer.concat(buffers)));
+      doc.on('error', (err: any) => reject(err));
+
+      // Header
+      doc.fontSize(20).font('Helvetica-Bold').text('PAYSLIP', { align: 'center' });
+      doc.moveDown();
+
+      // Company Info (Placeholder)
+      doc.fontSize(12).font('Helvetica-Bold').text('My Company Name');
+      doc.font('Helvetica').fontSize(10).text('123 Business Road, Nairobi, Kenya');
+      doc.text('PIN: P000000000A');
+      doc.moveDown();
+
+      const y = doc.y;
+
+      // Period & Employee Info
+      doc.font('Helvetica-Bold').text('Pay Period:', 50, y);
+      doc.font('Helvetica').text(record.payPeriod.name, 150, y);
+
+      doc.font('Helvetica-Bold').text('Date:', 300, y);
+      doc.font('Helvetica').text(new Date().toLocaleDateString(), 380, y);
+      doc.moveDown();
+
+      doc.font('Helvetica-Bold').text('Employee:', 50);
+      doc.font('Helvetica').text(record.worker.name, 150);
+
+      doc.font('Helvetica-Bold').text('ID / PIN:', 50);
+      doc.font('Helvetica').text(`${record.worker.idNumber || 'N/A'} / ${record.worker.kraPin || 'N/A'}`, 150);
+
+      doc.moveDown(2);
+
+      // Earnings Section
+      const startX = 50;
+      let currentY = doc.y;
+
+      // Draw Box
+      doc.rect(startX, currentY, 500, 25).fillAndStroke('#f0f0f0', '#cccccc');
+      doc.fillColor('black').font('Helvetica-Bold').text('Description', startX + 10, currentY + 7);
+      doc.text('Amount (KES)', 400, currentY + 7, { align: 'right', width: 140 });
+
+      currentY += 35;
+
+      const addRow = (label: string, amount: number, isBold = false) => {
+        if (isBold) doc.font('Helvetica-Bold');
+        else doc.font('Helvetica');
+
+        doc.text(label, startX + 10, currentY);
+        doc.text(this.formatMoney(amount), 400, currentY, { align: 'right', width: 140 });
+        currentY += 20;
+      };
+
+      addRow('Basic Salary', Number(record.grossSalary));
+
+      // Note: Using current worker allowances as historical data is not on record
+      if (Number(record.worker?.housingAllowance) > 0) addRow('Housing Allowance', Number(record.worker.housingAllowance));
+      if (Number(record.worker?.transportAllowance) > 0) addRow('Transport Allowance', Number(record.worker.transportAllowance));
+
+      if (Number(record.bonuses) > 0) addRow('Bonuses', Number(record.bonuses));
+      if (Number(record.otherEarnings) > 0) addRow('Other Earnings', Number(record.otherEarnings));
+
+      doc.moveTo(startX, currentY).lineTo(550, currentY).stroke();
+      currentY += 5;
+
+      // Calculate Total Gross for display (may differ slightly if allowances changed, but best effort)
+      const calculatedGross = Number(record.grossSalary) + Number(record.bonuses) + Number(record.otherEarnings);
+      addRow('GROSS PAY', calculatedGross, true);
+
+      currentY += 20;
+
+      // Deductions Section
+      doc.rect(startX, currentY, 500, 25).fillAndStroke('#f0f0f0', '#cccccc');
+      doc.fillColor('black').font('Helvetica-Bold').text('Deductions', startX + 10, currentY + 7);
+      currentY += 35;
+
+      const tax = record.taxBreakdown || {};
+      addRow('PAYE (Tax)', Number(tax.paye || 0));
+      addRow('NSSF', Number(tax.nssf || 0));
+      addRow('NHIF / SHIF', Number(tax.nhif || 0)); // Assuming NHIF maps to SHIF
+      addRow('Housing Levy', Number(tax.housingLevy || 0));
+
+      doc.moveTo(startX, currentY).lineTo(550, currentY).stroke();
+      currentY += 5;
+      addRow('TOTAL DEDUCTIONS', Number(tax.totalDeductions || 0), true);
+
+      currentY += 30;
+
+      // Net Pay
+      doc.rect(startX, currentY, 500, 40).fillAndStroke('#e8f5e9', '#4caf50');
+      doc.fillColor('black').fontSize(14).font('Helvetica-Bold');
+      doc.text('NET PAY', startX + 20, currentY + 12);
+      doc.text(`KES ${this.formatMoney(Number(record.netSalary))}`, 300, currentY + 12, { align: 'right', width: 240 });
+
+      doc.end();
+    });
+  }
+
+  /**
+   * Generate Statutory (P10) PDF Report
+   */
+  async generateStatutoryPdf(report: any): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      const doc = new PDFDocument({ margin: 30 });
+      const buffers: Buffer[] = [];
+
+      doc.on('data', (buffer: any) => buffers.push(buffer));
+      doc.on('end', () => resolve(Buffer.concat(buffers)));
+      doc.on('error', (err: any) => reject(err));
+
+      // Header
+      doc.fontSize(16).font('Helvetica-Bold').text('STATUTORY DEDUCTIONS REPORT', { align: 'center' });
+      doc.fontSize(12).text(report.payPeriod.name, { align: 'center' });
+      doc.moveDown(2);
+
+      // Totals Summary
+      doc.fontSize(12).font('Helvetica-Bold').text('Summary');
+      doc.rect(30, doc.y, 550, 60).stroke();
+
+      let y = doc.y + 10;
+      const col1 = 50;
+      const col2 = 200;
+      const col3 = 350;
+
+      doc.font('Helvetica-Bold').fontSize(10);
+      doc.text('PAYE:', col1, y);
+      doc.text(`KES ${this.formatMoney(report.totals.paye)}`, col1 + 50, y);
+
+      doc.text('NSSF:', col2, y);
+      doc.text(`KES ${this.formatMoney(report.totals.nssf)}`, col2 + 50, y);
+
+      y += 20;
+
+      doc.text('NHIF / SHIF:', col1, y);
+      doc.text(`KES ${this.formatMoney(report.totals.nhif)}`, col1 + 80, y);
+
+      doc.text('Housing Levy:', col2, y);
+      doc.text(`KES ${this.formatMoney(report.totals.housingLevy)}`, col2 + 80, y);
+
+      doc.moveDown(4);
+
+      // Employee Table
+      const headers = ['Name', 'Gross Pay', 'NSSF', 'NHIF', 'Housing', 'PAYE'];
+      const colWidths = [150, 80, 80, 80, 80, 80];
+      const startX = 30;
+      let x = startX;
+      y = doc.y;
+
+      // Draw Headers
+      doc.rect(startX, y, 550, 20).fill('#eeeeee');
+      doc.fillColor('black');
+      headers.forEach((h, i) => {
+        doc.text(h, x + 5, y + 5, { width: colWidths[i], align: i === 0 ? 'left' : 'right' });
+        x += colWidths[i];
+      });
+
+      y += 25;
+      doc.font('Helvetica').fontSize(9);
+
+      // Draw Rows
+      report.employees.forEach((emp: any, index: number) => {
+        if (y > 700) { // New Page
+          doc.addPage();
+          y = 30;
+          // Redraw headers... (simplified for brevity)
+        }
+
+        x = startX;
+        // Background striping
+        if (index % 2 === 1) doc.rect(startX, y - 2, 550, 15).fill('#f9f9f9');
+        doc.fillColor('black');
+
+        doc.text(emp.name, x + 5, y, { width: colWidths[0] });
+        x += colWidths[0];
+        doc.text(this.formatMoney(emp.grossPay), x + 5, y, { width: colWidths[1], align: 'right' });
+        x += colWidths[1];
+        doc.text(this.formatMoney(emp.nssf), x + 5, y, { width: colWidths[2], align: 'right' });
+        x += colWidths[2];
+        doc.text(this.formatMoney(emp.nhif), x + 5, y, { width: colWidths[3], align: 'right' });
+        x += colWidths[3];
+        doc.text(this.formatMoney(emp.housingLevy), x + 5, y, { width: colWidths[4], align: 'right' });
+        x += colWidths[4];
+        doc.text(this.formatMoney(emp.paye), x + 5, y, { width: colWidths[5], align: 'right' });
+
+        y += 15;
+      });
+
+      doc.end();
+    });
+  }
+
   private formatMoney(amount: number): string {
-    return (amount || 0).toFixed(2);
+    return (amount || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 }

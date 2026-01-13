@@ -1013,6 +1013,35 @@ class ReportEndpoints extends BaseEndpoints {
       throw _api.handleError(e);
     }
   }
+  Future<List<int>> downloadPayslipPdf(String recordId) async {
+    try {
+      final response = await _api.dio.get<List<int>>(
+        '/reports/payslip/$recordId/pdf',
+        options: Options(
+          responseType: ResponseType.bytes,
+          headers: {'Accept': '*/*'},
+        ),
+      );
+      return response.data ?? [];
+    } catch (e) {
+      throw _api.handleError(e);
+    }
+  }
+
+  Future<List<int>> downloadStatutoryPdf(String payPeriodId) async {
+    try {
+      final response = await _api.dio.get<List<int>>(
+        '/reports/statutory/$payPeriodId/pdf',
+        options: Options(
+          responseType: ResponseType.bytes,
+          headers: {'Accept': '*/*'},
+        ),
+      );
+      return response.data ?? [];
+    } catch (e) {
+      throw _api.handleError(e);
+    }
+  }
 }
 
 // -----------------------------------------------------------------------------

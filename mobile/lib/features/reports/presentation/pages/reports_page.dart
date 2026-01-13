@@ -1255,9 +1255,29 @@ class _PayrollSummaryView extends ConsumerWidget {
                   subtitle: Text(
                     'Net: KES ${currencyFormat.format(record.netPay)}',
                   ),
-                  trailing: Text(
-                    'KES ${currencyFormat.format(record.grossPay)}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'KES ${currencyFormat.format(record.grossPay)}',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.picture_as_pdf, color: Colors.blue),
+                        onPressed: () {
+                           if (record.id.isNotEmpty) {
+                             ref.read(taxExportProvider.notifier).downloadPayslip(
+                               recordId: record.id,
+                             );
+                           } else {
+                             ScaffoldMessenger.of(context).showSnackBar(
+                               const SnackBar(content: Text('Cannot download: Invalid record ID')),
+                             );
+                           }
+                        }, 
+                      ),
+                    ],
                   ),
                 ),
               )),
@@ -1372,8 +1392,8 @@ class _StatutoryReportView extends ConsumerWidget {
             children: [
               Expanded(
                 child: _SummaryCard(
-                  'NHIF',
-                  currencyFormat.format(report.totals.nhif),
+                  'SHIF',
+                  currencyFormat.format(report.totals.shif),
                   Colors.green,
                   Icons.health_and_safety,
                 ),
@@ -1411,7 +1431,7 @@ class _StatutoryReportView extends ConsumerWidget {
                   DataColumn(label: Text('Name')),
                   DataColumn(label: Text('Gross')),
                   DataColumn(label: Text('NSSF')),
-                  DataColumn(label: Text('NHIF')),
+                  DataColumn(label: Text('SHIF')),
                   DataColumn(label: Text('Housing')),
                   DataColumn(label: Text('PAYE')),
                 ],
@@ -1420,7 +1440,7 @@ class _StatutoryReportView extends ConsumerWidget {
                     DataCell(Text(e.name)),
                     DataCell(Text(currencyFormat.format(e.grossPay))),
                     DataCell(Text(currencyFormat.format(e.nssf))),
-                    DataCell(Text(currencyFormat.format(e.nhif))),
+                    DataCell(Text(currencyFormat.format(e.shif))),
                     DataCell(Text(currencyFormat.format(e.housingLevy))),
                     DataCell(Text(
                       currencyFormat.format(e.paye),
@@ -1473,6 +1493,15 @@ class _StatutoryReportView extends ConsumerWidget {
           _buildExportButton(
             context,
             ref,
+            'PDF Report',
+            Icons.picture_as_pdf,
+            Colors.red,
+            'PDF',
+          ),
+          const SizedBox(width: 8),
+          _buildExportButton(
+            context,
+            ref,
             'KRA P10 CSV',
             Icons.download,
             Colors.green,
@@ -1511,6 +1540,14 @@ class _StatutoryReportView extends ConsumerWidget {
   ) {
     return ElevatedButton.icon(
       onPressed: () {
+        if (exportType == 'PDF') {
+          // Handle PDF Download
+           ref.read(taxExportProvider.notifier).downloadStatutoryPdf(
+             payPeriodId: report.payPeriod.id,
+           );
+           return;
+        }
+
         final startDate = DateTime.parse(report.payPeriod.startDate);
         final endDate = DateTime.parse(report.payPeriod.endDate);
 

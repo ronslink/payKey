@@ -80,6 +80,48 @@ class TaxExportNotifier extends Notifier<ExportState> {
     }
   }
 
+  Future<void> downloadPayslip({required String recordId}) async {
+    state = ExportState(isLoading: true);
+    try {
+      final List<int> bytes = await _api.reports.downloadPayslipPdf(recordId);
+      final fileName = 'Payslip.pdf';
+
+      await _saveFile(bytes, fileName);
+
+      state = ExportState(
+        isLoading: false,
+        successMessage: 'Payslip downloaded successfully',
+      );
+    } catch (e) {
+      state = ExportState(
+        isLoading: false,
+        error: _api.getErrorMessage(e),
+        statusCode: e is ApiException ? e.statusCode : null,
+      );
+    }
+  }
+
+  Future<void> downloadStatutoryPdf({required String payPeriodId}) async {
+    state = ExportState(isLoading: true);
+    try {
+      final List<int> bytes = await _api.reports.downloadStatutoryPdf(payPeriodId);
+      final fileName = 'Statutory_Report.pdf';
+
+      await _saveFile(bytes, fileName);
+
+      state = ExportState(
+        isLoading: false,
+        successMessage: 'Statutory Report PDF downloaded successfully',
+      );
+    } catch (e) {
+      state = ExportState(
+        isLoading: false,
+        error: _api.getErrorMessage(e),
+        statusCode: e is ApiException ? e.statusCode : null,
+      );
+    }
+  }
+
   Future<void> downloadP9Zip({required int year}) async {
     state = ExportState(isLoading: true);
     try {

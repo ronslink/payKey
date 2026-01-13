@@ -64,7 +64,7 @@ class ReportTotals {
   final double netPay;
   final double paye;
   final double nssf;
-  final double nhif;
+  final double shif;
   final double housingLevy;
   final double totalDeductions;
   final int? workerCount;
@@ -74,7 +74,7 @@ class ReportTotals {
     required this.netPay,
     required this.paye,
     required this.nssf,
-    required this.nhif,
+    required this.shif,
     required this.housingLevy,
     required this.totalDeductions,
     this.workerCount,
@@ -86,7 +86,7 @@ class ReportTotals {
       netPay: (json['netPay'] as num?)?.toDouble() ?? 0,
       paye: (json['paye'] as num?)?.toDouble() ?? 0,
       nssf: (json['nssf'] as num?)?.toDouble() ?? 0,
-      nhif: (json['nhif'] as num?)?.toDouble() ?? 0,
+      shif: (json['nhif'] as num?)?.toDouble() ?? 0,
       housingLevy: (json['housingLevy'] as num?)?.toDouble() ?? 0,
       totalDeductions: (json['totalDeductions'] as num?)?.toDouble() ?? 0,
       workerCount: json['workerCount'] as int?,
@@ -95,6 +95,7 @@ class ReportTotals {
 }
 
 class PayrollRecordSummary {
+  final String id;
   final String workerName;
   final String workerId;
   final double grossPay;
@@ -102,6 +103,7 @@ class PayrollRecordSummary {
   final ReportTaxBreakdown taxBreakdown;
 
   PayrollRecordSummary({
+    required this.id,
     required this.workerName,
     required this.workerId,
     required this.grossPay,
@@ -111,6 +113,7 @@ class PayrollRecordSummary {
 
   factory PayrollRecordSummary.fromJson(Map<String, dynamic> json) {
     return PayrollRecordSummary(
+      id: json['id'] ?? '', // Default to empty string if missing (backwards compat)
       workerName: json['workerName'],
       workerId: json['workerId'],
       grossPay: (json['grossPay'] as num).toDouble(),
@@ -123,14 +126,14 @@ class PayrollRecordSummary {
 class ReportTaxBreakdown {
   final double paye;
   final double nssf;
-  final double nhif;
+  final double shif;
   final double housingLevy;
   final double total;
 
   ReportTaxBreakdown({
     required this.paye,
     required this.nssf,
-    required this.nhif,
+    required this.shif,
     required this.housingLevy,
     required this.total,
   });
@@ -139,7 +142,7 @@ class ReportTaxBreakdown {
     return ReportTaxBreakdown(
       paye: (json['paye'] as num).toDouble(),
       nssf: (json['nssf'] as num).toDouble(),
-      nhif: (json['nhif'] as num).toDouble(),
+      shif: (json['nhif'] as num).toDouble(),
       housingLevy: (json['housingLevy'] as num).toDouble(),
       total: (json['total'] as num).toDouble(),
     );
@@ -150,7 +153,7 @@ class StatutoryEmployeeRecord {
   final String name;
   final double grossPay;
   final double nssf;
-  final double nhif;
+  final double shif;
   final double housingLevy;
   final double paye;
 
@@ -158,7 +161,7 @@ class StatutoryEmployeeRecord {
     required this.name,
     required this.grossPay,
     required this.nssf,
-    required this.nhif,
+    required this.shif,
     required this.housingLevy,
     required this.paye,
   });
@@ -168,7 +171,7 @@ class StatutoryEmployeeRecord {
       name: json['name'],
       grossPay: (json['grossPay'] as num).toDouble(),
       nssf: (json['nssf'] as num).toDouble(),
-      nhif: (json['nhif'] as num).toDouble(),
+      shif: (json['nhif'] as num).toDouble(),
       housingLevy: (json['housingLevy'] as num).toDouble(),
       paye: (json['paye'] as num).toDouble(),
     );

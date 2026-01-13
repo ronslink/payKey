@@ -4,13 +4,14 @@ import { AppModule } from '../src/app.module';
 import { UsersService } from '../src/modules/users/users.service';
 import { WorkersService } from '../src/modules/workers/workers.service';
 import { Repository } from 'typeorm';
-import { User } from '../src/modules/users/entities/user.entity';
+import { User, UserTier } from '../src/modules/users/entities/user.entity';
 import {
   Worker,
   EmploymentType,
   PaymentFrequency,
   PaymentMethod,
 } from '../src/modules/workers/entities/worker.entity';
+import { Activity } from '../src/modules/activities/entities/activity.entity';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import * as bcrypt from 'bcrypt';
 
@@ -22,16 +23,31 @@ async function seedTestData() {
     const workersService = app.get(WorkersService);
     const userRepo = app.get<Repository<User>>(getRepositoryToken(User));
     const workerRepo = app.get<Repository<Worker>>(getRepositoryToken(Worker));
+    const activityRepo = app.get<Repository<Activity>>(getRepositoryToken(Activity));
 
     console.log('🌱 Seeding test data...');
 
-    // Clean up existing test data
-    await workerRepo.delete({ userId: 'test-user-123' });
-    await workerRepo.delete({ userId: 'loadtest-user-123' });
-    await workerRepo.delete({ userId: 'performance-test-123' });
-    await userRepo.delete({ email: 'test@paykey.com' });
-    await userRepo.delete({ email: 'loadtest@paykey.com' });
-    await userRepo.delete({ email: 'performance-test@paykey.com' });
+    // Clean up existing test data properly
+    const emailsToDelete = [
+      'test@paykey.com',
+      'loadtest@paykey.com',
+      'performance-test@paykey.com',
+      'testuser@paykey.com',
+      'compliance-test@paykey.com'
+    ];
+
+    for (const email of emailsToDelete) {
+      const user = await userRepo.findOne({ where: { email } });
+      if (user) {
+        // Delete related activities first
+        await activityRepo.delete({ userId: user.id });
+        // Delete related workers
+        await workerRepo.delete({ userId: user.id });
+        // Delete the user
+        await userRepo.delete({ id: user.id });
+        console.log(`🗑️ Cleaned up data for ${email}`);
+      }
+    }
 
     // Create test users
     const testUsers = [
@@ -58,6 +74,15 @@ async function seedTestData() {
         lastName: 'Test',
         countryCode: 'KE',
         isOnboardingCompleted: true,
+      },
+      {
+        email: 'testuser@paykey.com',
+        password: 'testuser123',
+        firstName: 'Test',
+        lastName: 'User',
+        countryCode: 'KE',
+        isOnboardingCompleted: true,
+        tier: UserTier.PLATINUM,
       },
     ];
 

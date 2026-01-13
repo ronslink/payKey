@@ -14,7 +14,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @Controller('reports')
 @UseGuards(JwtAuthGuard)
 export class ReportsController {
-  constructor(private readonly reportsService: ReportsService) {}
+  constructor(private readonly reportsService: ReportsService) { }
 
   @Get('payroll')
   async getMonthlyPayrollReport(
@@ -124,6 +124,40 @@ export class ReportsController {
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename="P9_${year}.pdf"`,
+    });
+
+    return new StreamableFile(buffer);
+  }
+
+  @Get('payslip/:recordId/pdf')
+  async getPayslipPdf(
+    @Request() req: any,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const buffer = await this.reportsService.generatePayslipPdf(req.params.recordId);
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="Payslip.pdf"`,
+    });
+
+    return new StreamableFile(buffer);
+  }
+
+  @Get('statutory/:payPeriodId/pdf')
+  async getStatutoryPdf(
+    @Request() req: any,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const report = await this.reportsService.getStatutoryReport(
+      req.user.userId,
+      req.params.payPeriodId,
+    );
+    const buffer = await this.reportsService.generateStatutoryPdf(report);
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="Statutory_Report.pdf"`,
     });
 
     return new StreamableFile(buffer);
