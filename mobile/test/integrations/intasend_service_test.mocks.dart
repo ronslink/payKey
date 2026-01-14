@@ -119,13 +119,19 @@ class _FakeWorkersConvertEndpoints_15 extends _i1.SmartFake
     : super(parent, parentInvocation);
 }
 
-class _FakeResponse_16<T> extends _i1.SmartFake implements _i2.Response<T> {
-  _FakeResponse_16(Object parent, Invocation parentInvocation)
+class _FakeUploadEndpoints_16 extends _i1.SmartFake
+    implements _i4.UploadEndpoints {
+  _FakeUploadEndpoints_16(Object parent, Invocation parentInvocation)
     : super(parent, parentInvocation);
 }
 
-class _FakeException_17 extends _i1.SmartFake implements Exception {
-  _FakeException_17(Object parent, Invocation parentInvocation)
+class _FakeResponse_17<T> extends _i1.SmartFake implements _i2.Response<T> {
+  _FakeResponse_17(Object parent, Invocation parentInvocation)
+    : super(parent, parentInvocation);
+}
+
+class _FakeException_18 extends _i1.SmartFake implements Exception {
+  _FakeException_18(Object parent, Invocation parentInvocation)
     : super(parent, parentInvocation);
 }
 
@@ -302,6 +308,17 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
           as _i4.WorkersConvertEndpoints);
 
   @override
+  _i4.UploadEndpoints get uploads =>
+      (super.noSuchMethod(
+            Invocation.getter(#uploads),
+            returnValue: _FakeUploadEndpoints_16(
+              this,
+              Invocation.getter(#uploads),
+            ),
+          )
+          as _i4.UploadEndpoints);
+
+  @override
   set auth(_i4.AuthEndpoints? value) => super.noSuchMethod(
     Invocation.setter(#auth, value),
     returnValueForMissingStub: null,
@@ -386,6 +403,12 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
   );
 
   @override
+  set uploads(_i4.UploadEndpoints? value) => super.noSuchMethod(
+    Invocation.setter(#uploads, value),
+    returnValueForMissingStub: null,
+  );
+
+  @override
   _i5.Future<_i2.Response<dynamic>> get(
     String? path, {
     Map<String, dynamic>? queryParams,
@@ -399,7 +422,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
               {#queryParams: queryParams, #options: options, #noCache: noCache},
             ),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(
                   #get,
@@ -435,7 +458,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
               },
             ),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(
                   #post,
@@ -472,7 +495,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
               },
             ),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(
                   #patch,
@@ -503,7 +526,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
               {#data: data, #queryParams: queryParams, #options: options},
             ),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(
                   #delete,
@@ -556,7 +579,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
   Exception handleError(dynamic error) =>
       (super.noSuchMethod(
             Invocation.method(#handleError, [error]),
-            returnValue: _FakeException_17(
+            returnValue: _FakeException_18(
               this,
               Invocation.method(#handleError, [error]),
             ),
@@ -568,7 +591,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#login, [email, password]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#login, [email, password]),
               ),
@@ -590,7 +613,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
               {#firstName: firstName, #lastName: lastName},
             ),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(
                   #register,
@@ -607,7 +630,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#getWorkers, []),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getWorkers, []),
               ),
@@ -620,7 +643,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#createWorker, [data]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#createWorker, [data]),
               ),
@@ -636,7 +659,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#updateWorker, [id, data]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#updateWorker, [id, data]),
               ),
@@ -649,7 +672,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#deleteWorker, [id]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#deleteWorker, [id]),
               ),
@@ -662,7 +685,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#getPayPeriods, []),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getPayPeriods, []),
               ),
@@ -675,7 +698,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#getPayPeriodById, [id]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getPayPeriodById, [id]),
               ),
@@ -690,7 +713,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#createPayPeriod, [data]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#createPayPeriod, [data]),
               ),
@@ -706,7 +729,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#updatePayPeriod, [id, data]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#updatePayPeriod, [id, data]),
               ),
@@ -719,7 +742,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#deletePayPeriod, [id]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#deletePayPeriod, [id]),
               ),
@@ -732,7 +755,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#activatePayPeriod, [id]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#activatePayPeriod, [id]),
               ),
@@ -745,7 +768,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#processPayPeriod, [id]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#processPayPeriod, [id]),
               ),
@@ -758,7 +781,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#completePayPeriod, [id]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#completePayPeriod, [id]),
               ),
@@ -771,7 +794,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#closePayPeriod, [id]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#closePayPeriod, [id]),
               ),
@@ -784,7 +807,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#getPayPeriodStatistics, [id]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getPayPeriodStatistics, [id]),
               ),
@@ -797,7 +820,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#getCurrentPayPeriod, []),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getCurrentPayPeriod, []),
               ),
@@ -813,7 +836,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#saveDraftPayroll, [payPeriodId, items]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#saveDraftPayroll, [payPeriodId, items]),
               ),
@@ -829,7 +852,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#updatePayrollItem, [id, updates]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#updatePayrollItem, [id, updates]),
               ),
@@ -842,7 +865,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#getDraftPayroll, [payPeriodId]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getDraftPayroll, [payPeriodId]),
               ),
@@ -855,7 +878,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#finalizePayroll, [payPeriodId]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#finalizePayroll, [payPeriodId]),
               ),
@@ -876,7 +899,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#calculateTax, [grossSalary]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#calculateTax, [grossSalary]),
               ),
@@ -889,7 +912,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#getTaxSubmissions, []),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getTaxSubmissions, []),
               ),
@@ -902,7 +925,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#markTaxAsFiled, [id]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#markTaxAsFiled, [id]),
               ),
@@ -915,7 +938,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#getCurrentTaxTable, []),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getCurrentTaxTable, []),
               ),
@@ -928,7 +951,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#getComplianceStatus, []),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getComplianceStatus, []),
               ),
@@ -941,7 +964,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#getTaxDeadlines, []),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getTaxDeadlines, []),
               ),
@@ -954,7 +977,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#exportPayrollToCSV, [payPeriodId]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#exportPayrollToCSV, [payPeriodId]),
               ),
@@ -967,7 +990,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#getRecentActivities, [], {#limit: limit}),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getRecentActivities, [], {#limit: limit}),
               ),
@@ -980,7 +1003,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#getAccountMappings, []),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getAccountMappings, []),
               ),
@@ -995,7 +1018,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#saveAccountMappings, [mappings]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#saveAccountMappings, [mappings]),
               ),
@@ -1008,7 +1031,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#getLeaveRequests, []),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getLeaveRequests, []),
               ),
@@ -1021,7 +1044,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#getWorkerLeaveRequests, [workerId]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getWorkerLeaveRequests, [workerId]),
               ),
@@ -1037,7 +1060,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#createLeaveRequest, [workerId, data]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#createLeaveRequest, [workerId, data]),
               ),
@@ -1053,7 +1076,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#updateLeaveRequest, [leaveRequestId, data]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#updateLeaveRequest, [leaveRequestId, data]),
               ),
@@ -1068,7 +1091,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#deleteLeaveRequest, [leaveRequestId]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#deleteLeaveRequest, [leaveRequestId]),
               ),
@@ -1089,7 +1112,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
               {#comments: comments},
             ),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(
                   #approveLeaveRequest,
@@ -1106,7 +1129,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#getLeaveBalance, [workerId]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getLeaveBalance, [workerId]),
               ),
@@ -1119,7 +1142,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#getPayrollRecords, []),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getPayrollRecords, []),
               ),
@@ -1140,7 +1163,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
               {#paymentDate: paymentDate},
             ),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(
                   #updatePayrollStatus,
@@ -1157,7 +1180,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#deletePayrollRecord, [id]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#deletePayrollRecord, [id]),
               ),
@@ -1170,7 +1193,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#getTransactions, []),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getTransactions, []),
               ),
@@ -1183,7 +1206,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#getTransactionById, [id]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getTransactionById, [id]),
               ),
@@ -1196,7 +1219,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#getPaymentDashboard, []),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getPaymentDashboard, []),
               ),
@@ -1209,7 +1232,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#getPaymentMethods, []),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getPaymentMethods, []),
               ),
@@ -1222,7 +1245,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#getTaxPaymentSummary, []),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getTaxPaymentSummary, []),
               ),
@@ -1247,7 +1270,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
               },
             ),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(
                   #initiateMpesaTopup,
@@ -1277,7 +1300,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
               #paymentDate: paymentDate,
             }),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#recordTaxPayment, [], {
                   #taxType: taxType,
@@ -1295,7 +1318,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#getSubscriptionPlans, []),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getSubscriptionPlans, []),
               ),
@@ -1308,7 +1331,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#getUserSubscription, []),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getUserSubscription, []),
               ),
@@ -1333,7 +1356,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
               #endDate: endDate,
             }),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getSubscriptionPaymentHistory, [], {
                   #page: page,
@@ -1352,7 +1375,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#getCountries, []),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getCountries, []),
               ),
@@ -1365,7 +1388,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#markTaxSubmissionAsFiled, [id]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#markTaxSubmissionAsFiled, [id]),
               ),
@@ -1380,7 +1403,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#generateTaxSubmission, [payPeriodId]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#generateTaxSubmission, [payPeriodId]),
               ),
@@ -1396,7 +1419,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#getMonthlyTaxSummary, [year, month]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getMonthlyTaxSummary, [year, month]),
               ),
@@ -1409,7 +1432,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#recordTaxPaymentTax, [id]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#recordTaxPaymentTax, [id]),
               ),
@@ -1422,7 +1445,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#getTaxPaymentHistory, []),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getTaxPaymentHistory, []),
               ),
@@ -1435,7 +1458,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#getPendingTaxPayments, []),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getPendingTaxPayments, []),
               ),
@@ -1451,7 +1474,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#updateTaxPaymentStatus, [id, status]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#updateTaxPaymentStatus, [id, status]),
               ),
@@ -1464,7 +1487,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#getTaxPaymentInstructions, []),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getTaxPaymentInstructions, []),
               ),
@@ -1479,7 +1502,7 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
       (super.noSuchMethod(
             Invocation.method(#updateUserProfile, [data]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#updateUserProfile, [data]),
               ),
@@ -1522,7 +1545,7 @@ class MockPaymentEndpoints extends _i1.Mock implements _i4.PaymentEndpoints {
       (super.noSuchMethod(
             Invocation.method(#getDashboard, []),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getDashboard, []),
               ),
@@ -1535,7 +1558,7 @@ class MockPaymentEndpoints extends _i1.Mock implements _i4.PaymentEndpoints {
       (super.noSuchMethod(
             Invocation.method(#getWalletBalance, []),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getWalletBalance, []),
               ),
@@ -1548,7 +1571,7 @@ class MockPaymentEndpoints extends _i1.Mock implements _i4.PaymentEndpoints {
       (super.noSuchMethod(
             Invocation.method(#getMethods, []),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#getMethods, []),
               ),
@@ -1573,7 +1596,7 @@ class MockPaymentEndpoints extends _i1.Mock implements _i4.PaymentEndpoints {
               },
             ),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(
                   #initiateMpesaTopup,
@@ -1596,7 +1619,7 @@ class MockPaymentEndpoints extends _i1.Mock implements _i4.PaymentEndpoints {
       (super.noSuchMethod(
             Invocation.method(#initiateStkPush, [phoneNumber, amount]),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#initiateStkPush, [phoneNumber, amount]),
               ),
@@ -1619,7 +1642,7 @@ class MockPaymentEndpoints extends _i1.Mock implements _i4.PaymentEndpoints {
               #remarks: remarks,
             }),
             returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
+              _FakeResponse_17<dynamic>(
                 this,
                 Invocation.method(#sendB2C, [], {
                   #transactionId: transactionId,
@@ -1627,73 +1650,6 @@ class MockPaymentEndpoints extends _i1.Mock implements _i4.PaymentEndpoints {
                   #amount: amount,
                   #remarks: remarks,
                 }),
-              ),
-            ),
-          )
-          as _i5.Future<_i2.Response<dynamic>>);
-
-  @override
-  _i5.Future<_i2.Response<dynamic>> getTaxPaymentSummary() =>
-      (super.noSuchMethod(
-            Invocation.method(#getTaxPaymentSummary, []),
-            returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
-                this,
-                Invocation.method(#getTaxPaymentSummary, []),
-              ),
-            ),
-          )
-          as _i5.Future<_i2.Response<dynamic>>);
-
-  @override
-  _i5.Future<_i2.Response<dynamic>> recordTaxPayment({
-    required String? taxType,
-    required double? amount,
-    required String? reference,
-    String? paymentDate,
-  }) =>
-      (super.noSuchMethod(
-            Invocation.method(#recordTaxPayment, [], {
-              #taxType: taxType,
-              #amount: amount,
-              #reference: reference,
-              #paymentDate: paymentDate,
-            }),
-            returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
-                this,
-                Invocation.method(#recordTaxPayment, [], {
-                  #taxType: taxType,
-                  #amount: amount,
-                  #reference: reference,
-                  #paymentDate: paymentDate,
-                }),
-              ),
-            ),
-          )
-          as _i5.Future<_i2.Response<dynamic>>);
-
-  @override
-  _i5.Future<_i2.Response<dynamic>> getTransactions() =>
-      (super.noSuchMethod(
-            Invocation.method(#getTransactions, []),
-            returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
-                this,
-                Invocation.method(#getTransactions, []),
-              ),
-            ),
-          )
-          as _i5.Future<_i2.Response<dynamic>>);
-
-  @override
-  _i5.Future<_i2.Response<dynamic>> getTransactionById(String? id) =>
-      (super.noSuchMethod(
-            Invocation.method(#getTransactionById, [id]),
-            returnValue: _i5.Future<_i2.Response<dynamic>>.value(
-              _FakeResponse_16<dynamic>(
-                this,
-                Invocation.method(#getTransactionById, [id]),
               ),
             ),
           )

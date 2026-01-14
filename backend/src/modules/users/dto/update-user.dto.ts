@@ -91,4 +91,8 @@ export class UpdateUserDto {
   @IsOptional()
   @IsString()
   mpesaPhone?: string;
+
+  @IsOptional()
+  @IsString()
+  photoUrl?: string;
 }

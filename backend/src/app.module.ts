@@ -29,6 +29,7 @@ import { AppCacheModule } from './modules/cache/cache.module';
 import { AppThrottlerModule } from './modules/throttler/throttler.module';
 import { PropertiesModule } from './modules/properties/properties.module';
 import { DataDeletionModule } from './modules/data-deletion/data-deletion.module';
+import { UploadsModule } from './modules/uploads/uploads.module';
 import { getDatabaseConfig } from './config/database.config';
 
 // Explicit Entity Imports
@@ -107,6 +108,7 @@ import { DeviceToken } from './modules/notifications/entities/device-token.entit
     AppThrottlerModule,
     PropertiesModule,
     DataDeletionModule,
+    UploadsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

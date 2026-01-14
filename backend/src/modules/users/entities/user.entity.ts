@@ -66,6 +66,9 @@ export class User {
   @Column({ nullable: true })
   stripeCustomerId: string;
 
+  @Column({ nullable: true })
+  photoUrl: string;
+
   // Compliance Fields
   @Column({ nullable: true })
   kraPin: string;

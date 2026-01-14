@@ -14,6 +14,7 @@ class UserSettings {
   final String defaultPayrollFrequency;
   final String defaultEmploymentType;
   final String? defaultPropertyId;
+  final String? photoUrl;
   final ThemeMode themeMode;
 
   UserSettings({
@@ -26,6 +27,7 @@ class UserSettings {
     this.defaultPayrollFrequency = 'MONTHLY',
     this.defaultEmploymentType = 'FIXED',
     this.defaultPropertyId,
+    this.photoUrl,
     this.themeMode = ThemeMode.light,
   });
 
@@ -39,6 +41,7 @@ class UserSettings {
     String? defaultPayrollFrequency,
     String? defaultEmploymentType,
     String? defaultPropertyId,
+    String? photoUrl,
     ThemeMode? themeMode,
   }) {
     return UserSettings(
@@ -51,6 +54,7 @@ class UserSettings {
       defaultPayrollFrequency: defaultPayrollFrequency ?? this.defaultPayrollFrequency,
       defaultEmploymentType: defaultEmploymentType ?? this.defaultEmploymentType,
       defaultPropertyId: defaultPropertyId ?? this.defaultPropertyId,
+      photoUrl: photoUrl ?? this.photoUrl,
       themeMode: themeMode ?? this.themeMode,
     );
   }
@@ -66,6 +70,7 @@ class UserSettings {
       defaultPayrollFrequency: json['defaultPayrollFrequency'] ?? 'MONTHLY',
       defaultEmploymentType: json['defaultEmploymentType'] ?? 'FIXED',
       defaultPropertyId: json['defaultPropertyId'],
+      photoUrl: json['photoUrl'],
     );
   }
 
@@ -80,6 +85,7 @@ class UserSettings {
       'defaultPayrollFrequency': defaultPayrollFrequency,
       'defaultEmploymentType': defaultEmploymentType,
       'defaultPropertyId': defaultPropertyId,
+      'photoUrl': photoUrl,
     };
   }
 }
@@ -183,6 +189,21 @@ class SettingsNotifier extends AsyncNotifier<UserSettings> {
     state = AsyncValue.data(current.copyWith(defaultPropertyId: propertyId));
 
     await _saveToApi({'defaultPropertyId': propertyId});
+  }
+
+  Future<void> uploadProfilePhoto(List<int> bytes, String filename) async {
+    final current = state.value ?? UserSettings();
+    state = const AsyncValue.loading();
+    
+    state = await AsyncValue.guard(() async {
+        // 1. Upload
+        final url = await ApiService().uploads.uploadAvatar(bytes, filename);
+        // 2. Update Profile
+        await _saveToApi({'photoUrl': url});
+        
+        // 3. Update local state
+        return current.copyWith(photoUrl: url);
+    });
   }
 
   Future<void> _saveToApi(Map<String, dynamic> updates) async {

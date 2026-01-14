@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
 import '../providers/workers_provider.dart';
 import '../../data/models/worker_model.dart';
 import '../../../../core/utils/download_utils.dart';
@@ -163,6 +164,55 @@ class _WorkerDetailPageState extends ConsumerState<WorkerDetailPage> {
   // Actions
   // ---------------------------------------------------------------------------
 
+  Future<void> _pickAndUploadPhoto() async {
+    final picker = ImagePicker();
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Camera'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Gallery'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (source == null) return;
+
+    final pickedFile = await picker.pickImage(source: source, imageQuality: 70);
+    if (pickedFile == null) return;
+
+    try {
+      final bytes = await pickedFile.readAsBytes();
+      await ref.read(workersProvider.notifier).uploadPhoto(
+        widget.workerId, 
+        bytes, 
+        pickedFile.name,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Photo uploaded successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Upload failed: $e')),
+        );
+      }
+    }
+  }
+
   void _navigateBack() => context.go('/workers');
 
   void _navigateToEdit(WorkerModel worker) {
@@ -228,6 +278,7 @@ class _WorkerDetailPageState extends ConsumerState<WorkerDetailPage> {
             onInvite: portalAccess.value?.hasAccess == true 
                 ? () => _handleMenuAction('invite', workerData) 
                 : null,
+            onAvatarTap: _pickAndUploadPhoto,
             onTerminate: _navigateToTerminate,
             history: _history,
             onDownloadPayslip: _downloadPayslip,
@@ -299,12 +350,14 @@ class _WorkerDetailContent extends StatelessWidget {
   final WorkerModel worker;
   final VoidCallback onEdit;
   final VoidCallback? onInvite;
+  final VoidCallback onAvatarTap;
   final VoidCallback onTerminate;
 
   const _WorkerDetailContent({
     required this.worker,
     required this.onEdit,
     this.onInvite,
+    required this.onAvatarTap,
     required this.onTerminate,
     required this.history,
     required this.onDownloadPayslip,
@@ -320,7 +373,10 @@ class _WorkerDetailContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _WorkerHeader(worker: worker),
+          _WorkerHeader(
+            worker: worker,
+            onAvatarTap: onAvatarTap,
+          ),
           if (onInvite != null) ...[
             const SizedBox(height: _Spacing.lg),
             SizedBox(
@@ -382,8 +438,12 @@ class _WorkerDetailContent extends StatelessWidget {
 
 class _WorkerHeader extends StatelessWidget {
   final WorkerModel worker;
+  final VoidCallback onAvatarTap;
 
-  const _WorkerHeader({required this.worker});
+  const _WorkerHeader({
+    required this.worker,
+    required this.onAvatarTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -391,7 +451,12 @@ class _WorkerHeader extends StatelessWidget {
       padding: const EdgeInsets.all(_Spacing.xxl),
       child: Row(
         children: [
-          _Avatar(name: worker.name, size: 80),
+          _Avatar(
+            name: worker.name,
+            size: 80,
+            photoUrl: worker.photoUrl,
+            onTap: onAvatarTap,
+          ),
           const SizedBox(width: _Spacing.xl),
           Expanded(
             child: Column(
@@ -1005,34 +1070,52 @@ class _Card extends StatelessWidget {
 class _Avatar extends StatelessWidget {
   final String name;
   final double size;
+  final String? photoUrl;
+  final VoidCallback? onTap;
 
   const _Avatar({
     required this.name,
     this.size = 56,
+    this.photoUrl,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [_AppColors.primary, _AppColors.primaryDark],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: _AppColors.primary,
+          gradient: photoUrl == null 
+              ? const LinearGradient(
+                  colors: [_AppColors.primary, _AppColors.primaryDark],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          image: photoUrl != null
+              ? DecorationImage(
+                  image: NetworkImage(photoUrl!),
+                  fit: BoxFit.cover,
+                )
+              : null,
+          borderRadius: BorderRadius.circular(size * 0.25),
         ),
-        borderRadius: BorderRadius.circular(size * 0.25),
-      ),
-      child: Center(
-        child: Text(
-          name.isNotEmpty ? name[0].toUpperCase() : '?',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: size * 0.4,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        child: photoUrl == null
+            ? Center(
+                child: Text(
+                  name.isNotEmpty ? name[0].toUpperCase() : '?',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: size * 0.4,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              )
+            : null,
       ),
     );
   }

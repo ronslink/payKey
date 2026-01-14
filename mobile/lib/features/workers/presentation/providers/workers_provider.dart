@@ -66,6 +66,19 @@ class WorkersNotifier extends AsyncNotifier<List<WorkerModel>> {
     });
   }
 
+  Future<void> uploadPhoto(String workerId, List<int> bytes, String filename) async {
+    final prevState = state.value;
+    state = const AsyncValue.loading();
+    
+    state = await AsyncValue.guard(() async {
+      final updatedWorker = await _repository.uploadWorkerPhoto(workerId, bytes, filename);
+      return [
+        for (final worker in prevState ?? [])
+          if (worker.id == workerId) updatedWorker else worker
+      ];
+    });
+  }
+
   Future<int> getWorkerCount() async {
     return _repository.getWorkerCount();
   }

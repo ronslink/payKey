@@ -14,10 +14,11 @@ import { plainToInstance } from 'class-transformer';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UpdateComplianceProfileDto } from './dto/update-compliance-profile.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   @UseGuards(JwtAuthGuard)
   @Get('profile')
@@ -27,7 +28,8 @@ export class UsersController {
 
   @UseGuards(JwtAuthGuard)
   @Patch('profile')
-  updateProfile(@Request() req: any, @Body() updateUserDto: any) {
+  @UsePipes(new ValidationPipe({ whitelist: true }))
+  updateProfile(@Request() req: any, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(req.user.userId, updateUserDto);
   }
 

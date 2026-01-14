@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 // Domain imports - adjust paths as needed
 import '../../auth/presentation/providers/auth_provider.dart';
@@ -124,6 +125,8 @@ class _SettingsContent extends ConsumerWidget {
           ProfileCard(
             tier: tier,
             onEditTap: () => context.push(SettingsRoutes.profileEdit),
+            photoUrl: settings.photoUrl,
+            onAvatarTap: () => _pickAndUploadPhoto(context, ref),
           ),
 
           // Quick access grid
@@ -155,6 +158,58 @@ class _SettingsContent extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _pickAndUploadPhoto(BuildContext context, WidgetRef ref) async {
+    final picker = ImagePicker();
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Camera'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Gallery'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (source == null) return;
+    if (!context.mounted) return;
+
+    final pickedFile = await picker.pickImage(source: source, imageQuality: 70);
+    if (pickedFile == null) return;
+
+    try {
+      final bytes = await pickedFile.readAsBytes();
+      if (!context.mounted) return;
+      
+      await ref.read(settingsProvider.notifier).uploadProfilePhoto(
+        bytes, 
+        pickedFile.name,
+      );
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile photo updated')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Upload failed: $e')),
+        );
+      }
+    }
   }
 
   // ===========================================================================

@@ -112,4 +112,8 @@ export class CreateWorkerDto {
   @IsString()
   @IsOptional()
   propertyId?: string;
+
+  @IsString()
+  @IsOptional()
+  photoUrl?: string;
 }

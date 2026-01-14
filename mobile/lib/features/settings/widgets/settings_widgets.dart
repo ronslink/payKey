@@ -253,11 +253,15 @@ class QuickAccessGrid extends StatelessWidget {
 class ProfileCard extends StatelessWidget {
   final String tier;
   final VoidCallback onEditTap;
+  final String? photoUrl;
+  final VoidCallback? onAvatarTap;
 
   const ProfileCard({
     super.key,
     required this.tier,
     required this.onEditTap,
+    this.photoUrl,
+    this.onAvatarTap,
   });
 
   @override
@@ -290,14 +294,25 @@ class ProfileCard extends StatelessWidget {
   }
 
   Widget _buildAvatar() {
-    return Container(
-      width: SettingsTheme.iconContainerSize,
-      height: SettingsTheme.iconContainerSize,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(SettingsTheme.iconContainerRadius),
+    return GestureDetector(
+      onTap: onAvatarTap,
+      child: Container(
+        width: SettingsTheme.iconContainerSize,
+        height: SettingsTheme.iconContainerSize,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(SettingsTheme.iconContainerRadius),
+          image: photoUrl != null
+              ? DecorationImage(
+                  image: NetworkImage(photoUrl!),
+                  fit: BoxFit.cover,
+                )
+              : null,
+        ),
+        child: photoUrl == null 
+            ? const Icon(Icons.person, color: Colors.white, size: 28)
+            : null,
       ),
-      child: const Icon(Icons.person, color: Colors.white, size: 28),
     );
   }
 

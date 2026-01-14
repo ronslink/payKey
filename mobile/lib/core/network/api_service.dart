@@ -54,6 +54,7 @@ class ApiService {
   late final TimeTrackingEndpoints timeTracking;
   late final PropertyEndpoints properties;
   late final WorkersConvertEndpoints workersConvert;
+  late final UploadEndpoints uploads;
 
   // ---------------------------------------------------------------------------
   // Initialization
@@ -88,6 +89,7 @@ class ApiService {
     timeTracking = TimeTrackingEndpoints(this);
     properties = PropertyEndpoints(this);
     workersConvert = WorkersConvertEndpoints(this);
+    uploads = UploadEndpoints(this);
   }
 
   InterceptorsWrapper _createAuthInterceptor() {
@@ -829,6 +831,26 @@ class PaymentEndpoints extends BaseEndpoints {
   Future<Response> getTransactions() => _api.get('/transactions');
 
   Future<Response> getTransactionById(String id) => _api.get('/transactions/$id');
+}
+
+// -----------------------------------------------------------------------------
+// Upload Endpoints
+// -----------------------------------------------------------------------------
+
+class UploadEndpoints extends BaseEndpoints {
+  const UploadEndpoints(super.api);
+
+  Future<String> uploadAvatar(List<int> bytes, String filename) async {
+    try {
+      final formData = FormData.fromMap({
+        'file': MultipartFile.fromBytes(bytes, filename: filename),
+      });
+      final response = await _api.post('/uploads/avatar', data: formData);
+      return response.data['url'] as String;
+    } catch (e) {
+      throw _api.handleError(e);
+    }
+  }
 }
 
 // -----------------------------------------------------------------------------

@@ -137,6 +137,25 @@ class WorkersRepository {
     );
   }
 
+  /// Uploads a photo for a worker and updates their profile.
+  Future<WorkerModel> uploadWorkerPhoto(String workerId, List<int> bytes, String filename) async {
+    return _executeRequest(
+      operation: 'upload worker photo',
+      request: () async {
+        // 1. Upload file
+        final photoUrl = await _apiService.uploads.uploadAvatar(bytes, filename);
+        
+        // 2. Update worker profile with new URL
+        final response = await _apiService.workers.update(
+          workerId,
+          {'photoUrl': photoUrl},
+        );
+        
+        return _mapJsonToWorker(response.data);
+      },
+    );
+  }
+
   // ---------------------------------------------------------------------------
   // Private Methods: Request Execution
   // ---------------------------------------------------------------------------
@@ -180,6 +199,7 @@ class WorkersRepository {
       'employmentType': json['employmentType'] ?? _Defaults.employmentType,
       'hourlyRate': _toNullableDouble(json['hourlyRate']),
       'propertyId': json['propertyId'],
+      'photoUrl': json['photoUrl'],
       'email': json['email'],
       'idNumber': json['idNumber'],
       'kraPin': json['kraPin'],
@@ -245,6 +265,7 @@ class WorkersRepository {
         'employmentType': request.employmentType,
       if (request.hourlyRate != null) 'hourlyRate': request.hourlyRate,
       if (request.propertyId != null) 'propertyId': request.propertyId,
+      if (request.photoUrl != null) 'photoUrl': request.photoUrl,
       if (request.isActive != null) 'isActive': request.isActive,
       if (request.email != null) 'email': request.email,
       if (request.idNumber != null) 'idNumber': request.idNumber,
