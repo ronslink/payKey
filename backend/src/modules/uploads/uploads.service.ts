@@ -41,4 +41,44 @@ export class UploadsService {
             throw new Error(`Failed to save file: ${error.message}`);
         }
     }
+
+    async saveDocument(file: Express.Multer.File, workerId: string): Promise<string> {
+        if (!file) {
+            throw new BadRequestException('No file uploaded');
+        }
+
+        // Create worker-specific documents directory
+        const workerDocsDir = path.join(this.uploadDir, 'documents', workerId);
+        if (!fs.existsSync(workerDocsDir)) {
+            fs.mkdirSync(workerDocsDir, { recursive: true });
+        }
+
+        const fileExt = path.extname(file.originalname);
+        const fileName = `${crypto.randomUUID()}${fileExt}`;
+        const filePath = path.join(workerDocsDir, fileName);
+
+        try {
+            await fs.promises.writeFile(filePath, file.buffer);
+            const baseUrl = process.env.API_URL || 'http://localhost:3000';
+            return `${baseUrl}/uploads/documents/${workerId}/${fileName}`;
+        } catch (error) {
+            throw new Error(`Failed to save document: ${error.message}`);
+        }
+    }
+
+    async deleteDocument(url: string): Promise<void> {
+        try {
+            // Extract relative path from URL
+            const urlObj = new URL(url);
+            const relativePath = urlObj.pathname.replace(/^\//, ''); // Remove leading slash
+            const filePath = path.join(process.cwd(), relativePath);
+
+            if (fs.existsSync(filePath)) {
+                await fs.promises.unlink(filePath);
+            }
+        } catch (error) {
+            // Log but don't throw - file might already be deleted
+            console.warn(`Failed to delete file: ${error.message}`);
+        }
+    }
 }

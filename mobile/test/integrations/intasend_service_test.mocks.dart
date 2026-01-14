@@ -1654,4 +1654,71 @@ class MockPaymentEndpoints extends _i1.Mock implements _i4.PaymentEndpoints {
             ),
           )
           as _i5.Future<_i2.Response<dynamic>>);
+
+  @override
+  _i5.Future<_i2.Response<dynamic>> getTaxPaymentSummary() =>
+      (super.noSuchMethod(
+            Invocation.method(#getTaxPaymentSummary, []),
+            returnValue: _i5.Future<_i2.Response<dynamic>>.value(
+              _FakeResponse_17<dynamic>(
+                this,
+                Invocation.method(#getTaxPaymentSummary, []),
+              ),
+            ),
+          )
+          as _i5.Future<_i2.Response<dynamic>>);
+
+  @override
+  _i5.Future<_i2.Response<dynamic>> recordTaxPayment({
+    required String? taxType,
+    required double? amount,
+    required String? reference,
+    String? paymentDate,
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#recordTaxPayment, [], {
+              #taxType: taxType,
+              #amount: amount,
+              #reference: reference,
+              #paymentDate: paymentDate,
+            }),
+            returnValue: _i5.Future<_i2.Response<dynamic>>.value(
+              _FakeResponse_17<dynamic>(
+                this,
+                Invocation.method(#recordTaxPayment, [], {
+                  #taxType: taxType,
+                  #amount: amount,
+                  #reference: reference,
+                  #paymentDate: paymentDate,
+                }),
+              ),
+            ),
+          )
+          as _i5.Future<_i2.Response<dynamic>>);
+
+  @override
+  _i5.Future<_i2.Response<dynamic>> getTransactions() =>
+      (super.noSuchMethod(
+            Invocation.method(#getTransactions, []),
+            returnValue: _i5.Future<_i2.Response<dynamic>>.value(
+              _FakeResponse_17<dynamic>(
+                this,
+                Invocation.method(#getTransactions, []),
+              ),
+            ),
+          )
+          as _i5.Future<_i2.Response<dynamic>>);
+
+  @override
+  _i5.Future<_i2.Response<dynamic>> getTransactionById(String? id) =>
+      (super.noSuchMethod(
+            Invocation.method(#getTransactionById, [id]),
+            returnValue: _i5.Future<_i2.Response<dynamic>>.value(
+              _FakeResponse_17<dynamic>(
+                this,
+                Invocation.method(#getTransactionById, [id]),
+              ),
+            ),
+          )
+          as _i5.Future<_i2.Response<dynamic>>);
 }

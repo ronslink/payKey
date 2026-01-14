@@ -20,6 +20,9 @@ import { TaxesModule } from '../taxes/taxes.module';
 import { UsersModule } from '../users/users.module';
 import { ActivitiesModule } from '../activities/activities.module';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
+import { WorkerDocument } from './entities/worker-document.entity';
+import { WorkerDocumentsController } from './controllers/worker-documents.controller';
+import { UploadsModule } from '../uploads/uploads.module';
 
 @Module({
   imports: [
@@ -31,6 +34,7 @@ import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
       PayPeriod,
       User,
       Property,
+      WorkerDocument,
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -44,11 +48,13 @@ import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
     UsersModule,
     ActivitiesModule,
     forwardRef(() => SubscriptionsModule),
+    UploadsModule,
   ],
   controllers: [
     WorkersController,
     EmployeePortalController,
     WorkersImportController,
+    WorkerDocumentsController,
   ],
   providers: [
     WorkersService,
@@ -58,4 +64,4 @@ import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
   ],
   exports: [WorkersService, EmployeePortalService],
 })
-export class WorkersModule {}
+export class WorkersModule { }

@@ -548,6 +548,45 @@ class WorkerEndpoints extends BaseEndpoints {
   Future<Response> getArchived() => _api.get('/workers/archived');
 
   Future<Response> restore(String id) => _api.post('/workers/$id/restore');
+
+  // Document endpoints
+  Future<Response> getDocuments(String workerId) => _api.get('/workers/$workerId/documents');
+
+  Future<Response> uploadDocument(
+    String workerId, 
+    List<int> bytes, 
+    String filename, {
+    String type = 'OTHER',
+    String? notes,
+    String? expiresAt,
+  }) async {
+    final formData = FormData.fromMap({
+      'file': MultipartFile.fromBytes(
+        bytes, 
+        filename: filename,
+        contentType: MediaType.parse(_getMimeType(filename)),
+      ),
+      'type': type,
+      if (notes != null) 'notes': notes,
+      if (expiresAt != null) 'expiresAt': expiresAt,
+    });
+    return _api.post('/workers/$workerId/documents', data: formData);
+  }
+
+  Future<Response> deleteDocument(String documentId) => _api.delete('/workers/documents/$documentId');
+
+  String _getMimeType(String filename) {
+    final ext = filename.split('.').last.toLowerCase();
+    switch (ext) {
+      case 'pdf': return 'application/pdf';
+      case 'jpg':
+      case 'jpeg': return 'image/jpeg';
+      case 'png': return 'image/png';
+      case 'doc': return 'application/msword';
+      case 'docx': return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      default: return 'application/octet-stream';
+    }
+  }
 }
 
 

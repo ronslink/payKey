@@ -9,6 +9,7 @@ import '../../../../core/utils/download_utils.dart';
 import '../../../payroll/data/repositories/payroll_repository.dart';
 import '../../../employee_portal/presentation/widgets/invite_worker_dialog.dart';
 import '../../../subscriptions/presentation/providers/feature_access_provider.dart';
+import '../widgets/documents_section.dart';
 
 // =============================================================================
 // CONSTANTS
@@ -411,6 +412,8 @@ class _WorkerDetailContent extends StatelessWidget {
               history: history,
               onDownload: onDownloadPayslip,
           ),
+          const SizedBox(height: _Spacing.xl),
+          DocumentsSection(workerId: worker.id),
           const SizedBox(height: _Spacing.xl),
           if (worker.notes?.isNotEmpty == true) ...[
             _NotesSection(notes: worker.notes!),
