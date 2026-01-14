@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:io';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../providers/auth_provider.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
@@ -143,6 +145,45 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     );
   }
 
+  Widget _buildSocialButtons(BuildContext context) {
+    return Column(
+      children: [
+        if (Platform.isIOS) ...[
+          SignInWithAppleButton(
+            onPressed: () => ref.read(authStateProvider.notifier).loginWithApple(context: context),
+            height: 48,
+            style: SignInWithAppleButtonStyle.black,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          const SizedBox(height: 16),
+        ],
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: OutlinedButton.icon(
+            onPressed: () => ref.read(authStateProvider.notifier).loginWithGoogle(context: context),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: Color(0xFFD1D5DB)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              backgroundColor: Colors.white,
+            ),
+            icon: const Icon(Icons.g_mobiledata, size: 28, color: Colors.black),
+            label: const Text(
+              'Sign up with Google',
+              style: TextStyle(
+                color: Color(0xFF1F2937),
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.listen(authStateProvider, (previous, next) {
@@ -251,6 +292,22 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                                 ),
                               ),
                       ),
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          Expanded(child: Divider(color: Colors.grey.shade300)),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              'Or continue with',
+                              style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
+                            ),
+                          ),
+                          Expanded(child: Divider(color: Colors.grey.shade300)),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      _buildSocialButtons(context),
                     ],
                   ),
                 ),

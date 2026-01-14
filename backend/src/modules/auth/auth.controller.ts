@@ -10,10 +10,11 @@ import {
 import { AuthService } from './auth.service';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
+import { SocialLoginDto } from './dto/social-login.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService) { }
 
   @Post('register')
   @UsePipes(new ValidationPipe())
@@ -82,6 +83,23 @@ export class AuthController {
       console.error('Unexpected error:', error);
       throw new HttpException(
         'Internal server error',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Post('social')
+  @UsePipes(new ValidationPipe())
+  async socialLogin(@Body() socialLoginDto: SocialLoginDto) {
+    try {
+      return await this.authService.loginWithSocial(socialLoginDto);
+    } catch (error) {
+      console.error('Social login error:', error);
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(
+        'Social login failed',
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }

@@ -60,6 +60,24 @@ class AuthRepository {
     return _apiService.register(email, password, firstName: firstName, lastName: lastName);
   }
 
+  Future<Response> socialLoginApi({
+    required String provider,
+    required String token,
+    required String email,
+    String? firstName,
+    String? lastName,
+    String? photoUrl,
+  }) async {
+    return _apiService.auth.socialLogin(
+      provider: provider,
+      token: token,
+      email: email,
+      firstName: firstName,
+      lastName: lastName,
+      photoUrl: photoUrl,
+    );
+  }
+
   Future<void> saveToken(String token) async {
     await _apiService.saveToken(token);
   }

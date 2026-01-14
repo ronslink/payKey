@@ -538,6 +538,24 @@ class AuthEndpoints extends BaseEndpoints {
     });
   }
 
+  Future<Response> socialLogin({
+    required String provider,
+    required String token,
+    required String email,
+    String? firstName,
+    String? lastName,
+    String? photoUrl,
+  }) {
+    return _api.post('/auth/social', data: {
+      'provider': provider,
+      'token': token,
+      'email': email,
+      if (firstName != null) 'firstName': firstName,
+      if (lastName != null) 'lastName': lastName,
+      if (photoUrl != null) 'photoUrl': photoUrl,
+    });
+  }
+
   Future<Response> updateProfile(Map<String, dynamic> data) {
     return _api.patch('/users/profile', data: data);
   }

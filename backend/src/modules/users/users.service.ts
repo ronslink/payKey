@@ -9,7 +9,7 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
-  ) {}
+  ) { }
 
   async create(
     createUserDto: CreateUserDto & { passwordHash: string },
@@ -37,6 +37,60 @@ export class UsersService {
 
   async findOneById(id: string): Promise<User | null> {
     return this.usersRepository.findOne({ where: { id } });
+  }
+
+  async findOneByGoogleId(googleId: string): Promise<User | null> {
+    return this.usersRepository.findOne({ where: { googleId } });
+  }
+
+  async findOneByAppleId(appleId: string): Promise<User | null> {
+    return this.usersRepository.findOne({ where: { appleId } });
+  }
+
+  async createSocialUser(details: {
+    email: string;
+    firstName?: string;
+    lastName?: string;
+    googleId?: string;
+    appleId?: string;
+    photoUrl?: string;
+  }): Promise<User> {
+    const existingUser = await this.usersRepository.findOne({
+      where: { email: details.email },
+    });
+
+    if (existingUser) {
+      // If user exists, link the social ID if not already linked
+      const updates: Partial<User> = {};
+      if (details.googleId && !existingUser.googleId) {
+        updates.googleId = details.googleId;
+      }
+      if (details.appleId && !existingUser.appleId) {
+        updates.appleId = details.appleId;
+      }
+      // Update photo if missing
+      if (details.photoUrl && !existingUser.photoUrl) {
+        updates.photoUrl = details.photoUrl;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await this.usersRepository.update(existingUser.id, updates);
+        return this.usersRepository.findOne({ where: { id: existingUser.id } }) as Promise<User>;
+      }
+      return existingUser;
+    }
+
+    // Create new user
+    const user = this.usersRepository.create({
+      email: details.email,
+      firstName: details.firstName,
+      lastName: details.lastName,
+      googleId: details.googleId,
+      appleId: details.appleId,
+      photoUrl: details.photoUrl,
+      isOnboardingCompleted: false, // Explicitly set to false
+    });
+    return this.usersRepository.save(user);
   }
   async update(id: string, updateUserDto: Partial<User>): Promise<User> {
     // Check if all required onboarding fields are present

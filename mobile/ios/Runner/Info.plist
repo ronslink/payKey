@@ -66,6 +66,17 @@
 		<key>NSAllowsArbitraryLoads</key>
 		<true/>
 	</dict>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.104336380998-jenvsdcitnun7un5j00aqnoggnrefbaa</string>
+			</array>
+		</dict>
+	</array>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>PayDome needs access to your photo library to upload documents such as receipts.</string>
 	<key>NSCameraUsageDescription</key>
