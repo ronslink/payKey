@@ -480,6 +480,22 @@ class ApiService {
       throw handleError(e);
     }
   }
+
+  /// Download a file from a URL as bytes
+  Future<List<int>> downloadFile(String url) async {
+    try {
+      final response = await dio.get<List<int>>(
+        url,
+        options: Options(
+          responseType: ResponseType.bytes,
+          headers: {'Accept': '*/*'},
+        ),
+      );
+      return response.data ?? [];
+    } catch (e) {
+      throw handleError(e);
+    }
+  }
 }
 
 // =============================================================================
