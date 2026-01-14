@@ -55,6 +55,7 @@ class ApiService {
   late final PropertyEndpoints properties;
   late final WorkersConvertEndpoints workersConvert;
   late final UploadEndpoints uploads;
+  late final GovEndpoints gov;
 
   // ---------------------------------------------------------------------------
   // Initialization
@@ -90,6 +91,7 @@ class ApiService {
     properties = PropertyEndpoints(this);
     workersConvert = WorkersConvertEndpoints(this);
     uploads = UploadEndpoints(this);
+    gov = GovEndpoints(this);
   }
 
   InterceptorsWrapper _createAuthInterceptor() {
@@ -889,6 +891,56 @@ class UploadEndpoints extends BaseEndpoints {
     } catch (e) {
       throw _api.handleError(e);
     }
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Government Integration Endpoints
+// -----------------------------------------------------------------------------
+
+class GovEndpoints extends BaseEndpoints {
+  const GovEndpoints(super.api);
+
+  Future<Response> getSubmissions() => _api.get('/gov/submissions');
+
+  Future<Response> getSubmission(String id) => _api.get('/gov/submissions/$id');
+
+  Future<Response> generateKraP10(String payPeriodId) {
+    return _api.post('/gov/kra/generate', data: {'payPeriodId': payPeriodId});
+  }
+
+  Future<Response> generateShif(String payPeriodId) {
+    return _api.post('/gov/shif/generate', data: {'payPeriodId': payPeriodId});
+  }
+
+  Future<Response> generateNssf(String payPeriodId) {
+    return _api.post('/gov/nssf/generate', data: {'payPeriodId': payPeriodId});
+  }
+
+  Future<List<int>> downloadFile(String submissionId) async {
+    try {
+      final response = await _api.dio.get<List<int>>(
+        '/gov/submissions/$submissionId/download',
+        options: Options(
+          responseType: ResponseType.bytes,
+          headers: {'Accept': '*/*'},
+        ),
+      );
+      return response.data ?? [];
+    } catch (e) {
+      throw _api.handleError(e);
+    }
+  }
+
+  Future<Response> markAsUploaded(String submissionId) {
+    return _api.patch('/gov/submissions/$submissionId/uploaded');
+  }
+
+  Future<Response> confirmSubmission(String submissionId, String referenceNumber, {String? notes}) {
+    return _api.patch('/gov/submissions/$submissionId/confirm', data: {
+      'referenceNumber': referenceNumber,
+      if (notes != null) 'notes': notes,
+    });
   }
 }
 

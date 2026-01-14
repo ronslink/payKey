@@ -188,33 +188,50 @@ class TaxPageNew extends ConsumerWidget {
   Widget _buildQuickActions(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: Row(
+      child: Column(
         children: [
-          Expanded(
-            child: _buildActionButton(
-              context, 
-              Icons.description_outlined, 
-              'Generate P9', 
-              () => context.push('/reports/p9'),
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: _buildActionButton(
+                  context, 
+                  Icons.description_outlined, 
+                  'Generate P9', 
+                  () => context.push('/reports/p9'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildActionButton(
+                  context, 
+                  Icons.send_outlined, 
+                  'File Returns', 
+                  () => context.push('/taxes/filing'),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _buildActionButton(
-              context, 
-              Icons.send_outlined, 
-              'File Returns', 
-              () => context.push('/taxes/filing'),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: _buildActionButton(
-              context, 
-              Icons.upload_file_outlined, 
-              'Upload\nReceipt', 
-              () => context.push('/taxes/upload'),
-            ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildActionButton(
+                  context, 
+                  Icons.upload_file_outlined, 
+                  'Upload Receipt', 
+                  () => context.push('/taxes/upload'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildActionButton(
+                  context, 
+                  Icons.account_balance_outlined, 
+                  'Gov Files', 
+                  () => context.push('/gov-submissions'),
+                ),
+              ),
+            ],
           ),
         ],
       ),

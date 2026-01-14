@@ -30,6 +30,7 @@ import { AppThrottlerModule } from './modules/throttler/throttler.module';
 import { PropertiesModule } from './modules/properties/properties.module';
 import { DataDeletionModule } from './modules/data-deletion/data-deletion.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
+import { GovIntegrationsModule } from './modules/gov-integrations/gov-integrations.module';
 import { getDatabaseConfig } from './config/database.config';
 
 // Explicit Entity Imports
@@ -58,6 +59,7 @@ import { Holiday } from './modules/holidays/entities/holiday.entity';
 import { DeletionRequest } from './modules/data-deletion/entities/deletion-request.entity';
 import { Notification } from './modules/notifications/entities/notification.entity';
 import { DeviceToken } from './modules/notifications/entities/device-token.entity';
+import { GovSubmission } from './modules/gov-integrations/entities/gov-submission.entity';
 
 @Module({
   imports: [
@@ -109,6 +111,7 @@ import { DeviceToken } from './modules/notifications/entities/device-token.entit
     PropertiesModule,
     DataDeletionModule,
     UploadsModule,
+    GovIntegrationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

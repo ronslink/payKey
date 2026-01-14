@@ -56,6 +56,7 @@ import 'features/finance/finance.dart';
 import 'features/finance/presentation/pages/mpesa_top_up_page.dart';
 import 'features/taxes/presentation/pages/tax_page_new.dart';
 import 'features/settings/settings.dart';
+import 'features/gov_submissions/presentation/pages/gov_submissions_page.dart';
 
 // =============================================================================
 // MAIN
@@ -160,6 +161,7 @@ abstract class AppRoutes {
   static const taxes = '/taxes';
   static const accounting = '/accounting';
   static const reports = '/reports';
+  static const govSubmissions = '/gov-submissions';
   static const attendance = '/attendance';
   static const leave = '/leave';
   static const profileEdit = '/profile/edit';
@@ -528,6 +530,11 @@ final _otherRoutes = <RouteBase>[
       featureKey: 'basic_reports',
       child: ReportsPage(),
     ),
+  ),
+  GoRoute(
+    path: AppRoutes.govSubmissions,
+    name: 'govSubmissions',
+    builder: (_, _) => const GovSubmissionsPage(),
   ),
   // Attendance (for employers)
   GoRoute(
