@@ -1,6 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
 import '../../data/models/worker_document_model.dart';
 import '../../../../core/network/api_service.dart';
 
@@ -112,6 +115,7 @@ class _DocumentsSectionState extends ConsumerState<DocumentsSection> {
               return Column(
                 children: documents.map((doc) => _DocumentTile(
                   document: doc,
+                  onView: () => _viewDocument(doc),
                   onDelete: () => _deleteDocument(doc),
                 )).toList(),
               );
@@ -231,6 +235,49 @@ class _DocumentsSectionState extends ConsumerState<DocumentsSection> {
     }
   }
 
+  Future<void> _viewDocument(WorkerDocument doc) async {
+    try {
+      // Show loading indicator
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                const SizedBox(width: 12),
+                Text('Opening ${doc.name}...'),
+              ],
+            ),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
+
+      // 1. Download document
+      final bytes = await ApiService().downloadFile(doc.url);
+      
+      // 2. Save to temporary directory
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File('${tempDir.path}/${doc.name}');
+      await tempFile.writeAsBytes(bytes);
+
+      // 3. Open file
+      final result = await OpenFilex.open(tempFile.path);
+      
+      if (result.type != ResultType.done && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open file: ${result.message}')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to open document: $e')),
+        );
+      }
+    }
+  }
+
   IconData _getDocumentIcon(DocumentType type) {
     switch (type) {
       case DocumentType.idCopy: return Icons.badge;
@@ -244,9 +291,14 @@ class _DocumentsSectionState extends ConsumerState<DocumentsSection> {
 
 class _DocumentTile extends StatelessWidget {
   final WorkerDocument document;
+  final VoidCallback onView;
   final VoidCallback onDelete;
 
-  const _DocumentTile({required this.document, required this.onDelete});
+  const _DocumentTile({
+    required this.document, 
+    required this.onView,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -304,6 +356,11 @@ class _DocumentTile extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.visibility_outlined, color: Color(0xFF6366F1), size: 20),
+            onPressed: onView,
+            tooltip: 'View',
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),

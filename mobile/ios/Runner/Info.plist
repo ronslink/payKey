@@ -47,9 +47,9 @@
 	<true/>
 	<!-- Background Geolocation -->
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>PayKey needs location access for time tracking at your work site.</string>
+	<string>PayDome needs location access for time tracking at your work site.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>PayKey needs background location to automatically clock you out when you leave work.</string>
+	<string>PayDome needs background location to automatically clock you out when you leave work.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>
@@ -67,8 +67,8 @@
 		<true/>
 	</dict>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>PayKey needs access to your photo library to upload documents such as receipts.</string>
+	<string>PayDome needs access to your photo library to upload documents such as receipts.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>PayKey needs access to your camera to take profile photos.</string>
+	<string>PayDome needs access to your camera to take profile photos.</string>
 </dict>
 </plist>
