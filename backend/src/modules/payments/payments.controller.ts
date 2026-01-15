@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { MpesaService } from './mpesa.service';
 import { IntaSendService } from './intasend.service';
+import { StripeService } from './stripe.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { AuthenticatedRequest } from '../../common/interfaces/user.interface';
 
@@ -96,6 +97,7 @@ export class PaymentsController {
     @InjectRepository(Subscription)
     private subscriptionRepository: Repository<Subscription>,
     private intaSendService: IntaSendService,
+    private stripeService: StripeService,
   ) { }
 
   @Post('callback')
@@ -155,6 +157,31 @@ export class PaymentsController {
     // Delegate to service if needed, or handle here
     // Currently PayKey uses IntaSend for B2C, so this might be legacy or direct M-Pesa.
     return { ResultCode: 0, ResultDesc: 'Accepted' };
+  }
+
+  /**
+   * Stripe Webhook Endpoint
+   * Receives events from Stripe (checkout.session.completed, invoice.payment_succeeded, etc.)
+   */
+  @Post('stripe/webhook')
+  async handleStripeWebhook(
+    @Headers('stripe-signature') signature: string,
+    @Request() req: any,
+  ) {
+    console.log('🔵 Stripe Webhook Received');
+
+    if (!signature) {
+      throw new UnauthorizedException('Missing Stripe signature');
+    }
+
+    try {
+      const event = this.stripeService.constructEvent(req.rawBody, signature);
+      await this.stripeService.handleWebhook(event);
+      return { received: true };
+    } catch (error) {
+      console.error('⛔ Stripe Webhook Error:', error.message);
+      throw new UnauthorizedException(`Webhook Error: ${error.message}`);
+    }
   }
 
   @Post('initiate-stk')

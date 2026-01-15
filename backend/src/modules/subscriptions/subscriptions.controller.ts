@@ -24,6 +24,7 @@ import {
 import { SUBSCRIPTION_PLANS } from './subscription-plans.config';
 import { UsersService } from '../users/users.service';
 import { IntaSendService } from '../payments/intasend.service';
+import { StripeService } from '../payments/stripe.service';
 import {
   Transaction,
   TransactionStatus,
@@ -42,9 +43,10 @@ export class SubscriptionsController {
     private subscriptionPaymentRepository: Repository<SubscriptionPayment>,
     private usersService: UsersService,
     private intaSendService: IntaSendService,
+    private stripeService: StripeService,
     @InjectRepository(Transaction)
     private transactionRepository: Repository<Transaction>,
-  ) {}
+  ) { }
 
   @Get('plans')
   getPlans() {
@@ -272,9 +274,6 @@ export class SubscriptionsController {
     @Request() req: any,
     @Body() body: { planId: string; paymentMethod?: string },
   ) {
-    // TODO: Implement actual payment integration (Stripe / M-Pesa)
-    // For now, just update/create subscription record and User tier
-
     const plan = SUBSCRIPTION_PLANS.find(
       (p) => p.tier.toLowerCase() === body.planId.toLowerCase(),
     );
@@ -282,6 +281,28 @@ export class SubscriptionsController {
       throw new Error('Invalid plan ID');
     }
 
+    // Handle Stripe payments
+    if (body.paymentMethod === 'STRIPE' || body.paymentMethod === 'stripe') {
+      const user = await this.usersService.findOneById(req.user.userId);
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      const checkoutResult = await this.stripeService.createCheckoutSession(
+        req.user.userId,
+        plan.tier,
+        user.email,
+        `${user.firstName || ''} ${user.lastName || ''}`.trim() || undefined,
+      );
+
+      return {
+        paymentMethod: 'STRIPE',
+        checkoutUrl: checkoutResult.url,
+        sessionId: checkoutResult.sessionId,
+      };
+    }
+
+    // Default: Free tier or manual/mock subscription (legacy behavior)
     let subscription = await this.subscriptionRepository.findOne({
       where: { userId: req.user.userId },
     });

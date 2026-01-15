@@ -47,6 +47,18 @@ export class StripeService {
   }
 
   /**
+   * Construct and verify a Stripe webhook event from raw payload
+   */
+  constructEvent(payload: Buffer, signature: string): Stripe.Event {
+    const stripe = this.ensureStripeConfigured();
+    const webhookSecret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET');
+    if (!webhookSecret) {
+      throw new BadRequestException('Stripe webhook secret not configured');
+    }
+    return stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+  }
+
+  /**
    * Create Stripe customer for user
    */
   async createCustomer(email: string, name?: string): Promise<Stripe.Customer> {
