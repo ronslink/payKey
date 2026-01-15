@@ -16,7 +16,7 @@ jobs:
           host: ${{ secrets.DO_HOST }}
           username: ${{ secrets.DO_USERNAME }}
           key: ${{ secrets.DO_SSH_KEY }}
-          envs: DO_HOST, DO_USERNAME, DO_SSH_KEY, DATABASE_URL, JWT_SECRET, INTASEND_PUBLISHABLE_KEY, INTASEND_SECRET, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, CR_PAT
+          envs: DO_HOST, DO_USERNAME, DO_SSH_KEY, DATABASE_URL, JWT_SECRET, INTASEND_PUBLISHABLE_KEY, INTASEND_SECRET, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, CR_PAT, APPLE_KEY_ID, APPLE_TEAM_ID, APPLE_BUNDLE_ID, APPLE_PRIVATE_KEY
           script: |
             cd /opt/paykey
             
@@ -42,6 +42,10 @@ jobs:
             INTASEND_IS_LIVE=true
             STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY
             STRIPE_WEBHOOK_SECRET=$STRIPE_WEBHOOK_SECRET
+            APPLE_KEY_ID=$APPLE_KEY_ID
+            APPLE_TEAM_ID=$APPLE_TEAM_ID
+            APPLE_BUNDLE_ID=$APPLE_BUNDLE_ID
+            APPLE_PRIVATE_KEY="$APPLE_PRIVATE_KEY"
             NODE_EXTRA_CA_CERTS=/app/ca-certificate.crt
             EOF
             
