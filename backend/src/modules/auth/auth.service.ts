@@ -4,6 +4,11 @@ import { UsersService } from '../users/users.service';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { User } from '../users/entities/user.entity';
 import * as bcrypt from 'bcrypt';
+import * as appleSignin from 'apple-signin-auth';
+import * as fs from 'fs';
+import * as path from 'path';
+import { ConfigService } from '@nestjs/config';
+import { OAuth2Client } from 'google-auth-library';
 
 interface JwtPayload {
   email: string;
@@ -21,6 +26,7 @@ export class AuthService {
   constructor(
     private usersService: UsersService,
     private jwtService: JwtService,
+    private configService: ConfigService,
   ) { }
 
   async validateUser(
@@ -81,39 +87,85 @@ export class AuthService {
   }
 
   async loginWithSocial(socialLoginDto: SocialLoginDto) {
-    const { provider, token, email, firstName, lastName, photoUrl } = socialLoginDto;
+    const { provider, token, email: clientEmail, firstName, lastName, photoUrl } = socialLoginDto;
 
-    // TODO: Verify token with Google/Apple servers
-    // For now, we trust the token/email sent from the mobile SDKs which handled verification
+    let socialId = token;
+    let verifiedEmail = clientEmail;
 
-    // Check if user exists by social ID
-    let user = null;
     if (provider === SocialProvider.GOOGLE) {
-      // Logic assumes token might be the ID if we are just passing IDs, 
-      // but usually token is JWT. Here we rely on email linkage mostly 
-      // or if we had the ID passed explicitly. 
-      // The DTO has 'token' which is usually the ID Token. 
-      // We should ideally decode it to get the 'sub' (Google ID).
-      // For this implementation, we will trust the client sending the email
-      // and perform linking in UsersService.createSocialUser
+      const googlePayload = await this.verifyGoogleToken(token);
+      socialId = googlePayload.sub;
+      verifiedEmail = googlePayload.email || clientEmail;
+    } else if (provider === SocialProvider.APPLE) {
+      const applePayload = await this.verifyAppleToken(token);
+      socialId = applePayload.sub;
+      verifiedEmail = applePayload.email || clientEmail;
     }
 
-    // We delegate the finding/creating to UsersService which handles 
-    // linking by email or social ID.
-    user = await this.usersService.createSocialUser({
-      email,
+    // Check if user exists or create them
+    const user = await this.usersService.createSocialUser({
+      email: verifiedEmail,
       firstName,
       lastName,
       photoUrl,
-      googleId: provider === SocialProvider.GOOGLE ? token : undefined, // Assuming token IS the ID for simplicity if client sends ID, or we map it. 
-      // Ideally client sends the ID as a separate field or we decode the token.
-      // Let's assume 'token' field in DTO actually carries the User ID (sub) for now
-      // or we should update DTO to have 'socialId'. 
-      // The mobile guide usually gives a 'idToken' and a 'userId'.
-      // Let's update DTO to be clear or use token as ID.
-      appleId: provider === SocialProvider.APPLE ? token : undefined,
+      googleId: provider === SocialProvider.GOOGLE ? socialId : undefined,
+      appleId: provider === SocialProvider.APPLE ? socialId : undefined,
     });
 
-    return this.login(user); // Generates JWT
+    return this.login(user);
+  }
+
+  private async verifyAppleToken(idToken: string) {
+    const appleKeyId = this.configService.get<string>('APPLE_KEY_ID');
+    const appleTeamId = this.configService.get<string>('APPLE_TEAM_ID');
+    const appleBundleId = this.configService.get<string>('APPLE_BUNDLE_ID');
+    const appleKeyPath = this.configService.get<string>('APPLE_KEY_PATH');
+
+    if (!appleKeyId || !appleTeamId || !appleBundleId || !appleKeyPath) {
+      throw new Error('Apple configuration missing in environment variables');
+    }
+
+    try {
+      const privateKey = fs.readFileSync(path.resolve(process.cwd(), appleKeyPath), 'utf8');
+
+      const clientSecret = appleSignin.getClientSecret({
+        clientID: appleBundleId,
+        teamID: appleTeamId,
+        keyIdentifier: appleKeyId,
+        privateKey: privateKey,
+        expAfter: 15777000, // 6 months
+      });
+
+      const tokenPayload = await appleSignin.verifyIdToken(idToken, {
+        audience: appleBundleId,
+        ignoreExpiration: false,
+      });
+
+      return tokenPayload;
+    } catch (error) {
+      throw new Error(`Apple token verification failed: ${error.message}`);
+    }
+  }
+
+  private async verifyGoogleToken(idToken: string) {
+    // We assume GOOGLE_CLIENT_ID is in env
+    const googleClientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
+    const client = new OAuth2Client(googleClientId);
+
+    try {
+      const ticket = await client.verifyIdToken({
+        idToken,
+        audience: googleClientId,
+      });
+      return ticket.getPayload()!;
+    } catch (error) {
+      // If GOOGLE_CLIENT_ID is missing, we might still want to allow development 
+      // but for production this is critical.
+      if (!googleClientId) {
+        console.warn('GOOGLE_CLIENT_ID missing, skipping Google token verification');
+        return { sub: idToken, email: undefined }; // Fallback for dev
+      }
+      throw new Error(`Google token verification failed: ${error.message}`);
+    }
   }
 }

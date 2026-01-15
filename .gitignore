@@ -102,3 +102,7 @@ paykey_deploy
 **/*.keystore
 **/*.jks
 key.properties
+
+# Apple Auth Keys
+**/*.p8
+backend/config/apple-auth-key.p8
