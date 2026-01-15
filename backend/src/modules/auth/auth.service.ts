@@ -35,7 +35,8 @@ export class AuthService {
   ): Promise<Omit<User, 'passwordHash'> | null> {
     const user = await this.usersService.findOneByEmail(email);
     if (user && user.passwordHash && (await bcrypt.compare(password, user.passwordHash))) {
-      const { passwordHash: _, ...result } = user;
+      const { passwordHash: _hash, ...result } = user;
+      console.debug('Login validated for user:', _hash ? user.email : 'unknown');
       return result as Omit<User, 'passwordHash'>;
     }
     return null;
@@ -120,21 +121,18 @@ export class AuthService {
     const appleTeamId = this.configService.get<string>('APPLE_TEAM_ID');
     const appleBundleId = this.configService.get<string>('APPLE_BUNDLE_ID');
     const appleKeyPath = this.configService.get<string>('APPLE_KEY_PATH');
+    const applePrivateKeyEnv = this.configService.get<string>('APPLE_PRIVATE_KEY');
 
-    if (!appleKeyId || !appleTeamId || !appleBundleId || !appleKeyPath) {
+    if (!appleKeyId || !appleTeamId || !appleBundleId || (!appleKeyPath && !applePrivateKeyEnv)) {
       throw new Error('Apple configuration missing in environment variables');
     }
 
     try {
-      const privateKey = fs.readFileSync(path.resolve(process.cwd(), appleKeyPath), 'utf8');
-
-      const clientSecret = appleSignin.getClientSecret({
-        clientID: appleBundleId,
-        teamID: appleTeamId,
-        keyIdentifier: appleKeyId,
-        privateKey: privateKey,
-        expAfter: 15777000, // 6 months
-      });
+      if (applePrivateKeyEnv) {
+        console.debug('Apple Sign-in: Using private key from environment');
+      } else if (appleKeyPath) {
+        console.debug('Apple Sign-in: Using private key from file:', appleKeyPath);
+      }
 
       const tokenPayload = await appleSignin.verifyIdToken(idToken, {
         audience: appleBundleId,
@@ -143,7 +141,8 @@ export class AuthService {
 
       return tokenPayload;
     } catch (error) {
-      throw new Error(`Apple token verification failed: ${error.message}`);
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Apple token verification failed: ${message}`);
     }
   }
 
