@@ -16,7 +16,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { StripeService } from './stripe.service';
 import { MpesaService } from './mpesa.service';
 import { IntaSendService } from './intasend.service';
-import { Transaction, TransactionStatus } from './entities/transaction.entity';
+import { Transaction, TransactionStatus, TransactionType } from './entities/transaction.entity';
 import {
   Subscription,
   SubscriptionStatus,
@@ -253,21 +253,60 @@ export class UnifiedPaymentsController {
     const { userId } = req.user;
 
     try {
-      const result = await this.mpesaService.initiateStkPush(
+      // Validate amount
+      const amount = Number(body.amount);
+      if (isNaN(amount) || amount <= 0) {
+        throw new HttpException('Invalid amount', HttpStatus.BAD_REQUEST);
+      }
+
+      // 1. Create PENDING Transaction Record
+      const transaction = this.transactionRepository.create({
         userId,
+        amount: amount,
+        currency: 'KES',
+        type: TransactionType.DEPOSIT,
+        status: TransactionStatus.PENDING,
+        provider: 'INTASEND',
+        recipientPhone: body.phoneNumber,
+        accountReference: body.accountReference || 'TopUp',
+        createdAt: new Date(),
+        metadata: {
+          description: body.transactionDesc || 'Wallet Topup',
+        },
+      });
+      await this.transactionRepository.save(transaction);
+
+      // 2. Initiate IntaSend STK Push
+      // Use transaction ID as API Ref for reconciliation
+      const result = await this.intaSendService.initiateStkPush(
         body.phoneNumber,
-        body.amount,
-        body.accountReference,
-        body.transactionDesc,
+        amount,
+        transaction.id,
       );
+
+      // 3. Update Transaction with Provider Ref (Invoice ID)
+      // Check response structure - usually result.invoice.invoice_id or result.checkoutRequestId (if we mapped it)
+      // IntaSendService returns the raw data or formatted data.
+      // Based on IntaSendService code: `return response.data;` or mapped object in simulation.
+      const invoiceId = result.invoice?.invoice_id || result.id || 'PENDING';
+
+      transaction.providerRef = invoiceId;
+      transaction.metadata = {
+        ...transaction.metadata,
+        intaSendResponse: result,
+      };
+      await this.transactionRepository.save(transaction);
 
       return {
         success: true,
-        checkoutRequestId: result.CheckoutRequestID,
-        message: 'STK push initiated successfully',
+        checkoutRequestId: invoiceId,
+        message: 'STK push initiated successfully via IntaSend',
       };
     } catch (error) {
-      this.throwBadRequest(error, 'Failed to initiate M-Pesa topup');
+      console.error('Unified TopUp Error:', error);
+      const message = error instanceof Error ? error.message : 'Failed to initiate topup';
+      // Return the actual error message to the frontend for better debugging
+      throw new HttpException(message, HttpStatus.BAD_REQUEST);
     }
   }
 

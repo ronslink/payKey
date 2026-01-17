@@ -1,4 +1,4 @@
-import { Injectable, Inject, Optional, Logger } from '@nestjs/common';
+import { Injectable, Inject, Optional, Logger, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThanOrEqual, MoreThanOrEqual, IsNull } from 'typeorm';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -8,14 +8,22 @@ import { TaxConfig, TaxType, RateType } from '../entities/tax-config.entity';
 const TAX_CONFIG_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours (tax rates rarely change)
 
 @Injectable()
-export class TaxConfigService {
+export class TaxConfigService implements OnModuleInit {
   private readonly logger = new Logger(TaxConfigService.name);
 
   constructor(
     @InjectRepository(TaxConfig)
     private taxConfigRepository: Repository<TaxConfig>,
     @Optional() @Inject(CACHE_MANAGER) private cacheManager?: Cache,
-  ) {}
+  ) { }
+
+  /**
+   * Automatically seed tax configurations on module initialization
+   */
+  async onModuleInit() {
+    this.logger.log('Checking tax configuration status...');
+    await this.seedInitialConfigs();
+  }
 
   /**
    * Get active tax configuration for a specific date (with caching)
@@ -140,7 +148,7 @@ export class TaxConfigService {
         effectiveFrom: new Date('2024-10-01'),
         effectiveTo: undefined,
         configuration: {
-          percentage: 0.0275,
+          percentage: 2.75,
           minAmount: 300,
           maxAmount: undefined,
         },
@@ -190,20 +198,19 @@ export class TaxConfigService {
           'NSSF Tier II: 6% of KES 8,001-72,000 (max KES 3,840 each party)',
       },
 
-      // Housing Levy
+      // Housing Levy - February 2025 rates
       {
         taxType: TaxType.HOUSING_LEVY,
         rateType: RateType.PERCENTAGE,
-        effectiveFrom: new Date('2024-03-19'),
+        effectiveFrom: new Date('2025-02-01'),
         effectiveTo: undefined,
         configuration: {
-          percentage: 0.015,
+          percentage: 1.5,
           minAmount: undefined,
           maxAmount: undefined,
         },
-        paymentDeadline: '9th working day after end of month',
-        notes:
-          'Housing Levy: 1.5% employee + 1.5% employer. Fully tax-deductible from Dec 27, 2024',
+        paymentDeadline: '9th of following month',
+        notes: 'Housing Levy: 1.5% of gross salary (employer matches 1.5%)',
       },
     ];
 

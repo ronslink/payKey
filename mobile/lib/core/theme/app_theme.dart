@@ -7,6 +7,9 @@ abstract class AppTheme {
   static const _secondaryColor = Color(0xFF6366F1); // Indigo
   static const _backgroundColor = Color(0xFFF3F4F6); // Soft Grey Background
   
+  // Public accessors for use in widgets
+  static const primaryColor = _seedColor;
+  
   // Text Colors
   static const _textPrimary = Color(0xFF111827); // Cool Gray 900
   static const _textSecondary = Color(0xFF4B5563); // Cool Gray 600

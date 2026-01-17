@@ -18,8 +18,14 @@ async function bootstrap() {
   });
 
   // Serve static files from 'uploads' directory
-  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+  // Use process.cwd() to ensure we look in /app/uploads regardless of where dist/main.js is
+  app.useStaticAssets(join(process.cwd(), 'uploads'), {
     prefix: '/uploads/',
+    setHeaders: (res) => {
+      res.set('Access-Control-Allow-Origin', '*');
+      res.set('Access-Control-Allow-Methods', 'GET');
+      res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+    },
   });
 
   // Middleware to capture raw body for webhook verification

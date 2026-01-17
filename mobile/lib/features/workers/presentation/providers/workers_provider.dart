@@ -6,6 +6,11 @@ import '../../data/repositories/workers_repository.dart';
 
 final workersRepositoryProvider = Provider((ref) => WorkersRepository(ApiService()));
 
+final supportedBanksProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final api = ApiService();
+  return api.getBanks();
+});
+
 final workersProvider = AsyncNotifierProvider<WorkersNotifier, List<WorkerModel>>(WorkersNotifier.new);
 
 class WorkersNotifier extends AsyncNotifier<List<WorkerModel>> {

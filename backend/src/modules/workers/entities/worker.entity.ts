@@ -165,6 +165,9 @@ export class Worker {
   bankName: string;
 
   @Column({ nullable: true })
+  bankCode: string; // IntaSend PesaLink bank code
+
+  @Column({ nullable: true })
   bankAccount: string;
 
   @Column({ type: 'text', nullable: true })

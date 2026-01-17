@@ -5,6 +5,7 @@ import '../providers/tax_submission_provider.dart';
 import '../../data/models/monthly_tax_summary.dart';
 import '../providers/tax_provider.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/utils/download_utils.dart';
 
 class ComprehensiveTaxPage extends ConsumerStatefulWidget {
   const ComprehensiveTaxPage({super.key});
@@ -277,21 +278,20 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
               ],
             ),
             
-            // Actions for pending returns
-            if (!isFiled) ...[
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _showDownloadOptions(summary),
-                      icon: const Icon(Icons.download, size: 18),
-                      label: const Text('Download'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showDownloadOptions(summary),
+                    icon: const Icon(Icons.download, size: 18),
+                    label: const Text('Download'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
+                ),
+                if (!isFiled) ...[
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton.icon(
@@ -306,8 +306,8 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
                     ),
                   ),
                 ],
-              ),
-            ],
+              ],
+            ),
           ],
         ),
       ),
@@ -969,6 +969,21 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
       if (bytes.isEmpty) {
         throw Exception('Download failed: Empty file');
       }
+
+      // Determine file extension based on export type
+      String fileName = 'report_$exportType.csv';
+      if (exportType.contains('EXCEL')) {
+        fileName = 'report_$exportType.csv'; // Still CSV for Excel exports
+      } else if (exportType.contains('CSV')) {
+        fileName = 'report_$exportType.csv';
+      }
+
+      // Save the file using DownloadUtils
+      await DownloadUtils.downloadFile(
+        filename: fileName,
+        bytes: bytes,
+        mimeType: 'text/csv',
+      );
 
       _showSnack('Download complete!');
     } catch (e) {

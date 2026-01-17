@@ -40,7 +40,7 @@ export class PayrollController {
     private payrollRepository: Repository<PayrollRecord>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
-  ) {}
+  ) { }
 
   // Helper method to get employer name (fetch once, use for all payslips)
   private async getEmployerName(userId: string): Promise<string> {
@@ -211,6 +211,43 @@ export class PayrollController {
       body.skipPayout ?? false, // Pass skipPayout flag
     );
   }
+  @Post('recalculate/:payPeriodId')
+  @UseGuards(JwtAuthGuard)
+  async recalculatePayroll(
+    @Request() req: AuthenticatedRequest,
+    @Param('payPeriodId') payPeriodId: string,
+  ) {
+    // 1. Get current draft items
+    const draftItems = await this.payrollService.getDraftPayroll(
+      req.user.userId,
+      payPeriodId,
+    );
+
+    if (!draftItems || draftItems.length === 0) {
+      throw new NotFoundException(
+        'No draft records found for this period. Please calculate payroll first.',
+      );
+    }
+
+    // 2. Map to DraftPayrollItem format for saving
+    // This will trigger a fresh calculation with current tax rates
+    const itemsToRecalculate = draftItems.map((item) => ({
+      workerId: item.workerId,
+      grossSalary: item.grossSalary,
+      bonuses: item.bonuses || 0,
+      otherEarnings: item.otherEarnings || 0,
+      otherDeductions: item.otherDeductions || 0,
+    }));
+
+    // 3. Save (Recalculate)
+    // The service handles status validation (must be modifiable)
+    return this.payrollService.saveDraftPayroll(
+      req.user.userId,
+      payPeriodId,
+      itemsToRecalculate,
+    );
+  }
+
   @Post('draft')
   @UseGuards(JwtAuthGuard)
   async saveDraftPayroll(

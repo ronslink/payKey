@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Body,
   Param,
   UseGuards,
@@ -21,7 +22,7 @@ export class EmployeePortalController {
     private readonly employeePortalService: EmployeePortalService,
     private readonly leaveManagementService: LeaveManagementService,
     private readonly featureAccessService: FeatureAccessService,
-  ) {}
+  ) { }
 
   // ============================================================
   // PUBLIC ENDPOINTS (No Auth Required)
@@ -88,12 +89,23 @@ export class EmployeePortalController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get employee profile and worker info' })
   async getMyProfile(@Request() req: any) {
-    // req.user contains workerId and employerId from JWT
+    const worker = await this.employeePortalService.getWorkerProfile(
+      req.user.workerId,
+    );
     return {
       userId: req.user.userId,
-      workerId: req.user.workerId,
-      employerId: req.user.employerId,
       role: req.user.role,
+      // Map worker details explicitly to prevent collisions
+      workerId: worker.id,
+      employerId: worker.userId,
+      name: worker.name,
+      email: worker.email,
+      phoneNumber: worker.phoneNumber,
+      paymentMethod: worker.paymentMethod,
+      bankName: worker.bankName,
+      bankCode: worker.bankCode,
+      bankAccount: worker.bankAccount,
+      mpesaNumber: worker.mpesaNumber,
     };
   }
 
@@ -206,6 +218,27 @@ export class EmployeePortalController {
     return this.leaveManagementService.cancelLeaveRequest(
       req.user.employerId,
       requestId,
+    );
+  }
+
+  @Patch('my-payment-details')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update employee payment details' })
+  async updatePaymentDetails(
+    @Request() req: any,
+    @Body()
+    body: {
+      paymentMethod: string;
+      bankName?: string;
+      bankCode?: string;
+      bankAccount?: string;
+      mpesaNumber?: string;
+    },
+  ) {
+    return this.employeePortalService.updatePaymentDetails(
+      req.user.workerId,
+      body,
     );
   }
 }

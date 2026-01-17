@@ -22,7 +22,7 @@ export class EmployeePortalService {
     @InjectRepository(Property)
     private propertyRepository: Repository<Property>,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
   /**
    * Generate an invite code for a worker
@@ -336,5 +336,68 @@ export class EmployeePortalService {
     }
 
     return digits;
+  }
+
+  /**
+   * Get worker profile details
+   */
+  async getWorkerProfile(workerId: string) {
+    const worker = await this.workersRepository.findOne({
+      where: { id: workerId },
+      select: [
+        'id',
+        'name',
+        'email',
+        'phoneNumber',
+        'paymentMethod',
+        'bankName',
+        'bankCode',
+        'bankAccount',
+        'mpesaNumber',
+      ],
+    });
+
+    if (!worker) {
+      throw new NotFoundException('Worker not found');
+    }
+    return worker;
+  }
+
+  /**
+   * Update employee payment details
+   */
+  async updatePaymentDetails(
+    workerId: string,
+    updates: {
+      paymentMethod: string;
+      bankName?: string;
+      bankCode?: string;
+      bankAccount?: string;
+      mpesaNumber?: string;
+    },
+  ) {
+    const worker = await this.workersRepository.findOne({
+      where: { id: workerId },
+    });
+
+    if (!worker) {
+      throw new NotFoundException('Worker not found');
+    }
+
+    if (updates.paymentMethod) {
+      worker.paymentMethod = updates.paymentMethod as any;
+    }
+
+    // Update bank details
+    if (updates.bankName !== undefined) worker.bankName = updates.bankName;
+    if (updates.bankCode !== undefined) worker.bankCode = updates.bankCode;
+    if (updates.bankAccount !== undefined)
+      worker.bankAccount = updates.bankAccount;
+
+    // Update MPesa details
+    if (updates.mpesaNumber !== undefined)
+      worker.mpesaNumber = updates.mpesaNumber;
+
+    return this.workersRepository.save(worker);
   }
 }

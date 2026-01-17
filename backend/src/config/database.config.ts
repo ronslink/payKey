@@ -24,6 +24,8 @@ import { TimeEntry } from '../modules/time-tracking/entities/time-entry.entity';
 import { Export } from '../modules/export/entities/export.entity';
 import { Holiday } from '../modules/holidays/entities/holiday.entity';
 import { DeletionRequest } from '../modules/data-deletion/entities/deletion-request.entity';
+import { WorkerDocument } from '../modules/workers/entities/worker-document.entity';
+import { GovSubmission } from '../modules/gov-integrations/entities/gov-submission.entity';
 
 /**
  * Get database configuration for TypeORM
@@ -72,6 +74,8 @@ export const getDatabaseConfig = (
         Export,
         Holiday,
         DeletionRequest,
+        WorkerDocument,
+        GovSubmission,
       ],
       synchronize: true,
       logging: ['query', 'error'],
@@ -133,6 +137,8 @@ export const getDatabaseConfig = (
       Export,
       Holiday,
       DeletionRequest,
+      WorkerDocument,
+      GovSubmission,
     ],
     synchronize: isTest || true, // Keep enabled for now
     logging: ['query', 'error'],

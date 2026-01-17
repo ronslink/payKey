@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -103,17 +104,22 @@ class SettingsNotifier extends AsyncNotifier<UserSettings> {
     final themeModeIndex = prefs.getInt('themeMode') ?? 0;
     final themeMode = ThemeMode.values[themeModeIndex];
 
-    // Try to load settings from API
+    // Try to load settings from API if authenticated
     try {
-      final response = await ApiService().get('/users/profile');
-      if (response.statusCode == 200) {
-        return UserSettings.fromJson(response.data).copyWith(
-          themeMode: themeMode,
-        );
+      final token = await ApiService().getToken();
+      if (token != null) {
+        final response = await ApiService().get('/users/profile');
+        if (response.statusCode == 200) {
+          return UserSettings.fromJson(response.data).copyWith(
+            themeMode: themeMode,
+          );
+        }
       }
     } catch (apiError) {
       // API failed, use defaults
-      debugPrint('Failed to load settings: $apiError');
+      if (apiError is! DioException || apiError.response?.statusCode != 401) {
+        debugPrint('Failed to load settings: $apiError');
+      }
     }
 
     // Fallback to defaults

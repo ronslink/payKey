@@ -1,8 +1,8 @@
 import 'dart:async';
-import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'dart:io' show Platform;
 
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/foundation.dart';
 
 /// Handles Firebase Cloud Messaging for push notifications.
 class NotificationService {
@@ -76,7 +76,7 @@ class NotificationService {
   Future<void> _getToken() async {
     try {
       // For iOS, get APNS token first
-      if (Platform.isIOS) {
+      if (!kIsWeb && Platform.isIOS) {
         final apnsToken = await _messaging.getAPNSToken();
         debugPrint('APNS Token: $apnsToken');
       }

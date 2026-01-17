@@ -228,6 +228,21 @@ class PayrollRepository {
     );
   }
 
+  /// Recalculate payroll for the current period.
+  ///
+  /// Forces a fresh tax calculation for all draft items using current rates.
+  Future<List<PayrollCalculation>> recalculatePayroll(String payPeriodId) async {
+    return _executeRequest(
+      operation: 'recalculate payroll',
+      request: () async {
+        final response = await _authenticatedPost(
+          '/payroll/recalculate/$payPeriodId',
+        );
+        return _parsePayrollList(response.data);
+      },
+    );
+  }
+
   /// Delete a payroll item from the draft.
   Future<void> deletePayrollItem(String payrollRecordId) async {
     return _executeRequest(

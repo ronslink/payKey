@@ -9,6 +9,7 @@ class ProfileModel {
   final String? nssfNumber;
   final String? shifNumber;
   final String? bankName;
+  final String? bankCode;
   final String? bankAccount;
   final String? mpesaPaybill;
   final String? mpesaTill;
@@ -32,6 +33,7 @@ class ProfileModel {
     this.nssfNumber,
     this.shifNumber,
     this.bankName,
+    this.bankCode,
     this.bankAccount,
     this.mpesaPaybill,
     this.mpesaTill,
@@ -57,6 +59,7 @@ class ProfileModel {
       // Support both new and old keys if transition period, but backend should send shifNumber now
       shifNumber: json['shifNumber'] ?? json['nhifNumber'],
       bankName: json['bankName'],
+      bankCode: json['bankCode'],
       bankAccount: json['bankAccount'],
       mpesaPaybill: json['mpesaPaybill'],
       mpesaTill: json['mpesaTill'],
@@ -82,6 +85,7 @@ class ProfileModel {
       'nssfNumber': nssfNumber,
       'shifNumber': shifNumber,
       'bankName': bankName,
+      'bankCode': bankCode,
       'bankAccount': bankAccount,
       'mpesaPaybill': mpesaPaybill,
       'mpesaTill': mpesaTill,

@@ -181,6 +181,7 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
       paymentMethod: _paymentMethod.value,
       mpesaNumber: _controllers.mpesaNumber.nullableText,
       bankName: _controllers.bankName.nullableText,
+      bankCode: _controllers.bankCode.nullableText,
       bankAccount: _controllers.bankAccount.nullableText,
       notes: _controllers.notes.nullableText,
       emergencyContactName: _controllers.emergencyName.nullableText,
@@ -211,6 +212,7 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
       paymentMethod: _paymentMethod.value,
       mpesaNumber: _controllers.mpesaNumber.nullableText,
       bankName: _controllers.bankName.nullableText,
+      bankCode: _controllers.bankCode.nullableText,
       bankAccount: _controllers.bankAccount.nullableText,
       notes: _controllers.notes.nullableText,
       emergencyContactName: _controllers.emergencyName.nullableText,
@@ -344,6 +346,7 @@ class _WorkerFormControllers {
   // Payment Details
   final mpesaNumber = TextEditingController();
   final bankName = TextEditingController();
+  final bankCode = TextEditingController();
   final bankAccount = TextEditingController();
 
   // Notes
@@ -372,6 +375,7 @@ class _WorkerFormControllers {
 
     mpesaNumber.text = worker.mpesaNumber ?? '';
     bankName.text = worker.bankName ?? '';
+    bankCode.text = worker.bankCode ?? '';
     bankAccount.text = worker.bankAccount ?? '';
 
     notes.text = worker.notes ?? '';
@@ -396,6 +400,7 @@ class _WorkerFormControllers {
     transportAllowance.dispose();
     mpesaNumber.dispose();
     bankName.dispose();
+    bankCode.dispose();
     bankAccount.dispose();
     notes.dispose();
     emergencyName.dispose();
@@ -759,7 +764,7 @@ class _PaymentDetailsSection extends StatelessWidget {
   }
 }
 
-class _PaymentMethodFields extends StatelessWidget {
+class _PaymentMethodFields extends ConsumerWidget {
   final PaymentMethod method;
   final _WorkerFormControllers controllers;
 
@@ -769,7 +774,7 @@ class _PaymentMethodFields extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return switch (method) {
       PaymentMethod.mpesa => _FormTextField(
           controller: controllers.mpesaNumber,
@@ -777,23 +782,79 @@ class _PaymentMethodFields extends StatelessWidget {
           hint: 'Enter M-Pesa number',
           keyboardType: TextInputType.phone,
         ),
-      PaymentMethod.bank => Column(
-          children: [
-            _FormTextField(
-              controller: controllers.bankName,
-              label: 'Bank Name',
-              hint: 'Enter bank name',
-            ),
-            const SizedBox(height: 16),
-            _FormTextField(
-              controller: controllers.bankAccount,
-              label: 'Account Number',
-              hint: 'Enter account number',
-            ),
-          ],
-        ),
+      PaymentMethod.bank => _BankPaymentFields(controllers: controllers),
       PaymentMethod.cash => const SizedBox.shrink(),
     };
+  }
+}
+
+class _BankPaymentFields extends ConsumerWidget {
+  final _WorkerFormControllers controllers;
+
+  const _BankPaymentFields({required this.controllers});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final banksAsync = ref.watch(supportedBanksProvider);
+
+    return Column(
+      children: [
+        banksAsync.when(
+          data: (banks) {
+            // Ensure the current value exists in the list (or is null/empty)
+            final currentCode = controllers.bankCode.text;
+            final isValid = currentCode.isNotEmpty && 
+                banks.any((b) => b['bank_code'].toString() == currentCode);
+            
+            return DropdownButtonFormField<String>(
+              key: ValueKey('bank_${isValid ? currentCode : "null"}'),
+              initialValue: isValid ? currentCode : null,
+              decoration: const InputDecoration(
+                labelText: 'Bank Name',
+                border: OutlineInputBorder(),
+                filled: true,
+                fillColor: _AppColors.background,
+              ),
+              items: banks.map((b) {
+                return DropdownMenuItem<String>(
+                  value: b['bank_code'].toString(),
+                  child: Text(
+                    b['bank_name']?.toString() ?? 'Unknown Bank',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                );
+              }).toList(),
+              onChanged: (val) {
+                if (val != null) {
+                  controllers.bankCode.text = val;
+                  final bank = banks.firstWhere(
+                    (b) => b['bank_code'].toString() == val,
+                    orElse: () => {},
+                  );
+                  controllers.bankName.text = bank['bank_name']?.toString() ?? '';
+                }
+              },
+              hint: const Text('Select Bank'),
+            );
+          },
+          loading: () => const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (error, _) => Text(
+            'Failed to load banks: $error',
+            style: const TextStyle(color: Colors.red),
+          ),
+        ),
+        const SizedBox(height: 16),
+        _FormTextField(
+          controller: controllers.bankAccount,
+          label: 'Account Number',
+          hint: 'Enter account number',
+          keyboardType: TextInputType.number,
+        ),
+      ],
+    );
   }
 }
 

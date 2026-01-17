@@ -6,10 +6,13 @@ import {
   Transaction,
   TransactionType,
 } from '../../payments/entities/transaction.entity';
+import {
+  PayrollRecord,
+} from '../../payroll/entities/payroll-record.entity';
 import * as fs from 'fs';
 import * as path from 'path';
 
-interface PayrollRecord {
+interface ExportRecord {
   date: string;
   workerName: string;
   workerId: string;
@@ -35,6 +38,8 @@ export class ExportService {
     private exportRepository: Repository<Export>,
     @InjectRepository(Transaction)
     private transactionRepository: Repository<Transaction>,
+    @InjectRepository(PayrollRecord) // Injected for robust data fetching
+    private payrollRecordRepository: Repository<PayrollRecord>,
   ) {
     // Ensure exports directory exists
     if (!fs.existsSync(this.exportsDir)) {
@@ -49,36 +54,53 @@ export class ExportService {
     userId: string,
     startDate: Date,
     endDate: Date,
-  ): Promise<PayrollRecord[]> {
-    const transactions = await this.transactionRepository.find({
-      where: {
-        userId,
-        createdAt: Between(startDate, endDate),
-        type: TransactionType.SALARY_PAYOUT,
-      },
-      relations: ['worker'], // Fetch worker details
-      order: {
-        createdAt: 'ASC',
-      },
-    });
+  ): Promise<ExportRecord[]> {
+    console.log(`[Export Service] Fetching data for user ${userId} from ${startDate} to ${endDate}`);
 
-    return transactions.map((t) => ({
-      date: t.createdAt.toISOString().split('T')[0],
-      workerName: t.metadata?.workerName || t.worker?.name || 'Unknown',
-      workerId: t.workerId,
-      workerPin: t.worker?.kraPin || '',
-      workerNssf: t.worker?.nssfNumber || '',
-      workerNhif: t.worker?.nhifNumber || '',
-      workerIdNo: t.worker?.idNumber || '',
-      grossSalary: parseFloat(t.metadata?.grossSalary) || 0,
-      paye: parseFloat(t.metadata?.taxBreakdown?.paye) || 0,
-      nssf: parseFloat(t.metadata?.taxBreakdown?.nssf) || 0,
-      shif: parseFloat(t.metadata?.taxBreakdown?.nhif) || 0,
-      housingLevy: parseFloat(t.metadata?.taxBreakdown?.housingLevy) || 0,
-      totalDeductions:
-        parseFloat(t.metadata?.taxBreakdown?.totalDeductions) || 0,
-      netPay: parseFloat(t.metadata?.netPay) || Number(t.amount) || 0,
-    }));
+    const records = await this.payrollRecordRepository
+      .createQueryBuilder('record')
+      .leftJoinAndSelect('record.worker', 'worker')
+      .where('record.userId = :userId', { userId })
+      .andWhere('record.periodStart >= :startDate', { startDate })
+      .andWhere('record.periodStart <= :endDate', { endDate })
+      .orderBy('record.periodStart', 'ASC')
+      .getMany();
+
+    console.log(`[Export Service] Found ${records.length} records`);
+
+    return records.map((r) => {
+      // Use payment date if paid, otherwise period end date or current date
+      let date = r.paymentDate ? new Date(r.paymentDate) : new Date(r.periodEnd);
+      if (isNaN(date.getTime())) date = new Date(r.periodEnd || new Date());
+
+      // Ensure tax breakdown exists with defaults
+      const tax = r.taxBreakdown || {};
+
+      const grossSalary = Number(r.grossSalary) || 0;
+
+      // Debug log for zero values
+      if (grossSalary === 0) {
+        console.warn(`[Export Service] Warning: Zero gross salary for worker ${r.worker?.name} (${r.workerId})`);
+      }
+
+      return {
+        date: date.toISOString().split('T')[0],
+        workerName: r.worker?.name || 'Unknown',
+        workerId: r.workerId,
+        workerPin: r.worker?.kraPin || '',
+        workerNssf: r.worker?.nssfNumber || '',
+        workerNhif: r.worker?.nhifNumber || '',
+        workerIdNo: r.worker?.idNumber || '',
+        grossSalary: grossSalary,
+        paye: Number(tax.paye) || 0,
+        nssf: Number(tax.nssf) || 0,
+        shif: Number(tax.shif) || Number(tax.nhif) || 0,
+        housingLevy: Number(tax.housingLevy) || 0,
+        totalDeductions:
+          (Number(r.taxAmount) || 0) + (Number(r.otherDeductions) || 0),
+        netPay: Number(r.netSalary) || 0,
+      };
+    });
   }
 
   /**
@@ -185,18 +207,18 @@ export class ExportService {
     for (const r of records) {
       // Fetch employee PIN from worker details
       const pin = r.workerPin || 'A000000000Z'; // Fallback to placeholder only if missing
-      const name = r.workerName;
+      const name = r.workerName || 'Unknown';
       const resStatus = 'Resident';
       const empType = 'Primary Employee';
-      const basic = r.grossSalary; // Simplified: Assuming Basic = Gross for MVP exports
-      // Zeros for allowances explicitly for now
+
+      // Defensive casting to ensure all values are numbers
+      const basic = Number(r.grossSalary) || 0;
       const houseAllow = 0;
       const transportAllow = 0;
       const overtime = 0;
       const otherAllow = 0;
 
-      const totalCash =
-        basic + houseAllow + transportAllow + overtime + otherAllow;
+      const totalCash = basic + houseAllow + transportAllow + overtime + otherAllow;
 
       const carBen = 0;
       const otherNonCash = 0;
@@ -204,27 +226,22 @@ export class ExportService {
 
       const totalGross = totalCash + totalNonCash;
 
-      const actualContrib = r.nssf; // Pension contribution
+      const actualContrib = Number(r.nssf) || 0; // Pension contribution
       const mortgage = 0;
 
       // Taxable Pay is usually Gross - NSSF (Allowable Deduction)
-      const taxable = totalGross - actualContrib;
+      const taxable = Math.max(0, totalGross - actualContrib);
 
-      const taxPayable = r.paye + 2400; // Gross Tax before relief (Approx back-calculation)
+      const paye = Number(r.paye) || 0;
       const relief = 2400; // Personal Relief
-      const insRelief = r.shif * 0.15; // SHIF attracts 15% relief usually, verifying...
-      // Actually standard personal relief is fixed. Insurance relief is separate.
-      // Let's stick to simple: Tax Payable = PAYE (Net Tax) for this export if we can't reverse calc easily
-      // OR: Tax Payable (Gross) -> Relief -> PAYE (Net).
-      // Let's use PAYE (Net) as the final column.
-
-      const paye = r.paye;
+      const taxPayable = paye + relief;
+      const insRelief = (Number(r.shif) || 0) * 0.15;
 
       csv += `${pin},"${name}",${resStatus},${empType},`;
       csv += `${basic.toFixed(2)},${houseAllow.toFixed(2)},${transportAllow.toFixed(2)},${overtime.toFixed(2)},${otherAllow.toFixed(2)},`;
       csv += `${totalCash.toFixed(2)},${carBen.toFixed(2)},${otherNonCash.toFixed(2)},${totalNonCash.toFixed(2)},`;
       csv += `${totalGross.toFixed(2)},${actualContrib.toFixed(2)},${mortgage.toFixed(2)},`;
-      csv += `${taxable.toFixed(2)},${(paye + relief).toFixed(2)},${relief.toFixed(2)},0.00,${paye.toFixed(2)}\n`;
+      csv += `${taxable.toFixed(2)},${taxPayable.toFixed(2)},${relief.toFixed(2)},${insRelief.toFixed(2)},${paye.toFixed(2)}\n`;
     }
 
     // Calculate and add totals row
@@ -247,23 +264,20 @@ export class ExportService {
       totalPaye = 0;
 
     for (const r of records) {
-      totalBasic += r.grossSalary;
-      totalHouseAllow += 0;
-      totalTransportAllow += 0;
-      totalOvertime += 0;
-      totalOtherAllow += 0;
-      totalCashPay += r.grossSalary;
-      totalCarBen += 0;
-      totalOtherNonCash += 0;
-      totalNonCash += 0;
-      totalGrossPay += r.grossSalary;
-      totalContrib += r.nssf;
-      totalMortgage += 0;
-      totalTaxable += r.grossSalary - r.nssf;
-      totalTaxPayable += r.paye + 2400;
+      const basic = Number(r.grossSalary) || 0;
+      const nssf = Number(r.nssf) || 0;
+      const shif = Number(r.shif) || 0;
+      const paye = Number(r.paye) || 0;
+
+      totalBasic += basic;
+      totalCashPay += basic;
+      totalGrossPay += basic;
+      totalContrib += nssf;
+      totalTaxable += Math.max(0, basic - nssf);
+      totalTaxPayable += paye + 2400;
       totalRelief += 2400;
-      totalInsRelief += r.shif * 0.15;
-      totalPaye += r.paye;
+      totalInsRelief += shif * 0.15;
+      totalPaye += paye;
     }
 
     // Add totals row with 'TOTAL' as the name
@@ -464,7 +478,7 @@ export class ExportService {
       // Clean up the file if DB save fails
       try {
         fs.unlinkSync(filePath);
-      } catch {}
+      } catch { }
       throw new Error(`Failed to save export record: ${error.message}`);
     }
   }

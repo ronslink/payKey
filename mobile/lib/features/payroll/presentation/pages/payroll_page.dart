@@ -1013,8 +1013,8 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
         return const Color(0xFF10B981);
       case PayPeriodStatus.closed:
         return const Color(0xFF6366F1);
-      default:
-        return const Color(0xFF9CA3AF);
+      case PayPeriodStatus.cancelled:
+        return const Color(0xFFEF4444);
     }
   }
 
@@ -1030,8 +1030,8 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
         return Icons.check_circle_outline_rounded;
       case PayPeriodStatus.closed:
         return Icons.lock_outline_rounded;
-      default:
-        return Icons.circle_outlined;
+      case PayPeriodStatus.cancelled:
+        return Icons.cancel_outlined;
     }
   }
 
@@ -1047,8 +1047,8 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
         return 'Completed';
       case PayPeriodStatus.closed:
         return 'Closed';
-      default:
-        return 'Unknown';
+      case PayPeriodStatus.cancelled:
+        return 'Cancelled';
     }
   }
 

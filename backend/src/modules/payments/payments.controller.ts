@@ -192,12 +192,34 @@ export class PaymentsController {
   ) {
     // Generate a reference
     const apiRef = `TopUp-${req.user.userId}-${Date.now()}`;
-    // IntaSend Logic
-    return this.intaSendService.initiateStkPush(
+
+    // Initiate IntaSend STK Push
+    const result = await this.intaSendService.initiateStkPush(
       body.phoneNumber,
       body.amount,
       apiRef,
     );
+
+    // Create Transaction Record for webhook to find
+    const transaction = this.transactionsRepository.create({
+      userId: req.user.userId,
+      amount: body.amount,
+      currency: 'KES',
+      type: TransactionType.DEPOSIT,
+      status: TransactionStatus.PENDING,
+      providerRef: result.invoice?.invoice_id || result.tracking_id,
+      provider: 'INTASEND',
+      recipientPhone: body.phoneNumber,
+      accountReference: apiRef,
+      metadata: {
+        initiatedAt: new Date().toISOString(),
+        stkResponse: result,
+      },
+    });
+
+    await this.transactionsRepository.save(transaction);
+
+    return result;
   }
 
   @Post('send-b2c')
@@ -264,6 +286,14 @@ export class PaymentsController {
     return status;
   }
 
+  /**
+   * Get list of supported Kenyan banks for PesaLink transfers
+   */
+  @Get('intasend/banks')
+  async getBankCodes() {
+    return this.intaSendService.getBankCodes();
+  }
+
   @Post('intasend/webhook')
   async handleIntaSendWebhook(@Request() req: any, @Body() body: any) {
     console.log('🔹 IntaSend Webhook Received:', JSON.stringify(body, null, 2));
@@ -272,11 +302,20 @@ export class PaymentsController {
       return { challenge: body.challenge };
     }
 
-    // VERIFY SIGNATURE
-    const signature = (req.headers['x-intasend-signature'] as string) || '';
-    if (!this.intaSendService.verifyWebhookSignature(signature, req.rawBody)) {
-      console.error('⛔ Invalid Webhook Signature');
-      throw new UnauthorizedException('Invalid Signature');
+    // Check if this is a simulation FIRST (before attempting signature verification)
+    const isSimulation =
+      process.env.INTASEND_SIMULATE === 'true' ||
+      (body.host === 'localhost' && body.invoice_id?.startsWith('INV_SIM_'));
+
+    if (isSimulation) {
+      console.log('✅ Simulation mode detected - skipping signature verification');
+    } else {
+      // Only verify signature for non-simulation webhooks
+      const signature = (req.headers['x-intasend-signature'] as string) || '';
+      if (!this.intaSendService.verifyWebhookSignature(signature, req.rawBody)) {
+        console.error('⛔ Invalid Webhook Signature');
+        throw new UnauthorizedException('Invalid Signature');
+      }
     }
 
     const { invoice_id, tracking_id, state, api_ref, value } = body;

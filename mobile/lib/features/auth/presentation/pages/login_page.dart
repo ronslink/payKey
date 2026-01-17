@@ -1,9 +1,7 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../providers/auth_provider.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -144,12 +142,28 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget _buildSocialButtons(BuildContext context, WidgetRef ref) {
     return Column(
       children: [
-        if (Platform.isIOS) ...[
-          SignInWithAppleButton(
-            onPressed: () => ref.read(authStateProvider.notifier).loginWithApple(context: context),
+        if (kIsWeb || defaultTargetPlatform == TargetPlatform.iOS) ...[
+          SizedBox(
+            width: double.infinity,
             height: 48,
-            style: SignInWithAppleButtonStyle.black,
-            borderRadius: BorderRadius.circular(12),
+            child: OutlinedButton.icon(
+              onPressed: () => ref.read(authStateProvider.notifier).loginWithApple(context: context),
+              icon: Image.asset(
+                'icons/apple_logo.png',
+                width: 20,
+                height: 20,
+              ),
+              label: const Text(
+                'Sign in with Apple',
+                style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Color(0xFFD1D5DB)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
           ),
           const SizedBox(height: 16),
         ],
@@ -165,7 +179,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               ),
               backgroundColor: Colors.white,
             ),
-            icon: const Icon(Icons.g_mobiledata, size: 28, color: Colors.black), // Using generic Icon since asset might be missing
+            icon: Image.asset(
+              'icons/google_logo.png',
+              width: 24,
+              height: 24,
+            ),
             label: const Text(
               'Sign in with Google',
               style: TextStyle(

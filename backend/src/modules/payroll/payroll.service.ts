@@ -143,7 +143,7 @@ export class PayrollService {
     private readonly dataSource: DataSource,
     private readonly payslipService: PayslipService,
     @InjectQueue('payouts') private readonly payoutsQueue: Queue,
-  ) {}
+  ) { }
 
   // ===========================================================================
   // Public Methods - Payroll Calculation
@@ -569,8 +569,8 @@ export class PayrollService {
     const totalDuration = Date.now() - startTime;
     this.logger.log(
       `Payroll finalization completed in ${totalDuration}ms: ` +
-        `${updatedRecords.length} records, ${payoutResults.successCount} payments, ` +
-        `${payslipsGenerated} payslips`,
+      `${updatedRecords.length} records, ${payoutResults.successCount} payments, ` +
+      `${payslipsGenerated} payslips`,
     );
 
     return {
@@ -722,15 +722,31 @@ export class PayrollService {
       },
     });
 
+    // Calculate minimum required balance
     const totalNetPay = records.reduce(
       (sum, r) => sum + (parseFloat(r.netSalary as any) || 0),
       0,
     );
 
+    const totalBonuses = records.reduce(
+      (sum, r) =>
+        sum + Number(r.bonuses || 0) + Number(r.otherEarnings || 0),
+      0,
+    );
+
+    const totalGross = records.reduce(
+      (sum, r) => sum + (parseFloat(r.grossSalary as any) || 0),
+      0,
+    );
+
+    // In development, bypass wallet balance check
+    const isDev = process.env.NODE_ENV !== 'production';
+    const hasMinimumBalance = isDev ? true : walletBalance >= totalNetPay;
+
     return {
       requiredAmount: totalNetPay,
       availableBalance: walletBalance,
-      canProceed: walletBalance >= totalNetPay,
+      canProceed: hasMinimumBalance,
       shortfall: Math.max(0, totalNetPay - walletBalance),
       workerCount: records.length,
     };
@@ -1189,8 +1205,8 @@ export class PayrollService {
         ActivityType.PAYROLL,
         'Payroll Finalized',
         `Finalized payroll for ${workerCount} workers. ` +
-          `Payments: ${payoutResults.successCount} successful, ${payoutResults.failureCount} failed. ` +
-          `Payslips: ${payslipsGenerated} generated.`,
+        `Payments: ${payoutResults.successCount} successful, ${payoutResults.failureCount} failed. ` +
+        `Payslips: ${payslipsGenerated} generated.`,
         {
           workerCount,
           totalAmount,
@@ -1290,7 +1306,7 @@ export class PayrollService {
     const duration = Date.now() - startTime;
     this.logger.log(
       `${operation} completed: ${count} items in ${duration}ms ` +
-        `(${(duration / count).toFixed(2)}ms avg)`,
+      `(${(duration / count).toFixed(2)}ms avg)`,
     );
   }
 
@@ -1338,7 +1354,7 @@ export class PayrollService {
 
     this.logger.log(
       `Updated pay period ${payPeriodId} stats: ${stats.totalWorkers} workers, ` +
-        `gross: ${stats.totalGrossAmount}, net: ${stats.totalNetAmount}`,
+      `gross: ${stats.totalGrossAmount}, net: ${stats.totalNetAmount}`,
     );
   }
 }

@@ -40,7 +40,7 @@ class _MainLayoutNewState extends State<MainLayoutNew> {
               children: [
                 _buildNavItem(context, 0, Icons.home_outlined, Icons.home, 'Home', '/home'),
                 _buildNavItem(context, 1, Icons.people_outline, Icons.people, 'People', '/workers'),
-                _buildNavItem(context, 2, Icons.play_circle_outline, Icons.play_circle, 'Payroll', '/payroll/run'),
+                _buildNavItem(context, 2, Icons.list_alt, Icons.list_alt, 'Payroll', '/payroll'),
                 _buildNavItem(context, 3, Icons.account_balance_wallet_outlined, Icons.account_balance_wallet, 'Finance', '/finance'),
                 _buildNavItem(context, 4, Icons.settings_outlined, Icons.settings, 'Settings', '/settings'),
               ],
@@ -58,11 +58,7 @@ class _MainLayoutNewState extends State<MainLayoutNew> {
     return InkWell(
       onTap: () {
         if (!isActive) {
-          if (route == '/payroll/run') {
-            context.push(route); // Push for payroll run (modal-like behavior)
-          } else {
-            context.go(route); // Go for tab navigation
-          }
+          context.go(route); // Go for tab navigation
         }
       },
       child: SizedBox(

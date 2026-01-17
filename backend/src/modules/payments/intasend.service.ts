@@ -128,14 +128,30 @@ export class IntaSendService {
             challenge: null,
           };
 
-          await lastValueFrom(
+          // Generate valid signature for simulation
+          const payloadString = JSON.stringify(payload);
+          const signature = crypto
+            .createHmac('sha256', this.secretKey)
+            .update(payloadString)
+            .digest('hex');
+
+          this.logger.log(`⚠️ SIMULATION: Sending webhook with signature`);
+
+          const response = await lastValueFrom(
             this.httpService.post(
               'http://localhost:3000/payments/intasend/webhook',
-              payload,
+              payloadString,  // Send as string for signature verification
+              {
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-IntaSend-Signature': signature,
+                },
+              },
             ),
           );
+          this.logger.log('✅ SIMULATION: Webhook sent successfully', response.data);
         } catch (e) {
-          this.logger.error('Simulation Callback Failed', e.message);
+          this.logger.error('❌ Simulation Callback Failed:', e.response?.data || e.message);
         }
       }, 3000);
 
@@ -146,9 +162,13 @@ export class IntaSendService {
       };
     }
 
+    // In Sandbox, FORCE the test number if using the API (unless simulation mode handled above)
+    // This allows the user to type ANY number in the UI, but the backend swaps it for the working test number.
+    const effectivePhone = this.isLive ? phoneNumber : INTASEND_SANDBOX_TEST_PHONE;
+
     const url = `${this.baseUrl}/v1/payment/mpesa-stk-push/`;
     this.logger.log(
-      `Initiating IntaSend STK Push to ${phoneNumber} for ${amount}`,
+      `Initiating IntaSend STK Push to ${effectivePhone} (Original: ${phoneNumber}) for ${amount}`,
     );
 
     try {
@@ -156,7 +176,7 @@ export class IntaSendService {
         this.httpService.post(
           url,
           {
-            phone_number: phoneNumber,
+            phone_number: effectivePhone,
             email: 'noreply@paykey.com', // Required by IntaSend sometimes
             amount: amount,
             api_ref: apiRef,
@@ -286,6 +306,130 @@ export class IntaSendService {
         error.response?.data || error.message,
       );
       throw error;
+    }
+  }
+
+  /**
+   * Static fallback list of Kenyan banks (used when API is unavailable)
+   */
+  private static readonly KENYAN_BANKS = [
+    { bank_code: '01', bank_name: 'Kenya Commercial Bank' },
+    { bank_code: '02', bank_name: 'Standard Chartered Bank Kenya' },
+    { bank_code: '03', bank_name: 'Barclays Bank of Kenya' },
+    { bank_code: '07', bank_name: 'Commercial Bank of Africa' },
+    { bank_code: '10', bank_name: 'Prime Bank' },
+    { bank_code: '11', bank_name: 'Co-operative Bank of Kenya' },
+    { bank_code: '12', bank_name: 'National Bank of Kenya' },
+    { bank_code: '14', bank_name: 'Oriental Commercial Bank' },
+    { bank_code: '16', bank_name: 'Citibank N.A. Kenya' },
+    { bank_code: '18', bank_name: 'Middle East Bank Kenya' },
+    { bank_code: '19', bank_name: 'Bank of Africa Kenya' },
+    { bank_code: '23', bank_name: 'Consolidated Bank of Kenya' },
+    { bank_code: '25', bank_name: 'Credit Bank' },
+    { bank_code: '26', bank_name: 'Trans-National Bank' },
+    { bank_code: '30', bank_name: 'Chase Bank Kenya' },
+    { bank_code: '31', bank_name: 'Stanbic Bank Kenya' },
+    { bank_code: '35', bank_name: 'African Banking Corporation' },
+    { bank_code: '39', bank_name: 'Imperial Bank' },
+    { bank_code: '41', bank_name: 'NIC Bank' },
+    { bank_code: '43', bank_name: 'Ecobank Kenya' },
+    { bank_code: '49', bank_name: 'Equity Bank Kenya' },
+    { bank_code: '50', bank_name: 'Paramount Universal Bank' },
+    { bank_code: '51', bank_name: 'Jamii Bora Bank' },
+    { bank_code: '53', bank_name: 'Guaranty Trust Bank Kenya' },
+    { bank_code: '54', bank_name: 'Victoria Commercial Bank' },
+    { bank_code: '55', bank_name: 'Guardian Bank' },
+    { bank_code: '57', bank_name: 'I&M Bank' },
+    { bank_code: '61', bank_name: 'HFC Limited' },
+    { bank_code: '63', bank_name: 'Diamond Trust Bank Kenya' },
+    { bank_code: '66', bank_name: 'Sidian Bank' },
+    { bank_code: '68', bank_name: 'Family Bank' },
+    { bank_code: '70', bank_name: 'Gulf African Bank' },
+    { bank_code: '72', bank_name: 'First Community Bank' },
+    { bank_code: '74', bank_name: 'KWFT Bank' },
+    { bank_code: '76', bank_name: 'UBA Kenya Bank' },
+    { bank_code: '78', bank_name: 'Kingdom Bank' },
+    { bank_code: '79', bank_name: 'Mayfair Bank' },
+    { bank_code: '98', bank_name: 'NCBA Bank Kenya' },
+  ];
+
+  /**
+   * Get list of supported Kenyan bank codes
+   * Falls back to static list if API is unavailable
+   */
+  async getBankCodes() {
+    const url = `${this.baseUrl}/v1/send-money/bank-codes/ke/`;
+    try {
+      const response = await lastValueFrom(
+        this.httpService.get(url, {
+          headers: {
+            Authorization: `Bearer ${this.secretKey}`,
+          },
+        }),
+      );
+      this.logger.log(`Fetched ${response.data.length || 0} bank codes from API`);
+      return response.data;
+    } catch (error) {
+      this.logger.warn(
+        'Failed to fetch bank codes from API, using fallback list',
+        error.response?.data || error.message,
+      );
+      // Return static fallback list
+      return IntaSendService.KENYAN_BANKS;
+    }
+  }
+
+  /**
+   * Send Money to Bank Account (PesaLink)
+   */
+  async sendToBank(
+    transactions: {
+      name: string;
+      account: string; // Bank account number
+      bankCode: string; // IntaSend bank code
+      amount: number;
+      narrative?: string;
+    }[],
+  ) {
+    const url = `${this.baseUrl}/v1/send-money/initiate/`;
+    this.logger.log(
+      `Initiating IntaSend Bank Payout for ${transactions.length} record(s)`,
+    );
+
+    const formattedTransactions = transactions.map((t) => ({
+      name: t.name,
+      account: t.account,
+      bank_code: t.bankCode,
+      amount: t.amount,
+      narrative: t.narrative || 'Salary Payment',
+    }));
+
+    try {
+      const response = await lastValueFrom(
+        this.httpService.post(
+          url,
+          {
+            provider: 'PESALINK',
+            currency: 'KES',
+            transactions: formattedTransactions,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${this.secretKey}`,
+            },
+          },
+        ),
+      );
+      this.logger.log('IntaSend Bank Payout response:', response.data);
+      return response.data;
+    } catch (error) {
+      this.logger.error(
+        'IntaSend Bank Payout failed',
+        error.response?.data || error.message,
+      );
+      throw new Error(
+        `IntaSend Bank Payout failed: ${JSON.stringify(error.response?.data)}`,
+      );
     }
   }
 }

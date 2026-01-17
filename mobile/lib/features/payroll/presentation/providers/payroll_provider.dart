@@ -146,6 +146,11 @@ class PayrollNotifier extends AsyncNotifier<List<PayrollCalculation>> {
     }
   }
 
+  Future<void> recalculatePayroll(String payPeriodId) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() => _repository.recalculatePayroll(payPeriodId));
+  }
+
   Future<void> downloadPayslip(String payrollRecordId, String workerName) async {
     try {
       final bytes = await _repository.downloadPayslip(payrollRecordId);

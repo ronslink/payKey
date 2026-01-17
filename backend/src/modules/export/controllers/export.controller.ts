@@ -20,19 +20,29 @@ import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 @Controller('export')
 @UseGuards(JwtAuthGuard)
 export class ExportController {
-  constructor(private readonly exportService: ExportService) {}
+  constructor(private readonly exportService: ExportService) { }
 
   @Post()
   async createExport(
     @Request() req: any,
     @Body() dto: CreateExportDto,
   ): Promise<ExportResponseDto> {
+    const startDate = new Date(dto.startDate);
+    const endDate = new Date(dto.endDate);
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      throw new HttpException(
+        'Invalid start or end date',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
     try {
       const exportRecord = await this.exportService.createExport(
         req.user.userId,
         dto.exportType,
-        new Date(dto.startDate),
-        new Date(dto.endDate),
+        startDate,
+        endDate,
       );
 
       return {

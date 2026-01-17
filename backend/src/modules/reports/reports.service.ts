@@ -937,7 +937,7 @@ export class ReportsService {
       const tax = record.taxBreakdown || {};
       addRow('PAYE (Tax)', Number(tax.paye || 0));
       addRow('NSSF', Number(tax.nssf || 0));
-      addRow('NHIF / SHIF', Number(tax.nhif || 0)); // Assuming NHIF maps to SHIF
+      addRow('SHIF', Number(tax.nhif || 0)); // SHIF (replaced NHIF Oct 2024)
       addRow('Housing Levy', Number(tax.housingLevy || 0));
 
       doc.moveTo(startX, currentY).lineTo(550, currentY).stroke();
@@ -991,8 +991,8 @@ export class ReportsService {
 
       y += 20;
 
-      doc.text('NHIF / SHIF:', col1, y);
-      doc.text(`KES ${this.formatMoney(report.totals.nhif)}`, col1 + 80, y);
+      doc.text('SHIF:', col1, y);
+      doc.text(`KES ${this.formatMoney(report.totals.nhif)}`, col1 + 50, y);
 
       doc.text('Housing Levy:', col2, y);
       doc.text(`KES ${this.formatMoney(report.totals.housingLevy)}`, col2 + 80, y);
@@ -1000,7 +1000,7 @@ export class ReportsService {
       doc.moveDown(4);
 
       // Employee Table
-      const headers = ['Name', 'Gross Pay', 'NSSF', 'NHIF', 'Housing', 'PAYE'];
+      const headers = ['Name', 'Gross Pay', 'NSSF', 'SHIF', 'Housing', 'PAYE'];
       const colWidths = [150, 80, 80, 80, 80, 80];
       const startX = 30;
       let x = startX;

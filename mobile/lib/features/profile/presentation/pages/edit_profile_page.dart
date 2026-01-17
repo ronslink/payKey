@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../data/repositories/profile_repository.dart';
 import '../../data/models/profile_model.dart';
 import '../../../onboarding/presentation/providers/countries_provider.dart';
+import '../../../workers/presentation/providers/workers_provider.dart';
 
 class EditProfilePage extends ConsumerStatefulWidget {
   const EditProfilePage({super.key});
@@ -22,6 +23,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
   final _nssfCtrl = TextEditingController();
   final _shifCtrl = TextEditingController();
   final _bankNameCtrl = TextEditingController();
+  final _bankCodeCtrl = TextEditingController();
   final _bankAccountCtrl = TextEditingController();
   final _paybillCtrl = TextEditingController();
   final _tillCtrl = TextEditingController();
@@ -72,6 +74,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     _nssfCtrl.text = p.nssfNumber ?? '';
     _shifCtrl.text = p.shifNumber ?? '';
     _bankNameCtrl.text = p.bankName ?? '';
+    _bankCodeCtrl.text = p.bankCode ?? '';
     _bankAccountCtrl.text = p.bankAccount ?? '';
     _paybillCtrl.text = p.mpesaPaybill ?? '';
     _tillCtrl.text = p.mpesaTill ?? '';
@@ -116,6 +119,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         'shifNumber': _shifCtrl.text,
         'businessName': _businessNameCtrl.text.isEmpty ? null : _businessNameCtrl.text,
         'bankName': _bankNameCtrl.text.isEmpty ? null : _bankNameCtrl.text,
+        'bankCode': _bankCodeCtrl.text.isEmpty ? null : _bankCodeCtrl.text,
         'bankAccount': _bankAccountCtrl.text.isEmpty ? null : _bankAccountCtrl.text,
         'mpesaPaybill': _paybillCtrl.text.isEmpty ? null : _paybillCtrl.text,
         'mpesaTill': _tillCtrl.text.isEmpty ? null : _tillCtrl.text,
@@ -259,9 +263,48 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
             const SizedBox(height: 16),
             
             _buildSectionHeader('Bank Details (Optional)'),
-            TextFormField(
-              controller: _bankNameCtrl,
-              decoration: const InputDecoration(labelText: 'Bank Name'),
+            Consumer(
+              builder: (context, ref, child) {
+                final banksAsync = ref.watch(supportedBanksProvider);
+                return banksAsync.when(
+                  data: (banks) {
+                    final currentCode = _bankCodeCtrl.text;
+                    final isValid = currentCode.isNotEmpty && 
+                        banks.any((b) => b['bank_code'].toString() == currentCode);
+                    
+                    return DropdownButtonFormField<String>(
+                      key: ValueKey('bank_${_bankCodeCtrl.text}'),
+                      initialValue: isValid ? currentCode : null,
+                      decoration: const InputDecoration(labelText: 'Bank Name'),
+                      items: banks.map((b) {
+                        return DropdownMenuItem<String>(
+                          value: b['bank_code'].toString(),
+                          child: Text(
+                            b['bank_name']?.toString() ?? 'Unknown Bank',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() {
+                            _bankCodeCtrl.text = val;
+                            final bank = banks.firstWhere(
+                              (b) => b['bank_code'].toString() == val,
+                              orElse: () => {},
+                            );
+                            _bankNameCtrl.text = bank['bank_name']?.toString() ?? '';
+                          });
+                        }
+                      },
+                      hint: const Text('Select Bank'),
+                    );
+                  },
+                  loading: () => const LinearProgressIndicator(),
+                  error: (e, _) => Text('Error loading banks: $e', 
+                      style: const TextStyle(color: Colors.red)),
+                );
+              },
             ),
             TextFormField(
               controller: _bankAccountCtrl,

@@ -44,21 +44,29 @@ export class WorkerDocumentsController {
         @Param('workerId') workerId: string,
         @Request() req: any,
     ) {
-        // Verify worker belongs to this user
-        const worker = await this.workerRepository.findOne({
-            where: { id: workerId, userId: req.user.userId },
-        });
+        console.log(`[WorkerDocumentsController] getDocuments called for worker: ${workerId}, user: ${req.user?.userId}`);
+        try {
+            // Verify worker belongs to this user
+            const worker = await this.workerRepository.findOne({
+                where: { id: workerId, userId: req.user.userId },
+            });
 
-        if (!worker) {
-            throw new NotFoundException('Worker not found');
+            if (!worker) {
+                console.log(`[WorkerDocumentsController] Worker not found or not owned by user`);
+                throw new NotFoundException('Worker not found');
+            }
+
+            const documents = await this.documentRepository.find({
+                where: { workerId },
+                order: { createdAt: 'DESC' },
+            });
+            console.log(`[WorkerDocumentsController] Found ${documents.length} documents`);
+
+            return documents;
+        } catch (error) {
+            console.error('[WorkerDocumentsController] Error in getDocuments:', error);
+            throw error;
         }
-
-        const documents = await this.documentRepository.find({
-            where: { workerId },
-            order: { createdAt: 'DESC' },
-        });
-
-        return documents;
     }
 
     /**

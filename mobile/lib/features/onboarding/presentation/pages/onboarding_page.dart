@@ -6,6 +6,7 @@ import '../providers/countries_provider.dart';
 import '../providers/tour_progress_provider.dart';
 import '../../data/models/country_model.dart';
 import '../../../../core/network/api_service.dart';
+import '../../../workers/presentation/providers/workers_provider.dart';
 
 class OnboardingPage extends ConsumerStatefulWidget {
   const OnboardingPage({super.key});
@@ -50,6 +51,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
   // Payment & Business
   final _businessNameController = TextEditingController();
   final _bankNameController = TextEditingController();
+  final _bankCodeController = TextEditingController();
   final _bankAccountController = TextEditingController();
   final _mpesaPhoneController = TextEditingController();
   final _mpesaPaybillController = TextEditingController();
@@ -82,6 +84,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
     _cityController.dispose();
     _businessNameController.dispose();
     _bankNameController.dispose();
+    _bankCodeController.dispose();
     _bankAccountController.dispose();
     _mpesaPhoneController.dispose();
     _mpesaPaybillController.dispose();
@@ -117,6 +120,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
           'businessName': _businessNameController.text.trim(),
         if (_bankNameController.text.isNotEmpty)
           'bankName': _bankNameController.text.trim(),
+        if (_bankCodeController.text.isNotEmpty)
+          'bankCode': _bankCodeController.text.trim(),
         if (_bankAccountController.text.isNotEmpty)
           'bankAccount': _bankAccountController.text.trim(),
         if (_mpesaPhoneController.text.isNotEmpty)
@@ -829,11 +834,53 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
           ),
         ),
         const SizedBox(height: 16),
-        _buildTextField(
-          _bankNameController,
-          'Bank Name',
-          'e.g. KCB, Equity',
-          icon: Icons.account_balance_rounded,
+        Consumer(
+          builder: (context, ref, child) {
+            final banksAsync = ref.watch(supportedBanksProvider);
+            return banksAsync.when(
+              data: (banks) {
+                final currentCode = _bankCodeController.text;
+                final isValid = currentCode.isNotEmpty && 
+                    banks.any((b) => b['bank_code'].toString() == currentCode);
+                
+                return _buildDropdown(
+                  value: isValid ? currentCode : null,
+                  label: 'Bank Name',
+                  hint: 'Select your bank',
+                  icon: Icons.account_balance_rounded,
+                  items: banks.map((b) => DropdownMenuItem(
+                    value: b['bank_code'].toString(),
+                    child: Text(
+                      b['bank_name']?.toString() ?? 'Unknown',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  )).toList(),
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() {
+                         _bankCodeController.text = val;
+                         final bank = banks.firstWhere(
+                           (b) => b['bank_code'].toString() == val,
+                           orElse: () => {},
+                         );
+                         _bankNameController.text = bank['bank_name']?.toString() ?? '';
+                      });
+                    }
+                  },
+                );
+              },
+              loading: () => const Padding(
+                padding: EdgeInsets.all(12),
+                child: LinearProgressIndicator(),
+              ),
+              error: (e, _) => _buildTextField(
+                _bankNameController,
+                'Bank Name',
+                'Enter bank name manually',
+                icon: Icons.account_balance_rounded,
+              ),
+            );
+          },
         ),
         const SizedBox(height: 16),
         _buildTextField(

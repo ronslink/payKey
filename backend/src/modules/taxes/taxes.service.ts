@@ -26,7 +26,7 @@ export class TaxesService {
     private taxConfigService: TaxConfigService,
     private usersService: UsersService,
     private activitiesService: ActivitiesService,
-  ) {}
+  ) { }
 
   async createTaxTable(data: Partial<TaxTable>): Promise<TaxTable> {
     const taxTable = this.taxTableRepository.create(data);
@@ -47,36 +47,9 @@ export class TaxesService {
     });
 
     if (!taxTable) {
-      // Fallback to hardcoded defaults if no table exists
-      return this.getDefaultTaxTable();
+      throw new NotFoundException(`No tax table found for date ${date.toISOString()}`);
     }
     return taxTable;
-  }
-
-  private getDefaultTaxTable(): TaxTable {
-    return {
-      id: 'default',
-      year: 2024,
-      effectiveDate: new Date('2024-01-01'),
-      nssfConfig: {
-        tierILimit: 7000,
-        tierIILimit: 36000,
-        rate: 0.06,
-      },
-      nhifConfig: {
-        rate: 0.0275,
-      },
-      housingLevyRate: 0.015,
-      payeBands: [
-        { limit: 24000, rate: 0.1 },
-        { limit: 32333, rate: 0.25 },
-        { limit: Infinity, rate: 0.3 },
-      ],
-      personalRelief: 2400,
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    } as TaxTable;
   }
 
   /**
@@ -184,9 +157,7 @@ export class TaxesService {
       return Math.round(Math.max(shifAmount, minAmount) * 100) / 100;
     }
 
-    // Fallback calculation
-    const shifAmount = grossSalary * 0.0275; // 2.75%
-    return Math.round(Math.max(shifAmount, 300) * 100) / 100; // Min KES 300
+    throw new NotFoundException(`SHIF tax configuration not found for date ${date.toISOString()}`);
   }
 
   /**
@@ -211,8 +182,7 @@ export class TaxesService {
       );
     }
 
-    // Fallback calculation
-    return Math.round(grossSalary * 0.015 * 100) / 100; // 1.5%
+    throw new NotFoundException(`Housing Levy tax configuration not found for date ${date.toISOString()}`);
   }
 
   /**
@@ -498,21 +468,38 @@ export class TaxesService {
     for (const sub of submissions) {
       // Use payPeriod endDate to determine tax month
       // Default to createdAt if payPeriod relation missing (fallback)
-      const date = sub.payPeriod?.endDate
+      let date = sub.payPeriod?.endDate
         ? new Date(sub.payPeriod.endDate)
         : sub.createdAt;
+
+      // Validate date to prevent RangeError
+      if (isNaN(date.getTime())) {
+        console.warn(`[TaxesService] Invalid date found for submission ${sub.id}, falling back to createdAt`);
+        date = sub.createdAt instanceof Date ? sub.createdAt : new Date(sub.createdAt);
+      }
+
+      // Final fallback if even createdAt is invalid (unlikely but safe)
+      if (isNaN(date.getTime())) {
+        console.warn(`[TaxesService] Invalid createdAt for submission ${sub.id}, falling back to current date`);
+        date = new Date();
+      }
 
       const year = date.getFullYear();
       const month = date.getMonth(); // 0-11
       const key = `${year}-${month}`;
 
       if (!summaries.has(key)) {
+        let monthName = 'Unknown';
+        try {
+          monthName = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(date);
+        } catch (e) {
+          console.error(`[TaxesService] Failed to format month for date ${date}: ${e.message}`);
+        }
+
         summaries.set(key, {
           year,
           month,
-          monthName: new Intl.DateTimeFormat('en-US', { month: 'long' }).format(
-            date,
-          ),
+          monthName,
           totalPaye: 0,
           totalNssf: 0,
           totalNhif: 0,

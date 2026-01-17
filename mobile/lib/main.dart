@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 
 // Features
 import 'features/auth/presentation/pages/login_page.dart';
@@ -38,6 +39,7 @@ import 'features/employee_portal/presentation/pages/employee_p9_page.dart';
 import 'features/employee_portal/presentation/pages/employee_my_leaves_page.dart';
 import 'features/employee_portal/presentation/pages/employee_timesheet_page.dart';
 import 'features/employee_portal/presentation/pages/employee_payslips_page.dart';
+import 'features/employee_portal/presentation/pages/employee_payment_settings_page.dart';
 import 'features/time_tracking/presentation/pages/attendance_dashboard_page.dart';
 import 'features/leave_management/presentation/pages/leave_dashboard_page.dart';
 import 'features/profile/presentation/pages/edit_profile_page.dart';
@@ -54,9 +56,9 @@ import 'features/home/presentation/pages/home_page.dart';
 import 'features/workers/workers.dart';
 import 'features/finance/finance.dart';
 import 'features/finance/presentation/pages/mpesa_top_up_page.dart';
-import 'features/taxes/presentation/pages/tax_page_new.dart';
 import 'features/settings/settings.dart';
-import 'features/gov_submissions/presentation/pages/gov_submissions_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'core/providers/storage_provider.dart';
 
 // =============================================================================
 // MAIN
@@ -66,15 +68,32 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Initialize Firebase
-  await Firebase.initializeApp();
+  if (kIsWeb) {
+    // On Web, minimize initialization or provide dummy options if necessary
+    // await Firebase.initializeApp(options: ...);
+    debugPrint('Firebase Web initialization skipped or needs options');
+  } else {
+    await Firebase.initializeApp();
+    
+    // Set up background message handler (Mobile only)
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    
+    // Initialize notification service (Mobile only)
+    await NotificationService().initialize();
+  }
   
-  // Set up background message handler
-  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  // Initialize SharedPreferences for token storage
+  final prefs = await SharedPreferences.getInstance();
+  final storageService = StorageService(prefs);
   
-  // Initialize notification service
-  await NotificationService().initialize();
-  
-  runApp(const ProviderScope(child: PaydomeApp()));
+  runApp(
+    ProviderScope(
+      overrides: [
+        storageProvider.overrideWithValue(storageService),
+      ],
+      child: const PaydomeApp(),
+    ),
+  );
 }
 
 // =============================================================================
@@ -126,7 +145,7 @@ abstract class AppRoutes {
   static const workers = '/workers';
   static const timeTracking = '/time-tracking';
   static const subscriptions = '/subscriptions';
-  static const tax = '/tax';
+  // tax route removed - using finance page
   static const payroll = '/payroll';
   static const finance = '/finance';
   static const settings = '/settings';
@@ -161,7 +180,7 @@ abstract class AppRoutes {
   static const taxes = '/taxes';
   static const accounting = '/accounting';
   static const reports = '/reports';
-  static const govSubmissions = '/gov-submissions';
+  // govSubmissions route removed - using ComprehensiveTaxPage
   static const attendance = '/attendance';
   static const leave = '/leave';
   static const profileEdit = '/profile/edit';
@@ -174,6 +193,7 @@ abstract class AppRoutes {
   static const employeeTimesheet = '/employee/timesheet';
   static const employeePayslips = '/employee/payslips';
   static const employeeP9 = '/employee/p9';
+  static const employeePaymentSettings = '/employee/payment-settings';
 }
 
 
@@ -297,18 +317,14 @@ final _mainTabRoutes = <RouteBase>[
     name: 'subscriptions',
     builder: (_, _) => const SubscriptionManagementPage(),
   ),
-  GoRoute(
-    path: AppRoutes.tax,
-    name: 'tax',
-    builder: (_, _) => const MainLayoutNew(
-      currentIndex: 3,
-      child: TaxPageNew(),
-    ),
-  ),
+  // TaxPageNew route removed - using finance page
   GoRoute(
     path: AppRoutes.payroll,
     name: 'payroll',
-    builder: (_, _) => const PayrollPage(),
+    builder: (_, _) => const MainLayoutNew(
+      currentIndex: 2,
+      child: PayrollPage(),
+    ),
   ),
   GoRoute(
     path: '/payroll/run',
@@ -531,11 +547,7 @@ final _otherRoutes = <RouteBase>[
       child: ReportsPage(),
     ),
   ),
-  GoRoute(
-    path: AppRoutes.govSubmissions,
-    name: 'govSubmissions',
-    builder: (_, _) => const GovSubmissionsPage(),
-  ),
+  // GovSubmissionsPage route removed - using ComprehensiveTaxPage
   // Attendance (for employers)
   GoRoute(
     path: AppRoutes.attendance,
@@ -585,6 +597,11 @@ final _otherRoutes = <RouteBase>[
     path: AppRoutes.employeeP9,
     name: 'employeeP9',
     builder: (_, _) => const EmployeeP9Page(),
+  ),
+  GoRoute(
+    path: AppRoutes.employeePaymentSettings,
+    name: 'employeePaymentSettings',
+    builder: (_, _) => const EmployeePaymentSettingsPage(),
   ),
 ];
 

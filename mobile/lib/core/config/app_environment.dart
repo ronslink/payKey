@@ -29,4 +29,25 @@ class AppEnvironment {
 
   /// IntaSend Secret Key
   static const String intasendSecretKey = String.fromEnvironment('INTASEND_SECRET_KEY', defaultValue: '');
+  
+  /// Google Client ID (Web)
+  static const String googleClientId = String.fromEnvironment(
+    'GOOGLE_CLIENT_ID',
+    defaultValue: '654819674151-pthcgmk3kfu8jm224v1918dl6pm6djmv.apps.googleusercontent.com',
+  );
+
+  /// Apple Service ID (Web)
+  static const String appleServiceId = String.fromEnvironment(
+    'APPLE_SERVICE_ID',
+    // Placeholder - User needs to configure this in Apple Developer Console
+    defaultValue: 'com.paykey.app.service', 
+  );
+
+  /// Apple Redirect URI (Web)
+  static const String appleRedirectUri = String.fromEnvironment(
+    'APPLE_REDIRECT_URI',
+    // Needs to match the one configured in Apple Developer Console
+    // For localhost testing, this often requires tunneling or specific config
+    defaultValue: 'https://paykey-2711d.firebaseapp.com/__/auth/handler',
+  );
 }

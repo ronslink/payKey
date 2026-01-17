@@ -498,6 +498,23 @@ class ApiService {
       throw handleError(e);
     }
   }
+
+  // ---------------------------------------------------------------------------
+  // Bank Codes (for PesaLink transfers)
+  // ---------------------------------------------------------------------------
+
+  /// Get list of supported Kenyan banks for bank transfers
+  Future<List<Map<String, dynamic>>> getBanks() async {
+    try {
+      final response = await dio.get('/payments/intasend/banks');
+      if (response.data is List) {
+        return (response.data as List).cast<Map<String, dynamic>>();
+      }
+      return [];
+    } catch (e) {
+      throw handleError(e);
+    }
+  }
 }
 
 // =============================================================================
@@ -1288,6 +1305,10 @@ class EmployeePortalEndpoints extends BaseEndpoints {
     } catch (e) {
       throw _api.handleError(e);
     }
+  }
+  /// Employee: Update payment details
+  Future<Response> updatePaymentDetails(Map<String, dynamic> data) {
+    return _api.patch('/employee-portal/my-payment-details', data: data);
   }
 }
 

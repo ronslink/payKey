@@ -7,6 +7,7 @@ import '../../data/repositories/payroll_repository.dart';
 import '../models/payroll_breakdown.dart';
 import '../widgets/payroll_review_widgets.dart';
 import '../widgets/payroll_review_dialogs.dart';
+import '../providers/payroll_provider.dart';
 
 class PayrollReviewPage extends ConsumerStatefulWidget {
   final String payPeriodId;
@@ -88,6 +89,35 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
 
 
 
+  Future<void> _recalculatePayroll() async {
+    setState(() => _isLoading = true);
+    try {
+      // Use the notifier we just updated
+      await ref.read(payrollProvider.notifier).recalculatePayroll(widget.payPeriodId);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Payroll recalculated with latest tax rates'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        // Reload data to show new figures
+        _loadPayrollData();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Recalculation failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   void _showMpesaConfirmation() {
     // Navigate to PayrollConfirmPage which handles IntaSend integration
     context.pushNamed(
@@ -111,6 +141,12 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
             icon: const Icon(Icons.refresh),
             onPressed: _loadPayrollData,
           ),
+          if (!_isPeriodClosed)
+            IconButton(
+              icon: const Icon(Icons.calculate_outlined),
+              tooltip: 'Recalculate Taxes',
+              onPressed: _recalculatePayroll,
+            ),
           IconButton(
             icon: const Icon(Icons.help_outline),
             onPressed: () => PayrollHelpDialog.show(context),

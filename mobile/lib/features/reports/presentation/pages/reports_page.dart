@@ -1502,7 +1502,7 @@ class _StatutoryReportView extends ConsumerWidget {
           _buildExportButton(
             context,
             ref,
-            'KRA P10 CSV',
+            'PAYE (P10 CSV)',
             Icons.download,
             Colors.green,
             'KRA_P10_CSV',
@@ -1511,7 +1511,7 @@ class _StatutoryReportView extends ConsumerWidget {
           _buildExportButton(
             context,
             ref,
-            'NSSF Excel',
+            'NSSF Return',
             Icons.table_chart,
             Colors.blue,
             'NSSF_RETURN_EXCEL',
@@ -1520,7 +1520,7 @@ class _StatutoryReportView extends ConsumerWidget {
           _buildExportButton(
             context,
             ref,
-            'SHIF Excel',
+            'SHIF Return',
             Icons.health_and_safety,
             Colors.purple,
             'SHIF_RETURN_EXCEL',

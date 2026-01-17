@@ -1,14 +1,17 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_sign_in/google_sign_in.dart' as google;
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../../data/repositories/auth_repository.dart';
+import 'package:mobile/core/config/app_environment.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository();
 });
+
 
 class AuthNotifier extends AsyncNotifier<void> {
   late AuthRepository _authRepository;
@@ -87,36 +90,72 @@ class AuthNotifier extends AsyncNotifier<void> {
     }
   }
 
+  /// Flag to track if GoogleSignIn has been initialized
+  static bool _googleSignInInitialized = false; // Reset to force re-init
+
   Future<void> loginWithGoogle({BuildContext? context}) async {
+    debugPrint('🔵 [Google Sign-In] Method called');
     state = const AsyncValue.loading();
     try {
-      final googleSignIn = google.GoogleSignIn(
-        scopes: ['email', 'profile'],
-      );
+      debugPrint('🔵 [Google Sign-In] Getting GoogleSignIn instance');
+      final googleSignIn = google.GoogleSignIn.instance;
       
-      final googleUser = await googleSignIn.signIn();
-      if (googleUser == null) {
-        state = const AsyncValue.data(null); // User cancelled
+      // Initialize only once (required in v7)
+      if (!_googleSignInInitialized) {
+        debugPrint('🔵 [Google Sign-In] Initializing... Platform: ${kIsWeb ? "Web" : "Mobile"}');
+        // Initialize only once (required in v7)
+        // On Web: Only clientId is supported
+        // On Mobile: Both clientId and serverClientId can be used
+        await googleSignIn.initialize(
+          clientId: kIsWeb ? AppEnvironment.googleClientId : null,
+          // serverClientId is NOT supported on Web, only on Mobile
+          serverClientId: kIsWeb ? null : AppEnvironment.googleClientId,
+        );
+        _googleSignInInitialized = true;
+        debugPrint('🔵 [Google Sign-In] Initialization complete');
+      }
+      
+      // Authenticate the user
+      debugPrint('🔵 [Google Sign-In] Attempting authentication...');
+      google.GoogleSignInAccount? account;
+      if (googleSignIn.supportsAuthenticate()) {
+        debugPrint('🔵 [Google Sign-In] Using authenticate()');
+        account = await googleSignIn.authenticate();
+      } else {
+        debugPrint('🔵 [Google Sign-In] Using attemptLightweightAuthentication()');
+        // For web, use lightweight authentication
+        account = await googleSignIn.attemptLightweightAuthentication();
+      }
+      
+      if (account == null) {
+        debugPrint('⚠️ [Google Sign-In] User cancelled or not signed in');
+        state = const AsyncValue.data(null); // User cancelled or not signed in
         return;
       }
       
-      final googleAuth = await googleUser.authentication;
-      final idToken = googleAuth.idToken;
+      debugPrint('🔵 [Google Sign-In] User authenticated: ${account.email}');
+      // Get authentication to retrieve ID Token (required by backend)
+      final authentication = await account.authentication;
+      final token = authentication.idToken;
       
-      if (idToken == null) {
-        throw Exception('Failed to get Google ID Token');
+      if (token == null) {
+        debugPrint('❌ [Google Sign-In] Failed to retrieve ID Token');
+        throw Exception('Failed to retrieve ID Token from Google');
       }
 
+      debugPrint('🔵 [Google Sign-In] ID Token retrieved, sending to backend...');
       await _handleSocialLogin(
         provider: 'GOOGLE',
-        token: idToken, // Send ID token as the token
-        email: googleUser.email,
-        firstName: googleUser.displayName?.split(' ').first,
-        lastName: googleUser.displayName?.split(' ').skip(1).join(' '),
-        photoUrl: googleUser.photoUrl,
+        token: token,
+        email: account.email,
+        firstName: account.displayName?.split(' ').first,
+        lastName: account.displayName?.split(' ').skip(1).join(' '),
+        photoUrl: account.photoUrl,
         context: context,
       );
     } catch (error, stackTrace) {
+      debugPrint('❌ [Google Sign-In] Error: $error');
+      debugPrint('Stack trace: $stackTrace');
       state = AsyncValue.error(error.toString(), stackTrace);
     }
   }
@@ -129,6 +168,10 @@ class AuthNotifier extends AsyncNotifier<void> {
           AppleIDAuthorizationScopes.email,
           AppleIDAuthorizationScopes.fullName,
         ],
+        webAuthenticationOptions: WebAuthenticationOptions(
+          clientId: AppEnvironment.appleServiceId,
+          redirectUri: Uri.parse(AppEnvironment.appleRedirectUri),
+        ),
       );
 
       // Apple only returns name on first sign in, so might be null on subsequent logins
@@ -154,11 +197,22 @@ class AuthNotifier extends AsyncNotifier<void> {
         lastName: credential.familyName,
         context: context,
       );
+      // Check for default configuration on Web
+      if (kIsWeb && (AppEnvironment.appleServiceId == 'com.paykey.app.service' || 
+          AppEnvironment.appleRedirectUri.contains('firebaseapp.com'))) {
+        debugPrint('WARNING: Apple Sign In may fail. Use --dart-define=APPLE_SERVICE_ID=... and APPLE_REDIRECT_URI=...');
+      }
+
     } catch (error, stackTrace) {
-      if (error is SignInWithAppleAuthorizationException && 
-          error.code == AuthorizationErrorCode.canceled) {
-        state = const AsyncValue.data(null);
-        return;
+      debugPrint('Apple Sign In Error: $error');
+      if (error is SignInWithAppleAuthorizationException) {
+        debugPrint('Apple Error Code: ${error.code}');
+        debugPrint('Apple Error Message: ${error.message}');
+        
+        if (error.code == AuthorizationErrorCode.canceled) {
+          state = const AsyncValue.data(null);
+          return;
+        }
       }
       state = AsyncValue.error(error.toString(), stackTrace);
     }

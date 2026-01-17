@@ -35,7 +35,7 @@ export class PayPeriodsService {
     @InjectRepository(TaxSubmission)
     private taxSubmissionRepository: Repository<TaxSubmission>,
     private taxPaymentsService: TaxPaymentsService,
-  ) {}
+  ) { }
 
   async create(
     createPayPeriodDto: CreatePayPeriodDto,
@@ -626,6 +626,24 @@ export class PayPeriodsService {
     // Normalize start date to beginning of day
     currentDate.setHours(0, 0, 0, 0);
 
+    // Batch fetch usage: Get all existing periods for this user, frequency, and year range
+    // to avoid N+1 queries and reduce race condition window.
+    const startYear = startDate.getFullYear();
+    const endYear = endDate.getFullYear();
+
+    const existingPeriods = await this.payPeriodRepository
+      .createQueryBuilder('pp')
+      .where('pp.userId = :userId', { userId })
+      .andWhere('pp.frequency = :frequency', { frequency })
+      .andWhere('EXTRACT(YEAR FROM pp.startDate) BETWEEN :startYear AND :endYear', {
+        startYear,
+        endYear
+      })
+      .getMany();
+
+    // Create a Set of existing names for O(1) lookup
+    const existingNames = new Set(existingPeriods.map(p => p.name));
+
     while (currentDate <= endDate) {
       const periodStart = new Date(currentDate);
       let periodEnd: Date;
@@ -662,16 +680,8 @@ export class PayPeriodsService {
 
       const name = this.generatePeriodName(periodStart, periodEnd, frequency);
 
-      // Check if period already exists
-      const existing = await this.payPeriodRepository.findOne({
-        where: {
-          userId: userId,
-          name: name,
-          frequency: frequency as PayPeriodFrequency,
-        },
-      });
-
-      if (!existing) {
+      // Check if period already exists using our pre-fetched Set
+      if (!existingNames.has(name)) {
         const payPeriod = this.payPeriodRepository.create({
           name,
           startDate: this.formatDate(periodStart),
@@ -683,10 +693,13 @@ export class PayPeriodsService {
           userId: userId,
         });
 
-        periods.push(await this.payPeriodRepository.save(payPeriod));
+        const saved = await this.payPeriodRepository.save(payPeriod);
+        periods.push(saved);
+        existingNames.add(name); // Add to set to prevent internal dupes if loop is weird
       } else {
-        // If exists, just add to returned list without creating new
-        periods.push(existing);
+        // If exists, find it in our list and add to returned list
+        const existing = existingPeriods.find(p => p.name === name);
+        if (existing) periods.push(existing);
       }
     }
 

@@ -43,7 +43,7 @@ export class WorkerDocument {
     @Column()
     url: string; // File URL
 
-    @Column({ type: 'bigint', nullable: true })
+    @Column({ type: 'integer', nullable: true })
     fileSize: number; // Size in bytes
 
     @Column({ nullable: true })

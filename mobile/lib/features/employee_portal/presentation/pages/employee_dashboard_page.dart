@@ -748,7 +748,7 @@ class _QuickActionsSection extends StatelessWidget {
     ],
     [
       _QuickActionData('P9 Tax Report', Icons.description, _DashboardColors.successDark, '/employee/p9'),
-      null, // Placeholder for future action
+      _QuickActionData('Payment Settings', Icons.payments, _DashboardColors.primary, '/employee/payment-settings'),
     ],
   ];
 
@@ -771,15 +771,11 @@ class _QuickActionsSection extends StatelessWidget {
           child: Row(
             children: [
               Expanded(
-                child: row[0] != null
-                    ? _QuickActionCard(data: row[0]!)
-                    : const SizedBox(),
+                child: _QuickActionCard(data: row[0]),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: row[1] != null
-                    ? _QuickActionCard(data: row[1]!)
-                    : const SizedBox(),
+                child: _QuickActionCard(data: row[1]),
               ),
             ],
           ),
