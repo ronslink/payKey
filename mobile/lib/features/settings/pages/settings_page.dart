@@ -168,6 +168,27 @@ class _SettingsContent extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Column(
+                children: [
+                   Text(
+                    'Photo Guidelines',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Ideal size: 1024 x 1024 px (1:1 ratio)',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
             ListTile(
               leading: const Icon(Icons.camera_alt),
               title: const Text('Camera'),
@@ -186,7 +207,13 @@ class _SettingsContent extends ConsumerWidget {
     if (source == null) return;
     if (!context.mounted) return;
 
-    final pickedFile = await picker.pickImage(source: source, imageQuality: 70);
+    final pickedFile = await picker.pickImage(
+      source: source,
+      imageQuality: 70,
+      maxWidth: 1024,
+      maxHeight: 1024,
+    );
+
     if (pickedFile == null) return;
 
     try {

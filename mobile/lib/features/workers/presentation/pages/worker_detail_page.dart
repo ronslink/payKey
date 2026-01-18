@@ -173,6 +173,30 @@ class _WorkerDetailPageState extends ConsumerState<WorkerDetailPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Column(
+                children: [
+                   Text(
+                    'Photo Guidelines',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: _AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Ideal size: 1024 x 1024 px (1:1 ratio)',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
             ListTile(
               leading: const Icon(Icons.camera_alt),
               title: const Text('Camera'),
@@ -190,7 +214,13 @@ class _WorkerDetailPageState extends ConsumerState<WorkerDetailPage> {
 
     if (source == null) return;
 
-    final pickedFile = await picker.pickImage(source: source, imageQuality: 70);
+    final pickedFile = await picker.pickImage(
+      source: source,
+      imageQuality: 70,
+      maxWidth: 1024,
+      maxHeight: 1024,
+    );
+
     if (pickedFile == null) return;
 
     try {
