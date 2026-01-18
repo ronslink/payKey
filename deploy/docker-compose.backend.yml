@@ -21,6 +21,10 @@ services:
       - INTASEND_IS_LIVE=true
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - APPLE_KEY_ID=${APPLE_KEY_ID}
+      - APPLE_TEAM_ID=${APPLE_TEAM_ID}
+      - APPLE_BUNDLE_ID=${APPLE_BUNDLE_ID}
       - NODE_EXTRA_CA_CERTS=/app/ca-certificate.crt
     volumes:
       - /opt/paykey/ca-certificate.crt:/app/ca-certificate.crt:ro
