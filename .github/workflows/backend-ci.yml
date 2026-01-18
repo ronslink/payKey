@@ -251,11 +251,11 @@ jobs:
             echo "INTASEND_IS_LIVE=true" >> .env
 
             # 1. Start Infrastructure (DB, Redis, Network)
-            docker-compose -f deploy/docker-compose.infra.yml up -d
+            docker compose -f deploy/docker-compose.infra.yml up -d
 
             # 2. Deploy Backend
-            docker-compose -f deploy/docker-compose.backend.yml pull backend
-            docker-compose -f deploy/docker-compose.backend.yml up -d backend
+            docker compose -f deploy/docker-compose.backend.yml pull backend
+            docker compose -f deploy/docker-compose.backend.yml up -d backend
             
             docker image prune -f
             echo "✅ Deployment complete: $(date)"
