@@ -7,6 +7,8 @@ import '../utils/payroll_calculator.dart';
 /// Card widget for displaying a worker's payroll input form
 class WorkerPayrollCard extends StatelessWidget {
   final WorkerModel worker;
+  final bool isSelected;
+  final ValueChanged<bool?> onSelectionChanged;
   final bool isExpanded;
   final TextEditingController hoursController;
   final TextEditingController overtimeController;
@@ -33,6 +35,8 @@ class WorkerPayrollCard extends StatelessWidget {
     required this.formatter,
     required this.onTap,
     required this.onInputChanged,
+    this.isSelected = true,
+    required this.onSelectionChanged,
   });
 
   @override
@@ -59,7 +63,7 @@ class WorkerPayrollCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isSelected ? Colors.white : Colors.grey.shade50,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isExpanded 
@@ -68,18 +72,19 @@ class WorkerPayrollCard extends StatelessWidget {
             width: isPartialPeriod ? 2 : 1,
           ),
           boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
+            if (isSelected)
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
           ],
         ),
         child: Column(
           children: [
             _buildHeader(context, initials, estimatedPay, isHourly),
             if (isPartialPeriod && !isExpanded) _buildPartialBadge(),
-            if (isExpanded) ...[
+            if (isExpanded && isSelected) ...[
               const Divider(height: 24),
               _buildInputFields(context, isHourly),
             ],
@@ -126,41 +131,53 @@ class WorkerPayrollCard extends StatelessWidget {
   ) {
     return Row(
       children: [
+        Checkbox(
+          value: isSelected,
+          onChanged: onSelectionChanged,
+          activeColor: Theme.of(context).primaryColor,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+        ),
+        const SizedBox(width: 8),
         _buildAvatar(context, initials),
         const SizedBox(width: 14),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                worker.name,
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-              Text(
-                isHourly ? 'Hourly Worker' : 'Monthly Salary',
-                style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
-              ),
-            ],
+          child: Opacity(
+            opacity: isSelected ? 1.0 : 0.5,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  worker.name,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  isHourly ? 'Hourly Worker' : 'Monthly Salary',
+                  style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+                ),
+              ],
+            ),
           ),
         ),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              'KES ${formatter.format(estimatedPay)}',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).primaryColor,
+        if (isSelected)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                'KES ${formatter.format(estimatedPay)}',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).primaryColor,
+                ),
               ),
-            ),
-            Text('Est.', style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
-          ],
-        ),
+              Text('Est.', style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
+            ],
+          ),
         const SizedBox(width: 8),
-        Icon(
-          isExpanded ? Icons.expand_less : Icons.expand_more,
-          color: Colors.grey.shade400,
-        ),
+        if (isSelected)
+          Icon(
+            isExpanded ? Icons.expand_less : Icons.expand_more,
+            color: Colors.grey.shade400,
+          ),
       ],
     );
   }

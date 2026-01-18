@@ -49,6 +49,8 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
   bool _isAutomatedMode = true;
   bool _isProcessing = false;
   bool _isWorkersSectionExpanded = false;
+  final Set<String> _selectedWorkerIds = {};
+  bool _selectionInitialized = false;
 
   // Controllers and utilities
   final _controllerManager = WorkerHoursControllerManager();
@@ -471,9 +473,21 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
     // Sync controllers with current worker list
     _controllerManager.syncWithWorkers(workers.map((w) => w.id).toList());
 
+    // Initialize selection if needed
+    if (!_selectionInitialized && workers.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _selectedWorkerIds.addAll(workers.map((w) => w.id));
+            _selectionInitialized = true;
+          });
+        }
+      });
+    }
+
     return Column(
       children: [
-        _buildWorkersHeader(context, workers.length),
+        _buildWorkersHeader(context, workers),
         AnimatedCrossFade(
           firstChild: Container(),
           secondChild: Padding(
@@ -493,16 +507,33 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
     );
   }
 
-  Widget _buildWorkersHeader(BuildContext context, int count) {
+  Widget _buildWorkersHeader(BuildContext context, List<WorkerModel> workers) {
+    final count = workers.length;
+    final allSelected = _selectedWorkerIds.length == count && count > 0;
+
     return InkWell(
       onTap: () => setState(() => _isWorkersSectionExpanded = !_isWorkersSectionExpanded),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+        padding: const EdgeInsets.fromLTRB(8, 8, 20, 12),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Row(
               children: [
+                Checkbox(
+                  value: allSelected,
+                  onChanged: (bool? value) {
+                    setState(() {
+                      if (value == true) {
+                        _selectedWorkerIds.addAll(workers.map((w) => w.id));
+                      } else {
+                        _selectedWorkerIds.clear();
+                      }
+                    });
+                  },
+                  activeColor: Theme.of(context).primaryColor,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                ),
                 Text(
                   'Employee Inputs',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -519,7 +550,7 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
               ],
             ),
             Text(
-              '$count Workers',
+              '${_selectedWorkerIds.length} / $count Selected',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Colors.grey.shade600,
                   ),
@@ -541,6 +572,16 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
     return WorkerPayrollCard(
       worker: worker,
       isExpanded: _expandedWorkerIndex == index,
+      isSelected: _selectedWorkerIds.contains(worker.id),
+      onSelectionChanged: (value) {
+        setState(() {
+          if (value == true) {
+            _selectedWorkerIds.add(worker.id);
+          } else {
+            _selectedWorkerIds.remove(worker.id);
+          }
+        });
+      },
       hoursController: _controllerManager.getHoursController(
         worker.id,
         isHourly: isHourly,
@@ -585,13 +626,16 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
           ),
         ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildAutomationToggle(context),
-          const SizedBox(height: 12),
-          _buildActionButtons(context, workers, isDisabled),
-        ],
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildAutomationToggle(context),
+            const SizedBox(height: 12),
+            _buildActionButtons(context, workers, isDisabled),
+          ],
+        ),
       ),
     );
   }
@@ -621,11 +665,14 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
     List<WorkerModel> workers,
     bool isDisabled,
   ) {
+    // Also disable if no workers selected
+    final effectivelyDisabled = isDisabled || _selectedWorkerIds.isEmpty;
+
     return Row(
       children: [
         Expanded(
           child: OutlinedButton(
-            onPressed: isDisabled ? null : () => _handleSaveDraft(workers),
+            onPressed: effectivelyDisabled ? null : () => _handleSaveDraft(workers),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
@@ -639,7 +686,7 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
         Expanded(
           flex: 2,
           child: ElevatedButton(
-            onPressed: isDisabled ? null : () => _handleRunPayroll(workers),
+            onPressed: effectivelyDisabled ? null : () => _handleRunPayroll(workers),
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).primaryColor,
               foregroundColor: Colors.white,
@@ -723,8 +770,9 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
     try {
       final payrollRepo = ref.read(payrollRepositoryProvider);
 
+      final selectedWorkers = workers.where((w) => _selectedWorkerIds.contains(w.id)).toList();
       final calculations = await payrollRepo.calculatePayroll(
-        workers.map((w) => w.id).toList(),
+        selectedWorkers.map((w) => w.id).toList(),
         startDate: _selectedPayPeriod!.startDate,
         endDate: _selectedPayPeriod!.endDate,
       );
@@ -761,8 +809,9 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
       final payrollRepo = ref.read(payrollRepositoryProvider);
 
       // Calculate payroll
+      final selectedWorkers = workers.where((w) => _selectedWorkerIds.contains(w.id)).toList();
       final calculations = await payrollRepo.calculatePayroll(
-        workers.map((w) => w.id).toList(),
+        selectedWorkers.map((w) => w.id).toList(),
         startDate: _selectedPayPeriod!.startDate,
         endDate: _selectedPayPeriod!.endDate,
       );

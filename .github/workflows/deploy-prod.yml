@@ -33,7 +33,7 @@ jobs:
             cat <<EOF > .env
             NODE_ENV=production
             DATABASE_URL=$DATABASE_URL
-            REDIS_HOST=paykey_redis_prod
+            REDIS_HOST=redis
             REDIS_PORT=6379
             JWT_SECRET=$JWT_SECRET
             JWT_EXPIRES_IN=7d
@@ -55,28 +55,25 @@ jobs:
             source .env
             set +a
 
-            # 3. Create network if it doesn't exist
-            docker network create paykey-network-prod 2>/dev/null || true
-
-            # 4. Deploy Infrastructure (Redis)
+            # 3. Deploy Infrastructure (DB, Redis, Network)
             echo "📦 Deploying Infrastructure..."
             docker compose -f deploy/docker-compose.infra.yml up -d
 
-            # 5. Deploy Backend using restart script
+            # 4. Deploy Backend
             echo "🔙 Deploying Backend..."
-            chmod +x /opt/paykey/restart-backend.sh
-            /opt/paykey/restart-backend.sh
+            docker compose -f deploy/docker-compose.backend.yml pull backend
+            docker compose -f deploy/docker-compose.backend.yml up -d backend
             
-            # 6. Deploy Website
+            # 5. Deploy Website
             echo "🌐 Deploying Website..."
-            docker compose -f deploy/docker-compose.website.yml up -d website || echo "⚠️ Website deployment skipped"
+            docker compose -f deploy/docker-compose.website.yml pull website
+            docker compose -f deploy/docker-compose.website.yml up -d website
 
-            # 7. Seed Tax Configurations
+            # 6. Seed Tax Configurations
             echo "🧾 Seeding Tax Configurations..."
-            sleep 15  # Wait for backend to fully start
-            docker exec paykey_backend_prod node dist/scripts/seed-tax-configs-2025.js || echo "⚠️ Seeding skipped"
+            docker exec paykey_backend_prod node dist/scripts/seed-tax-configs-2025.js || echo "⚠️ Seeding failed, but continuing deployment..."
 
-            # 8. Cleanup
+            # 7. Cleanup
             docker image prune -f
             echo "✅ Full Deployment Complete: $(date)"
 
