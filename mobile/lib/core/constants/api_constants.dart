@@ -16,7 +16,11 @@ class ApiConstants {
     String url = AppEnvironment.apiUrl;
 
     // Fix for Web if default emulator IP is returned
-    if ((kIsWeb || defaultTargetPlatform == TargetPlatform.iOS) && url == 'http://10.0.2.2:3000') {
+    if ((kIsWeb || 
+        defaultTargetPlatform == TargetPlatform.iOS || 
+        defaultTargetPlatform == TargetPlatform.windows || 
+        defaultTargetPlatform == TargetPlatform.macOS) && 
+        url == 'http://10.0.2.2:3000') {
       return 'http://localhost:3000';
     }
     

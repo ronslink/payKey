@@ -3,10 +3,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_sign_in/google_sign_in.dart' as google;
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../../data/repositories/auth_repository.dart';
 import 'package:mobile/core/config/app_environment.dart';
+import 'package:mobile/core/constants/api_constants.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository();
@@ -90,51 +91,45 @@ class AuthNotifier extends AsyncNotifier<void> {
     }
   }
 
-  /// Flag to track if GoogleSignIn has been initialized
-  static bool _googleSignInInitialized = false; // Reset to force re-init
+  static bool _googleSignInInitialized = false;
 
   Future<void> loginWithGoogle({BuildContext? context}) async {
     debugPrint('🔵 [Google Sign-In] Method called');
     state = const AsyncValue.loading();
     try {
-      debugPrint('🔵 [Google Sign-In] Getting GoogleSignIn instance');
-      final googleSignIn = google.GoogleSignIn.instance;
+      debugPrint('🔵 [Google Sign-In] Accessing GoogleSignIn.instance...');
+      final googleSignIn = GoogleSignIn.instance;
       
-      // Initialize only once (required in v7)
+      // Initialize if not already done
       if (!_googleSignInInitialized) {
-        debugPrint('🔵 [Google Sign-In] Initializing... Platform: ${kIsWeb ? "Web" : "Mobile"}');
-        // Initialize only once (required in v7)
-        // On Web: Only clientId is supported
-        // On Mobile: Both clientId and serverClientId can be used
+        debugPrint('🔵 [Google Sign-In] Initializing (Singleton Pattern)...');
         await googleSignIn.initialize(
           clientId: kIsWeb ? AppEnvironment.googleClientId : null,
-          // serverClientId is NOT supported on Web, only on Mobile
-          serverClientId: kIsWeb ? null : AppEnvironment.googleClientId,
+          serverClientId: kIsWeb ? null : AppEnvironment.googleClientId, 
+          // Passing serverClientId on mobile might be needed for valid ID Token for backend?
+          // Using googleClientId as serverClientId for now if mobile, or null if using google-services.json defaults.
+          // Correct pattern: usually serverClientId matches the Web Client ID credential.
+          // For now, mirroring previous logic but respecting the singleton API.
         );
         _googleSignInInitialized = true;
-        debugPrint('🔵 [Google Sign-In] Initialization complete');
       }
-      
+
       // Authenticate the user
-      debugPrint('🔵 [Google Sign-In] Attempting authentication...');
-      google.GoogleSignInAccount? account;
-      if (googleSignIn.supportsAuthenticate()) {
-        debugPrint('🔵 [Google Sign-In] Using authenticate()');
-        account = await googleSignIn.authenticate();
-      } else {
-        debugPrint('🔵 [Google Sign-In] Using attemptLightweightAuthentication()');
-        // For web, use lightweight authentication
-        account = await googleSignIn.attemptLightweightAuthentication();
-      }
+      debugPrint('🔵 [Google Sign-In] Attempting authentication via authenticate()...');
       
-      if (account == null) {
-        debugPrint('⚠️ [Google Sign-In] User cancelled or not signed in');
-        state = const AsyncValue.data(null); // User cancelled or not signed in
-        return;
-      }
+      // scopeHint recommends scopes during the auth flow (if platform supports it)
+      GoogleSignInAccount? account = await googleSignIn.authenticate(
+        scopeHint: [
+          'email',
+          'profile',
+          'openid',
+        ]
+      );
       
+
       debugPrint('🔵 [Google Sign-In] User authenticated: ${account.email}');
-      // Get authentication to retrieve ID Token (required by backend)
+      
+      // Get authentication to retrieve ID Token
       final authentication = await account.authentication;
       final token = authentication.idToken;
       
@@ -227,6 +222,9 @@ class AuthNotifier extends AsyncNotifier<void> {
     String? photoUrl,
     BuildContext? context,
   }) async {
+      debugPrint('🔵 [Google Sign-In] Sending API request to: ${ApiConstants.baseUrl}${ApiConstants.loginEndpoint.replaceFirst('login', 'social')}'); // Constructing social endpoint path manually for debug
+      debugPrint('🔵 [Google Sign-In] Token (prefix): ${token.substring(0, 10)}...');
+      
       final response = await _authRepository.socialLoginApi(
         provider: provider,
         token: token,

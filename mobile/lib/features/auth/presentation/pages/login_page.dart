@@ -149,7 +149,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             child: OutlinedButton.icon(
               onPressed: () => ref.read(authStateProvider.notifier).loginWithApple(context: context),
               icon: Image.asset(
-                'icons/apple_logo.png',
+                'assets/icons/apple_logo.png',
                 width: 20,
                 height: 20,
               ),
@@ -180,7 +180,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               backgroundColor: Colors.white,
             ),
             icon: Image.asset(
-              'icons/google_logo.png',
+              'assets/icons/google_logo.png',
               width: 24,
               height: 24,
             ),

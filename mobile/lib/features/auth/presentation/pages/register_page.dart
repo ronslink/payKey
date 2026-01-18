@@ -154,7 +154,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             child: OutlinedButton.icon(
               onPressed: () => ref.read(authStateProvider.notifier).loginWithApple(context: context),
               icon: Image.asset(
-                'icons/apple_logo.png',
+                'assets/icons/apple_logo.png',
                 width: 20,
                 height: 20,
               ),
@@ -185,7 +185,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
               backgroundColor: Colors.white,
             ),
             icon: Image.asset(
-              'icons/google_logo.png',
+              'assets/icons/google_logo.png',
               width: 24,
               height: 24,
             ),

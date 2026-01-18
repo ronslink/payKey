@@ -1549,6 +1549,24 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
             returnValue: _i5.Future<List<int>>.value(<int>[]),
           )
           as _i5.Future<List<int>>);
+
+  @override
+  _i5.Future<List<int>> downloadFile(String? url) =>
+      (super.noSuchMethod(
+            Invocation.method(#downloadFile, [url]),
+            returnValue: _i5.Future<List<int>>.value(<int>[]),
+          )
+          as _i5.Future<List<int>>);
+
+  @override
+  _i5.Future<List<Map<String, dynamic>>> getBanks() =>
+      (super.noSuchMethod(
+            Invocation.method(#getBanks, []),
+            returnValue: _i5.Future<List<Map<String, dynamic>>>.value(
+              <Map<String, dynamic>>[],
+            ),
+          )
+          as _i5.Future<List<Map<String, dynamic>>>);
 }
 
 /// A class which mocks [PaymentEndpoints].

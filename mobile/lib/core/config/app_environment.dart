@@ -33,7 +33,7 @@ class AppEnvironment {
   /// Google Client ID (Web)
   static const String googleClientId = String.fromEnvironment(
     'GOOGLE_CLIENT_ID',
-    defaultValue: '654819674151-pthcgmk3kfu8jm224v1918dl6pm6djmv.apps.googleusercontent.com',
+    defaultValue: '104336380998-gi875vmfc1vtkoi9235qcosn5sg5h9nc.apps.googleusercontent.com',
   );
 
   /// Apple Service ID (Web)

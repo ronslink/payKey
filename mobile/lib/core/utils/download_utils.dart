@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:universal_html/html.dart' as html;
+import 'package:share_plus/share_plus.dart';
 
 class DownloadUtils {
   /// Download and open a file (PDF, etc.)
@@ -35,12 +36,26 @@ class DownloadUtils {
       final dir = await getTemporaryDirectory();
       final file = io.File('${dir.path}/$filename');
       await file.writeAsBytes(bytes);
+      
       final result = await OpenFilex.open(file.path);
       
       if (result.type != ResultType.done) {
+        // Fallback: If no app can open the file, try sharing it so user can save it
+        if (result.type == ResultType.noAppToOpen) {
+          debugPrint('No app found to open file, attempting simple share...');
+          // Using Share.shareXFiles
+          await Share.shareXFiles(
+            [XFile(file.path)], 
+            subject: filename, // subject usually used in emails
+            text: 'Here is your file: $filename'
+          );
+          return;
+        }
+
         throw Exception('Could not open file: ${result.message}');
       }
     } catch (e) {
+      // Re-throw if it wasn't validly handled
       throw Exception('Failed to save or open file: $e');
     }
   }
