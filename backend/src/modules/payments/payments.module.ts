@@ -4,11 +4,10 @@ import { ConfigModule } from '@nestjs/config';
 import { PaymentsController } from './payments.controller';
 import { UnifiedPaymentsController } from './unified-payments.controller';
 import { SubscriptionPaymentsController } from './subscription-payments.controller';
-import { MpesaService } from './mpesa.service';
 import { StripeService } from './stripe.service';
 import { PayrollPaymentService } from './payroll-payment.service';
-import { PayrollService } from './payroll.service';
 import { IntaSendService } from './intasend.service';
+
 import { Transaction } from './entities/transaction.entity';
 import { Worker } from '../workers/entities/worker.entity';
 import { Subscription } from '../subscriptions/entities/subscription.entity';
@@ -47,18 +46,16 @@ import { HttpModule } from '@nestjs/axios';
     SubscriptionPaymentsController,
   ],
   providers: [
-    MpesaService,
     StripeService,
     PayrollPaymentService,
-    PayrollService,
     IntaSendService,
+
   ],
   exports: [
-    MpesaService,
     StripeService,
     PayrollPaymentService,
-    PayrollService,
     IntaSendService,
+
   ],
 })
-export class PaymentsModule {}
+export class PaymentsModule { }

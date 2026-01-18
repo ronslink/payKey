@@ -9,9 +9,9 @@ import {
   Request,
   UnauthorizedException,
 } from '@nestjs/common';
-import { MpesaService } from './mpesa.service';
 import { IntaSendService } from './intasend.service';
 import { StripeService } from './stripe.service';
+
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { AuthenticatedRequest } from '../../common/interfaces/user.interface';
 
@@ -40,50 +40,11 @@ import {
   PayPeriodStatus,
 } from '../payroll/entities/pay-period.entity';
 
-interface MpesaCallbackData {
-  Body: {
-    stkCallback: {
-      MerchantRequestID: string;
-      CheckoutRequestID: string;
-      ResultCode: number;
-      ResultDesc: string;
-      CallbackMetadata?: {
-        Item: Array<{
-          Name: string;
-          Value: string | number;
-        }>;
-      };
-    };
-  };
-}
 
-interface MpesaB2CCallbackData {
-  Result: {
-    ResultType: number;
-    ResultCode: number;
-    ResultDesc: string;
-    OriginatorConversationID: string;
-    ConversationID: string;
-    TransactionID: string;
-    ResultParameters: {
-      ResultParameter: Array<{
-        Key: string;
-        Value: string | number;
-      }>;
-    };
-    ReferenceData: {
-      ReferenceItem: Array<{
-        Key: string;
-        Value: string;
-      }>;
-    };
-  };
-}
 
 @Controller('payments')
 export class PaymentsController {
   constructor(
-    private mpesaService: MpesaService,
     @InjectRepository(Transaction)
     private transactionsRepository: Repository<Transaction>,
     @InjectRepository(User)
@@ -98,66 +59,10 @@ export class PaymentsController {
     private subscriptionRepository: Repository<Subscription>,
     private intaSendService: IntaSendService,
     private stripeService: StripeService,
+
   ) { }
 
-  @Post('callback')
-  async handleMpesaCallback(@Body() body: MpesaCallbackData) {
-    console.log('M-Pesa Callback Received:', JSON.stringify(body));
 
-    const callback = body.Body.stkCallback;
-    if (!callback) {
-      return { ResultCode: 1, ResultDesc: 'Invalid Payload' };
-    }
-
-    const { MerchantRequestID, ResultCode, ResultDesc } = callback;
-
-    const transaction = await this.transactionsRepository.findOne({
-      where: { providerRef: MerchantRequestID },
-    });
-
-    if (!transaction) {
-      console.warn(`Transaction not found for M-Pesa Callback: ${MerchantRequestID}`);
-      return { ResultCode: 0, ResultDesc: 'Transaction Not Found' };
-    }
-
-    if (transaction.status !== TransactionStatus.PENDING) {
-      return { ResultCode: 0, ResultDesc: 'Already Processed' };
-    }
-
-    if (ResultCode === 0) {
-      transaction.status = TransactionStatus.SUCCESS;
-
-      // Credit User Wallet
-      // Note: check for double crediting handled by status check above
-      await this.usersRepository.increment(
-        { id: transaction.userId },
-        'walletBalance',
-        Number(transaction.amount) // Ensure number
-      );
-    } else {
-      transaction.status = TransactionStatus.FAILED;
-    }
-
-    transaction.metadata = {
-      ...(typeof transaction.metadata === 'string'
-        ? JSON.parse(transaction.metadata)
-        : transaction.metadata),
-      resultDesc: ResultDesc,
-      callback: body,
-    };
-
-    await this.transactionsRepository.save(transaction);
-
-    return { ResultCode: 0, ResultDesc: 'Success' };
-  }
-
-  @Post('b2c-callback')
-  async handleB2CCallback(@Body() body: MpesaB2CCallbackData) {
-    console.log('M-Pesa B2C Callback Received:', JSON.stringify(body));
-    // Delegate to service if needed, or handle here
-    // Currently PayKey uses IntaSend for B2C, so this might be legacy or direct M-Pesa.
-    return { ResultCode: 0, ResultDesc: 'Accepted' };
-  }
 
   /**
    * Stripe Webhook Endpoint

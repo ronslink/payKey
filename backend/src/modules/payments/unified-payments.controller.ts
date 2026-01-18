@@ -14,7 +14,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { StripeService } from './stripe.service';
-import { MpesaService } from './mpesa.service';
+
 import { IntaSendService } from './intasend.service';
 import { Transaction, TransactionStatus, TransactionType } from './entities/transaction.entity';
 import {
@@ -132,8 +132,8 @@ export class UnifiedPaymentsController {
 
   constructor(
     private readonly stripeService: StripeService,
-    private readonly mpesaService: MpesaService,
     private readonly taxPaymentsService: TaxPaymentsService,
+
     @InjectRepository(Transaction)
     private readonly transactionRepository: Repository<Transaction>,
     @InjectRepository(Subscription)

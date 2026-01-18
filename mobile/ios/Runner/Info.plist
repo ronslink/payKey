@@ -79,7 +79,20 @@
 	</array>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>PayDome needs access to your photo library to upload documents such as receipts.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>PayDome needs permission to save exported reports and documents to your photo library.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>PayDome needs access to your camera to take profile photos.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>https</string>
+		<string>tel</string>
+		<string>mailto</string>
+	</array>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+
 </dict>
 </plist>

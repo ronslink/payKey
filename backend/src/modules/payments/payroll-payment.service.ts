@@ -100,7 +100,7 @@ export class PayrollPaymentService {
     };
   }
 
-  private readonly MPESA_LIMIT = 150000;
+  private readonly MPESA_LIMIT = 250000;
 
   private async processMobileBatch(records: PayrollRecord[]) {
     if (records.length === 0) return [];

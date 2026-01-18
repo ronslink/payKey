@@ -5,7 +5,7 @@ services:
     restart: always
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: Tina76
+      POSTGRES_PASSWORD: admin
       POSTGRES_DB: paykey
     ports:
       - "5435:5432"
@@ -43,7 +43,7 @@ services:
       - DB_HOST=db
       - DB_PORT=5432
       - DB_USER=postgres
-      - DB_PASSWORD=Tina76
+      - DB_PASSWORD=admin
       - DB_NAME=paykey
       - REDIS_HOST=redis
       - REDIS_PORT=6379
@@ -100,9 +100,11 @@ services:
     image: ngrok/ngrok:latest
     container_name: paykey_ngrok
     restart: unless-stopped
-    command: http backend:3000 --domain=dictatorily-contrarious-darby.ngrok-free.dev
+    command: http backend:3000
+    env_file:
+      - ./backend/.env
     environment:
-      - NGROK_AUTHTOKEN=34Jv8kOgcr1lyc2ljBS77zCxn6N_4bub1wQ9JqVoyp92HVomw
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
     ports:
       - "4040:4040"
     networks:
