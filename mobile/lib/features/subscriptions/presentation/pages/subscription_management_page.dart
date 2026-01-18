@@ -40,6 +40,16 @@ class _SubscriptionManagementPageState
             letterSpacing: -0.5,
           ),
         ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF111827)),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/settings');
+            }
+          },
+        ),
         elevation: 0,
         actions: [
           IconButton(
