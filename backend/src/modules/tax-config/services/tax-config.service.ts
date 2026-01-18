@@ -1,4 +1,11 @@
-import { Injectable, Inject, Optional, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  Optional,
+  Logger,
+  OnModuleInit,
+} from '@nestjs/common';
+
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThanOrEqual, MoreThanOrEqual, IsNull } from 'typeorm';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -110,21 +117,15 @@ export class TaxConfigService implements OnModuleInit {
   }
 
   /**
-   * Seed initial tax configurations for 2024/2025
+   * Seed initial tax configurations for 2024/2025 (Idempotent)
    */
   async seedInitialConfigs(): Promise<void> {
-    const existingConfigs = await this.taxConfigRepository.count();
-    if (existingConfigs > 0) {
-      return; // Already seeded
-    }
-
     const configs: Partial<TaxConfig>[] = [
-      // PAYE - Graduated rates
+      // PAYE - Graduated rates (Effective 2023-07-01)
       {
         taxType: TaxType.PAYE,
         rateType: RateType.GRADUATED,
         effectiveFrom: new Date('2023-07-01'),
-        effectiveTo: undefined,
         configuration: {
           brackets: [
             { from: 0, to: 24000, rate: 0.1 },
@@ -146,7 +147,6 @@ export class TaxConfigService implements OnModuleInit {
         taxType: TaxType.SHIF,
         rateType: RateType.PERCENTAGE,
         effectiveFrom: new Date('2024-10-01'),
-        effectiveTo: undefined,
         configuration: {
           percentage: 2.75,
           minAmount: 300,
@@ -162,7 +162,6 @@ export class TaxConfigService implements OnModuleInit {
         taxType: TaxType.NSSF_TIER1,
         rateType: RateType.TIERED,
         effectiveFrom: new Date('2025-02-01'),
-        effectiveTo: undefined,
         configuration: {
           tiers: [
             {
@@ -182,7 +181,6 @@ export class TaxConfigService implements OnModuleInit {
         taxType: TaxType.NSSF_TIER2,
         rateType: RateType.TIERED,
         effectiveFrom: new Date('2025-02-01'),
-        effectiveTo: undefined,
         configuration: {
           tiers: [
             {
@@ -203,7 +201,6 @@ export class TaxConfigService implements OnModuleInit {
         taxType: TaxType.HOUSING_LEVY,
         rateType: RateType.PERCENTAGE,
         effectiveFrom: new Date('2025-02-01'),
-        effectiveTo: undefined,
         configuration: {
           percentage: 1.5,
           minAmount: undefined,
@@ -215,7 +212,24 @@ export class TaxConfigService implements OnModuleInit {
     ];
 
     for (const configData of configs) {
-      await this.createTaxConfig(configData);
+      // Check if this specific tax type and effective date already exists
+      const existing = await this.taxConfigRepository.findOne({
+        where: {
+          taxType: configData.taxType,
+          effectiveFrom: configData.effectiveFrom,
+        },
+      });
+
+      if (!existing) {
+        await this.createTaxConfig(configData);
+        this.logger.log(`✅ Seeded ${configData.taxType} tax configuration`);
+      } else {
+        // Optionally update existing if notes match our seeding logic
+        // For now, we just skip to avoid overwriting manual changes
+        this.logger.debug(
+          `⏩ ${configData.taxType} configuration already exists, skipping.`,
+        );
+      }
     }
   }
 }
