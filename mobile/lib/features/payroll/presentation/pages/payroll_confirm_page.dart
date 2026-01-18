@@ -62,6 +62,18 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
       );
     });
 
+    if (widget.workerIds.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _state = _state.copyWith(
+            status: PayrollConfirmStatus.error,
+            error: 'No workers selected for payroll',
+          );
+        });
+      }
+      return;
+    }
+
     try {
       // 1. Fetch Workers for phone numbers
       final workerRepo = ref.read(workersRepositoryProvider);

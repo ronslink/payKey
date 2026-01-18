@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../workers/data/models/worker_model.dart';
+import 'package:mobile/features/payroll/data/models/payroll_model.dart';
 
 import '../../data/repositories/payroll_repository.dart';
 import '../models/payroll_breakdown.dart';
@@ -34,7 +35,7 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
   PayrollBreakdown _totals = const PayrollBreakdown.empty();
   
   // Keep original calculations for ID mapping
-  // List<PayrollCalculation> _rawCalculations = [];
+  List<PayrollCalculation> _rawCalculations = [];
   
   // Track if this is a closed/finalized period (read-only view)
   bool _isPeriodClosed = false;
@@ -70,6 +71,15 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
           _isPeriodClosed = calculations.isNotEmpty &&
               calculations.every((c) => c.status.toLowerCase() == 'finalized');
           
+          // Filter calculations if specific workers were selected
+          // This ensures totals and list only reflect the current selection
+          if (widget.selectedWorkers.isNotEmpty) {
+            final selectedIds = widget.selectedWorkers.map((w) => w.id).toSet();
+            calculations = calculations.where((c) => selectedIds.contains(c.workerId)).toList();
+          }
+
+          _rawCalculations = calculations;
+
           // Adapt backend data to UI models
           _breakdowns = calculations.map((c) => PayrollBreakdown.fromCalculation(c)).toList();
           _totals = PayrollBreakdown.totals(_breakdowns);
@@ -205,29 +215,52 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
               children: [
                 PayrollSummaryCard(
                   totals: _totals, 
-                  workerCount: widget.selectedWorkers.length,
+                  workerCount: widget.selectedWorkers.isNotEmpty 
+                      ? widget.selectedWorkers.length 
+                      : _breakdowns.length,
                 ),
                 const SizedBox(height: 24),
                 const SectionLabel('BREAKDOWN BY EMPLOYEE'),
                 const SizedBox(height: 12),
-                ...widget.selectedWorkers.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final worker = entry.value;
-                  // Ensure we have a matching breakdown (safe access)
-                  if (index >= _breakdowns.length) return const SizedBox.shrink();
-                  
-                  return WorkerBreakdownCard(
-                    name: worker.name,
-                    jobTitle: worker.jobTitle,
-                    breakdown: _breakdowns[index],
-                    isExpanded: _expandedIndex == index,
-                    onTap: () {
-                      setState(() {
-                        _expandedIndex = _expandedIndex == index ? null : index;
-                      });
-                    },
-                  );
-                }),
+                if (widget.selectedWorkers.isNotEmpty)
+                  ...widget.selectedWorkers.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final worker = entry.value;
+                    if (index >= _breakdowns.length) return const SizedBox.shrink();
+                    
+                    return WorkerBreakdownCard(
+                      name: worker.name,
+                      jobTitle: worker.jobTitle,
+                      breakdown: _breakdowns[index],
+                      isExpanded: _expandedIndex == index,
+                      onTap: () {
+                        setState(() {
+                          _expandedIndex = _expandedIndex == index ? null : index;
+                        });
+                      },
+                    );
+                  })
+                else
+                  ..._breakdowns.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final breakdown = entry.value;
+                    // Use name from raw calculation if available
+                    final name = index < _rawCalculations.length 
+                        ? _rawCalculations[index].workerName 
+                        : 'Unknown Employee';
+                    
+                    return WorkerBreakdownCard(
+                      name: name,
+                      jobTitle: 'Employee',
+                      breakdown: breakdown,
+                      isExpanded: _expandedIndex == index,
+                      onTap: () {
+                        setState(() {
+                          _expandedIndex = _expandedIndex == index ? null : index;
+                        });
+                      },
+                    );
+                  }),
               ],
             ),
           ),

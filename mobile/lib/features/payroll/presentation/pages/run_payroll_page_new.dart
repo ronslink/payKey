@@ -777,11 +777,11 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
         endDate: _selectedPayPeriod!.endDate,
       );
 
-      final itemsToSave = _buildPayrollItems(calculations, workers);
+      final itemsToSave = _buildPayrollItems(calculations, selectedWorkers);
       await payrollRepo.saveDraftPayroll(_selectedPayPeriod!.id, itemsToSave);
 
       if (mounted) {
-        _showSuccessSnackbar('Draft saved for ${workers.length} workers');
+        _showSuccessSnackbar('Draft saved for ${selectedWorkers.length} workers');
       }
     } catch (e) {
       if (mounted) {
@@ -817,15 +817,15 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
       );
 
       // Save draft first (required before finalization)
-      final itemsToSave = _buildPayrollItems(calculations, workers);
+      final itemsToSave = _buildPayrollItems(calculations, selectedWorkers);
       await payrollRepo.saveDraftPayroll(_selectedPayPeriod!.id, itemsToSave);
 
       if (!mounted) return;
 
       if (_isAutomatedMode) {
-        await _processAutomatedPayroll(workers);
+        await _processAutomatedPayroll(selectedWorkers);
       } else {
-        _navigateToReview(workers);
+        _navigateToReview(selectedWorkers);
       }
     } catch (e) {
       if (mounted) {
