@@ -46,8 +46,8 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          INTASEND_PUBLISHABLE_KEY: ${{ secrets.INTASEND_PUBLISHABLE_KEY }}
-          INTASEND_SECRET: ${{ secrets.INTASEND_SECRET }}
+          INTASEND_PUBLISHABLE_KEY: ${{ secrets.INTASEND_PUB_KEY_PROD }}
+          INTASEND_SECRET: ${{ secrets.INTASEND_SECRET_KEY_PROD }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
