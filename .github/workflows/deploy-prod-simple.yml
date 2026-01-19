@@ -7,8 +7,36 @@ on:
   workflow_dispatch:
 
 jobs:
+  # 1. Build and Push Backend Image (Docker Hub)
+  build-push:
+    name: Build & Push Backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          # Using specific tag to ensure pulling latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/paykey-backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # 2. Deploy to Production
   deploy:
-    name: Simple Production Deployment
+    name: Deploy to Production
+    needs: build-push
     runs-on: ubuntu-latest
     environment: PROD
 
@@ -22,7 +50,7 @@ jobs:
           INTASEND_SECRET: ${{ secrets.INTASEND_SECRET }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
-          CR_PAT: ${{ secrets.CR_PAT }}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           APPLE_KEY_ID: ${{ secrets.APPLE_KEY_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -32,16 +60,23 @@ jobs:
           host: ${{ secrets.DO_HOST }}
           username: ${{ secrets.DO_USERNAME }}
           key: ${{ secrets.DO_SSH_KEY }}
-          envs: DATABASE_URL,JWT_SECRET,INTASEND_PUBLISHABLE_KEY,INTASEND_SECRET,STRIPE_SECRET_KEY,STRIPE_WEBHOOK_SECRET,CR_PAT,GOOGLE_CLIENT_ID,APPLE_KEY_ID,APPLE_TEAM_ID,APPLE_BUNDLE_ID,APPLE_PRIVATE_KEY
+          envs: DATABASE_URL,JWT_SECRET,INTASEND_PUBLISHABLE_KEY,INTASEND_SECRET,STRIPE_SECRET_KEY,STRIPE_WEBHOOK_SECRET,DOCKER_USERNAME,GOOGLE_CLIENT_ID,APPLE_KEY_ID,APPLE_TEAM_ID,APPLE_BUNDLE_ID,APPLE_PRIVATE_KEY
           script: |
             set -e
             cd /opt/paykey
             
-            echo "🔐 Authenticating with GitHub Container Registry..."
-            echo $CR_PAT | docker login ghcr.io -u ronslink --password-stdin
-            
-            echo "📥 Pulling latest code..."
+            echo "📥 Pulling latest deployment configs..."
             git pull origin main
+
+            # Update docker-compose to use Docker Hub image if needed
+            # (We will push a code change for this, but this sed is a safety net)
+            sed -i "s|ghcr.io/ronslink/paykey-backend|${DOCKER_USERNAME}/paykey-backend|g" deploy/docker-compose.backend.yml
+            
+            echo "🔐 Authenticating with Docker Hub..."
+            # Not strictly needed for public images or if previously logged in, 
+            # but good practice if private. 
+            # We assume image is public or node is already auth'd. 
+            # If DOCKER_USERNAME/PASSWORD are in envs from previous setup, we could login here.
             
             echo "⚙️ Generating .env file..."
             cat <<EOF > .env
@@ -73,7 +108,10 @@ jobs:
             echo "🔙 Deploying Backend..."
             # Force remove existing backend container
             docker rm -f paykey_backend_prod 2>/dev/null || true
+            
+            # PULL explicitly to ensure we get the latest image we just built
             docker compose --env-file .env -f deploy/docker-compose.backend.yml pull backend
+            
             docker compose --env-file .env -f deploy/docker-compose.backend.yml down || true
             docker compose --env-file .env -f deploy/docker-compose.backend.yml up -d backend
             
