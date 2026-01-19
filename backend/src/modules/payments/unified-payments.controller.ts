@@ -252,12 +252,21 @@ export class UnifiedPaymentsController {
   ): Promise<{ success: boolean; checkoutRequestId: string; message: string }> {
     const { userId } = req.user;
 
+    console.log(`[UnifiedPayments] Received TopUp Request for ${userId}`, JSON.stringify(body));
+
     try {
       // Validate amount
       const amount = Number(body.amount);
       if (isNaN(amount) || amount <= 0) {
         throw new HttpException('Invalid amount', HttpStatus.BAD_REQUEST);
       }
+
+      // Normalize Phone Number (Ensure 254 format)
+      let phoneNumber = body.phoneNumber.trim().replace(/\s+/g, '');
+      if (phoneNumber.startsWith('+')) phoneNumber = phoneNumber.substring(1); // Remove +
+      if (phoneNumber.startsWith('0')) phoneNumber = '254' + phoneNumber.substring(1); // 07xx -> 2547xx
+
+      console.log(`[UnifiedPayments] Normalized Phone: ${body.phoneNumber} -> ${phoneNumber}`);
 
       // 1. Create PENDING Transaction Record
       const transaction = this.transactionRepository.create({
@@ -267,7 +276,7 @@ export class UnifiedPaymentsController {
         type: TransactionType.DEPOSIT,
         status: TransactionStatus.PENDING,
         provider: 'INTASEND',
-        recipientPhone: body.phoneNumber,
+        recipientPhone: phoneNumber,
         accountReference: body.accountReference || 'TopUp',
         createdAt: new Date(),
         metadata: {
@@ -279,7 +288,7 @@ export class UnifiedPaymentsController {
       // 2. Initiate IntaSend STK Push
       // Use transaction ID as API Ref for reconciliation
       const result = await this.intaSendService.initiateStkPush(
-        body.phoneNumber,
+        phoneNumber,
         amount,
         transaction.id,
       );
