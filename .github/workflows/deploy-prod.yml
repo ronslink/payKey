@@ -33,7 +33,7 @@ jobs:
             cat <<EOF > .env
             NODE_ENV=production
             DATABASE_URL=$DATABASE_URL
-            REDIS_HOST=redis
+            REDIS_HOST=paykey_redis_prod
             REDIS_PORT=6379
             JWT_SECRET=$JWT_SECRET
             JWT_EXPIRES_IN=7d
