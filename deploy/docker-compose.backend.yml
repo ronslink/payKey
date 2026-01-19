@@ -3,7 +3,7 @@
 
 services:
   backend:
-    image: rondockerlink/paykey-backend:latest
+    image: ghcr.io/ronslink/paykey-backend:latest
     container_name: paykey_backend_prod
     restart: always
     ports:
