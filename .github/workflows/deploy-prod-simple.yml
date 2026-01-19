@@ -63,6 +63,18 @@ jobs:
           envs: DATABASE_URL,JWT_SECRET,INTASEND_PUBLISHABLE_KEY,INTASEND_SECRET,STRIPE_SECRET_KEY,STRIPE_WEBHOOK_SECRET,DOCKER_USERNAME,GOOGLE_CLIENT_ID,APPLE_KEY_ID,APPLE_TEAM_ID,APPLE_BUNDLE_ID,APPLE_PRIVATE_KEY
           script: |
             set -e
+            
+            echo "📊 Checking Disk Space (Before Cleanup)..."
+            df -h
+            
+            echo "🧹 aggressively Pruning Docker System..."
+            # Prune everything (stopped containers, unused networks, dangling images) + volumes
+            # This fixes "failed to extract layer / overlayfs" errors due to disk space
+            docker system prune -af --volumes || true
+            
+            echo "📊 Checking Disk Space (After Cleanup)..."
+            df -h
+
             cd /opt/paykey
             
             echo "📥 Pulling latest deployment configs..."
