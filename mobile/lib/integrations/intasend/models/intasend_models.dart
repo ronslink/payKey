@@ -445,6 +445,7 @@ class WorkerPayout {
 class FundVerification {
   final double requiredAmount;
   final double availableBalance;
+  final double clearingBalance;
   final double shortfall;
   final int workerCount;
   final bool canProceed;
@@ -452,6 +453,7 @@ class FundVerification {
   const FundVerification({
     required this.requiredAmount,
     required this.availableBalance,
+    this.clearingBalance = 0.0,
     required this.shortfall,
     required this.workerCount,
     required this.canProceed,
@@ -470,6 +472,7 @@ class FundVerification {
     return FundVerification(
       requiredAmount: requiredAmount,
       availableBalance: wallet.availableBalance,
+      clearingBalance: wallet.clearingBalance,
       shortfall: shortfall,
       workerCount: workerCount,
       canProceed: shortfall == 0,

@@ -286,6 +286,7 @@ export class PaymentsController {
 
     // 4. Update ALL matching transactions
     for (const tx of transactions) {
+      const previousStatus = tx.status;
       tx.status = newStatus;
       tx.metadata = {
         ...(typeof tx.metadata === 'string' ? JSON.parse(tx.metadata) : tx.metadata),
@@ -299,6 +300,9 @@ export class PaymentsController {
       // Handle Deposit Logic (Only credit once per transaction)
       if (tx.type === TransactionType.DEPOSIT) {
         if (newStatus === TransactionStatus.CLEARING) {
+          // If we are moving TO clearing, add to clearing balance
+          // But check if we were already in clearing? Idempotency handles that.
+          // What if we were PENDING? Add to clearing.
           await this.usersRepository.increment(
             { id: tx.userId },
             'clearingBalance',
@@ -312,15 +316,17 @@ export class PaymentsController {
           );
 
           // If it was previously in clearing, remove from clearing balance
-          // CHECK: This logic assumes we got a CLEARING webhook first.
-          // If we go straight to SUCCESS, we just add to wallet.
-          // If we receive SUCCESS after CLEARING, we need to deduct from clearing.
-          // However, IntaSend might sending multiple webhooks.
-          // Ideally we check previous status, but we update status in loop.
-          // Let's rely on preventing double credit via Idempotency Check above.
+          if (previousStatus === TransactionStatus.CLEARING) {
+            await this.usersRepository.decrement(
+              { id: tx.userId },
+              'clearingBalance',
+              Number(value || tx.amount),
+            );
+          }
         }
       }
     }
+
 
     await this.transactionsRepository.save(transactions);
 

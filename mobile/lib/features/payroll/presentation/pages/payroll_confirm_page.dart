@@ -141,6 +141,7 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
     return FundVerificationResult(
       requiredAmount: iv.requiredAmount,
       availableBalance: iv.availableBalance,
+      clearingBalance: iv.clearingBalance,
       canProceed: iv.canProceed,
       shortfall: iv.shortfall,
       workerCount: iv.workerCount,
@@ -361,6 +362,8 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
     required VoidCallback onTopUp,
   }) {
     final isSufficient = verification.hasSufficientFunds;
+    final canCoverWithClearing = !isSufficient && 
+        (verification.availableBalance + verification.clearingBalance >= verification.requiredAmount);
     
     return Container(
       decoration: PayrollConfirmTheme.walletCardDecoration(isSufficient: isSufficient),
@@ -403,7 +406,7 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
                 ],
                 ],
               ),
-              if (!isSufficient)
+              if (!isSufficient && !canCoverWithClearing)
                  ElevatedButton.icon(
                     onPressed: onTopUp,
                     icon: const Icon(Icons.add, size: 18),
@@ -419,25 +422,47 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
           ),
           if (!isSufficient) ...[
             const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: PayrollConfirmTheme.errorBgLight,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.warning_amber_rounded, color: Colors.red),
-                  const SizedBox(height: 12),
-                  Expanded(
-                    child: Text(
-                      'Insufficient funds. Shortfall: ${verification.formattedShortfall}',
-                      style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w500),
+            if (canCoverWithClearing)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.hourglass_empty, color: Colors.blue.shade700),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Funds are clearing. You have enough to cover this payment once settled.',
+                        style: TextStyle(color: Colors.blue.shade900, fontWeight: FontWeight.w500),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+              )
+            else
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: PayrollConfirmTheme.errorBgLight,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning_amber_rounded, color: Colors.red),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Insufficient funds. Shortfall: ${verification.formattedShortfall}',
+                        style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
           ],
         ],
       ),
