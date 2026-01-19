@@ -188,7 +188,11 @@ export class PayrollController {
     }
 
     // 2. Ensure they are saved as DRAFT first (Repo relies on DRAFT records to finalize)
-    // We update/save draft to ensure latest numbers are in DB
+    // FIX: Do NOT recalculate and overwrite here. The frontend has already saved the draft with specific user inputs (e.g. partial pay).
+    // Overwriting here with default calculation destroys those edits.
+    // We assume the draft is already saved correctly by the client.
+
+    /* 
     const draftItems = itemsToProcess.map((item) => ({
       workerId: item.workerId,
       grossSalary: item.grossSalary,
@@ -202,6 +206,7 @@ export class PayrollController {
       body.payPeriodId,
       draftItems,
     );
+    */
 
     // 3. Finalize immediately (Automated Flow)
     // This executes: Funds Check -> Finalize Records -> Generate Payslips -> Tax Submission

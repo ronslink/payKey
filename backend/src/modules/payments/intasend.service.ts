@@ -102,7 +102,8 @@ export class IntaSendService {
     // SIMULATION MODE
     // Trigger if Env Var is true OR Magic Amount 777
     // We removed the blanket 'sandbox' check to allow testing against the REAL IntaSend Sandbox if desired.
-    if (process.env.INTASEND_SIMULATE === 'true' || amount === 777) {
+    // FIX: Ensure we NEVER simulate in Live mode/Production
+    if ((process.env.INTASEND_SIMULATE === 'true' || amount === 777) && !this.isLive) {
       this.logger.log(
         `⚠️ SIMULATION: IntaSend STK Push to ${phoneNumber} for ${amount}`,
       );
@@ -168,7 +169,7 @@ export class IntaSendService {
 
     const url = `${this.baseUrl}/v1/payment/mpesa-stk-push/`;
     this.logger.log(
-      `Initiating IntaSend STK Push to ${effectivePhone} (Original: ${phoneNumber}) for ${amount}`,
+      `Initiating IntaSend STK Push to ${effectivePhone} (Original: ${phoneNumber}) for ${amount} at URL: ${url}`,
     );
 
     try {

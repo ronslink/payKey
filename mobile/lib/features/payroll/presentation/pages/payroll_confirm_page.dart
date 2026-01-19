@@ -83,8 +83,22 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
       _workerPhones = { for (var w in workers) w.id : w.phoneNumber };
 
       // 2. Calculate payroll
+      // FIX: Try to get draft payroll first to respect any user edits (e.g. partial salary)
       final repo = ref.read(payrollRepositoryProvider);
-      final calculations = await repo.calculatePayroll(widget.workerIds);
+      List<PayrollCalculation> calculations = [];
+      
+      try {
+        final draftItems = await repo.getDraftPayroll(widget.payPeriodId);
+        // Filter for selected workers
+        calculations = draftItems.where((c) => widget.workerIds.contains(c.workerId)).toList();
+      } catch (_) {
+        // Fallback to fresh calculation if draft fetch fails
+      }
+
+      // If no valid draft items found for selected workers, calculate fresh
+      if (calculations.isEmpty) {
+        calculations = await repo.calculatePayroll(widget.workerIds);
+      }
       
       // 3. Map to IntaSend WorkerPayout
       final payouts = calculations.map((c) {
@@ -149,10 +163,18 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
     _showSnackbar(PayrollConfirmSnackbars.loading('Initiating Top Up...'));
 
     try {
+      // FIX: Ensure phone number is in 254 format for IntaSend
+      String formattedPhone = phone.trim();
+      if (formattedPhone.startsWith('0')) {
+        formattedPhone = '254${formattedPhone.substring(1)}';
+      } else if (formattedPhone.startsWith('+254')) {
+         formattedPhone = formattedPhone.substring(1);
+      }
+
       final paymentService = ref.read(paymentServiceProvider);
       final response = await paymentService.topUpWallet(
         amount: amount,
-        phoneNumber: phone,
+        phoneNumber: formattedPhone,
       );
 
       if (mounted && response != null) {
