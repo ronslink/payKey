@@ -1,15 +1,15 @@
 name: Backend CI/CD
 
 on:
-  push:
-    branches: [main, develop]
-    paths-ignore:
-      - 'website/**'
-  pull_request:
-    branches: [main, develop]
-    paths-ignore:
-      - 'website/**'
   workflow_dispatch:
+  # push:
+  #   branches: [main, develop]
+  #   paths-ignore:
+  #     - 'website/**'
+  # pull_request:
+  #   branches: [main, develop]
+  #   paths-ignore:
+  #     - 'website/**'
 
 env:
   NODE_VERSION: '20'

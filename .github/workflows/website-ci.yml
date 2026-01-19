@@ -1,15 +1,15 @@
 name: Website CI/CD
 
 on:
-  push:
-    branches: [main, develop]
-    paths:
-      - 'website/**'
-  pull_request:
-    branches: [main, develop]
-    paths:
-      - 'website/**'
   workflow_dispatch:
+  # push:
+  #   branches: [main, develop]
+  #   paths:
+  #     - 'website/**'
+  # pull_request:
+  #   branches: [main, develop]
+  #   paths:
+  #     - 'website/**'
 
 jobs:
   # 1. Test & Lint
