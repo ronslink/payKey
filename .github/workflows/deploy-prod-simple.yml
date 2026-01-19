@@ -75,6 +75,9 @@ jobs:
             echo "📊 Checking Disk Space (After Cleanup)..."
             df -h
 
+            echo "🌐 Ensuring Docker Network Exists..."
+            docker network create paykey-network-prod || true
+
             cd /opt/paykey
             
             echo "📥 Pulling latest deployment configs..."
