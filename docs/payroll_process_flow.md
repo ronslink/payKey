@@ -174,6 +174,35 @@ Once payroll is **Finalized**:
 
 ---
 
+## 6.5 Payment Status Tracking
+
+After payroll is finalized and payments are sent, the system tracks each worker's payment status in real-time.
+
+### Status Flow
+```
+PENDING → CLEARING → PAID
+                  ↘ FAILED
+```
+
+### Push Notifications
+Employers receive push notifications as each payment progresses:
+
+| Status | Notification |
+|--------|--------------|
+| CLEARING | ⏳ "Payment to Worker sent to M-Pesa, awaiting confirmation" |
+| PAID | ✅ "KES X successfully sent to Worker" |
+| FAILED | ❌ "Payment to Worker failed. Please check and retry" |
+
+### UI Display
+- `PaymentStatusBadge` widget shows color-coded status (🟡🔵🟢🔴)
+- Displayed on `WorkerBreakdownCard` in payroll review
+- API: `GET /payroll-records/pay-period/:id/status`
+
+> [!TIP]
+> See [PAYMENT_STATUS.md](features/PAYMENT_STATUS.md) for full technical details.
+
+---
+
 ## 7. Tax Submission Workflow
 
 The system handles the **calculation** and **tracking** of tax liabilities automatically, but the **filing** and **payment** to authorities is currently a manual process.

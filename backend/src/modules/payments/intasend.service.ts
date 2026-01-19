@@ -98,6 +98,7 @@ export class IntaSendService {
     phoneNumber: string,
     amount: number,
     apiRef: string = 'PayKey',
+    walletId?: string,
   ) {
     // SIMULATION MODE
     // Trigger if Env Var is true OR Magic Amount 777
@@ -181,6 +182,7 @@ export class IntaSendService {
             email: 'noreply@paykey.com', // Required by IntaSend sometimes
             amount: amount,
             api_ref: apiRef,
+            wallet_id: walletId,
           },
           {
             headers: {
@@ -215,6 +217,7 @@ export class IntaSendService {
       narrative?: string;
       name?: string;
     }[],
+    walletId?: string,
   ) {
     const url = `${this.baseUrl}/v1/send-money/initiate/`;
     this.logger.log(
@@ -243,6 +246,7 @@ export class IntaSendService {
             provider: 'MPESA-B2C',
             currency: 'KES',
             transactions: formattedTransactions,
+            wallet_id: walletId,
           },
           {
             headers: {
@@ -288,10 +292,49 @@ export class IntaSendService {
   }
 
   /**
+   * Create a Working Wallet
+   */
+  async createWallet(label: string, currency = 'KES', canDisburse = true) {
+    const url = `${this.baseUrl}/v1/wallets/`;
+    this.logger.log(`Creating IntaSend Wallet: ${label}`);
+
+    try {
+      const response = await lastValueFrom(
+        this.httpService.post(
+          url,
+          {
+            wallet_type: 'WORKING',
+            label: label,
+            currency: currency,
+            can_disburse: canDisburse,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${this.secretKey}`,
+            },
+          },
+        ),
+      );
+      this.logger.log('Wallet Created:', response.data);
+      return response.data; // Returns { wallet_id: "...", label: "...", ... }
+    } catch (error) {
+      this.logger.error(
+        'Failed to create wallet',
+        error.response?.data || error.message,
+      );
+      throw error;
+    }
+  }
+
+  /**
    * Check Wallet Balance
    */
-  async getWalletBalance() {
-    const url = `${this.baseUrl}/v1/wallets/`;
+  async getWalletBalance(walletId?: string) {
+    let url = `${this.baseUrl}/v1/wallets/`;
+    if (walletId) {
+      url += `${walletId}/`;
+    }
+
     try {
       const response = await lastValueFrom(
         this.httpService.get(url, {
@@ -391,6 +434,7 @@ export class IntaSendService {
       amount: number;
       narrative?: string;
     }[],
+    walletId?: string,
   ) {
     const url = `${this.baseUrl}/v1/send-money/initiate/`;
     this.logger.log(
@@ -413,6 +457,7 @@ export class IntaSendService {
             provider: 'PESALINK',
             currency: 'KES',
             transactions: formattedTransactions,
+            wallet_id: walletId,
           },
           {
             headers: {
@@ -431,6 +476,50 @@ export class IntaSendService {
       throw new Error(
         `IntaSend Bank Payout failed: ${JSON.stringify(error.response?.data)}`,
       );
+    }
+  }
+
+  /**
+   * Create Checkout URL for Collection (Card/PesaLink)
+   */
+  async createCheckoutUrl(
+    amount: number,
+    email: string,
+    firstName: string,
+    lastName: string,
+    reference: string,
+  ) {
+    const url = `${this.baseUrl}/v1/checkout/`;
+    try {
+      const response = await lastValueFrom(
+        this.httpService.post(
+          url,
+          {
+            public_key: this.publishableKey,
+            amount: amount,
+            currency: 'KES',
+            email: email,
+            first_name: firstName,
+            last_name: lastName,
+            api_ref: reference,
+            redirect_url: 'https://paydome.co/payment/success', // Or mobile deep link
+            method: 'M-PESA-STK-PUSH,CARD-PAYMENT,BANK-PAYMENT', // Enable PesaLink (BANK-PAYMENT)
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${this.secretKey}`,
+            },
+          },
+        ),
+      );
+      this.logger.log('Checkout URL created:', response.data);
+      return response.data; // Expected: { url: "...", signature: "...", ... }
+    } catch (error) {
+      this.logger.error(
+        'Failed to create checkout URL',
+        error.response?.data || error.message,
+      );
+      throw error;
     }
   }
 }

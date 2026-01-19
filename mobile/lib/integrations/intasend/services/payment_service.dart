@@ -48,6 +48,19 @@ class PaymentService {
       name: 'Wallet Top Up',
     );
   }
+
+  /// Initiate Checkout Top-Up
+  Future<String?> checkoutTopUp({
+    required double amount,
+  }) async {
+    final service = ref.read(intaSendServiceProvider);
+    try {
+      return await service.initiateCheckout(amount: amount);
+    } catch (e) {
+      // Handle error via notifier if needed, or rethrow
+      return null;
+    }
+  }
 }
 
 /// Provider for payment service

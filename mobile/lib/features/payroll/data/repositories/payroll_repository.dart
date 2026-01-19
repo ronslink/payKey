@@ -365,6 +365,35 @@ class PayrollRepository {
     );
   }
 
+  /// Get payment status for all workers in a pay period.
+  /// Returns list of worker payment status for UI display.
+  Future<List<WorkerPaymentStatus>> getPaymentStatus(String payPeriodId) async {
+    return _executeRequest(
+      operation: 'get payment status',
+      request: () async {
+        final response = await _authenticatedGet(
+          '/payroll-records/pay-period/$payPeriodId/status',
+        );
+
+        if (response.data is! List) return [];
+
+        return (response.data as List).map((json) {
+          final map = json as Map<String, dynamic>;
+          return WorkerPaymentStatus(
+            id: map['id'] ?? '',
+            workerId: map['workerId'] ?? '',
+            workerName: map['workerName'] ?? 'Unknown',
+            netPay: PayrollUtils.parseDouble(map['netPay']),
+            paymentStatus: map['paymentStatus'] ?? 'pending',
+            paymentDate: map['paymentDate'] != null
+                ? DateTime.parse(map['paymentDate'])
+                : null,
+          );
+        }).toList();
+      },
+    );
+  }
+
   // ---------------------------------------------------------------------------
   // Private Methods: HTTP Helpers
   // ---------------------------------------------------------------------------

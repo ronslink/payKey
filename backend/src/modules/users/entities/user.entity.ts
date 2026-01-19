@@ -167,6 +167,9 @@ export class User {
   @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
   clearingBalance: number;
 
+  @Column({ nullable: true, unique: true, name: 'intasend_wallet_id' })
+  intasendWalletId: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

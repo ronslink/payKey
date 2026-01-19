@@ -23,11 +23,25 @@ class PaymentsRepository {
     try {
       final token = await _storage.read(key: 'access_token');
       final response = await _dio.post(
-        '/payments/topup',
+        '/payments/mpesa/topup', // Updated to match backend route
         data: {'phoneNumber': phoneNumber, 'amount': amount},
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
       return PaymentResponse.fromJson(response.data);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Future<CheckoutResponse> initiateCheckoutTopup(double amount) async {
+    try {
+      final token = await _storage.read(key: 'access_token');
+      final response = await _dio.post(
+        '/payments/checkout/topup',
+        data: {'amount': amount},
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+      return CheckoutResponse.fromJson(response.data);
     } catch (e) {
       throw _handleError(e);
     }

@@ -22,7 +22,7 @@ export class PayrollRecordsController {
   constructor(
     @InjectRepository(PayrollRecord)
     private payrollRepository: Repository<PayrollRecord>,
-  ) {}
+  ) { }
 
   @Get()
   @ApiOperation({ summary: 'Get payroll records for the current user' })
@@ -50,6 +50,38 @@ export class PayrollRecordsController {
     });
     console.log('Worker Payroll Records:', JSON.stringify(records, null, 2));
     return records;
+  }
+
+  @Get('pay-period/:payPeriodId/status')
+  @ApiOperation({ summary: 'Get payment status for all workers in a pay period' })
+  async getPayPeriodPaymentStatus(
+    @Request() req: any,
+    @Param('payPeriodId') payPeriodId: string,
+  ) {
+    const records = await this.payrollRepository.find({
+      where: { payPeriodId, userId: req.user.userId },
+      relations: ['worker'],
+      select: {
+        id: true,
+        workerId: true,
+        netSalary: true,
+        paymentStatus: true,
+        paymentDate: true,
+        worker: {
+          id: true,
+          name: true,
+        },
+      },
+    });
+
+    return records.map((record) => ({
+      id: record.id,
+      workerId: record.workerId,
+      workerName: record.worker?.name || 'Unknown',
+      netPay: record.netSalary,
+      paymentStatus: record.paymentStatus || 'pending',
+      paymentDate: record.paymentDate,
+    }));
   }
 
   @Patch(':id/status')

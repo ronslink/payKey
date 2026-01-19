@@ -487,3 +487,54 @@ class PayslipPreview {
     );
   }
 }
+
+// =============================================================================
+// WORKER PAYMENT STATUS
+// =============================================================================
+
+/// Payment status for a worker in a pay period.
+/// Used to display payment status badges in the UI.
+class WorkerPaymentStatus {
+  final String id;
+  final String workerId;
+  final String workerName;
+  final double netPay;
+  final String paymentStatus;
+  final DateTime? paymentDate;
+
+  const WorkerPaymentStatus({
+    required this.id,
+    required this.workerId,
+    required this.workerName,
+    required this.netPay,
+    required this.paymentStatus,
+    this.paymentDate,
+  });
+
+  factory WorkerPaymentStatus.fromJson(Map<String, dynamic> json) {
+    return WorkerPaymentStatus(
+      id: json['id'] as String? ?? '',
+      workerId: json['workerId'] as String? ?? '',
+      workerName: json['workerName'] as String? ?? 'Unknown',
+      netPay: (json['netPay'] as num?)?.toDouble() ?? 0,
+      paymentStatus: json['paymentStatus'] as String? ?? 'pending',
+      paymentDate: json['paymentDate'] != null
+          ? DateTime.parse(json['paymentDate'] as String)
+          : null,
+    );
+  }
+
+  /// Returns true if payment was successful.
+  bool get isPaid =>
+      paymentStatus.toLowerCase() == 'paid' ||
+      paymentStatus.toLowerCase() == 'success' ||
+      paymentStatus.toLowerCase() == 'complete';
+
+  /// Returns true if payment is still processing.
+  bool get isProcessing =>
+      paymentStatus.toLowerCase() == 'processing' ||
+      paymentStatus.toLowerCase() == 'clearing';
+
+  /// Returns true if payment failed.
+  bool get isFailed => paymentStatus.toLowerCase() == 'failed';
+}

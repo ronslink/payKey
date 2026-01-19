@@ -923,6 +923,11 @@ class PaymentEndpoints extends BaseEndpoints {
   Future<Response> getTransactions() => _api.get('/transactions');
 
   Future<Response> getTransactionById(String id) => _api.get('/transactions/$id');
+
+  // Checkout
+  Future<Response> initiateCheckout(double amount) {
+    return _api.post('/payments/checkout/topup', data: {'amount': amount});
+  }
 }
 
 // -----------------------------------------------------------------------------

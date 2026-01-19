@@ -82,6 +82,8 @@ intaSendService.sendMoney([
 - ✅ Webhook signature verification
 - ✅ Payout status checking
 - ✅ Idempotent webhook handling
+- ✅ Payment status push notifications
+- ✅ Per-worker status API endpoint
 
 ## Recent Updates
 - ✅ **Bulk B2C Payments** - [`sendMoney()`](backend/src/modules/payments/intasend.service.ts:190) now accepts array of transactions
@@ -89,3 +91,6 @@ intaSendService.sendMoney([
 - ✅ **Idempotent Webhooks** - Webhook handler checks existing status before processing
 - ✅ **Bulk Transaction Matching** - Webhook now finds ALL transactions matching `invoice_id` or `tracking_id`
 - ✅ **Backward Compatibility** - Legacy `/payments/send-b2c` still works with single transactions
+- ✅ **Payment Status Notifications** - Push notifications sent on status changes (CLEARING, SUCCESS, FAILED). See [PAYMENT_STATUS.md](./PAYMENT_STATUS.md)
+- ✅ **Working Wallets** - Each employer has a segregated IntaSend sub-account (`intasend_wallet_id`)
+

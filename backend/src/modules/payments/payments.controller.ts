@@ -39,6 +39,8 @@ import {
   PayPeriod,
   PayPeriodStatus,
 } from '../payroll/entities/pay-period.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+import { DeviceToken } from '../notifications/entities/device-token.entity';
 
 
 
@@ -57,9 +59,11 @@ export class PaymentsController {
     private subscriptionPaymentRepository: Repository<SubscriptionPayment>,
     @InjectRepository(Subscription)
     private subscriptionRepository: Repository<Subscription>,
+    @InjectRepository(DeviceToken)
+    private deviceTokenRepository: Repository<DeviceToken>,
     private intaSendService: IntaSendService,
     private stripeService: StripeService,
-
+    private notificationsService: NotificationsService,
   ) { }
 
 
@@ -95,6 +99,9 @@ export class PaymentsController {
     @Request() req: AuthenticatedRequest,
     @Body() body: { phoneNumber: string; amount: number },
   ) {
+    // Ensure user has a working wallet
+    const walletId = await this._ensureWallet(req.user.userId);
+
     // Generate a reference
     const apiRef = `TopUp-${req.user.userId}-${Date.now()}`;
 
@@ -103,6 +110,7 @@ export class PaymentsController {
       body.phoneNumber,
       body.amount,
       apiRef,
+      walletId, // Fund specific wallet
     );
 
     // Create Transaction Record for webhook to find
@@ -139,6 +147,9 @@ export class PaymentsController {
       remarks: string;
     },
   ) {
+    // Ensure user has a working wallet
+    const walletId = await this._ensureWallet(req.user.userId);
+
     // IntaSend Logic
     // Note: This endpoint processes single payment legacy style.
     // Ideally should be updated to use bulk if needed, but keeping for backward compat.
@@ -148,7 +159,7 @@ export class PaymentsController {
         amount: body.amount,
         narrative: body.remarks || 'Payment',
       }
-    ]);
+    ], walletId); // Draw from specific wallet
   }
 
   /**
@@ -189,6 +200,16 @@ export class PaymentsController {
   @UseGuards(JwtAuthGuard)
   async getWalletBalance(@Request() req: AuthenticatedRequest) {
     const userId = req.user.userId;
+    // ensure wallet logic might check DB, but here we want to fetch FROM IntaSend
+    const walletId = await this._ensureWallet(userId);
+
+    // Fetch REAL balance from IntaSend
+    const intasendWallet = await this.intaSendService.getWalletBalance(walletId);
+
+    // Fallback or Sync logic?
+    // For now, let's return the IntaSend balance as primary source of truth if available
+    // But we also maintain local state for "Clearing" visualization.
+
     const user = await this.usersRepository.findOne({
       where: { id: userId },
       select: ['walletBalance', 'clearingBalance'],
@@ -196,11 +217,53 @@ export class PaymentsController {
 
     return {
       success: true,
-      available_balance: user?.walletBalance ?? 0,
-      clearing_balance: user?.clearingBalance ?? 0,
+      // Use IntaSend's available_balance as the truth for "Ready to Spend"
+      available_balance: Number(intasendWallet.available_balance ?? user?.walletBalance ?? 0),
+      // Use local clearing balance as "Pending Logic" (since IntaSend API might just say pending)
+      clearing_balance: Number(intasendWallet.current_balance) - Number(intasendWallet.available_balance) > 0
+        ? Number(intasendWallet.current_balance) - Number(intasendWallet.available_balance) // Calculate pending from IntaSend
+        : user?.clearingBalance ?? 0,
       currency: 'KES',
-      can_disburse: true, // Assuming active users can always disburse if they have funds
+      can_disburse: true,
     };
+  }
+
+  /**
+   * HELPER: Ensure user has a dedicated IntaSend Wallet
+   */
+  private async _ensureWallet(userId: string): Promise<string> {
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+      select: ['id', 'email', 'firstName', 'lastName', 'businessName', 'intasendWalletId'],
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    if (user.intasendWalletId) {
+      return user.intasendWalletId;
+    }
+
+    // Create Wallet
+    const label = user.businessName || `${user.firstName} ${user.lastName}`.trim() || `User ${user.id}`;
+    // Sanitize label (alphanumeric only ideally, but API might be flexible)
+
+    try {
+      const wallet = await this.intaSendService.createWallet(label);
+      if (wallet && wallet.wallet_id) {
+        // Save to DB
+        await this.usersRepository.update(userId, { intasendWalletId: wallet.wallet_id });
+        return wallet.wallet_id;
+      }
+      throw new Error('Wallet creation response missing ID');
+    } catch (e) {
+      console.error('Failed to auto-create wallet:', e);
+      // Fallback: Return undefined (will use Master Wallet) OR throw error?
+      // For migration safety, we might mistakenly use master wallet if we don't throw.
+      // BUT for now, let's throw to ensure we don't mix funds.
+      throw new Error('Failed to Initialize Client Wallet');
+    }
   }
 
   @Get('intasend/status/:trackingId')
@@ -244,17 +307,32 @@ export class PaymentsController {
     const { invoice_id, tracking_id, state, api_ref, value } = body;
 
     // 1. Find Transactions (Handing Bulk by tracking_id)
-    // We search for ANY transaction matching invoice_id OR tracking_id
+    // We search for ANY transaction matching:
+    // - providerRef == invoice_id
+    // - providerRef == tracking_id
+    // - id == api_ref (Use Transaction ID as matching key)
+    const searchCriteria: any[] = [
+      ...(invoice_id ? [{ providerRef: invoice_id }] : []),
+      ...(tracking_id ? [{ providerRef: tracking_id }] : []),
+    ];
+
+    // Only add api_ref if it looks like a UUID (to avoid matching random strings against ID)
+    if (api_ref && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(api_ref)) {
+      searchCriteria.push({ id: api_ref });
+    }
+
+    if (searchCriteria.length === 0) {
+      console.warn('⚠️ No valid search criteria found for webhook');
+      return { status: 'ignored', reason: 'No identifiers found' };
+    }
+
     const transactions = await this.transactionsRepository.find({
-      where: [
-        ...(invoice_id ? [{ providerRef: invoice_id }] : []),
-        ...(tracking_id ? [{ providerRef: tracking_id }] : []),
-      ],
+      where: searchCriteria,
     });
 
     if (transactions.length === 0) {
       console.warn(
-        `⚠️ Transaction not found for Invoice: ${invoice_id} / Tracking: ${tracking_id}`,
+        `⚠️ Transaction not found for Invoice: ${invoice_id} / Tracking: ${tracking_id} / Ref: ${api_ref}`,
       );
       return { status: 'ignored', reason: 'Transaction not found' };
     }
@@ -330,7 +408,32 @@ export class PaymentsController {
 
     await this.transactionsRepository.save(transactions);
 
-    // 5. Subscription Logic (Legacy/Single handling)
+    // 6. Send Push Notifications for status updates
+    if (newStatus !== TransactionStatus.PENDING) {
+      const userId = firstTx.userId;
+      const deviceToken = await this.deviceTokenRepository.findOne({
+        where: { userId, isActive: true },
+        order: { lastUsedAt: 'DESC' },
+      });
+
+      if (deviceToken) {
+        const transactionType =
+          firstTx.type === TransactionType.DEPOSIT ? 'TOPUP' : 'PAYOUT';
+        const workerName = firstTx.metadata?.workerName || 'Worker';
+        const amount = Number(firstTx.amount);
+
+        await this.notificationsService.sendPaymentStatusNotification(
+          deviceToken.token,
+          workerName,
+          amount,
+          newStatus as 'PENDING' | 'CLEARING' | 'SUCCESS' | 'FAILED',
+          transactionType,
+        );
+        console.log(`📱 Push notification sent for ${newStatus}`);
+      }
+    }
+
+    // 7. Subscription Logic (Legacy/Single handling)
     if (firstTx.metadata?.subscriptionPaymentId) {
       const subPaymentId = firstTx.metadata.subscriptionPaymentId;
       const isSuccess = newStatus === TransactionStatus.SUCCESS;

@@ -147,6 +147,22 @@ class IntaSendService {
        );
   }
 
+  /// Initiate Checkout (Card/Bank)
+  Future<String> initiateCheckout({
+    required double amount,
+  }) async {
+    try {
+      final response = await _apiService.payments.initiateCheckout(amount);
+      final data = response.data;
+      if (data != null && data['url'] != null) {
+        return data['url'] as String;
+      }
+      throw IntaSendException('Invalid checkout response');
+    } catch (e) {
+      throw IntaSendException('Checkout init failed: $e');
+    }
+  }
+
   // ===========================================================================
   // PAYOUTS (Disbursement)
   // ===========================================================================

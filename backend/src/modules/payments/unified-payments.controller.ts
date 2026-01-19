@@ -245,6 +245,110 @@ export class UnifiedPaymentsController {
     }
   }
 
+  @Post('checkout/topup')
+  async initiateCheckoutTopup(
+    @Request() req: AuthenticatedRequest,
+    @Body() body: { amount: number },
+  ): Promise<{ success: boolean; url: string; message: string }> {
+    const { userId, email, name } = req.user;
+
+    console.log(`[UnifiedPayments] Received Checkout TopUp Request for ${userId}`, JSON.stringify(body));
+
+    try {
+      const amount = Number(body.amount);
+      if (isNaN(amount) || amount <= 0) {
+        throw new HttpException('Invalid amount', HttpStatus.BAD_REQUEST);
+      }
+
+      // 1. Create PENDING Transaction Record
+      const transaction = this.transactionRepository.create({
+        userId,
+        amount: amount,
+        currency: 'KES',
+        type: TransactionType.DEPOSIT,
+        status: TransactionStatus.PENDING,
+        provider: 'INTASEND',
+        recipientPhone: req.user.email, // Use email for checkout reference
+        accountReference: 'Checkout',
+        createdAt: new Date(),
+        metadata: {
+          description: 'Wallet Topup via Checkout',
+          method: 'CHECKOUT',
+        },
+      });
+      await this.transactionRepository.save(transaction);
+
+      // 2. Generate Checkout URL
+      // Use transaction ID as API Ref for reconciliation
+      const result = await this.intaSendService.createCheckoutUrl(
+        amount,
+        email,
+        name?.split(' ')[0] || 'User',
+        name?.split(' ').slice(1).join(' ') || 'Name',
+        transaction.id,
+      );
+
+      // 3. Update Transaction with Provider Ref
+      // IntaSend Checkout creation response usually contains 'id' or we rely on api_ref in webhook
+      const checkoutId = result.id || transaction.id;
+
+      transaction.providerRef = checkoutId;
+      transaction.metadata = {
+        ...transaction.metadata,
+        intaSendResponse: result,
+      };
+      await this.transactionRepository.save(transaction);
+
+      return {
+        success: true,
+        url: result.url,
+        message: 'Checkout initialized successfully',
+      };
+    } catch (error) {
+      console.error('Unified Checkout TopUp Error:', error);
+      const message = error instanceof Error ? error.message : 'Failed to initiate checkout';
+      throw new HttpException(message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  @Post('stripe/create-intent')
+  async initiateStripeTopup(
+    @Request() req: AuthenticatedRequest,
+    @Body() body: { amount: number; paymentMethodTypes?: string[] },
+  ): Promise<{ success: boolean; clientSecret: string; transactionId: string }> {
+    const { userId } = req.user;
+
+    console.log(`[UnifiedPayments] Received Stripe TopUp Request for ${userId}`, JSON.stringify(body));
+
+    try {
+      const amount = Number(body.amount);
+      if (isNaN(amount) || amount <= 0) {
+        throw new HttpException('Invalid amount', HttpStatus.BAD_REQUEST);
+      }
+
+      // Default to ['card', 'sepa_debit'] if not specified
+      // Note: Mobile SDK might send types.
+      const types = body.paymentMethodTypes || ['card', 'sepa_debit'];
+
+      const result = await this.stripeService.createPaymentIntent(
+        userId,
+        amount,
+        'EUR', // Default to EUR for SEPA. If user wants KES via card, we might need to change this.
+        types,
+      );
+
+      return {
+        success: true,
+        clientSecret: result.clientSecret,
+        transactionId: result.transactionId,
+      };
+    } catch (error) {
+      console.error('Unified Stripe TopUp Error:', error);
+      const message = error instanceof Error ? error.message : 'Failed to initiate stripe topup';
+      throw new HttpException(message, HttpStatus.BAD_REQUEST);
+    }
+  }
+
   @Post('mpesa/topup')
   async initiateMpesaTopup(
     @Request() req: AuthenticatedRequest,

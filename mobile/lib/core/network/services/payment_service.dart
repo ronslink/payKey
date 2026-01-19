@@ -59,4 +59,10 @@ extension PaymentService on ApiService {
   Future<Response> getTransactionById(String transactionId) async {
     return dio.get('/transactions/$transactionId');
   }
+
+  Future<Response> initiateCheckoutTopup(double amount) async {
+    return dio.post('/payments/checkout/topup', data: {
+      'amount': amount,
+    });
+  }
 }

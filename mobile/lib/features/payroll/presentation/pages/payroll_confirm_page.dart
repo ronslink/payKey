@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../providers/payroll_provider.dart';
 import '../providers/pay_period_provider.dart';
 import '../constants/payroll_confirm_constants.dart';
+import '../widgets/topup_selection_sheet.dart'; // New sheet
+import 'package:url_launcher/url_launcher.dart'; // For Checkout
 import '../models/payroll_confirm_state.dart';
 import '../widgets/mpesa_topup_sheet.dart';
 import '../widgets/payment_results_page.dart';
@@ -21,6 +23,7 @@ import '../../../workers/data/repositories/workers_repository.dart';
 // Integration imports
 // Integration imports
 import 'package:mobile/integrations/intasend/intasend.dart';
+import '../../../../integrations/stripe/services/stripe_service.dart'; // Stripe Service
 
 
 /// Payroll confirmation page
@@ -151,11 +154,83 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
   void _showTopupSheet() {
     final shortfall = _state.verification?.shortfall ?? 0;
 
-    MpesaTopupSheet.show(
+    TopupSelectionSheet.show(
       context: context,
       shortfall: shortfall,
-      onConfirm: _performTopup,
+      onMpesaConfirm: _performTopup,
+      onCheckoutConfirm: _performCheckoutTopup,
+      onStripeConfirm: _performStripeTopup,
     );
+  }
+
+  Future<void> _performStripeTopup(double amount) async {
+    _showSnackbar(PayrollConfirmSnackbars.loading('Initializing Stripe...'));
+    try {
+       final stripeService = ref.read(stripeIntegrationServiceProvider);
+       // Initialize Sheet (Backend call)
+       await stripeService.initPaymentSheet(amount: amount, currency: 'EUR');
+       
+       if (mounted) _hideSnackbar();
+       
+       // Present Sheet
+       await stripeService.presentPaymentSheet();
+       
+       if (mounted) {
+         _showSnackbar(PayrollConfirmSnackbars.success('Payment successful! Verifying balance...'));
+         // Wait for webhook (a bit longer for Stripe?) or optimistically verify
+         await Future.delayed(const Duration(seconds: 5)); 
+         await _verifyFunds();
+       }
+    } catch (e) {
+       if (mounted) {
+         _hideSnackbar();
+         // Handle "Cancelled" specific error if possible to just hide snackbar?
+         // StripeException usually contains code 'Canceled'.
+         // For now, simple error message.
+         _showSnackbar(PayrollConfirmSnackbars.error('Payment Error: $e'));
+       }
+    }
+  }
+
+  Future<void> _performCheckoutTopup(double amount) async {
+    _showSnackbar(PayrollConfirmSnackbars.loading('Redirecting to Checkout...'));
+
+    try {
+      final paymentService = ref.read(paymentServiceProvider);
+      // Initiate Checkout
+      final url = await paymentService.checkoutTopUp(amount: amount);
+      
+      if (mounted && url != null) {
+         _hideSnackbar();
+         
+         // Launch URL
+         final uri = Uri.parse(url);
+         if (await canLaunchUrl(uri)) {
+             await launchUrl(uri, mode: LaunchMode.externalApplication);
+             
+             // Show success message and wait for user to return
+             // Ideally we should poll or have a "I have paid" button, but simple delay works for now.
+             _showSnackbar(PayrollConfirmSnackbars.success('Checkout opened. Please complete payment and return.'));
+             
+             // Wait for user to complete payment (e.g., 30s) then verify
+             // Optimistic verify after delay
+             await Future.delayed(const Duration(seconds: 15)); 
+             await _verifyFunds();
+         } else {
+             _showSnackbar(PayrollConfirmSnackbars.error('Could not launch payment page.'));
+         }
+      } else {
+         if (mounted) {
+            _hideSnackbar();
+            _showSnackbar(PayrollConfirmSnackbars.error('Failed to generate checkout link.'));
+         }
+      }
+    } catch (e) {
+      if (mounted) {
+        _hideSnackbar();
+        _showSnackbar(PayrollConfirmSnackbars.error('Checkout Error: $e'));
+      }
+    }
   }
 
   Future<void> _performTopup(double amount, String phone) async {

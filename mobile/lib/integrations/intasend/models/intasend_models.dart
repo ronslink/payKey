@@ -223,7 +223,6 @@ class WalletInfo {
     required this.availableBalance,
     required this.currentBalance,
     this.floatBalance,
-    this.floatBalance,
     this.label,
     required this.canDisburse,
     this.clearingBalance = 0.0,

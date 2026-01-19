@@ -18,6 +18,11 @@ import {
   PaymentStatus,
   PaymentMethod,
 } from '../subscriptions/entities/subscription-payment.entity';
+import { User } from '../users/entities/user.entity';
+import { Transaction, TransactionStatus, TransactionType } from './entities/transaction.entity';
+import { ExchangeRateService } from './exchange-rate.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { DeviceToken } from '../notifications/entities/device-token.entity';
 
 @Injectable()
 export class StripeService {
@@ -30,6 +35,14 @@ export class StripeService {
     private subscriptionRepository: Repository<Subscription>,
     @InjectRepository(SubscriptionPayment)
     private paymentRepository: Repository<SubscriptionPayment>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+    @InjectRepository(Transaction)
+    private transactionRepository: Repository<Transaction>,
+    private exchangeRateService: ExchangeRateService,
+    private notificationsService: NotificationsService,
+    @InjectRepository(DeviceToken)
+    private deviceTokenRepository: Repository<DeviceToken>,
   ) {
     const secretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
     if (!secretKey) {
@@ -145,6 +158,58 @@ export class StripeService {
       this.logger.error('Failed to create checkout session', error);
       throw new BadRequestException('Failed to create checkout session');
     }
+  }
+
+  /**
+   * Create Payment Intent for Wallet Top Up (SEPA/Card)
+   */
+  async createPaymentIntent(
+    userId: string,
+    amount: number,
+    currency: string = 'eur',
+    paymentMethodTypes: string[] = ['card', 'sepa_debit'],
+  ): Promise<{ clientSecret: string; transactionId: string }> {
+    const stripe = this.ensureStripeConfigured();
+
+    // Create pending transaction
+    const transaction = this.transactionRepository.create({
+      userId,
+      amount,
+      currency: currency.toUpperCase(),
+      type: TransactionType.DEPOSIT,
+      status: TransactionStatus.PENDING,
+      provider: 'STRIPE',
+      metadata: {
+        description: 'Wallet Top Up via Stripe',
+        initiatedAt: new Date().toISOString()
+      },
+    });
+    await this.transactionRepository.save(transaction);
+
+    // Create PaymentIntent
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(amount * 100), // Convert to cents
+      currency: currency.toLowerCase(),
+      payment_method_types: paymentMethodTypes,
+      metadata: {
+        userId,
+        transactionId: transaction.id,
+        type: 'WALLET_TOPUP',
+      },
+    });
+
+    // Update transaction with PI ID
+    transaction.providerRef = paymentIntent.id;
+    await this.transactionRepository.save(transaction);
+
+    if (!paymentIntent.client_secret) {
+      throw new BadRequestException('Failed to generate client secret');
+    }
+
+    return {
+      clientSecret: paymentIntent.client_secret,
+      transactionId: transaction.id,
+    };
   }
 
   private getPlanPrice(planTier: string): number {
@@ -280,6 +345,9 @@ export class StripeService {
       switch (event.type) {
         case 'checkout.session.completed':
           await this.handleCheckoutCompleted(event.data.object);
+          break;
+        case 'payment_intent.succeeded':
+          await this.handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent);
           break;
         case 'invoice.payment_succeeded':
           await this.handlePaymentSucceeded(event.data.object);
@@ -593,5 +661,99 @@ export class StripeService {
         message: 'Failed to retrieve account information',
       };
     }
+  }
+
+  /**
+   * Handle Payment Intent Succeeded (Wallet Top Up)
+   */
+  private async handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent): Promise<void> {
+    const { userId, transactionId, type } = paymentIntent.metadata;
+
+    if (type !== 'WALLET_TOPUP' || !transactionId) {
+      return; // Ignore non-wallet payments
+    }
+
+    const transaction = await this.transactionRepository.findOne({ where: { id: transactionId } });
+    if (!transaction) {
+      this.logger.error(`Transaction not found for PI: ${paymentIntent.id}`);
+      return;
+    }
+
+    if (transaction.status === TransactionStatus.SUCCESS) {
+      this.logger.log(`Transaction ${transactionId} already processed`);
+      return;
+    }
+
+    // Update Transaction
+    transaction.status = TransactionStatus.SUCCESS;
+    transaction.providerRef = paymentIntent.id;
+    // transaction.updatedAt = new Date(); // Not in entity
+    await this.transactionRepository.save(transaction);
+
+    // Credit Wallet
+    // Stripe charges are in cents, so we use amount/100
+    const amountReceivedEur = paymentIntent.amount_received / 100;
+
+    let amountToCredit = amountReceivedEur;
+    let appliedRate = 1;
+    let targetCurrency = 'EUR';
+
+    // FX Conversion (EUR -> KES)
+    if (transaction.currency !== 'KES' && transaction.currency !== 'USD') {
+      targetCurrency = 'KES';
+      try {
+        // Fetch latest periodic rate (Cached/DB)
+        appliedRate = await this.exchangeRateService.getLatestRate('EUR', 'KES');
+        amountToCredit = this.roundCurrency(amountReceivedEur * appliedRate);
+      } catch (e) {
+        this.logger.error('FX Conversion Failed. Using 1:1 Fallback (Manual Review Required)', e);
+        // Fallback is 1:1, effectively freezing real value transfer until resolved
+      }
+    }
+
+    // Update Transaction Metadata
+    transaction.metadata = {
+      ...transaction.metadata,
+      fxApplied: {
+        sourceAmount: amountReceivedEur,
+        sourceCurrency: 'EUR',
+        targetCurrency,
+        rate: appliedRate,
+        creditedAmount: amountToCredit
+      }
+    };
+    await this.transactionRepository.save(transaction);
+
+    await this.userRepository.increment(
+      { id: userId },
+      'walletBalance',
+      amountToCredit
+    );
+
+    this.logger.log(`Wallet credited for user ${userId}: ${amountToCredit} KES (Rate: ${appliedRate}, Source: ${amountReceivedEur} EUR)`);
+
+    // Send Push Notification
+    try {
+      const deviceToken = await this.deviceTokenRepository.findOne({
+        where: { userId, isActive: true },
+        order: { lastUsedAt: 'DESC' },
+      });
+
+      if (deviceToken?.token) {
+        await this.notificationsService.sendPaymentStatusNotification(
+          deviceToken.token,
+          'Wallet', // "Worker Name" context used as "Wallet" for topups
+          amountToCredit,
+          'SUCCESS',
+          'TOPUP'
+        );
+      }
+    } catch (e) {
+      this.logger.error('Failed to send Top-Up Notification', e);
+    }
+  }
+
+  private roundCurrency(amount: number): number {
+    return Math.round(amount * 100) / 100;
   }
 }

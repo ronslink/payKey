@@ -45,7 +45,7 @@ export class NotificationsService implements OnModuleInit {
   constructor(
     private configService: ConfigService,
     private httpService: HttpService,
-  ) {}
+  ) { }
 
   onModuleInit() {
     this.initializeFirebase();
@@ -472,6 +472,71 @@ export class NotificationsService implements OnModuleInit {
       message,
       type: NotificationType.SMS,
       priority: 'LOW',
+    });
+
+    return { success: result.success, error: result.error };
+  }
+
+  /**
+   * Send push notification when payment status changes
+   * Called from IntaSend webhook handler
+   */
+  async sendPaymentStatusNotification(
+    fcmToken: string | undefined,
+    workerName: string,
+    amount: number,
+    status: 'PENDING' | 'CLEARING' | 'SUCCESS' | 'FAILED',
+    transactionType: 'PAYOUT' | 'TOPUP' = 'PAYOUT',
+  ): Promise<{ success: boolean; error?: string }> {
+    if (!fcmToken) {
+      this.logger.warn('No FCM token for payment status notification');
+      return { success: false, error: 'No FCM token' };
+    }
+
+    const statusMessages: Record<string, { title: string; body: string }> = {
+      PENDING: {
+        title: '💳 Payment Initiated',
+        body:
+          transactionType === 'PAYOUT'
+            ? `Payment of KES ${amount.toFixed(0)} to ${workerName} is processing`
+            : `Top-up of KES ${amount.toFixed(0)} is processing`,
+      },
+      CLEARING: {
+        title: '⏳ Payment Clearing',
+        body:
+          transactionType === 'PAYOUT'
+            ? `Payment to ${workerName} sent to M-Pesa, awaiting confirmation`
+            : `Your top-up is being processed by M-Pesa`,
+      },
+      SUCCESS: {
+        title: '✅ Payment Complete',
+        body:
+          transactionType === 'PAYOUT'
+            ? `KES ${amount.toFixed(0)} successfully sent to ${workerName}`
+            : `KES ${amount.toFixed(0)} added to your wallet`,
+      },
+      FAILED: {
+        title: '❌ Payment Failed',
+        body:
+          transactionType === 'PAYOUT'
+            ? `Payment to ${workerName} failed. Please check and retry.`
+            : `Top-up failed. Please try again.`,
+      },
+    };
+
+    const { title, body } = statusMessages[status] || statusMessages.PENDING;
+
+    const result = await this.sendPushToDevice({
+      token: fcmToken,
+      title,
+      body,
+      data: {
+        type: 'PAYMENT_STATUS',
+        status,
+        amount: amount.toString(),
+        workerName,
+        transactionType,
+      },
     });
 
     return { success: result.success, error: result.error };

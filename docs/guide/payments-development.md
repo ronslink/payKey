@@ -45,3 +45,10 @@ To support the latest document loading and avatar features on iOS, the following
 - **Permissions**: `NSPhotoLibraryUsageDescription`, `NSPhotoLibraryAddUsageDescription`, and `NSCameraUsageDescription` are required in `Info.plist`.
 - **File Sharing**: `UIFileSharingEnabled` and `LSSupportsOpeningDocumentsInPlace` are enabled. This allows exported files to be visible in the iOS **Files** app.
 - **URL Schemes**: `LSApplicationQueriesSchemes` is configured for `https`, `tel`, and `mailto` to support external links.
+
+---
+
+## 5. Technical Documentation
+
+For deep dives into implementation logic:
+- [Payment Payouts & FX Logic](../../docs/technical/payment_payouts_and_fx.md)

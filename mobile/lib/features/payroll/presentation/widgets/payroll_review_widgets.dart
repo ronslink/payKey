@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/payroll_breakdown.dart';
+import 'payment_status_badge.dart';
 
 /// Currency formatter for KES
 final _currencyFormatter = NumberFormat('#,###');
@@ -188,6 +189,7 @@ class WorkerBreakdownCard extends StatelessWidget {
   final PayrollBreakdown breakdown;
   final bool isExpanded;
   final VoidCallback onTap;
+  final String? paymentStatus;
 
   const WorkerBreakdownCard({
     super.key,
@@ -196,6 +198,7 @@ class WorkerBreakdownCard extends StatelessWidget {
     required this.breakdown,
     required this.isExpanded,
     required this.onTap,
+    this.paymentStatus,
   });
 
   String get _initials {
@@ -284,9 +287,17 @@ class WorkerBreakdownCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          name,
-          style: const TextStyle(fontWeight: FontWeight.w600),
+        Row(
+          children: [
+            Text(
+              name,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            if (paymentStatus != null) ...[
+              const SizedBox(width: 8),
+              PaymentStatusBadge(status: paymentStatus!, compact: true),
+            ],
+          ],
         ),
         Text(
           jobTitle ?? 'Employee',

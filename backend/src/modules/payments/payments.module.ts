@@ -1,12 +1,14 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
+import { BullModule } from '@nestjs/bull';
 import { PaymentsController } from './payments.controller';
 import { UnifiedPaymentsController } from './unified-payments.controller';
 import { SubscriptionPaymentsController } from './subscription-payments.controller';
 import { StripeService } from './stripe.service';
 import { PayrollPaymentService } from './payroll-payment.service';
 import { IntaSendService } from './intasend.service';
+import { WalletProcessor } from './wallet.processor';
 
 import { Transaction } from './entities/transaction.entity';
 import { Worker } from '../workers/entities/worker.entity';
@@ -19,6 +21,9 @@ import { TaxSubmission } from '../taxes/entities/tax-submission.entity';
 import { User } from '../users/entities/user.entity';
 import { TimeTrackingModule } from '../time-tracking/time-tracking.module';
 import { TaxPaymentsModule } from '../tax-payments/tax-payments.module';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { DeviceToken } from '../notifications/entities/device-token.entity';
+import { ExchangeRate } from './entities/exchange-rate.entity';
 
 import { HttpModule } from '@nestjs/axios';
 
@@ -33,12 +38,22 @@ import { HttpModule } from '@nestjs/axios';
       Subscription,
       SubscriptionPayment,
       User,
+      DeviceToken,
+      ExchangeRate,
     ]),
     TaxesModule,
     TimeTrackingModule,
     TaxPaymentsModule,
     HttpModule,
     ConfigModule,
+    BullModule.registerQueue({
+      name: 'wallets',
+      limiter: {
+        max: 3,
+        duration: 1000,
+      },
+    }),
+    NotificationsModule,
   ],
   controllers: [
     PaymentsController,
@@ -49,13 +64,13 @@ import { HttpModule } from '@nestjs/axios';
     StripeService,
     PayrollPaymentService,
     IntaSendService,
-
+    WalletProcessor,
   ],
   exports: [
     StripeService,
     PayrollPaymentService,
     IntaSendService,
-
   ],
 })
 export class PaymentsModule { }
+
