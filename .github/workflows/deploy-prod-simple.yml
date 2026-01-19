@@ -1,0 +1,82 @@
+name: Deploy PROD (Simple - No Tests)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Simple Production Deployment
+    runs-on: ubuntu-latest
+    environment: PROD
+
+    steps:
+      - name: Deploy to DigitalOcean
+        uses: appleboy/ssh-action@v1.0.0
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          INTASEND_PUBLISHABLE_KEY: ${{ secrets.INTASEND_PUBLISHABLE_KEY }}
+          INTASEND_SECRET: ${{ secrets.INTASEND_SECRET }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          CR_PAT: ${{ secrets.CR_PAT }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          APPLE_KEY_ID: ${{ secrets.APPLE_KEY_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_BUNDLE_ID: ${{ secrets.APPLE_BUNDLE_ID }}
+          APPLE_PRIVATE_KEY: ${{ secrets.APPLE_PRIVATE_KEY }}
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USERNAME }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          envs: DATABASE_URL,JWT_SECRET,INTASEND_PUBLISHABLE_KEY,INTASEND_SECRET,STRIPE_SECRET_KEY,STRIPE_WEBHOOK_SECRET,CR_PAT,GOOGLE_CLIENT_ID,APPLE_KEY_ID,APPLE_TEAM_ID,APPLE_BUNDLE_ID,APPLE_PRIVATE_KEY
+          script: |
+            set -e
+            cd /opt/paykey
+            
+            echo "🔐 Authenticating with GitHub Container Registry..."
+            echo $CR_PAT | docker login ghcr.io -u ronslink --password-stdin
+            
+            echo "📥 Pulling latest code..."
+            git pull origin main
+            
+            echo "⚙️ Generating .env file..."
+            cat <<EOF > .env
+            NODE_ENV=production
+            DATABASE_URL=$DATABASE_URL
+            REDIS_HOST=paykey_redis_prod
+            REDIS_PORT=6379
+            JWT_SECRET=$JWT_SECRET
+            JWT_EXPIRES_IN=7d
+            INTASEND_PUBLISHABLE_KEY=$INTASEND_PUBLISHABLE_KEY
+            INTASEND_SECRET_KEY=$INTASEND_SECRET
+            INTASEND_IS_LIVE=true
+            STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY
+            STRIPE_WEBHOOK_SECRET=$STRIPE_WEBHOOK_SECRET
+            GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID
+            APPLE_KEY_ID=$APPLE_KEY_ID
+            APPLE_TEAM_ID=$APPLE_TEAM_ID
+            APPLE_BUNDLE_ID=$APPLE_BUNDLE_ID
+            APPLE_PRIVATE_KEY="$APPLE_PRIVATE_KEY"
+            NODE_EXTRA_CA_CERTS=/app/ca-certificate.crt
+            EOF
+            
+            echo "📦 Starting Infrastructure (Redis)..."
+            docker compose --env-file .env -f deploy/docker-compose.infra.yml up -d --remove-orphans
+            
+            echo "🔙 Deploying Backend..."
+            docker compose --env-file .env -f deploy/docker-compose.backend.yml pull backend
+            docker compose --env-file .env -f deploy/docker-compose.backend.yml up -d backend --remove-orphans --force-recreate
+            
+            echo "⏳ Waiting for backend to start..."
+            sleep 15
+            
+            echo "🧾 Seeding Tax Configurations..."
+            docker exec paykey_backend_prod node dist/scripts/seed-tax-configs-2025.js || echo "⚠️ Tax seeding failed (non-critical)"
+            
+            echo "🧹 Cleaning up old images..."
+            docker image prune -f
+            
+            echo "✅ Deployment Complete!"
+            echo "📊 Container Status:"
+            docker ps --filter name=paykey
