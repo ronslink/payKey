@@ -62,11 +62,14 @@ jobs:
             EOF
             
             echo "📦 Starting Infrastructure (Redis)..."
-            docker compose --env-file .env -f deploy/docker-compose.infra.yml up -d --remove-orphans
+            # Stop and remove existing containers to avoid conflicts
+            docker compose --env-file .env -f deploy/docker-compose.infra.yml down || true
+            docker compose --env-file .env -f deploy/docker-compose.infra.yml up -d
             
             echo "🔙 Deploying Backend..."
             docker compose --env-file .env -f deploy/docker-compose.backend.yml pull backend
-            docker compose --env-file .env -f deploy/docker-compose.backend.yml up -d backend --remove-orphans --force-recreate
+            docker compose --env-file .env -f deploy/docker-compose.backend.yml down || true
+            docker compose --env-file .env -f deploy/docker-compose.backend.yml up -d backend
             
             echo "⏳ Waiting for backend to start..."
             sleep 15
