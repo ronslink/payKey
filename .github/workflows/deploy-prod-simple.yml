@@ -62,11 +62,14 @@ jobs:
             EOF
             
             echo "📦 Starting Infrastructure (Redis)..."
-            # Stop and remove existing containers to avoid conflicts
+            # Force remove existing containers to avoid conflicts from orphaned containers
+            docker rm -f paykey_redis_prod 2>/dev/null || true
             docker compose --env-file .env -f deploy/docker-compose.infra.yml down || true
             docker compose --env-file .env -f deploy/docker-compose.infra.yml up -d
             
             echo "🔙 Deploying Backend..."
+            # Force remove existing backend container
+            docker rm -f paykey_backend_prod 2>/dev/null || true
             docker compose --env-file .env -f deploy/docker-compose.backend.yml pull backend
             docker compose --env-file .env -f deploy/docker-compose.backend.yml down || true
             docker compose --env-file .env -f deploy/docker-compose.backend.yml up -d backend
