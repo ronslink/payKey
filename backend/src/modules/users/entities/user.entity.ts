@@ -164,6 +164,9 @@ export class User {
   @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
   walletBalance: number;
 
+  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
+  clearingBalance: number;
+
   @CreateDateColumn()
   createdAt: Date;
 

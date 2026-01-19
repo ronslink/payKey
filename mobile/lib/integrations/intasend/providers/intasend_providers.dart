@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_service.dart';
 
 
-import '../models/intasend_models.dart';
+import 'package:mobile/integrations/intasend/models/intasend_models.dart';
 import '../services/intasend_service.dart';
 
 // =============================================================================

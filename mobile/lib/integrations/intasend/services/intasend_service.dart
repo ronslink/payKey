@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import '../../../core/network/api_service.dart';
 
-import '../models/intasend_models.dart';
+import 'package:mobile/integrations/intasend/models/intasend_models.dart';
 import '../../../core/config/app_environment.dart';
 
 /// IntaSend API service

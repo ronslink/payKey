@@ -398,11 +398,12 @@ export class UnifiedPaymentsController {
     // Fetch fresh balance from DB
     const user = await this.usersRepository.findOne({
       where: { id: userId },
-      select: ['walletBalance'],
+      select: ['walletBalance', 'clearingBalance'],
     });
 
     return {
       available_balance: user?.walletBalance ?? 0,
+      clearing_balance: user?.clearingBalance ?? 0,
       currency: 'KES',
       can_disburse: true, // Assuming active users can always disburse if they have funds
     };

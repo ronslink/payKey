@@ -317,6 +317,9 @@ class FundVerificationResult {
   /// User's current available wallet balance
   final double availableBalance;
 
+  /// User's uncleared wallet balance
+  final double clearingBalance;
+
   /// Whether the user can proceed with payroll (balance >= required)
   final bool canProceed;
 
@@ -329,6 +332,7 @@ class FundVerificationResult {
   const FundVerificationResult({
     required this.requiredAmount,
     required this.availableBalance,
+    this.clearingBalance = 0.0,
     required this.canProceed,
     required this.shortfall,
     required this.workerCount,
@@ -338,6 +342,7 @@ class FundVerificationResult {
     return FundVerificationResult(
       requiredAmount: (json['requiredAmount'] as num?)?.toDouble() ?? 0,
       availableBalance: (json['availableBalance'] as num?)?.toDouble() ?? 0,
+      clearingBalance: (json['clearingBalance'] as num?)?.toDouble() ?? 0,
       canProceed: json['canProceed'] as bool? ?? false,
       shortfall: (json['shortfall'] as num?)?.toDouble() ?? 0,
       workerCount: json['workerCount'] as int? ?? 0,
@@ -355,6 +360,9 @@ class FundVerificationResult {
 
   /// Returns formatted balance for display
   String get formattedBalance => 'KES ${availableBalance.toStringAsFixed(2)}';
+
+  /// Returns formatted clearing balance for display
+  String get formattedClearing => 'KES ${clearingBalance.toStringAsFixed(2)}';
 }
 
 // =============================================================================

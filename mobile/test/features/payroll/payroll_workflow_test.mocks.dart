@@ -435,6 +435,18 @@ class MockPayrollRepository extends _i1.Mock implements _i6.PayrollRepository {
           as _i5.Future<_i4.PayrollCalculation>);
 
   @override
+  _i5.Future<List<_i4.PayrollCalculation>> recalculatePayroll(
+    String? payPeriodId,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#recalculatePayroll, [payPeriodId]),
+            returnValue: _i5.Future<List<_i4.PayrollCalculation>>.value(
+              <_i4.PayrollCalculation>[],
+            ),
+          )
+          as _i5.Future<List<_i4.PayrollCalculation>>);
+
+  @override
   _i5.Future<void> deletePayrollItem(String? payrollRecordId) =>
       (super.noSuchMethod(
             Invocation.method(#deletePayrollItem, [payrollRecordId]),

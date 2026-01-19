@@ -13,17 +13,15 @@ import '../widgets/payment_results_page.dart';
 // Data imports
 // Data imports
 import '../../data/repositories/payroll_repository.dart';
-// import '../../data/models/payroll_model.dart';
+import '../../data/models/payroll_model.dart';
 
 // Worker imports
 import '../../../workers/data/repositories/workers_repository.dart';
 
 // Integration imports
-import '../../../../integrations/intasend/intasend.dart';
-// import '../../../../integrations/intasend/providers/intasend_providers.dart';
-// import '../../../../integrations/intasend/services/payment_service.dart';
-// ignore: unused_import
-import '../../../../integrations/intasend/models/intasend_models.dart' as intasend_model;
+// Integration imports
+import 'package:mobile/integrations/intasend/intasend.dart';
+
 
 /// Payroll confirmation page
 class PayrollConfirmPage extends ConsumerStatefulWidget {
@@ -139,7 +137,7 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
     }
   }
 
-  FundVerificationResult _convertIntaSendVerification(intasend_model.FundVerification iv) {
+  FundVerificationResult _convertIntaSendVerification(FundVerification iv) {
     return FundVerificationResult(
       requiredAmount: iv.requiredAmount,
       availableBalance: iv.availableBalance,
@@ -384,6 +382,25 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
                     verification.formattedBalance,
                     style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                   ),
+                  if (verification.clearingBalance > 0) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                     decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                     ),
+                     child: Text(
+                        'Clearing: ${verification.formattedClearing}',
+                        style: TextStyle(
+                           fontSize: 12, 
+                           color: Colors.orange.shade800,
+                           fontWeight: FontWeight.w500,
+                        ),
+                     ),
+                  ),
+                ],
                 ],
               ),
               if (!isSufficient)

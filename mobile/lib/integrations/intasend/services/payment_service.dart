@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/intasend_models.dart';
-import '../providers/intasend_providers.dart';
+import 'package:mobile/integrations/intasend/models/intasend_models.dart';
+import 'package:mobile/integrations/intasend/providers/intasend_providers.dart';
 
 /// Payment service adapter for payDome
 /// 

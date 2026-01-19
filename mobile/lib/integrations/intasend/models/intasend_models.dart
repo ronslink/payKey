@@ -214,6 +214,7 @@ class WalletInfo {
   final double? floatBalance;
   final String? label;
   final bool canDisburse;
+  final double clearingBalance;
   final DateTime updatedAt;
 
   const WalletInfo({
@@ -222,8 +223,10 @@ class WalletInfo {
     required this.availableBalance,
     required this.currentBalance,
     this.floatBalance,
+    this.floatBalance,
     this.label,
     required this.canDisburse,
+    this.clearingBalance = 0.0,
     required this.updatedAt,
   });
 
@@ -250,6 +253,7 @@ class WalletInfo {
           : null,
       label: json['label'] as String?,
       canDisburse: json['can_disburse'] as bool? ?? true,
+      clearingBalance: _parseDouble(json['clearing_balance']),
       updatedAt: DateTime.now(),
     );
   }
