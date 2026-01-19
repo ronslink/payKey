@@ -19,3 +19,4 @@ volumes:
 networks:
   paykey-network-prod:
     driver: bridge
+    name: paykey-network-prod
