@@ -55,22 +55,33 @@ jobs:
             source .env
             set +a
 
+            # 3. Load Environment Variables explicitly
+            # We created .env in the root (/opt/paykey)
+            # Docker Compose needs to know where it is.
+            
             # 3. Deploy Infrastructure (DB, Redis, Network)
             echo "📦 Deploying Infrastructure..."
-            docker compose -f deploy/docker-compose.infra.yml up -d
+            # Remove potential conflicting containers first if needed, though 'up' usually handles it.
+            # But since we saw a conflict error, forced removal might be safer for a clean state.
+            # docker stop paykey_redis_prod || true
+            # docker rm paykey_redis_prod || true
+            
+            docker compose --env-file .env -f deploy/docker-compose.infra.yml up -d --remove-orphans
 
             # 4. Deploy Backend
             echo "🔙 Deploying Backend..."
-            docker compose -f deploy/docker-compose.backend.yml pull backend
-            docker compose -f deploy/docker-compose.backend.yml up -d backend
+            docker compose --env-file .env -f deploy/docker-compose.backend.yml pull backend
+            docker compose --env-file .env -f deploy/docker-compose.backend.yml up -d backend --remove-orphans
             
             # 5. Deploy Website
             echo "🌐 Deploying Website..."
-            docker compose -f deploy/docker-compose.website.yml pull website
-            docker compose -f deploy/docker-compose.website.yml up -d website
+            docker compose --env-file .env -f deploy/docker-compose.website.yml pull website
+            docker compose --env-file .env -f deploy/docker-compose.website.yml up -d website
 
             # 6. Seed Tax Configurations
             echo "🧾 Seeding Tax Configurations..."
+            # Wait a few seconds for backend to be ready
+            sleep 10
             docker exec paykey_backend_prod node dist/scripts/seed-tax-configs-2025.js || echo "⚠️ Seeding failed, but continuing deployment..."
 
             # 7. Cleanup
