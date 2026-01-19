@@ -12,16 +12,34 @@ jobs:
     steps:
       - name: Deploy to DigitalOcean
         uses: appleboy/ssh-action@v1.0.0
+        env:
+          DO_HOST: ${{ secrets.DO_HOST }}
+          DO_USERNAME: ${{ secrets.DO_USERNAME }}
+          DO_SSH_KEY: ${{ secrets.DO_SSH_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          INTASEND_PUBLISHABLE_KEY: ${{ secrets.INTASEND_PUBLISHABLE_KEY }}
+          INTASEND_SECRET: ${{ secrets.INTASEND_SECRET }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          CR_PAT: ${{ secrets.CR_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          APPLE_KEY_ID: ${{ secrets.APPLE_KEY_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_BUNDLE_ID: ${{ secrets.APPLE_BUNDLE_ID }}
+          APPLE_PRIVATE_KEY: ${{ secrets.APPLE_PRIVATE_KEY }}
         with:
           host: ${{ secrets.DO_HOST }}
           username: ${{ secrets.DO_USERNAME }}
           key: ${{ secrets.DO_SSH_KEY }}
-          envs: DO_HOST, DO_USERNAME, DO_SSH_KEY, DATABASE_URL, JWT_SECRET, INTASEND_PUBLISHABLE_KEY, INTASEND_SECRET, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, CR_PAT, APPLE_KEY_ID, APPLE_TEAM_ID, APPLE_BUNDLE_ID, APPLE_PRIVATE_KEY, GOOGLE_CLIENT_ID
+          envs: DO_HOST, DO_USERNAME, DO_SSH_KEY, DATABASE_URL, JWT_SECRET, INTASEND_PUBLISHABLE_KEY, INTASEND_SECRET, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, GITHUB_TOKEN, APPLE_KEY_ID, APPLE_TEAM_ID, APPLE_BUNDLE_ID, APPLE_PRIVATE_KEY, GOOGLE_CLIENT_ID
           script: |
             cd /opt/paykey
             
-            # 0. Authenticate with Registry
-            echo $CR_PAT | docker login ghcr.io -u ronslink --password-stdin
+            # 0. Authenticate with Registry using GITHUB_TOKEN
+            echo $GITHUB_TOKEN | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
 
             echo "🚀 Starting Full Production Deployment..."
             
