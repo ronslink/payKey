@@ -509,4 +509,16 @@ class MockPayrollRepository extends _i1.Mock implements _i6.PayrollRepository {
             ),
           )
           as _i5.Future<List<_i6.WorkerPaymentHistoryItem>>);
+
+  @override
+  _i5.Future<List<_i4.WorkerPaymentStatus>> getPaymentStatus(
+    String? payPeriodId,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#getPaymentStatus, [payPeriodId]),
+            returnValue: _i5.Future<List<_i4.WorkerPaymentStatus>>.value(
+              <_i4.WorkerPaymentStatus>[],
+            ),
+          )
+          as _i5.Future<List<_i4.WorkerPaymentStatus>>);
 }
