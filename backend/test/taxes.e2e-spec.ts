@@ -103,6 +103,32 @@ describe('Taxes E2E', () => {
         .expect(200);
 
       expect(Array.isArray(res.body)).toBe(true);
+
+      // Verify deadline structure if deadlines exist
+      if (res.body.length > 0) {
+        const deadline = res.body[0];
+        expect(deadline).toHaveProperty('title');
+        expect(deadline).toHaveProperty('dueDate');
+        expect(deadline).toHaveProperty('description');
+
+        // Verify dueDate is a valid date
+        expect(new Date(deadline.dueDate).toString()).not.toBe('Invalid Date');
+      }
+    });
+
+    it('should return Kenya statutory deadlines (PAYE, NSSF, SHIF, Housing)', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/taxes/deadlines')
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(200);
+
+      expect(Array.isArray(res.body)).toBe(true);
+      expect(res.body.length).toBeGreaterThan(0);
+
+      // Kenya-specific deadlines should include PAYE, NSSF, SHIF/NHIF
+      const titles = res.body.map((d: any) => d.title.toLowerCase());
+      expect(titles.some((t: string) => t.includes('paye'))).toBe(true);
+      expect(titles.some((t: string) => t.includes('nssf'))).toBe(true);
     });
   });
 

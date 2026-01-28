@@ -15,14 +15,22 @@ import * as bcrypt from 'bcrypt';
 import { MockBullModule } from '../mock-bull.module';
 
 jest.mock('@nestjs/bullmq', () => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const actual = jest.requireActual('@nestjs/bullmq');
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
   return {
     ...actual,
     BullModule: {
-      forRoot: jest.fn().mockReturnValue({ module: class { }, providers: [] }),
-      forRootAsync: jest.fn().mockReturnValue({ module: class { }, providers: [] }),
-      registerQueue: jest.fn().mockReturnValue({ module: class { }, providers: [] }),
-      registerQueueAsync: jest.fn().mockReturnValue({ module: class { }, providers: [] }),
+      forRoot: jest.fn().mockReturnValue({ module: class {}, providers: [] }),
+      forRootAsync: jest
+        .fn()
+        .mockReturnValue({ module: class {}, providers: [] }),
+      registerQueue: jest
+        .fn()
+        .mockReturnValue({ module: class {}, providers: [] }),
+      registerQueueAsync: jest
+        .fn()
+        .mockReturnValue({ module: class {}, providers: [] }),
     },
   };
 });
@@ -49,11 +57,15 @@ describe('Security Tests', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, transform: true }),
+    );
     await app.init();
 
     userRepo = moduleFixture.get<Repository<User>>(getRepositoryToken(User));
-    workerRepo = moduleFixture.get<Repository<Worker>>(getRepositoryToken(Worker));
+    workerRepo = moduleFixture.get<Repository<Worker>>(
+      getRepositoryToken(Worker),
+    );
 
     // Create test users
     const testUser = await userRepo.save({
@@ -78,14 +90,14 @@ describe('Security Tests', () => {
     otherUserId = otherUser.id;
 
     // Get auth token for test user
-    const loginRes = await request(app.getHttpServer())
+    const loginRes = await request(app.getHttpServer() as string)
       .post('/auth/login')
       .send({
         email: 'security-test@paykey.com',
         password: 'test-password',
       });
 
-    authToken = loginRes.body.access_token;
+    authToken = (loginRes.body as { access_token: string }).access_token;
   });
 
   afterAll(async () => {
@@ -96,20 +108,20 @@ describe('Security Tests', () => {
 
   describe('Authentication Security', () => {
     it('should reject requests without authentication token', async () => {
-      await request(app.getHttpServer())
+      await request(app.getHttpServer() as string)
         .get('/workers')
         .expect(401);
     });
 
     it('should reject requests with invalid token', async () => {
-      await request(app.getHttpServer())
+      await request(app.getHttpServer() as string)
         .get('/workers')
         .set('Authorization', 'Bearer invalid-token')
         .expect(401);
     });
 
     it('should reject requests with malformed token', async () => {
-      await request(app.getHttpServer())
+      await request(app.getHttpServer() as string)
         .get('/workers')
         .set('Authorization', 'Malformed token')
         .expect(401);
@@ -118,9 +130,10 @@ describe('Security Tests', () => {
     it('should reject expired tokens', async () => {
       // This would require implementing token expiration in the test
       // For now, we'll test with an old token format
-      const oldToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjMiLCJleHAiOjE2MjM5NzYzMjB9.invalid-signature';
+      const oldToken =
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjMiLCJleHAiOjE2MjM5NzYzMjB9.invalid-signature';
 
-      await request(app.getHttpServer())
+      await request(app.getHttpServer() as string)
         .get('/workers')
         .set('Authorization', `Bearer ${oldToken}`)
         .expect(401);
@@ -128,7 +141,7 @@ describe('Security Tests', () => {
 
     it('should enforce strong password requirements during registration', async () => {
       // Test weak passwords (this would require a registration endpoint)
-      await request(app.getHttpServer())
+      await request(app.getHttpServer() as string)
         .post('/auth/register')
         .send({
           email: 'weak-password@test.com',
@@ -141,12 +154,11 @@ describe('Security Tests', () => {
   });
 
   describe('Authorization Security', () => {
-    let testWorkerId: string;
     let otherWorkerId: string;
 
     beforeEach(async () => {
       // Create workers for both users
-      const testWorker = await workerRepo.save({
+      await workerRepo.save({
         name: 'Test Worker',
         phoneNumber: '+254712345678',
         salaryGross: 50000,
@@ -164,7 +176,6 @@ describe('Security Tests', () => {
         isActive: true,
       });
 
-      testWorkerId = testWorker.id;
       otherWorkerId = otherWorker.id;
     });
 
@@ -173,37 +184,45 @@ describe('Security Tests', () => {
       await workerRepo.delete({ userId: otherUserId });
     });
 
-    it('should prevent users from accessing another user\'s workers', async () => {
-      await request(app.getHttpServer())
+    it("should prevent users from accessing another user's workers", async () => {
+      await request(app.getHttpServer() as string)
         .get(`/workers/${otherWorkerId}`)
         .set('Authorization', `Bearer ${authToken}`)
-        .expect((res) => { expect([400, 404]).toContain(res.status); }); // Should return 404, not 403 (security through obscurity)
+        .expect((res) => {
+          expect([400, 404]).toContain(res.status);
+        }); // Should return 404, not 403 (security through obscurity)
     });
 
-    it('should prevent users from modifying another user\'s workers', async () => {
-      await request(app.getHttpServer())
+    it("should prevent users from modifying another user's workers", async () => {
+      await request(app.getHttpServer() as string)
         .patch(`/workers/${otherWorkerId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({
           name: 'Modified by Attacker',
           salaryGross: 999999,
         })
-        .expect((res) => { expect([400, 404]).toContain(res.status); }); // Should return 404, not 403
+        .expect((res) => {
+          expect([400, 404]).toContain(res.status);
+        }); // Should return 404, not 403
     });
 
-    it('should prevent users from deleting another user\'s workers', async () => {
-      await request(app.getHttpServer())
+    it("should prevent users from deleting another user's workers", async () => {
+      await request(app.getHttpServer() as string)
         .delete(`/workers/${otherWorkerId}`)
         .set('Authorization', `Bearer ${authToken}`)
-        .expect((res) => { expect([400, 404]).toContain(res.status); }); // Should return 404, not 403
+        .expect((res) => {
+          expect([400, 404]).toContain(res.status);
+        }); // Should return 404, not 403
     });
 
     it('should enforce user isolation in payroll operations', async () => {
       // Test accessing payroll for another user
-      await request(app.getHttpServer())
+      await request(app.getHttpServer() as string)
         .get(`/payroll/calculate/${otherUserId}`)
         .set('Authorization', `Bearer ${authToken}`)
-        .expect((res) => { expect([400, 404]).toContain(res.status); });
+        .expect((res) => {
+          expect([400, 404]).toContain(res.status);
+        });
     });
   });
 
@@ -216,13 +235,15 @@ describe('Security Tests', () => {
         startDate: '2024-01-01',
       };
 
-      const response = await request(app.getHttpServer())
+      const response = await request(app.getHttpServer() as string)
         .post('/workers')
         .set('Authorization', `Bearer ${authToken}`)
         .send(maliciousPayload);
 
       expect(response.status).not.toBe(500); // Should not cause SQL error
-      expect(response.body.name).toContain("'; DROP TABLE users; --"); // Should be sanitized/encoded
+      expect((response.body as { name: string }).name).toContain(
+        "'; DROP TABLE users; --",
+      ); // Should be sanitized/encoded
     });
 
     it('should prevent XSS in worker names', async () => {
@@ -233,7 +254,7 @@ describe('Security Tests', () => {
         startDate: '2024-01-01',
       };
 
-      await request(app.getHttpServer())
+      await request(app.getHttpServer() as string)
         .post('/workers')
         .set('Authorization', `Bearer ${authToken}`)
         .send(xssPayload)
@@ -257,7 +278,7 @@ describe('Security Tests', () => {
       ];
 
       for (const invalidSalary of invalidSalaries) {
-        await request(app.getHttpServer())
+        await request(app.getHttpServer() as string)
           .post('/workers')
           .set('Authorization', `Bearer ${authToken}`)
           .send({
@@ -278,7 +299,7 @@ describe('Security Tests', () => {
         startDate: '2024-01-01',
       };
 
-      await request(app.getHttpServer())
+      await request(app.getHttpServer() as string)
         .post('/workers')
         .set('Authorization', `Bearer ${authToken}`)
         .send(oversizedData)
@@ -290,9 +311,10 @@ describe('Security Tests', () => {
     it('should enforce session timeout', async () => {
       // This would require implementing session timeout in the application
       // For now, we'll test with a very old timestamp
-      const oldToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjMiLCJleHAiOjE2MjM5NzYzMjB9.old-signature';
+      const oldToken =
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjMiLCJleHAiOjE2MjM5NzYzMjB9.old-signature';
 
-      await request(app.getHttpServer())
+      await request(app.getHttpServer() as string)
         .get('/workers')
         .set('Authorization', `Bearer ${oldToken}`)
         .expect(401);
@@ -300,14 +322,15 @@ describe('Security Tests', () => {
 
     it('should prevent token reuse after logout', async () => {
       // First, login to get a valid token
-      const loginRes = await request(app.getHttpServer())
+      const loginRes = await request(app.getHttpServer() as string)
         .post('/auth/login')
         .send({
           email: 'security-test@paykey.com',
           password: 'test-password',
         });
 
-      const validToken = loginRes.body.access_token;
+      const validToken = (loginRes.body as { access_token: string })
+        .access_token;
 
       // Logout (this would require implementing a logout endpoint)
       // await request(app.getHttpServer())
@@ -315,7 +338,7 @@ describe('Security Tests', () => {
       //   .set('Authorization', `Bearer ${validToken}`);
 
       // Try to use the token after "logout"
-      await request(app.getHttpServer())
+      await request(app.getHttpServer() as string)
         .get('/workers')
         .set('Authorization', `Bearer ${validToken}`)
         .expect(200); // This should fail after implementing proper logout
@@ -327,7 +350,7 @@ describe('Security Tests', () => {
       const attempts = 10;
 
       for (let i = 0; i < attempts; i++) {
-        await request(app.getHttpServer())
+        await request(app.getHttpServer() as string)
           .post('/auth/login')
           .send({
             email: 'security-test@paykey.com',
@@ -336,7 +359,7 @@ describe('Security Tests', () => {
       }
 
       // The next attempt should be rate limited
-      const response = await request(app.getHttpServer())
+      const response = await request(app.getHttpServer() as string)
         .post('/auth/login')
         .send({
           email: 'security-test@paykey.com',
@@ -352,7 +375,7 @@ describe('Security Tests', () => {
 
       // Use a serial loop similar to the login test to trigger 429 reliably without crashing the server
       for (let i = 0; i < attempts; i++) {
-        const response = await request(app.getHttpServer())
+        const response = await request(app.getHttpServer() as string)
           .get(endpoint)
           .set('Authorization', `Bearer ${authToken}`);
 
@@ -362,22 +385,24 @@ describe('Security Tests', () => {
       }
 
       // Final check if not catched in loop
-      await request(app.getHttpServer())
+      await request(app.getHttpServer() as string)
         .get(endpoint)
         .set('Authorization', `Bearer ${authToken}`)
-        .expect((res) => { expect([200, 429]).toContain(res.status); });
+        .expect((res) => {
+          expect([200, 429]).toContain(res.status);
+        });
     });
   });
 
   describe('Data Protection Security', () => {
     it('should not expose sensitive data in API responses', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(app.getHttpServer() as string)
         .get('/workers')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
       // Check that sensitive fields are not exposed
-      const workers = response.body;
+      const workers = response.body as Array<Record<string, any>>;
       if (Array.isArray(workers) && workers.length > 0) {
         const worker = workers[0];
         expect(worker).not.toHaveProperty('passwordHash');
@@ -399,7 +424,7 @@ describe('Security Tests', () => {
       });
 
       // In a real implementation, phone numbers, IDs, etc. should be encrypted
-      const worker = await workerRepo.findOne({
+      await workerRepo.findOne({
         where: { name: 'Encrypted Worker', userId: testUserId },
       });
 
@@ -410,7 +435,7 @@ describe('Security Tests', () => {
 
   describe('Error Handling Security', () => {
     it('should not expose sensitive information in error messages', async () => {
-      await request(app.getHttpServer())
+      await request(app.getHttpServer() as string)
         .get('/workers/non-existent-id')
         .set('Authorization', `Bearer ${authToken}`)
         .expect((res) => {
@@ -424,7 +449,7 @@ describe('Security Tests', () => {
     });
 
     it('should handle malformed requests gracefully', async () => {
-      await request(app.getHttpServer())
+      await request(app.getHttpServer() as string)
         .post('/workers')
         .set('Authorization', `Bearer ${authToken}`)
         .set('Content-Type', 'application/json')

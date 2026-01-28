@@ -29,6 +29,7 @@ import {
   Transaction,
   TransactionStatus,
   TransactionType,
+  PaymentMethodType,
 } from './entities/transaction.entity';
 import { User } from '../users/entities/user.entity';
 import {
@@ -367,6 +368,25 @@ export class PaymentsController {
     for (const tx of transactions) {
       const previousStatus = tx.status;
       tx.status = newStatus;
+
+      // Detect payment method from IntaSend provider field
+      const provider = body.provider as string | undefined;
+      if (provider && !tx.paymentMethod) {
+        switch (provider.toUpperCase()) {
+          case 'M-PESA':
+            tx.paymentMethod = PaymentMethodType.MPESA_STK;
+            break;
+          case 'CARD-PAYMENT':
+            tx.paymentMethod = PaymentMethodType.CARD;
+            break;
+          case 'BANK-PAYMENT':
+            tx.paymentMethod = PaymentMethodType.PESALINK;
+            break;
+          default:
+            tx.paymentMethod = PaymentMethodType.UNKNOWN;
+        }
+      }
+
       tx.metadata = {
         ...(typeof tx.metadata === 'string' ? JSON.parse(tx.metadata) : tx.metadata),
         webhookEvent: body,

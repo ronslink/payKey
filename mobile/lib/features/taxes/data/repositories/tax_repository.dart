@@ -177,29 +177,20 @@ class TaxRepository {
     }
   }
 
-  // Get tax deadlines
+  // Get tax deadlines from backend
   Future<List<Map<String, dynamic>>> getTaxDeadlines() async {
     try {
-      // Return mock tax deadlines
-      return [
-        {
-          'title': 'Annual Tax Return',
-          'description': 'Submit your annual tax return for the current year',
-          'dueDate': '2024-04-30',
-        },
-        {
-          'title': 'Quarterly PAYE',
-          'description': 'Submit quarterly PAYE returns',
-          'dueDate': '2024-01-15',
-        },
-        {
-          'title': 'NSSF Returns',
-          'description': 'Submit monthly NSSF contributions',
-          'dueDate': '2024-01-15',
-        },
-      ];
+      final response = await _apiService.dio.get('/taxes/deadlines');
+      if (response.data is List) {
+        return List<Map<String, dynamic>>.from(
+          (response.data as List).map((item) => Map<String, dynamic>.from(item)),
+        );
+      }
+      return [];
     } catch (e) {
-      throw Exception('Failed to fetch tax deadlines: $e');
+      debugPrint('Failed to fetch tax deadlines: $e');
+      // Return empty on error - home page will handle gracefully
+      return [];
     }
   }
 

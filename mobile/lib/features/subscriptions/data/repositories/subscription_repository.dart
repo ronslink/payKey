@@ -382,13 +382,18 @@ class SubscriptionRepository {
   }
 
   /// Initiate M-Pesa STK Push for subscription payment
-  Future<MpesaSubscriptionResult> subscribeWithMpesa(String planId, String phoneNumber) async {
+  Future<MpesaSubscriptionResult> subscribeWithMpesa(
+    String planId, 
+    String phoneNumber, {
+    String billingPeriod = 'monthly',
+  }) async {
     try {
       final response = await _apiService.dio.post(
         '/subscriptions/mpesa-subscribe',
         data: {
           'planId': planId,
           'phoneNumber': phoneNumber,
+          'billingPeriod': billingPeriod,
         },
       );
       
@@ -407,6 +412,45 @@ class SubscriptionRepository {
       throw Exception(_apiService.getErrorMessage(e));
     } catch (e) {
       throw Exception('Failed to initiate M-Pesa subscription: $e');
+    }
+  }
+
+  /// Initiate Bank Transfer (PesaLink) for subscription payment via IntaSend Checkout
+  Future<BankSubscriptionResult> subscribeWithBank(
+    String planId,
+    String billingPeriod,
+  ) async {
+    try {
+      final response = await _apiService.dio.post(
+        '/subscriptions/bank-subscribe',
+        data: {
+          'planId': planId,
+          'billingPeriod': billingPeriod,
+        },
+      );
+      
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        String? processingInfo;
+        if (data['processingInfo'] is Map) {
+          final info = data['processingInfo'] as Map<String, dynamic>;
+          processingInfo = info['estimatedTime']?.toString();
+        }
+        
+        return BankSubscriptionResult(
+          success: data['success'] ?? false,
+          message: data['message']?.toString() ?? 'Unknown response',
+          checkoutUrl: data['checkoutUrl']?.toString() ?? '',
+          reference: data['reference']?.toString(),
+          subscriptionId: data['subscriptionId']?.toString(),
+          processingInfo: processingInfo,
+        );
+      }
+      throw Exception('Invalid response from server');
+    } on DioException catch (e) {
+      throw Exception(_apiService.getErrorMessage(e));
+    } catch (e) {
+      throw Exception('Failed to initiate bank subscription: $e');
     }
   }
 
@@ -472,4 +516,23 @@ class MpesaPaymentStatus {
   bool get isCompleted => status == 'COMPLETED';
   bool get isPending => status == 'PENDING';
   bool get isFailed => status == 'FAILED';
+}
+
+/// Result of initiating Bank Transfer (PesaLink) subscription
+class BankSubscriptionResult {
+  final bool success;
+  final String message;
+  final String checkoutUrl;
+  final String? reference;
+  final String? subscriptionId;
+  final String? processingInfo;
+
+  BankSubscriptionResult({
+    required this.success,
+    required this.message,
+    required this.checkoutUrl,
+    this.reference,
+    this.subscriptionId,
+    this.processingInfo,
+  });
 }

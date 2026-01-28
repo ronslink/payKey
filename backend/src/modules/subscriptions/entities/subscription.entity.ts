@@ -25,6 +25,11 @@ export enum SubscriptionTier {
   PLATINUM = 'PLATINUM',
 }
 
+export enum RenewalMethod {
+  NOTIFICATION = 'NOTIFICATION',
+  STK_PUSH = 'STK_PUSH',
+}
+
 // Transformer to convert decimal strings to numbers
 const decimalTransformer = {
   to: (value: number | null): number | null => value,
@@ -91,6 +96,36 @@ export class Subscription {
 
   @Column({ type: 'text', nullable: true })
   notes: string;
+
+  // Lifecycle Management Fields
+  @Column({ default: true })
+  autoRenewal: boolean;
+
+  @Column({
+    type: 'enum',
+    enum: SubscriptionTier,
+    nullable: true,
+  })
+  pendingTier: SubscriptionTier | null;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  gracePeriodEndDate: Date | null;
+
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    transformer: decimalTransformer,
+    nullable: true,
+  })
+  lockedPrice: number | null;
+
+  @Column({
+    type: 'enum',
+    enum: RenewalMethod,
+    default: RenewalMethod.NOTIFICATION,
+  })
+  renewalMethod: RenewalMethod;
 
   @CreateDateColumn()
   createdAt: Date;

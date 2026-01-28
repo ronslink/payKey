@@ -24,6 +24,15 @@ export enum TransactionStatus {
   MANUAL_INTERVENTION = 'MANUAL_INTERVENTION',
 }
 
+export enum PaymentMethodType {
+  MPESA_STK = 'MPESA_STK',
+  PESALINK = 'PESALINK',
+  CARD = 'CARD',
+  WALLET = 'WALLET',
+  STRIPE = 'STRIPE',
+  UNKNOWN = 'UNKNOWN',
+}
+
 @Entity('transactions')
 export class Transaction {
   @PrimaryGeneratedColumn('uuid')
@@ -66,6 +75,13 @@ export class Transaction {
 
   @Column({ nullable: true })
   provider: string;
+
+  @Column({
+    type: 'enum',
+    enum: PaymentMethodType,
+    nullable: true,
+  })
+  paymentMethod: PaymentMethodType;
 
   @Column({ nullable: true })
   recipientPhone: string;

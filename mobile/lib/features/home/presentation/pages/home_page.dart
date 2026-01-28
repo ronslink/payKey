@@ -14,6 +14,7 @@ import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../onboarding/presentation/widgets/guided_tour.dart';
 import '../../../onboarding/presentation/providers/tour_progress_provider.dart';
 import '../../../onboarding/presentation/models/tour_models.dart';
+import '../providers/statutory_deadlines_provider.dart';
 
 /// New Home page with the redesigned dashboard UI
 class HomePage extends ConsumerStatefulWidget {
@@ -43,7 +44,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildHeader(context),
-                  _buildHeroSection(context, payPeriodsAsync),
+                  _buildHeroSection(context, payPeriodsAsync, workersAsync),
                   _buildStatsRow(context, workersAsync, payPeriodsAsync),
                   _buildQuickActionsSection(context),
                   _buildDeadlinesSection(context),
@@ -216,15 +217,27 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  Widget _buildHeroSection(BuildContext context, AsyncValue<List<PayPeriod>> payPeriodsAsync) {
+  Widget _buildHeroSection(
+    BuildContext context, 
+    AsyncValue<List<PayPeriod>> payPeriodsAsync,
+    AsyncValue<List<WorkerModel>> workersAsync,
+  ) {
     final activePeriod = payPeriodsAsync.when(
       data: (periods) => PayPeriodUtils.getNextPayrollPeriod(periods),
       loading: () => null,
-      error: (_, _) => null,
+      error: (_, __) => null,
     );
 
     final periodName = activePeriod?.name ?? 'No Active Payroll';
     final daysUntilDue = activePeriod?.payDate?.difference(DateTime.now()).inDays ?? 5;
+
+    // Get active workers count
+    final activeWorkers = workersAsync.when(
+      data: (workers) => workers.where((w) => w.isActive).toList(),
+      loading: () => <WorkerModel>[],
+      error: (_, __) => <WorkerModel>[],
+    );
+    final workerCount = activeWorkers.length;
 
     return Container(
       margin: const EdgeInsets.all(20),
@@ -297,7 +310,8 @@ class _HomePageState extends ConsumerState<HomePage> {
           const SizedBox(height: 16),
           Row(
             children: [
-              ...List.generate(3, (i) => Align(
+              // Show up to 3 worker avatars
+              ...List.generate(workerCount.clamp(0, 3), (i) => Align(
                 widthFactor: 0.7,
                 child: CircleAvatar(
                   radius: 16,
@@ -305,12 +319,22 @@ class _HomePageState extends ConsumerState<HomePage> {
                   child: CircleAvatar(
                     radius: 14,
                     backgroundColor: Colors.grey.shade300,
-                    child: const Icon(Icons.person, size: 16, color: Colors.grey),
+                    child: Text(
+                      activeWorkers.isNotEmpty && i < activeWorkers.length
+                        ? activeWorkers[i].name.substring(0, 1).toUpperCase()
+                        : '?',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               )),
               const SizedBox(width: 8),
-              Text('+ others ready', style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 12)),
+              Text(
+                workerCount > 3 
+                  ? '+ ${workerCount - 3} more workers'
+                  : workerCount > 0 ? '$workerCount workers ready' : 'No workers yet',
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 12),
+              ),
             ],
           ),
           const SizedBox(height: 20),
@@ -602,8 +626,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Widget _buildDeadlinesSection(BuildContext context) {
-    final now = DateTime.now();
-    final currentMonth = now.month;
+    final deadlinesAsync = ref.watch(statutoryDeadlinesProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -620,62 +643,91 @@ class _HomePageState extends ConsumerState<HomePage> {
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Column(
-            children: [
-              _buildDeadlineItem(
-                context,
-                icon: Icons.warning_amber_rounded,
-                iconColor: Colors.red,
-                title: 'PAYE Tax',
-                subtitle: 'Kenya Revenue Authority',
-                day: 20,
-                month: currentMonth,
-                statusLabel: 'Due in ${20 - now.day} days',
-                statusColor: now.day <= 20 ? Colors.orange : Colors.red,
-              ),
-              const SizedBox(height: 12),
-              _buildDeadlineItem(
-                context,
-                icon: Icons.account_balance,
-                iconColor: Colors.blue,
-                title: 'NSSF Contribution',
-                subtitle: 'Social Security Fund',
-                day: 15,
-                month: currentMonth,
-                statusLabel: 'Due on 15th',
-                statusColor: Colors.blue,
-              ),
-              const SizedBox(height: 12),
-              _buildDeadlineItem(
-                context,
-                icon: Icons.health_and_safety,
-                iconColor: Colors.green,
-                title: 'SHIF Contribution',
-                subtitle: 'Social Health Insurance Fund',
-                day: 10,
-                month: currentMonth,
-                statusLabel: now.day <= 10 ? 'Due soon' : 'Paid',
-                statusColor: now.day <= 10 ? Colors.orange : Colors.green,
-              ),
-            ],
+          child: deadlinesAsync.when(
+            data: (deadlines) => deadlines.isEmpty
+              ? _buildEmptyDeadlines(context)
+              : Column(
+                  children: deadlines.take(3).map((deadline) {
+                    final iconData = _getDeadlineIcon(deadline.title);
+                    final iconColor = _getDeadlineColor(deadline);
+                    final statusLabel = _getDeadlineStatus(deadline);
+                    final statusColor = deadline.isPastDue ? Colors.red : 
+                      (deadline.daysUntilDue <= 3 ? Colors.orange : Colors.green);
+                    
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _buildDeadlineItemFromData(
+                        context,
+                        icon: iconData,
+                        iconColor: iconColor,
+                        title: deadline.title,
+                        subtitle: deadline.description,
+                        statusLabel: statusLabel,
+                        statusColor: statusColor,
+                      ),
+                    );
+                  }).toList(),
+                ),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (_, __) => _buildEmptyDeadlines(context),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildDeadlineItem(
+  Widget _buildEmptyDeadlines(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.check_circle, color: Colors.green),
+          SizedBox(width: 12),
+          Text('No upcoming deadlines'),
+        ],
+      ),
+    );
+  }
+
+  IconData _getDeadlineIcon(String title) {
+    final lower = title.toLowerCase();
+    if (lower.contains('paye')) return Icons.warning_amber_rounded;
+    if (lower.contains('nssf')) return Icons.account_balance;
+    if (lower.contains('shif') || lower.contains('nhif')) return Icons.health_and_safety;
+    if (lower.contains('housing')) return Icons.home;
+    return Icons.calendar_today;
+  }
+
+  Color _getDeadlineColor(StatutoryDeadline deadline) {
+    if (deadline.isPastDue) return Colors.red;
+    if (deadline.daysUntilDue <= 3) return Colors.orange;
+    final lower = deadline.title.toLowerCase();
+    if (lower.contains('paye')) return Colors.red;
+    if (lower.contains('nssf')) return Colors.blue;
+    if (lower.contains('shif') || lower.contains('nhif')) return Colors.green;
+    return Colors.indigo;
+  }
+
+  String _getDeadlineStatus(StatutoryDeadline deadline) {
+    if (deadline.isPastDue) return 'Overdue!';
+    if (deadline.daysUntilDue == 0) return 'Due today';
+    if (deadline.daysUntilDue == 1) return 'Due tomorrow';
+    return 'Due in ${deadline.daysUntilDue} days';
+  }
+
+  Widget _buildDeadlineItemFromData(
     BuildContext context, {
     required IconData icon,
     required Color iconColor,
     required String title,
     required String subtitle,
-    required int day,
-    required int month,
     required String statusLabel,
     required Color statusColor,
   }) {
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(

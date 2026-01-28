@@ -312,7 +312,54 @@ export class SubscriptionsController {
       };
     }
 
-    // 2. Handle Wallet Payments (Leveraging Internal Ledger)
+    // 2. Handle Bank Transfer Payments (IntaSend Checkout with PesaLink)
+    if (body.paymentMethod === 'BANK' || body.paymentMethod === 'bank') {
+      const user = await this.usersService.findOneById(req.user.userId);
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      // Check for existing subscription to warn about grace period
+      const existingSubscription = await this.subscriptionRepository.findOne({
+        where: { userId: req.user.userId },
+      });
+
+      let gracePeriodWarning: string | null = null;
+      let daysUntilDowngrade: number | null = null;
+
+      if (existingSubscription?.gracePeriodEndDate) {
+        const now = new Date();
+        const gracePeriodEnd = new Date(existingSubscription.gracePeriodEndDate);
+        const daysRemaining = Math.ceil((gracePeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (daysRemaining <= 3 && daysRemaining > 0) {
+          daysUntilDowngrade = daysRemaining;
+          gracePeriodWarning = `Warning: Your grace period ends in ${daysRemaining} day(s). Bank transfers may take 1-3 business days to process. If payment is not received before the grace period ends, your subscription will be downgraded to FREE.`;
+        }
+      }
+
+      const checkoutResult = await this.intaSendService.createCheckoutUrl(
+        amountToCharge,
+        user.email,
+        user.firstName || 'User',
+        user.lastName || '',
+        `SUB-${req.user.userId}-${plan.tier}-${billingPeriod}`,
+      );
+
+      return {
+        paymentMethod: 'BANK',
+        checkoutUrl: checkoutResult.url,
+        reference: `SUB-${req.user.userId}-${plan.tier}-${billingPeriod}`,
+        processingInfo: {
+          estimatedTime: 'Instant (typically under 45 seconds)',
+          note: 'Bank transfers via PesaLink are processed in real-time and typically complete within 45 seconds. Your subscription will be activated once payment is confirmed.',
+          gracePeriodWarning,
+          daysUntilDowngrade,
+        },
+      };
+    }
+
+    // 3. Handle Wallet Payments (Leveraging Internal Ledger)
     if (body.paymentMethod === 'WALLET') {
       const user = await this.usersService.findOneById(req.user.userId);
       if (!user) throw new Error('User not found');
@@ -338,19 +385,34 @@ export class SubscriptionsController {
         where: { userId: req.user.userId },
       });
 
+      // Calculate period end date
+      const now = new Date();
+      const periodEnd = new Date(now);
+      if (billingPeriod === 'yearly') {
+        periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+      } else {
+        periodEnd.setMonth(periodEnd.getMonth() + 1);
+      }
+
       if (!subscription) {
         subscription = this.subscriptionRepository.create({
           userId: req.user.userId,
           tier: plan.tier as SubscriptionTier,
           status: SubscriptionStatus.ACTIVE,
-          startDate: new Date(),
+          startDate: now,
+          endDate: periodEnd,
+          nextBillingDate: periodEnd,
           billingPeriod: billingPeriod,
+          lockedPrice: amountToCharge,
         });
       } else {
         subscription.tier = plan.tier as SubscriptionTier;
         subscription.status = SubscriptionStatus.ACTIVE;
         subscription.updatedAt = new Date();
         subscription.billingPeriod = billingPeriod;
+        subscription.endDate = periodEnd;
+        subscription.nextBillingDate = periodEnd;
+        subscription.lockedPrice = amountToCharge;
       }
       const savedSubscription =
         await this.subscriptionRepository.save(subscription);
@@ -359,13 +421,6 @@ export class SubscriptionsController {
       });
 
       // Record Payment
-      const now = new Date();
-      const periodEnd = new Date(now);
-      if (billingPeriod === 'yearly') {
-        periodEnd.setFullYear(periodEnd.getFullYear() + 1);
-      } else {
-        periodEnd.setMonth(periodEnd.getMonth() + 1);
-      }
 
       const payment = this.subscriptionPaymentRepository.create({
         subscriptionId: savedSubscription.id,
@@ -450,9 +505,10 @@ export class SubscriptionsController {
   @Post('mpesa-subscribe')
   async mpesaSubscribe(
     @Request() req: any,
-    @Body() body: { planId: string; phoneNumber: string },
+    @Body() body: { planId: string; phoneNumber: string; billingPeriod?: 'monthly' | 'yearly' },
   ) {
     const { planId, phoneNumber } = body;
+    const billingPeriod = body.billingPeriod || 'monthly';
 
     // Validate plan
     const plan = SUBSCRIPTION_PLANS.find(
@@ -473,7 +529,8 @@ export class SubscriptionsController {
       where: { userId: req.user.userId, status: SubscriptionStatus.ACTIVE },
     });
 
-    let amountToCharge = plan.priceKES;
+    // Use yearly pricing if applicable
+    let amountToCharge = billingPeriod === 'yearly' ? plan.priceKESYearly : plan.priceKES;
     let isProrated = false;
     let prorationDetails: any = null;
 
