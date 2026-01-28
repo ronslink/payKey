@@ -1,5 +1,5 @@
 
-import 'package:flutter/material.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import '../../../core/network/api_service.dart';
@@ -22,7 +22,7 @@ class StripeIntegrationService {
 
       final data = response.data;
       final clientSecret = data['clientSecret'];
-      final transactionId = data['transactionId'];
+      // final transactionId = data['transactionId']; // Unused for now
 
       if (clientSecret == null) throw Exception('Missing client secret');
 

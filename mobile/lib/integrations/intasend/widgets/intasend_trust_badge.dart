@@ -22,8 +22,8 @@ class IntaSendTrustBadge extends StatelessWidget {
   });
 
   static const String _securityUrl = 'https://intasend.com/security';
-  static const String _badgeUrl = 
-      'https://intasend-prod-static.s3.amazonaws.com/img/trust-badges/intasend-trust-badge-no-mpesa-hr-light.png';
+  static const String _assetPath = 
+      'assets/images/intasend-trust-badge-no-mpesa-hr-light.png';
 
   Future<void> _launchSecurityPage() async {
     final uri = Uri.parse(_securityUrl);
@@ -39,20 +39,10 @@ class IntaSendTrustBadge extends StatelessWidget {
       children: [
         GestureDetector(
           onTap: _launchSecurityPage,
-          child: Image.network(
-            _badgeUrl,
+          child: Image.asset(
+            _assetPath,
             width: width,
             semanticLabel: 'IntaSend Secure Payments (PCI-DSS Compliant)',
-            loadingBuilder: (context, child, loadingProgress) {
-              if (loadingProgress == null) return child;
-              return SizedBox(
-                width: width,
-                height: 60,
-                child: const Center(
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              );
-            },
             errorBuilder: (context, error, stackTrace) {
               // Fallback to text if image fails
               return _buildTextBadge(context);

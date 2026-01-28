@@ -9,6 +9,7 @@ import { StripeService } from './stripe.service';
 import { PayrollPaymentService } from './payroll-payment.service';
 import { IntaSendService } from './intasend.service';
 import { WalletProcessor } from './wallet.processor';
+import { BalanceSyncTask } from './balance-sync.task';
 
 import { Transaction } from './entities/transaction.entity';
 import { Worker } from '../workers/entities/worker.entity';
@@ -26,6 +27,8 @@ import { DeviceToken } from '../notifications/entities/device-token.entity';
 import { ExchangeRate } from './entities/exchange-rate.entity';
 
 import { HttpModule } from '@nestjs/axios';
+
+import { ExchangeRateService } from './exchange-rate.service';
 
 @Module({
   imports: [
@@ -65,11 +68,14 @@ import { HttpModule } from '@nestjs/axios';
     PayrollPaymentService,
     IntaSendService,
     WalletProcessor,
+    BalanceSyncTask,
+    ExchangeRateService,
   ],
   exports: [
     StripeService,
     PayrollPaymentService,
     IntaSendService,
+    ExchangeRateService,
   ],
 })
 export class PaymentsModule { }

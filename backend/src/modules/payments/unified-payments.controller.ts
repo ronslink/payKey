@@ -368,7 +368,15 @@ export class UnifiedPaymentsController {
       // Normalize Phone Number (Ensure 254 format)
       let phoneNumber = body.phoneNumber.trim().replace(/\s+/g, '');
       if (phoneNumber.startsWith('+')) phoneNumber = phoneNumber.substring(1); // Remove +
-      if (phoneNumber.startsWith('0')) phoneNumber = '254' + phoneNumber.substring(1); // 07xx -> 2547xx
+      if (phoneNumber.startsWith('0')) {
+        phoneNumber = '254' + phoneNumber.substring(1); // 07xx -> 2547xx
+      } else if (phoneNumber.startsWith('2540')) {
+        phoneNumber = '254' + phoneNumber.substring(4); // 25407xx -> 2547xx
+      } else if (!phoneNumber.startsWith('254')) {
+        // If it doesn't start with 0 and doesn't start with 254, assume it needs 254 (e.g. 712345678)
+        phoneNumber = '254' + phoneNumber;
+      }
+      // If it already starts with 254, leave it alone.
 
       console.log(`[UnifiedPayments] Normalized Phone: ${body.phoneNumber} -> ${phoneNumber}`);
 

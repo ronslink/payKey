@@ -284,7 +284,8 @@ export class PaymentsController {
   async handleIntaSendWebhook(@Request() req: any, @Body() body: any) {
     console.log('🔹 IntaSend Webhook Received:', JSON.stringify(body, null, 2));
 
-    if (body.challenge) {
+    // If it's a pure verification challenge (no invoice/tracking data), return immediately
+    if (body.challenge && !body.invoice_id && !body.tracking_id) {
       return { challenge: body.challenge };
     }
 
@@ -459,6 +460,10 @@ export class PaymentsController {
       }
     }
 
-    return { status: 'success', updated: transactions.length };
+    return {
+      status: 'success',
+      updated: transactions.length,
+      challenge: body.challenge // Echo challenge if present (required by IntaSend)
+    };
   }
 }

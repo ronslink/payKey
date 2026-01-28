@@ -19,6 +19,9 @@ class PayrollConstants {
   // UI
   static const double cardBorderRadius = 12.0;
   static const double bottomSheetShadowOpacity = 0.05;
+
+  // Limits
+  static const int mpesaTransactionLimit = 250000;
 }
 
 /// Worker employment types

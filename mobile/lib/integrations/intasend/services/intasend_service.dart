@@ -77,9 +77,14 @@ class IntaSendService {
     required List<WorkerPayout> workers,
   }) async {
     final wallet = await getWalletBalance();
+    
+    // Calculate total including Payout Fees (1.5% capped at 50)
     final totalRequired = workers.fold<double>(
       0,
-      (sum, w) => sum + w.amount,
+      (sum, w) {
+        final fee = _calculatePayoutFee(w.amount);
+        return sum + w.amount + fee;
+      },
     );
 
     return FundVerification.check(
@@ -87,6 +92,21 @@ class IntaSendService {
       wallet: wallet,
       workerCount: workers.length,
     );
+  }
+
+  /// Calculate IntaSend Payout Fee (Mirror Backend Logic)
+  /// 1.5% - Min 10, Max 50
+  double _calculatePayoutFee(double amount) {
+    // Logic: 1.5% of amount
+    double fee = amount * 0.015;
+    
+    // Min 10
+    if (fee < 10) fee = 10;
+    
+    // Max 50
+    if (fee > 50) fee = 50;
+    
+    return fee;
   }
 
 

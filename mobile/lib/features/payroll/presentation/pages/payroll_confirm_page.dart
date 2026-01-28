@@ -9,7 +9,7 @@ import '../constants/payroll_confirm_constants.dart';
 import '../widgets/topup_selection_sheet.dart'; // New sheet
 import 'package:url_launcher/url_launcher.dart'; // For Checkout
 import '../models/payroll_confirm_state.dart';
-import '../widgets/mpesa_topup_sheet.dart';
+
 import '../widgets/payment_results_page.dart';
 
 // Data imports
@@ -465,9 +465,9 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
                   Container(
                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                      decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.1),
+                        color: Colors.orange.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                        border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
                      ),
                      child: Text(
                         'Clearing: ${verification.formattedClearing}',
@@ -501,9 +501,9 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
+                  color: Colors.blue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                  border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [

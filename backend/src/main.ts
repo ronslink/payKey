@@ -49,7 +49,13 @@ async function bootstrap() {
   app.enableCors({
     origin:
       process.env.NODE_ENV === 'production'
-        ? ['https://paydome.co', 'https://www.paydome.co']
+        ? [
+          'https://paydome.co',
+          'https://www.paydome.co',
+          'http://localhost:8080',
+          'http://0.0.0.0:8080',
+          'http://127.0.0.1:8080'
+        ]
         : true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],

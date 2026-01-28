@@ -104,7 +104,10 @@ export class IntaSendService {
     // Trigger if Env Var is true OR Magic Amount 777
     // We removed the blanket 'sandbox' check to allow testing against the REAL IntaSend Sandbox if desired.
     // FIX: Ensure we NEVER simulate in Live mode/Production
-    if ((process.env.INTASEND_SIMULATE === 'true' || amount === 777) && !this.isLive) {
+    const simulateVar = this.configService.get('INTASEND_SIMULATE');
+    this.logger.log(`[DEBUG] Simulate Check: Var=${simulateVar} (${typeof simulateVar}), Amount=${amount}, IsLive=${this.isLive}`);
+
+    if ((simulateVar === 'true' || amount === 777) && !this.isLive) {
       this.logger.log(
         `⚠️ SIMULATION: IntaSend STK Push to ${phoneNumber} for ${amount}`,
       );
@@ -164,9 +167,9 @@ export class IntaSendService {
       };
     }
 
-    // In Sandbox, FORCE the test number if using the API (unless simulation mode handled above)
-    // This allows the user to type ANY number in the UI, but the backend swaps it for the working test number.
-    const effectivePhone = this.isLive ? phoneNumber : INTASEND_SANDBOX_TEST_PHONE;
+    // Use the provided phone number directly. 
+    // IntaSend Sandbox supports real STK pushes to real numbers for verification.
+    const effectivePhone = phoneNumber;
 
     const url = `${this.baseUrl}/v1/payment/mpesa-stk-push/`;
     this.logger.log(
@@ -262,9 +265,7 @@ export class IntaSendService {
         'IntaSend Payout failed',
         error.response?.data || error.message,
       );
-      throw new Error(
-        `IntaSend Payout failed: ${JSON.stringify(error.response?.data)}`,
-      );
+      throw error;
     }
   }
 
@@ -473,9 +474,7 @@ export class IntaSendService {
         'IntaSend Bank Payout failed',
         error.response?.data || error.message,
       );
-      throw new Error(
-        `IntaSend Bank Payout failed: ${JSON.stringify(error.response?.data)}`,
-      );
+      throw error;
     }
   }
 

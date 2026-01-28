@@ -21,6 +21,7 @@ export enum TransactionStatus {
   SUCCESS = 'SUCCESS',
   FAILED = 'FAILED',
   CLEARING = 'CLEARING',
+  MANUAL_INTERVENTION = 'MANUAL_INTERVENTION',
 }
 
 @Entity('transactions')

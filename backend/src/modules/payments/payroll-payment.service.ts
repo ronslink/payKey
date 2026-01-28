@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
@@ -26,6 +27,7 @@ export class PayrollPaymentService {
     private payrollRecordRepository: Repository<PayrollRecord>,
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    private configService: ConfigService,
   ) { }
 
   /**
@@ -91,9 +93,22 @@ export class PayrollPaymentService {
     };
   }
 
-  private readonly MPESA_LIMIT = 250000;
-  // PesaLink limit is generally higher (e.g. 999,999) but let's stick to safe single transaction limits
-  // IntaSend might have its own limits, but usually it handles standard payroll amounts.
+  private get MPESA_LIMIT(): number {
+    return this.configService.get<number>('MPESA_LIMIT', 250000);
+  }
+
+  /**
+   * Calculate IntaSend B2C/Payout fee
+   * Logic: 1.5% of amount, Min KES 10, Max KES 50.
+   */
+  private calculatePayoutFee(amount: number): number {
+    const fee = amount * 0.015;
+    return Math.min(Math.max(fee, 10), 50);
+  }
+
+  // PesaLink fee estimation (using safe upper bound or similar logic)
+  // Often ranges KES 30-100. Using flat 50 for now as safe estimate.
+  private readonly BANK_PAYOUT_FEE = 50;
 
   private async processMobileBatch(records: PayrollRecord[]) {
     if (records.length === 0) return [];
@@ -108,6 +123,7 @@ export class PayrollPaymentService {
       recordId: string;
     }[] = [];
     let totalBatchAmount = 0;
+    let totalBatchFees = 0;
 
     // 1. Prepare Transactions (Splitting logic)
     for (const record of records) {
@@ -135,6 +151,10 @@ export class PayrollPaymentService {
             recordId: record.id
           });
 
+          // Calculate Fee for this transaction chunk
+          const fee = this.calculatePayoutFee(currentAmount);
+          totalBatchFees += fee;
+
           // Create Transaction Entity
           const transaction = this.transactionRepository.create({
             userId: record.userId,
@@ -152,6 +172,7 @@ export class PayrollPaymentService {
               taxBreakdown: record.taxBreakdown,
               grossSalary: record.grossSalary,
               netPay: record.netSalary,
+              estimatedFee: fee, // Track fee in metadata
             },
           });
 
@@ -172,6 +193,7 @@ export class PayrollPaymentService {
     if (allTransactions.length === 0) return results;
 
     const firstUserId = records[0].userId;
+    const totalDeduction = totalBatchAmount + totalBatchFees;
 
     // Fetch employer's IntaSend wallet ID
     const employer = await this.usersRepository.findOne({
@@ -180,11 +202,11 @@ export class PayrollPaymentService {
     });
     const walletId = employer?.intasendWalletId;
 
-    // 2. Deduct Bundle Amount
+    // 2. Deduct Bundle Amount + Fees
     try {
-      await this.usersRepository.decrement({ id: firstUserId }, 'walletBalance', totalBatchAmount);
+      await this.usersRepository.decrement({ id: firstUserId }, 'walletBalance', totalDeduction);
     } catch (e) {
-      this.logger.error(`Failed to deduct batch amount ${totalBatchAmount}`, e);
+      this.logger.error(`Failed to deduct batch amount ${totalDeduction}`, e);
       records.forEach(r => {
         results.push({
           workerId: r.workerId,
@@ -228,30 +250,53 @@ export class PayrollPaymentService {
         });
       }
 
-    } catch (e) {
+    } catch (e: any) {
       this.logger.error('Bulk Payout Failed', e);
 
-      // Refund
-      await this.usersRepository.increment({ id: firstUserId }, 'walletBalance', totalBatchAmount);
+      const status = e.response?.status;
+      const isSafeToRefund = status && status >= 400 && status < 500;
 
-      // Mark Transactions Failed
-      for (const tx of savedTransactions) {
-        tx.status = TransactionStatus.FAILED;
-        tx.metadata = { ...tx.metadata, error: e.message };
+      if (isSafeToRefund) {
+        // Safe to refund (Request rejected)
+        await this.usersRepository.increment({ id: firstUserId }, 'walletBalance', totalDeduction);
+
+        for (const tx of savedTransactions) {
+          tx.status = TransactionStatus.FAILED;
+          tx.metadata = { ...tx.metadata, error: e.message };
+        }
+
+        for (const record of records) {
+          record.paymentStatus = 'failed';
+          await this.payrollRecordRepository.save(record);
+          results.push({
+            workerId: record.workerId,
+            workerName: record.worker.name,
+            success: false,
+            error: e.message
+          });
+        }
+      } else {
+        // Unsafe to refund (Network/Server Error - Unknown State)
+        this.logger.warn(`CRITICAL: Potential Partial Failure (Status: ${status}). NOT Refunding automatically.`);
+
+        for (const tx of savedTransactions) {
+          tx.status = TransactionStatus.MANUAL_INTERVENTION;
+          tx.metadata = { ...tx.metadata, error: e.message, partialFailure: true };
+        }
+
+        for (const record of records) {
+          // Mark as manual_check to prevent auto-retry while keeping user informed
+          record.paymentStatus = 'manual_check';
+          await this.payrollRecordRepository.save(record);
+          results.push({
+            workerId: record.workerId,
+            workerName: record.worker.name,
+            success: false,
+            error: 'Partial Failure: Manual Check Required'
+          });
+        }
       }
       await this.transactionRepository.save(savedTransactions);
-
-      // Update Records Logic (Mark failed)
-      for (const record of records) {
-        record.paymentStatus = 'failed';
-        await this.payrollRecordRepository.save(record);
-        results.push({
-          workerId: record.workerId,
-          workerName: record.worker.name,
-          success: false,
-          error: e.message
-        });
-      }
     }
 
     return results;
@@ -270,6 +315,7 @@ export class PayrollPaymentService {
       narrative: string;
     }[] = [];
     let totalBatchAmount = 0;
+    let totalBatchFees = 0;
 
     // 1. Prepare Transactions
     for (const record of records) {
@@ -304,6 +350,10 @@ export class PayrollPaymentService {
         narrative: 'Salary Payment'
       });
 
+      // Calculate Fee (Flat bank fee for now)
+      const fee = this.BANK_PAYOUT_FEE;
+      totalBatchFees += fee;
+
       // Create Transaction Entity
       const transaction = this.transactionRepository.create({
         userId: record.userId,
@@ -320,6 +370,7 @@ export class PayrollPaymentService {
           taxBreakdown: record.taxBreakdown,
           grossSalary: record.grossSalary,
           netPay: record.netSalary,
+          estimatedFee: fee,
         },
       });
 
@@ -330,6 +381,7 @@ export class PayrollPaymentService {
     if (allTransactions.length === 0) return results;
 
     const firstUserId = records[0].userId;
+    const totalDeduction = totalBatchAmount + totalBatchFees;
 
     // Fetch employer's IntaSend wallet ID
     const employer = await this.usersRepository.findOne({
@@ -338,11 +390,11 @@ export class PayrollPaymentService {
     });
     const walletId = employer?.intasendWalletId;
 
-    // 2. Deduct Amount
+    // 2. Deduct Amount + Fees
     try {
-      await this.usersRepository.decrement({ id: firstUserId }, 'walletBalance', totalBatchAmount);
+      await this.usersRepository.decrement({ id: firstUserId }, 'walletBalance', totalDeduction);
     } catch (e) {
-      this.logger.error(`Failed to deduct bank batch amount ${totalBatchAmount}`, e);
+      this.logger.error(`Failed to deduct bank batch amount ${totalDeduction}`, e);
       records.forEach(r => {
         results.push({
           workerId: r.workerId,
@@ -388,27 +440,52 @@ export class PayrollPaymentService {
         });
       }
 
-    } catch (e) {
+    } catch (e: any) {
       this.logger.error('Bank Bulk Payout Failed', e);
 
-      // Refund
-      await this.usersRepository.increment({ id: firstUserId }, 'walletBalance', totalBatchAmount);
+      const status = e.response?.status;
+      const isSafeToRefund = status && status >= 400 && status < 500;
 
-      // Mark Failed
-      for (const tx of savedTransactions) {
-        tx.status = TransactionStatus.FAILED;
-        tx.metadata = { ...tx.metadata, error: e.message };
+      if (isSafeToRefund) {
+        // Safe to Refund
+        await this.usersRepository.increment({ id: firstUserId }, 'walletBalance', totalDeduction);
+
+        for (const tx of savedTransactions) {
+          tx.status = TransactionStatus.FAILED;
+          tx.metadata = { ...tx.metadata, error: e.message };
+        }
+
+        records.forEach(async r => {
+          r.paymentStatus = 'failed';
+          await this.payrollRecordRepository.save(r);
+          results.push({
+            workerId: r.workerId,
+            workerName: r.worker.name,
+            success: false,
+            error: e.message
+          });
+        });
+      } else {
+        // Unsafe
+        this.logger.warn(`CRITICAL: Potential Bank Partial Failure (Status: ${status}). NOT Refunding automatically.`);
+
+        for (const tx of savedTransactions) {
+          tx.status = TransactionStatus.MANUAL_INTERVENTION;
+          tx.metadata = { ...tx.metadata, error: e.message, partialFailure: true };
+        }
+
+        records.forEach(async r => {
+          r.paymentStatus = 'manual_check';
+          await this.payrollRecordRepository.save(r);
+          results.push({
+            workerId: r.workerId,
+            workerName: r.worker.name,
+            success: false,
+            error: 'Partial Failure: Manual Check Required'
+          });
+        });
       }
       await this.transactionRepository.save(savedTransactions);
-
-      records.forEach(r => {
-        results.push({
-          workerId: r.workerId,
-          workerName: r.worker.name,
-          success: false,
-          error: e.message
-        });
-      });
     }
 
     return results;

@@ -1,6 +1,6 @@
 
 import 'package:flutter/material.dart';
-import '../constants/payroll_confirm_constants.dart';
+
 
 class TopupSelectionSheet extends StatefulWidget {
   final double defaultAmount;
@@ -70,9 +70,24 @@ class _TopupSelectionSheetState extends State<TopupSelectionSheet> with SingleTi
     super.dispose();
   }
 
+  double get _enteredAmount => double.tryParse(_amountController.text) ?? widget.defaultAmount;
+ 
+  // Fee Calculation Logic
+  // M-Pesa/IntaSend charges ~3% for collection.
+  // To ensure wallet receives the requested amount, we gross up.
+  // Formula: Total = Net / (1 - 0.03)
+  double get _processingFee => _calculateGrossAmount(_enteredAmount) - _enteredAmount;
+  double get _totalPayable => _calculateGrossAmount(_enteredAmount);
+
+  double _calculateGrossAmount(double net) {
+    // 3% Fee
+    double raw = net / 0.97;
+    return double.parse(raw.toStringAsFixed(2));
+  }
+
   void _handleConfirm() {
     Navigator.of(context).pop();
-    final amount = double.tryParse(_amountController.text) ?? widget.defaultAmount;
+    final amount = _totalPayable; // Pass total payable so wallet receives net
     
     if (_tabController.index == 0) {
       widget.onMpesaConfirm(amount, _phoneController.text);
@@ -126,14 +141,18 @@ class _TopupSelectionSheetState extends State<TopupSelectionSheet> with SingleTi
               Tab(text: 'Checkout'),
               Tab(text: 'Global/SEPA'),
             ],
+            onTap: (_) => setState(() {}), // Rebuild to update fee wording if needed
           ),
           const SizedBox(height: 24),
           _buildAmountField(),
+          const SizedBox(height: 16),
+          _buildFeeBreakdown(), // New Breakdown Section
           const SizedBox(height: 24),
           SizedBox(
             height: 100, // Fixed height for tab content
             child: TabBarView(
               controller: _tabController,
+              physics: const NeverScrollableScrollPhysics(), // Disable swipe to avoid confusion
               children: [
                 _buildPhoneField(),
                 _buildCheckoutInfo(),
@@ -154,13 +173,14 @@ class _TopupSelectionSheetState extends State<TopupSelectionSheet> with SingleTi
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Amount to Load',
+          'Amount to Receive (Net)',
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
         TextField(
           controller: _amountController,
           keyboardType: TextInputType.number,
+          onChanged: (_) => setState(() {}), // Rebuild to update breakdown
           style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           decoration: InputDecoration(
             prefixText: 'KES ',
@@ -179,6 +199,50 @@ class _TopupSelectionSheetState extends State<TopupSelectionSheet> with SingleTi
               vertical: 20,
               horizontal: 16,
             ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFeeBreakdown() {
+    // Only show fee for M-Pesa/Checkout (IntaSend)
+    // Stripe might have different fees, but let's assume consistent gross-up policy or hide for Stripe if unknown.
+    // For this plan, we focus on M-Pesa.
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        children: [
+          _feeRow('Processing Fee (3%)', _processingFee),
+          const Divider(height: 16),
+          _feeRow('Total to Pay', _totalPayable, isTotal: true),
+        ],
+      ),
+    );
+  }
+
+  Widget _feeRow(String label, double amount, {bool isTotal = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: isTotal ? Colors.black : Colors.grey.shade600,
+            fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+        Text(
+          'KES ${amount.toStringAsFixed(2)}',
+          style: TextStyle(
+            fontWeight: isTotal ? FontWeight.bold : FontWeight.w500,
+            fontSize: isTotal ? 16 : 14,
           ),
         ),
       ],
@@ -249,9 +313,9 @@ class _TopupSelectionSheetState extends State<TopupSelectionSheet> with SingleTi
             borderRadius: BorderRadius.circular(16),
           ),
         ),
-        child: const Text(
-          'Proceed',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+        child: Text(
+          'Pay KES ${_totalPayable.toStringAsFixed(0)}',
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
         ),
       ),
     );
