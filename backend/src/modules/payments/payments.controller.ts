@@ -404,6 +404,27 @@ export class PaymentsController {
           }
         }
       }
+
+      // Handle B2C Payout Logic - Update PayrollRecord status
+      if (tx.type === TransactionType.SALARY_PAYOUT && tx.metadata?.payrollRecordId) {
+        const payrollRecordId = tx.metadata.payrollRecordId;
+        let paymentStatus: string;
+
+        if (newStatus === TransactionStatus.SUCCESS) {
+          paymentStatus = 'paid';
+        } else if (newStatus === TransactionStatus.FAILED) {
+          paymentStatus = 'failed';
+        } else {
+          paymentStatus = 'processing';
+        }
+
+        await this.payrollRecordRepository.update(payrollRecordId, {
+          paymentStatus,
+          paymentDate: newStatus === TransactionStatus.SUCCESS ? new Date() : undefined,
+        });
+
+        console.log(`📊 PayrollRecord ${payrollRecordId} updated to ${paymentStatus}`);
+      }
     }
 
 

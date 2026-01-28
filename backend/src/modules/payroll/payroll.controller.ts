@@ -28,6 +28,8 @@ import {
 import { PayslipService } from './payslip.service';
 import { TaxesService } from '../taxes/taxes.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 
 @Controller('payroll')
 @UseGuards(JwtAuthGuard)
@@ -40,6 +42,8 @@ export class PayrollController {
     private payrollRepository: Repository<PayrollRecord>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectQueue('payroll-processing')
+    private readonly payrollQueue: Queue,
   ) { }
 
   // Helper method to get employer name (fetch once, use for all payslips)
@@ -533,5 +537,35 @@ export class PayrollController {
       req.user.userId,
       payPeriodId,
     );
+  }
+
+  /**
+   * Get the status of a payroll processing job
+   * Frontend can poll this endpoint after calling POST /payroll/process
+   */
+  @Get('job-status/:jobId')
+  async getJobStatus(
+    @Request() req: AuthenticatedRequest,
+    @Param('jobId') jobId: string,
+  ) {
+    const job = await this.payrollQueue.getJob(jobId);
+
+    if (!job) {
+      throw new NotFoundException(`Job ${jobId} not found`);
+    }
+
+    const state = await job.getState();
+    const progress = job.progress;
+
+    return {
+      jobId: job.id,
+      status: state,
+      progress: typeof progress === 'number' ? progress : 0,
+      data: job.data,
+      result: job.returnvalue,
+      failedReason: job.failedReason,
+      finishedOn: job.finishedOn,
+      processedOn: job.processedOn,
+    };
   }
 }

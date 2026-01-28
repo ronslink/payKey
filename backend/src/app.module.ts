@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { BullModule } from '@nestjs/bull';
+import { BullModule } from '@nestjs/bullmq';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
@@ -77,7 +77,7 @@ import { GovSubmission } from './modules/gov-integrations/entities/gov-submissio
     BullModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
-        redis: {
+        connection: {
           host: configService.get('REDIS_HOST', 'localhost'),
           port: parseInt(configService.get('REDIS_PORT', '6379')),
           password: configService.get('REDIS_PASSWORD'),

@@ -70,12 +70,12 @@ class PayrollRepository {
 
   /// Process payroll batch for payment.
   ///
-  /// Marks the specified workers' payroll as processed and ready for payment.
-  /// Returns processing result with success/failure details.
+  /// Returns a response containing the job ID for async processing.
+  /// Use [getJobStatus] to poll for completion status.
   /// 
-  /// Note: Backend uses async queue processing. If status is 'PROCESSING',
-  /// the job is queued and will complete asynchronously.
-  Future<PayrollProcessingResult> processPayroll(
+  /// Note: Backend uses async queue processing. The response will contain
+  /// a jobId that can be used to track progress.
+  Future<PayrollProcessResponse> processPayroll(
     List<String> workerIds,
     String payPeriodId, {
     bool skipPayout = false,
@@ -93,25 +93,7 @@ class PayrollRepository {
         );
 
         final data = response.data as Map<String, dynamic>;
-        
-        // Handle async queue response: {status: 'PROCESSING', jobId: '...', ...}
-        if (data['status'] == 'PROCESSING') {
-          // Job is queued - return a "pending" result
-          // The actual result will be available when the job completes
-          return PayrollProcessingResult(
-            successCount: workerIds.length, // Optimistic - assume all will succeed
-            failureCount: 0,
-            results: workerIds.map((id) => WorkerPaymentResult(
-              workerId: id,
-              workerName: 'Processing...',
-              success: true,
-            )).toList(),
-          );
-        }
-        
-        // Handle immediate completion response with payoutResults
-        final payoutResults = data['payoutResults'] as Map<String, dynamic>? ?? {};
-        return PayrollProcessingResult.fromJson(payoutResults);
+        return PayrollProcessResponse.fromJson(data);
       },
     );
   }
@@ -128,6 +110,20 @@ class PayrollRepository {
           '/payroll/verify-funds/$payPeriodId',
         );
         return FundVerificationResult.fromJson(response.data);
+      },
+    );
+  }
+
+  /// Get the status of a payroll processing job.
+  ///
+  /// Returns job status including progress percentage and completion state.
+  /// Use this to poll job status after processPayroll returns a jobId.
+  Future<JobStatusResult> getJobStatus(String jobId) async {
+    return _executeRequest(
+      operation: 'get job status',
+      request: () async {
+        final response = await _authenticatedGet('/payroll/job-status/$jobId');
+        return JobStatusResult.fromJson(response.data as Map<String, dynamic>);
       },
     );
   }

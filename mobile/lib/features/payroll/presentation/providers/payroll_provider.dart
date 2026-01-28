@@ -51,7 +51,7 @@ class PayrollNotifier extends AsyncNotifier<List<PayrollCalculation>> {
       ));
   }
 
-  Future<PayrollProcessingResult> processPayroll(
+  Future<PayrollProcessResponse> processPayroll(
     List<String> workerIds,
     String payPeriodId, {
     bool skipPayout = false,

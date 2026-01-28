@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart'; // For Checkout
 import '../models/payroll_confirm_state.dart';
 
 import '../widgets/payment_results_page.dart';
+import '../widgets/payroll_processing_dialog.dart';
 
 // Data imports
 // Data imports
@@ -290,38 +291,81 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
     });
 
     try {
-      // Process payroll via backend API (which handles IntaSend disbursement server-side)
-      // skipPayout: false means the backend WILL process the M-Pesa payouts
-      await ref.read(payrollProvider.notifier).processPayroll(
+      // Process payroll via backend API (returns jobId for async processing)
+      final response = await ref.read(payrollProvider.notifier).processPayroll(
             widget.workerIds,
             widget.payPeriodId,
-            skipPayout: false, // Backend handles disbursement
+            skipPayout: false,
       );
 
-      ref.invalidate(transactionHistoryProvider);
-      ref.invalidate(payPeriodsProvider);
+      // If we have a jobId, show the progress dialog
+      if (response.isAsync && response.jobId != null && mounted) {
+        final success = await showPayrollProcessingDialog(
+          context: context,
+          jobId: response.jobId!,
+          workerCount: _preparedPayouts!.length,
+        );
 
-      // Create a success result for UI display
-      final batchResult = PayrollBatchResult(
-        successCount: _preparedPayouts!.length,
-        failureCount: 0,
-        totalProcessed: _preparedPayouts!.length,
-        failedWorkerIds: [],
-        results: _preparedPayouts!.map((p) => PayrollWorkerResult(
-          success: true,
-          workerName: p.name,
-          netPay: p.amount,
-          error: null,
-        )).toList(),
-      );
+        if (!mounted) return;
 
-      if (mounted) {
-        setState(() {
-          _state = _state.copyWith(
-            status: PayrollConfirmStatus.completed,
-            batchResult: batchResult,
+        if (success) {
+          ref.invalidate(transactionHistoryProvider);
+          ref.invalidate(payPeriodsProvider);
+
+          // Create a success result for UI display
+          final batchResult = PayrollBatchResult(
+            successCount: _preparedPayouts!.length,
+            failureCount: 0,
+            totalProcessed: _preparedPayouts!.length,
+            failedWorkerIds: [],
+            results: _preparedPayouts!.map((p) => PayrollWorkerResult(
+              success: true,
+              workerName: p.name,
+              netPay: p.amount,
+              error: null,
+            )).toList(),
           );
-        });
+
+          setState(() {
+            _state = _state.copyWith(
+              status: PayrollConfirmStatus.completed,
+              batchResult: batchResult,
+            );
+          });
+        } else {
+          setState(() {
+            _state = _state.copyWith(
+              status: PayrollConfirmStatus.ready,
+              error: 'Payroll processing failed. Please try again.',
+            );
+          });
+        }
+      } else {
+        // Immediate completion (shouldn't happen with new async flow, but handle it)
+        ref.invalidate(transactionHistoryProvider);
+        ref.invalidate(payPeriodsProvider);
+
+        final batchResult = PayrollBatchResult(
+          successCount: _preparedPayouts!.length,
+          failureCount: 0,
+          totalProcessed: _preparedPayouts!.length,
+          failedWorkerIds: [],
+          results: _preparedPayouts!.map((p) => PayrollWorkerResult(
+            success: true,
+            workerName: p.name,
+            netPay: p.amount,
+            error: null,
+          )).toList(),
+        );
+
+        if (mounted) {
+          setState(() {
+            _state = _state.copyWith(
+              status: PayrollConfirmStatus.completed,
+              batchResult: batchResult,
+            );
+          });
+        }
       }
     } catch (e) {
       if (mounted) {

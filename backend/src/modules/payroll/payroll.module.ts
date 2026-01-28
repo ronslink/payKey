@@ -18,7 +18,7 @@ import { TaxesModule } from '../taxes/taxes.module';
 import { TaxPaymentsModule } from '../tax-payments/tax-payments.module';
 import { PayslipService } from './payslip.service';
 import { ActivitiesModule } from '../activities/activities.module';
-import { BullModule } from '@nestjs/bull';
+import { BullModule } from '@nestjs/bullmq';
 import { PayrollProcessor } from './payroll.processor';
 
 @Module({
@@ -38,11 +38,7 @@ import { PayrollProcessor } from './payroll.processor';
     TaxPaymentsModule,
     ActivitiesModule,
     BullModule.registerQueue({
-      name: 'payouts',
-      limiter: {
-        max: 5, // Process max 5 jobs
-        duration: 1000, // per second (IntaSend safe limit)
-      },
+      name: 'payroll-processing',
     }),
   ],
   controllers: [
@@ -58,4 +54,4 @@ import { PayrollProcessor } from './payroll.processor';
   ],
   exports: [PayrollService, PayPeriodsService],
 })
-export class PayrollModule {}
+export class PayrollModule { }

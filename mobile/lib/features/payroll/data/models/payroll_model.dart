@@ -366,6 +366,47 @@ class FundVerificationResult {
 }
 
 // =============================================================================
+// PAYROLL PROCESS RESPONSE
+// =============================================================================
+
+/// Response from initiating payroll processing.
+/// 
+/// When backend uses async queue processing, this contains the jobId
+/// that can be used to poll for status updates.
+class PayrollProcessResponse {
+  /// Status: 'PROCESSING' for async, 'COMPLETED' for immediate
+  final String status;
+
+  /// Job ID for polling status (only for async processing)
+  final String? jobId;
+
+  /// Pay period ID being processed
+  final String? payPeriodId;
+
+  /// Message from backend
+  final String? message;
+
+  /// Whether this is an async job that needs polling
+  bool get isAsync => status == 'PROCESSING' && jobId != null;
+
+  const PayrollProcessResponse({
+    required this.status,
+    this.jobId,
+    this.payPeriodId,
+    this.message,
+  });
+
+  factory PayrollProcessResponse.fromJson(Map<String, dynamic> json) {
+    return PayrollProcessResponse(
+      status: json['status'] as String? ?? 'UNKNOWN',
+      jobId: json['jobId']?.toString(),
+      payPeriodId: json['payPeriodId'] as String?,
+      message: json['message'] as String?,
+    );
+  }
+}
+
+// =============================================================================
 // PAYROLL PROCESSING RESULT
 // =============================================================================
 
@@ -537,4 +578,90 @@ class WorkerPaymentStatus {
 
   /// Returns true if payment failed.
   bool get isFailed => paymentStatus.toLowerCase() == 'failed';
+}
+
+// =============================================================================
+// JOB STATUS RESULT
+// =============================================================================
+
+/// Status of a background payroll processing job.
+/// Used for polling job progress after initiating payroll processing.
+class JobStatusResult {
+  /// Unique job identifier
+  final String jobId;
+
+  /// Current job state: 'waiting', 'active', 'completed', 'failed', 'delayed'
+  final String status;
+
+  /// Progress percentage (0-100)
+  final int progress;
+
+  /// Job input data
+  final Map<String, dynamic>? data;
+
+  /// Result data if job completed successfully
+  final Map<String, dynamic>? result;
+
+  /// Error message if job failed
+  final String? failedReason;
+
+  /// Timestamp when job finished (milliseconds since epoch)
+  final int? finishedOn;
+
+  /// Timestamp when job started processing (milliseconds since epoch)
+  final int? processedOn;
+
+  const JobStatusResult({
+    required this.jobId,
+    required this.status,
+    required this.progress,
+    this.data,
+    this.result,
+    this.failedReason,
+    this.finishedOn,
+    this.processedOn,
+  });
+
+  factory JobStatusResult.fromJson(Map<String, dynamic> json) {
+    return JobStatusResult(
+      jobId: json['jobId']?.toString() ?? '',
+      status: json['status'] as String? ?? 'unknown',
+      progress: (json['progress'] as num?)?.toInt() ?? 0,
+      data: json['data'] as Map<String, dynamic>?,
+      result: json['result'] as Map<String, dynamic>?,
+      failedReason: json['failedReason'] as String?,
+      finishedOn: (json['finishedOn'] as num?)?.toInt(),
+      processedOn: (json['processedOn'] as num?)?.toInt(),
+    );
+  }
+
+  /// Returns true if the job is still running
+  bool get isActive => status == 'active' || status == 'waiting' || status == 'delayed';
+
+  /// Returns true if the job completed successfully
+  bool get isCompleted => status == 'completed';
+
+  /// Returns true if the job failed
+  bool get isFailed => status == 'failed';
+
+  /// Returns true if the job is finished (completed or failed)
+  bool get isFinished => isCompleted || isFailed;
+
+  /// Human-readable status message
+  String get statusMessage {
+    switch (status) {
+      case 'waiting':
+        return 'Waiting to start...';
+      case 'active':
+        return 'Processing payroll...';
+      case 'delayed':
+        return 'Delayed, will retry...';
+      case 'completed':
+        return 'Payroll completed!';
+      case 'failed':
+        return failedReason ?? 'Processing failed';
+      default:
+        return 'Status: $status';
+    }
+  }
 }

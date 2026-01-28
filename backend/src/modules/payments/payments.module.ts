@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
-import { BullModule } from '@nestjs/bull';
+import { BullModule } from '@nestjs/bullmq';
 import { PaymentsController } from './payments.controller';
 import { UnifiedPaymentsController } from './unified-payments.controller';
 import { SubscriptionPaymentsController } from './subscription-payments.controller';
@@ -51,10 +51,6 @@ import { ExchangeRateService } from './exchange-rate.service';
     ConfigModule,
     BullModule.registerQueue({
       name: 'wallets',
-      limiter: {
-        max: 3,
-        duration: 1000,
-      },
     }),
     NotificationsModule,
   ],

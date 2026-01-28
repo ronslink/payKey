@@ -1,6 +1,6 @@
-import { Process, Processor } from '@nestjs/bull';
+import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
-import type { Job } from 'bull';
+import { Job } from 'bullmq';
 import { IntaSendService } from './intasend.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -12,17 +12,18 @@ export interface WalletCreationJobData {
 }
 
 @Processor('wallets')
-export class WalletProcessor {
+export class WalletProcessor extends WorkerHost {
     private readonly logger = new Logger(WalletProcessor.name);
 
     constructor(
         private readonly intaSendService: IntaSendService,
         @InjectRepository(User)
         private readonly usersRepository: Repository<User>,
-    ) { }
+    ) {
+        super();
+    }
 
-    @Process('create-wallet')
-    async handleWalletCreation(job: Job<WalletCreationJobData>) {
+    async process(job: Job<WalletCreationJobData>): Promise<any> {
         this.logger.log(
             `Processing wallet creation job ${job.id} for user ${job.data.userId}`,
         );
@@ -73,7 +74,7 @@ export class WalletProcessor {
             this.logger.error(
                 `Wallet creation job ${job.id} failed: ${errorMessage}`,
             );
-            throw error; // Let Bull handle retries
+            throw error; // Let BullMQ handle retries
         }
     }
 }

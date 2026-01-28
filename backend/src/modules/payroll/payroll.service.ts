@@ -33,8 +33,8 @@ import {
 } from '../time-tracking/entities/time-entry.entity';
 import { PayrollRecord, PayrollStatus } from './entities/payroll-record.entity';
 import { PayslipService } from './payslip.service';
-import { InjectQueue } from '@nestjs/bull';
-import type { Queue } from 'bull';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 
 // =============================================================================
 // Types & Interfaces
@@ -142,7 +142,7 @@ export class PayrollService {
     private readonly activitiesService: ActivitiesService,
     private readonly dataSource: DataSource,
     private readonly payslipService: PayslipService,
-    @InjectQueue('payouts') private readonly payoutsQueue: Queue,
+    @InjectQueue('payroll-processing') private readonly payrollQueue: Queue,
   ) { }
 
   // ===========================================================================
@@ -434,8 +434,8 @@ export class PayrollService {
       status: PayPeriodStatus.PROCESSING,
     });
 
-    const job = await this.payoutsQueue.add(
-      'process-payout',
+    const job = await this.payrollQueue.add(
+      'finalize-payroll',
       { userId, payPeriodId, skipPayout },
       {
         attempts: 3,

@@ -13,8 +13,8 @@ import { AppModule } from '../app.module';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { User, UserRole } from '../modules/users/entities/user.entity';
 import { Repository, IsNull } from 'typeorm';
-import { Queue } from 'bull';
-import { getQueueToken } from '@nestjs/bull';
+import { Queue } from 'bullmq';
+import { getQueueToken } from '@nestjs/bullmq';
 
 async function bootstrap() {
     console.log('🚀 Starting User Wallet Migration...');

@@ -106,7 +106,7 @@ describe('PayrollService', () => {
           },
         },
         {
-          provide: 'BullQueue_payouts',
+          provide: 'BullQueue_payroll-processing',
           useValue: {
             add: jest.fn().mockResolvedValue({ id: 'job-1' }),
             process: jest.fn(),
