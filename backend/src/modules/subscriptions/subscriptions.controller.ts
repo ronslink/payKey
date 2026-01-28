@@ -272,7 +272,12 @@ export class SubscriptionsController {
   @Post('subscribe')
   async subscribe(
     @Request() req: any,
-    @Body() body: { planId: string; paymentMethod?: string },
+    @Body()
+    body: {
+      planId: string;
+      paymentMethod?: string;
+      billingPeriod?: 'monthly' | 'yearly';
+    },
   ) {
     const plan = SUBSCRIPTION_PLANS.find(
       (p) => p.tier.toLowerCase() === body.planId.toLowerCase(),
@@ -281,7 +286,11 @@ export class SubscriptionsController {
       throw new Error('Invalid plan ID');
     }
 
-    // Handle Stripe payments
+    const billingPeriod = body.billingPeriod || 'monthly';
+    const amountToCharge =
+      billingPeriod === 'yearly' ? plan.priceKESYearly : plan.priceKES;
+
+    // 1. Handle Stripe Payments
     if (body.paymentMethod === 'STRIPE' || body.paymentMethod === 'stripe') {
       const user = await this.usersService.findOneById(req.user.userId);
       if (!user) {
@@ -293,6 +302,7 @@ export class SubscriptionsController {
         plan.tier,
         user.email,
         `${user.firstName || ''} ${user.lastName || ''}`.trim() || undefined,
+        billingPeriod,
       );
 
       return {
@@ -302,31 +312,123 @@ export class SubscriptionsController {
       };
     }
 
-    // Default: Free tier or manual/mock subscription (legacy behavior)
-    let subscription = await this.subscriptionRepository.findOne({
-      where: { userId: req.user.userId },
-    });
+    // 2. Handle Wallet Payments (Leveraging Internal Ledger)
+    if (body.paymentMethod === 'WALLET') {
+      const user = await this.usersService.findOneById(req.user.userId);
+      if (!user) throw new Error('User not found');
 
-    if (!subscription) {
-      subscription = this.subscriptionRepository.create({
-        userId: req.user.userId,
-        tier: plan.tier as SubscriptionTier,
-        status: SubscriptionStatus.ACTIVE,
-        startDate: new Date(),
+      // Check Funds
+      if (Number(user.walletBalance) < amountToCharge) {
+        throw new Error(
+          `Insufficient wallet balance. Required: KES ${amountToCharge}, Available: KES ${user.walletBalance}`,
+        );
+      }
+
+      // Check for existing active subscription
+      // Implementation Note: Upgrades/Proration logic not fully implemented for Wallet yet
+      // For now, we assume simple monthly renewal or new subscription.
+
+      // Deduct Funds
+      await this.usersService.update(user.id, {
+        walletBalance: Number(user.walletBalance) - amountToCharge,
       });
-    } else {
-      subscription.tier = plan.tier as SubscriptionTier;
-      subscription.status = SubscriptionStatus.ACTIVE;
-      subscription.updatedAt = new Date();
+
+      // Create/Update Subscription
+      let subscription = await this.subscriptionRepository.findOne({
+        where: { userId: req.user.userId },
+      });
+
+      if (!subscription) {
+        subscription = this.subscriptionRepository.create({
+          userId: req.user.userId,
+          tier: plan.tier as SubscriptionTier,
+          status: SubscriptionStatus.ACTIVE,
+          startDate: new Date(),
+          billingPeriod: billingPeriod,
+        });
+      } else {
+        subscription.tier = plan.tier as SubscriptionTier;
+        subscription.status = SubscriptionStatus.ACTIVE;
+        subscription.updatedAt = new Date();
+        subscription.billingPeriod = billingPeriod;
+      }
+      const savedSubscription =
+        await this.subscriptionRepository.save(subscription);
+      await this.usersService.update(req.user.userId, {
+        tier: plan.tier as any,
+      });
+
+      // Record Payment
+      const now = new Date();
+      const periodEnd = new Date(now);
+      if (billingPeriod === 'yearly') {
+        periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+      } else {
+        periodEnd.setMonth(periodEnd.getMonth() + 1);
+      }
+
+      const payment = this.subscriptionPaymentRepository.create({
+        subscriptionId: savedSubscription.id,
+        userId: req.user.userId,
+        amount: amountToCharge,
+        currency: 'KES',
+        status: PaymentStatus.COMPLETED,
+        paymentMethod: PaymentMethod.WALLET, // Ensure this enum exists or use 'WALLET' string
+        billingPeriod: billingPeriod,
+        periodStart: now,
+        periodEnd: periodEnd,
+        dueDate: now,
+        paidDate: now,
+        paymentProvider: 'INTERNAL_WALLET',
+        metadata: {
+          planId: plan.tier,
+          billingPeriod: billingPeriod,
+          description: `Subscription to ${plan.name} (${billingPeriod}) via Wallet`,
+        },
+      });
+      await this.subscriptionPaymentRepository.save(payment);
+
+      return {
+        success: true,
+        message: 'Subscription activated via Wallet',
+        subscription: savedSubscription,
+      };
     }
 
-    const savedSubscription =
-      await this.subscriptionRepository.save(subscription);
+    // 3. Handle Free Tier
+    if (amountToCharge === 0) {
+      let subscription = await this.subscriptionRepository.findOne({
+        where: { userId: req.user.userId },
+      });
 
-    // CRITICAL FIX: Also update the User entity's tier to ensure checks against User work
-    await this.usersService.update(req.user.userId, { tier: plan.tier as any });
+      if (!subscription) {
+        subscription = this.subscriptionRepository.create({
+          userId: req.user.userId,
+          tier: plan.tier as SubscriptionTier,
+          status: SubscriptionStatus.ACTIVE,
+          startDate: new Date(),
+          billingPeriod: billingPeriod,
+        });
+      } else {
+        subscription.tier = plan.tier as SubscriptionTier;
+        subscription.status = SubscriptionStatus.ACTIVE;
+        subscription.updatedAt = new Date();
+        subscription.billingPeriod = billingPeriod;
+      }
 
-    return savedSubscription;
+      const savedSubscription =
+        await this.subscriptionRepository.save(subscription);
+      await this.usersService.update(req.user.userId, {
+        tier: plan.tier as any,
+      });
+
+      return savedSubscription;
+    }
+
+    // 4. Fallback / Security Block
+    throw new Error(
+      'Payment method required for paid plans. Please select Card (Stripe) or M-Pesa.',
+    );
   }
 
   @Get('subscription-payment-history')

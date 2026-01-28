@@ -3,6 +3,8 @@ export interface SubscriptionPlan {
   name: string;
   priceUSD: number;
   priceKES: number;
+  priceUSDYearly: number;
+  priceKESYearly: number;
   workerLimit: number;
   features: string[];
   importAccess: boolean;
@@ -15,6 +17,8 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     name: 'Free',
     priceUSD: 0,
     priceKES: 0,
+    priceUSDYearly: 0,
+    priceKESYearly: 0,
     workerLimit: 3,
     features: ['Up to 3 workers', 'Automatic tax calculations'],
     importAccess: false,
@@ -24,6 +28,8 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     name: 'Basic',
     priceUSD: 9.99,
     priceKES: 1300,
+    priceUSDYearly: 99.99,
+    priceKESYearly: 13000,
     workerLimit: 5,
     features: [
       'Up to 5 workers',
@@ -39,6 +45,8 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     name: 'Gold',
     priceUSD: 29.99,
     priceKES: 3900,
+    priceUSDYearly: 299.99,
+    priceKESYearly: 39000,
     workerLimit: 10,
     features: [
       'Up to 10 workers',
@@ -57,6 +65,8 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     name: 'Platinum',
     priceUSD: 49.99,
     priceKES: 6500,
+    priceUSDYearly: 499.99,
+    priceKESYearly: 65000,
     workerLimit: 20,
     features: [
       'Up to 20 workers',

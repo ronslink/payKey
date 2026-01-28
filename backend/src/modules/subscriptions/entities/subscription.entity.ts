@@ -59,6 +59,9 @@ export class Subscription {
   })
   status: SubscriptionStatus;
 
+  @Column({ default: 'monthly' })
+  billingPeriod: string;
+
   @Column({
     type: 'decimal',
     precision: 10,

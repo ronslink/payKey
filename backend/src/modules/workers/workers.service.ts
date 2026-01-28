@@ -1,23 +1,42 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThanOrEqual, Between } from 'typeorm';
 import { Worker } from './entities/worker.entity';
+import { User } from '../users/entities/user.entity';
 import { CreateWorkerDto } from './dto/create-worker.dto';
 import { ActivitiesService } from '../activities/activities.service';
 import { ActivityType } from '../activities/entities/activity.entity';
+import { canAddWorker } from '../subscriptions/subscription-plans.config';
 
 @Injectable()
 export class WorkersService {
   constructor(
     @InjectRepository(Worker)
     private workersRepository: Repository<Worker>,
+    @InjectRepository(User)
+    private usersRepository: Repository<User>,
     private activitiesService: ActivitiesService,
-  ) {}
+  ) { }
 
   async create(
     userId: string,
     createWorkerDto: CreateWorkerDto,
   ): Promise<Worker> {
+    // 1. Check Worker Limit
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+
+    const currentCount = await this.getWorkerCount(userId);
+
+    // Default to FREE if no tier set
+    const userTier = user.tier || 'FREE';
+
+    if (!canAddWorker(userTier, currentCount)) {
+      throw new ForbiddenException(
+        `Worker limit reached for ${userTier} plan. Please upgrade to add more workers.`,
+      );
+    }
+
     const worker = this.workersRepository.create({
       ...createWorkerDto,
       userId,

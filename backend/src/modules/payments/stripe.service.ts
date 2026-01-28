@@ -94,6 +94,7 @@ export class StripeService {
     planTier: string,
     customerEmail: string,
     customerName?: string,
+    billingPeriod: 'monthly' | 'yearly' = 'monthly',
     successUrl?: string,
     cancelUrl?: string,
   ): Promise<{ sessionId: string; url: string }> {
@@ -125,13 +126,13 @@ export class StripeService {
             price_data: {
               currency: 'usd',
               product_data: {
-                name: `${planTier.toUpperCase()} Plan - PayKey Payroll`,
-                description: `Monthly subscription for ${planTier} plan`,
+                name: `${planTier.toUpperCase()} Plan (${billingPeriod}) - PayKey Payroll`,
+                description: `${billingPeriod === 'monthly' ? 'Monthly' : 'Yearly'} subscription for ${planTier} plan`,
               },
               recurring: {
-                interval: 'month',
+                interval: billingPeriod === 'yearly' ? 'year' : 'month',
               },
-              unit_amount: this.getPlanPrice(normalizedTier), // Convert to cents
+              unit_amount: this.getPlanPrice(normalizedTier, billingPeriod), // Convert to cents
             },
             quantity: 1,
           },
@@ -139,6 +140,7 @@ export class StripeService {
         metadata: {
           userId,
           planTier: normalizedTier,
+          billingPeriod,
           source: 'PayKey',
         },
         success_url:
@@ -212,14 +214,23 @@ export class StripeService {
     };
   }
 
-  private getPlanPrice(planTier: string): number {
-    const prices: Record<string, number> = {
+  private getPlanPrice(planTier: string, billingPeriod: 'monthly' | 'yearly' = 'monthly'): number {
+    const monthlyPrices: Record<string, number> = {
       FREE: 0,
       BASIC: 999, // $9.99
       GOLD: 2999, // $29.99
       PLATINUM: 4999, // $49.99
     };
-    return prices[planTier] || prices.BASIC;
+
+    // Yearly prices (approx 10x monthly)
+    const yearlyPrices: Record<string, number> = {
+      FREE: 0,
+      BASIC: 9999, // $99.99
+      GOLD: 29999, // $299.99
+      PLATINUM: 49999, // $499.99
+    };
+
+    return billingPeriod === 'yearly' ? (yearlyPrices[planTier] || yearlyPrices.BASIC) : (monthlyPrices[planTier] || monthlyPrices.BASIC);
   }
 
   /**

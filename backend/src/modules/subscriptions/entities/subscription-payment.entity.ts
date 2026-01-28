@@ -22,6 +22,7 @@ export enum PaymentMethod {
   PAYPAL = 'PayPal',
   STRIPE = 'stripe',
   MPESA = 'mpesa',
+  WALLET = 'Wallet',
 }
 
 // Transformer to convert decimal strings to numbers

@@ -486,7 +486,7 @@ export class NotificationsService implements OnModuleInit {
     workerName: string,
     amount: number,
     status: 'PENDING' | 'CLEARING' | 'SUCCESS' | 'FAILED',
-    transactionType: 'PAYOUT' | 'TOPUP' = 'PAYOUT',
+    transactionType: 'PAYOUT' | 'TOPUP' | 'SUBSCRIPTION' = 'PAYOUT',
   ): Promise<{ success: boolean; error?: string }> {
     if (!fcmToken) {
       this.logger.warn('No FCM token for payment status notification');
@@ -520,11 +520,22 @@ export class NotificationsService implements OnModuleInit {
         body:
           transactionType === 'PAYOUT'
             ? `Payment to ${workerName} failed. Please check and retry.`
-            : `Top-up failed. Please try again.`,
+            : transactionType === 'SUBSCRIPTION'
+              ? `Subscription renewal failed. Amount: KES ${amount.toFixed(0)}`
+              : `Top-up failed. Please try again.`,
+      },
+      SUBSCRIPTION_SUCCESS: {
+        title: '✅ Subscription Active',
+        body: `Your subscription has been renewed for KES ${amount.toFixed(0)}`,
       },
     };
 
-    const { title, body } = statusMessages[status] || statusMessages.PENDING;
+    let { title, body } = statusMessages[status] || statusMessages.PENDING;
+
+    if (transactionType === 'SUBSCRIPTION' && status === 'SUCCESS') {
+      title = statusMessages.SUBSCRIPTION_SUCCESS.title;
+      body = statusMessages.SUBSCRIPTION_SUCCESS.body;
+    }
 
     const result = await this.sendPushToDevice({
       token: fcmToken,

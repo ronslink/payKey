@@ -3,19 +3,19 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
-import { AppModule } from '../src/app.module';
-import { TestDatabaseModule } from './test-database.module';
-import { cleanupTestData } from './test-utils';
-import { WorkersModule } from '../src/modules/workers/workers.module';
-import { TaxesModule } from '../src/modules/taxes/taxes.module';
-import { PayrollModule } from '../src/modules/payroll/payroll.module';
-import { PayrollService } from '../src/modules/payroll/payroll.service';
-import { WorkersService } from '../src/modules/workers/workers.service';
-import { TaxesService } from '../src/modules/taxes/taxes.service';
-import { Worker } from '../src/modules/workers/entities/worker.entity';
-import { PayPeriod } from '../src/modules/payroll/entities/pay-period.entity';
-import { PayrollRecord } from '../src/modules/payroll/entities/payroll-record.entity';
-import { User } from '../src/modules/users/entities/user.entity';
+import { AppModule } from '../../src/app.module';
+import { TestDatabaseModule } from '../test-database.module';
+import { cleanupTestData } from '../test-utils';
+import { WorkersModule } from '../../src/modules/workers/workers.module';
+import { TaxesModule } from '../../src/modules/taxes/taxes.module';
+import { PayrollModule } from '../../src/modules/payroll/payroll.module';
+import { PayrollService } from '../../src/modules/payroll/payroll.service';
+import { WorkersService } from '../../src/modules/workers/workers.service';
+import { TaxesService } from '../../src/modules/taxes/taxes.service';
+import { Worker } from '../../src/modules/workers/entities/worker.entity';
+import { PayPeriod } from '../../src/modules/payroll/entities/pay-period.entity';
+import { PayrollRecord } from '../../src/modules/payroll/entities/payroll-record.entity';
+import { User } from '../../src/modules/users/entities/user.entity';
 
 describe('PayrollService Integration', () => {
   let app: INestApplication;
@@ -143,11 +143,11 @@ describe('PayrollService Integration', () => {
       // Verify total calculations
       expect(johnRecord.netSalary + janeRecord.netSalary).toBeCloseTo(
         johnRecord.grossSalary +
-          janeRecord.grossSalary -
-          johnRecord.nssf -
-          johnRecord.paye -
-          janeRecord.nssf -
-          janeRecord.paye,
+        janeRecord.grossSalary -
+        johnRecord.nssf -
+        johnRecord.paye -
+        janeRecord.nssf -
+        janeRecord.paye,
         0,
       );
     });
