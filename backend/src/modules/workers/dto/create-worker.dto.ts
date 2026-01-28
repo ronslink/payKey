@@ -5,7 +5,11 @@ import {
   IsDateString,
   IsOptional,
   IsEnum,
+  Min,
+  Max,
+  Length,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import {
   EmploymentType,
   PaymentFrequency,
@@ -15,10 +19,13 @@ import {
 export class CreateWorkerDto {
   @IsString()
   @IsNotEmpty()
+  @Length(2, 100)
+  @Transform(({ value }) => typeof value === 'string' ? value.replace(/<[^>]*>?/gm, '') : value)
   name: string;
 
   @IsString()
   @IsNotEmpty()
+  @Length(7, 20)
   phoneNumber: string;
 
   @IsString()
@@ -31,6 +38,8 @@ export class CreateWorkerDto {
 
   @IsNumber()
   @IsNotEmpty()
+  @Min(0)
+  @Max(10000000)
   salaryGross: number;
 
   @IsEnum(EmploymentType)

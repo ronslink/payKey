@@ -15,6 +15,20 @@ import { Termination } from '../src/modules/workers/entities/termination.entity'
 import { Subscription } from '../src/modules/subscriptions/entities/subscription.entity';
 import { SubscriptionPayment } from '../src/modules/subscriptions/entities/subscription-payment.entity';
 import { AccountingExport } from '../src/modules/accounting/entities/accounting-export.entity';
+import { Transaction } from '../src/modules/payments/entities/transaction.entity';
+import { TaxTable } from '../src/modules/taxes/entities/tax-table.entity';
+import { Export } from '../src/modules/export/entities/export.entity';
+import { Property } from '../src/modules/properties/entities/property.entity';
+import { Country } from '../src/modules/countries/entities/country.entity';
+import { AccountMapping } from '../src/modules/accounting/entities/account-mapping.entity';
+import { Activity } from '../src/modules/activities/entities/activity.entity';
+import { Holiday } from '../src/modules/holidays/entities/holiday.entity';
+import { DeletionRequest } from '../src/modules/data-deletion/entities/deletion-request.entity';
+import { WorkerDocument } from '../src/modules/workers/entities/worker-document.entity';
+import { GovSubmission } from '../src/modules/gov-integrations/entities/gov-submission.entity';
+import { Notification } from '../src/modules/notifications/entities/notification.entity';
+import { DeviceToken } from '../src/modules/notifications/entities/device-token.entity';
+import { ExchangeRate } from '../src/modules/payments/entities/exchange-rate.entity';
 
 @Module({
   imports: [
@@ -42,15 +56,29 @@ import { AccountingExport } from '../src/modules/accounting/entities/accounting-
           Subscription,
           SubscriptionPayment,
           AccountingExport,
+          Property,
+          Country,
+          AccountMapping,
+          Activity,
+          Holiday,
+          DeletionRequest,
+          WorkerDocument,
+          GovSubmission,
+          Notification,
+          DeviceToken,
+          Transaction,
+          TaxTable,
+          Export,
+          ExchangeRate,
         ],
         synchronize: true, // Auto-create schema for tests
         dropSchema: true, // Clean slate for each test run
         logging: false, // Disable query logging for tests
         extra: {
           // Connection pool settings for tests
-          max: 1,
+          max: 10,
           min: 0,
-          acquireTimeoutMillis: 5000,
+          acquireTimeoutMillis: 10000,
           idleTimeoutMillis: 30000,
         },
       }),
@@ -58,4 +86,4 @@ import { AccountingExport } from '../src/modules/accounting/entities/accounting-
     }),
   ],
 })
-export class TestDatabaseModule {}
+export class TestDatabaseModule { }

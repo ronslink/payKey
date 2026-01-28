@@ -10,6 +10,7 @@ import {
   Res,
   Delete,
   HttpCode,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { WorkersService } from './workers.service';
 import { CreateWorkerDto } from './dto/create-worker.dto';
@@ -34,7 +35,7 @@ export class WorkersController {
     private readonly workersService: WorkersService,
     private readonly terminationService: TerminationService,
     private readonly leaveManagementService: LeaveManagementService,
-  ) {}
+  ) { }
 
   // ======================================================================================
   // STATIC ROUTES (MUST BE BEFORE DYNAMIC ROUTES)
@@ -86,7 +87,7 @@ export class WorkersController {
   @UseGuards(SubscriptionGuard, PlatinumGuard)
   approveLeaveRequest(
     @Request() req: AuthenticatedRequest,
-    @Param('requestId') requestId: string,
+    @Param('requestId', new ParseUUIDPipe()) requestId: string,
     @Body() approveLeaveRequestDto: ApproveLeaveRequestDto,
   ) {
     return this.leaveManagementService.approveLeaveRequest(
@@ -100,7 +101,7 @@ export class WorkersController {
   @UseGuards(SubscriptionGuard, PlatinumGuard)
   updateLeaveRequest(
     @Request() req: AuthenticatedRequest,
-    @Param('requestId') requestId: string,
+    @Param('requestId', new ParseUUIDPipe()) requestId: string,
     @Body() updateLeaveRequestDto: UpdateLeaveRequestDto,
   ) {
     return this.leaveManagementService.updateLeaveRequest(
@@ -114,7 +115,7 @@ export class WorkersController {
   @UseGuards(SubscriptionGuard, PlatinumGuard)
   deleteLeaveRequest(
     @Request() req: AuthenticatedRequest,
-    @Param('requestId') requestId: string,
+    @Param('requestId', new ParseUUIDPipe()) requestId: string,
   ) {
     return this.leaveManagementService.cancelLeaveRequest(
       req.user.userId,
@@ -127,21 +128,27 @@ export class WorkersController {
   // ======================================================================================
 
   @Get(':id')
-  findOne(@Request() req: AuthenticatedRequest, @Param('id') id: string) {
+  findOne(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
     return this.workersService.findOne(id, req.user.userId);
   }
 
   @Patch(':id')
   update(
     @Request() req: AuthenticatedRequest,
-    @Param('id') id: string,
+    @Param('id', new ParseUUIDPipe()) id: string,
     @Body() updateWorkerDto: Partial<CreateWorkerDto>,
   ) {
     return this.workersService.update(id, req.user.userId, updateWorkerDto);
   }
 
   @Delete(':id')
-  remove(@Request() req: AuthenticatedRequest, @Param('id') id: string) {
+  remove(
+    @Request() req: AuthenticatedRequest,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ) {
     return this.workersService.remove(id, req.user.userId);
   }
 
@@ -204,7 +211,7 @@ export class WorkersController {
   @UseGuards(SubscriptionGuard, PlatinumGuard)
   getWorkerLeaveRequests(
     @Request() req: AuthenticatedRequest,
-    @Param('id') workerId: string,
+    @Param('id', new ParseUUIDPipe()) workerId: string,
   ) {
     return this.leaveManagementService.getLeaveRequestsForWorker(
       req.user.userId,
@@ -216,7 +223,7 @@ export class WorkersController {
   @UseGuards(SubscriptionGuard, PlatinumGuard)
   getLeaveBalance(
     @Request() req: AuthenticatedRequest,
-    @Param('id') workerId: string,
+    @Param('id', new ParseUUIDPipe()) workerId: string,
   ) {
     return this.leaveManagementService.getLeaveBalance(
       workerId,

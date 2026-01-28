@@ -68,10 +68,16 @@ export class WorkersService {
     });
   }
 
-  async findOne(id: string, userId: string): Promise<Worker | null> {
-    return this.workersRepository.findOne({
+  async findOne(id: string, userId: string): Promise<Worker> {
+    const worker = await this.workersRepository.findOne({
       where: { id, userId },
     });
+
+    if (!worker) {
+      throw new NotFoundException('Worker not found');
+    }
+
+    return worker;
   }
 
   async update(

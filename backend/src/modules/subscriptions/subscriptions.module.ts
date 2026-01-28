@@ -11,6 +11,7 @@ import { UsersModule } from '../users/users.module';
 import { PaymentsModule } from '../payments/payments.module';
 import { Transaction } from '../payments/entities/transaction.entity';
 import { DeviceToken } from '../notifications/entities/device-token.entity';
+import { User } from '../users/entities/user.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
 
 import { SubscriptionCallbackController } from './subscription-callback.controller';
@@ -25,6 +26,7 @@ import { SubscriptionScheduler } from './subscription.scheduler';
       SubscriptionPayment,
       Transaction,
       DeviceToken,
+      User,
     ]),
     BullModule.registerQueue({
       name: 'subscriptions',

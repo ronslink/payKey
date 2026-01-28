@@ -23,7 +23,7 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json --runInBand",
     "test:unit": "jest --testPathPatterns=src/.*\\.spec\\.ts$ --coverage",
-    "test:integration": "jest --testPathPatterns=test/integration/ --coverage",
+    "test:integration": "jest --testPathPatterns=test/integration/ --testPathPatterns=test/e2e/ --coverage",
     "test:security": "jest --testPathPatterns=test/security/ --coverage",
     "test:compliance": "jest --testPathPatterns=test/compliance/ --coverage",
     "test:performance": "jest --testPathPattern=test/performance/ --timeout=30000",
