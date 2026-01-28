@@ -49,9 +49,10 @@ import { ExchangeRateService } from './exchange-rate.service';
     TaxPaymentsModule,
     HttpModule,
     ConfigModule,
-    BullModule.registerQueue({
-      name: 'wallets',
-    }),
+    BullModule.registerQueue(
+      { name: 'wallets' },
+      { name: 'payroll-processing' }, // For scheduling status check jobs
+    ),
     NotificationsModule,
   ],
   controllers: [

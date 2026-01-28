@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import {
   Transaction,
   TransactionType,
@@ -19,6 +21,9 @@ import { User } from '../users/entities/user.entity';
 export class PayrollPaymentService {
   private readonly logger = new Logger(PayrollPaymentService.name);
 
+  // Delay for status check job (10 minutes)
+  private readonly STATUS_CHECK_DELAY_MS = 10 * 60 * 1000;
+
   constructor(
     @InjectRepository(Transaction)
     private transactionRepository: Repository<Transaction>,
@@ -28,6 +33,8 @@ export class PayrollPaymentService {
     @InjectRepository(User)
     private usersRepository: Repository<User>,
     private configService: ConfigService,
+    @InjectQueue('payroll-processing')
+    private payrollQueue: Queue,
   ) { }
 
   /**
@@ -248,6 +255,34 @@ export class PayrollPaymentService {
           transactionId: trackingId, // Batch ID
           message: 'Batch processing initiated'
         });
+      }
+
+      // Schedule safety net status check job (only in production where payouts are async)
+      if (finalStatus === 'processing' && trackingId) {
+        const payPeriodId = records[0]?.payPeriodId;
+        const userId = records[0]?.userId;
+        const recordIds = records.map(r => r.id);
+
+        this.logger.log(`Scheduling status check for tracking ID ${trackingId} in ${this.STATUS_CHECK_DELAY_MS / 1000}s`);
+
+        await this.payrollQueue.add(
+          'check-payout-status',
+          {
+            trackingId,
+            payPeriodId,
+            userId,
+            recordIds,
+            attempt: 1,
+          },
+          {
+            delay: this.STATUS_CHECK_DELAY_MS,
+            attempts: 3, // Retry up to 3 times if job fails
+            backoff: {
+              type: 'exponential',
+              delay: 60000, // 1 minute base delay for retries
+            },
+          }
+        );
       }
 
     } catch (e: any) {
