@@ -2,6 +2,10 @@ import { MigrationInterface, QueryRunner, Table } from 'typeorm';
 
 export class CreateTaxSubmissionsTable1733570000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
+    const tableExists = await queryRunner.hasTable('tax_submissions');
+    if (tableExists) {
+      return;
+    }
     // Create new table matching the TaxSubmission Entity definition
     await queryRunner.createTable(
       new Table({

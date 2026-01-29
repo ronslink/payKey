@@ -172,7 +172,7 @@ export class SubscriptionProcessor extends WorkerHost {
         notes?: string
     ) {
         const now = new Date();
-        const periodEnd = new Date(subscription.nextBillingDate);
+        const periodEnd = subscription.nextBillingDate ? new Date(subscription.nextBillingDate) : new Date();
 
         const payment = this.paymentRepository.create({
             subscription: subscription, // Use relation

@@ -2,8 +2,17 @@ import { MigrationInterface, QueryRunner, Table } from 'typeorm';
 
 export class RecreateTaxPaymentsTable1733560000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // Drop existing table which has incorrect schema
-    await queryRunner.dropTable('tax_payments', true);
+    // Check if table exists
+    const tableExists = await queryRunner.hasTable('tax_payments');
+    if (tableExists) {
+      // Check if it's the old version (missing paymentYear)
+      const hasPaymentYear = await queryRunner.hasColumn('tax_payments', 'paymentYear');
+      if (hasPaymentYear) {
+        return; // Already migrated
+      }
+      // If old version, drop it
+      await queryRunner.dropTable('tax_payments');
+    }
 
     // Create new table matching the Entity definition
     await queryRunner.createTable(

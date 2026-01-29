@@ -80,13 +80,13 @@ export class Subscription {
   currency: string;
 
   @Column({ type: 'timestamptz', nullable: true })
-  startDate: Date;
+  startDate: Date | null;
 
   @Column({ type: 'timestamptz', nullable: true })
-  endDate: Date;
+  endDate: Date | null;
 
   @Column({ type: 'timestamptz', nullable: true })
-  nextBillingDate: Date;
+  nextBillingDate: Date | null;
 
   @Column({ nullable: true })
   stripeSubscriptionId: string;

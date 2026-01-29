@@ -201,7 +201,7 @@ export const FEATURE_ACCESS_MATRIX: FeatureDefinition[] = [
  * Tier limits configuration
  */
 export const TIER_LIMITS: Record<SubscriptionTier, { workerLimit: number }> = {
-  FREE: { workerLimit: 3 },
+  FREE: { workerLimit: 1 },
   BASIC: { workerLimit: 5 },
   GOLD: { workerLimit: 10 },
   PLATINUM: { workerLimit: 20 },

@@ -6,11 +6,11 @@ export class AddMissingPayrollRecordColumns1733300000000 implements MigrationInt
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       ALTER TABLE "payroll_records" 
-      ADD "bonuses" numeric(10,2) NOT NULL DEFAULT '0',
-      ADD "otherEarnings" numeric(10,2) NOT NULL DEFAULT '0',
-      ADD "otherDeductions" numeric(10,2) NOT NULL DEFAULT '0',
-      ADD "status" character varying NOT NULL DEFAULT 'draft',
-      ADD "finalizedAt" TIMESTAMP
+      ADD COLUMN IF NOT EXISTS "bonuses" numeric(10,2) NOT NULL DEFAULT '0',
+      ADD COLUMN IF NOT EXISTS "otherEarnings" numeric(10,2) NOT NULL DEFAULT '0',
+      ADD COLUMN IF NOT EXISTS "otherDeductions" numeric(10,2) NOT NULL DEFAULT '0',
+      ADD COLUMN IF NOT EXISTS "status" character varying NOT NULL DEFAULT 'draft',
+      ADD COLUMN IF NOT EXISTS "finalizedAt" TIMESTAMP
     `);
   }
 

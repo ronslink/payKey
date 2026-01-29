@@ -4,12 +4,18 @@
 
 ```mermaid
 erDiagram
-    USERS ||--o{ WORKERS : employs
     USERS ||--o{ SUBSCRIPTIONS : has
+    USERS ||--o{ WORKERS : employs
     USERS ||--o{ TRANSACTIONS : initiates
+    USERS ||--o{ PAYROLL_RECORDS : processes
+    USERS ||--o{ TAX_SUBMISSIONS : files
+    USERS ||--o{ GOV_SUBMISSIONS : submits
     WORKERS ||--o{ TRANSACTIONS : receives
-    WORKERS ||--o{ LEAVE_REQUESTS : requests
-    WORKERS ||--o{ TAX_REPORTS : has
+    WORKERS ||--o{ PAYROLL_RECORDS : receives
+    WORKERS ||--o{ TAX_SUBMISSIONS : generates
+    PAY_PERIODS ||--o{ PAYROLL_RECORDS : contains
+    PAY_PERIODS ||--o{ TRANSACTIONS : includes
+    SUBSCRIPTIONS ||--o{ SUBSCRIPTION_PAYMENTS : has
 
     USERS {
         uuid id PK
@@ -17,8 +23,9 @@ erDiagram
         string password_hash
         string first_name
         string last_name
-        enum tier "FREE, BASIC, PRO, ENTERPRISE"
+        enum tier "FREE, BASIC, GOLD, PLATINUM"
         string stripe_customer_id
+        string intasend_wallet_id
         timestamp created_at
     }
 
@@ -32,50 +39,108 @@ erDiagram
         decimal salary_gross
         date start_date
         boolean is_active
+        enum payment_method "mpesa, bank, cash"
+        string bank_account
+        string bank_name
+    }
+
+    PAY_PERIODS {
+        uuid id PK
+        uuid user_id FK
+        string name
+        date period_start
+        date period_end
+        enum frequency "WEEKLY, BIWEEKLY, MONTHLY, QUARTERLY, YEARLY"
+        enum status "DRAFT, OPEN, PROCESSING, COMPLETED, CLOSED"
+        boolean is_locked
+    }
+
+    PAYROLL_RECORDS {
+        uuid id PK
+        uuid user_id FK
+        uuid worker_id FK
+        uuid pay_period_id FK
+        decimal gross_salary
+        decimal bonuses
+        decimal other_earnings
+        decimal other_deductions
+        decimal overtime_pay
+        decimal net_salary
+        decimal tax_amount
+        json tax_breakdown
+        json deductions
+        enum status "draft, finalized, paid"
+        string payment_status
+        timestamp payment_date
     }
 
     SUBSCRIPTIONS {
         uuid id PK
         uuid user_id FK
-        string provider_sub_id
-        enum status "ACTIVE, PAST_DUE, CANCELED"
-        timestamp current_period_end
-        boolean cancel_at_period_end
+        enum tier "FREE, BASIC, GOLD, PLATINUM"
+        enum status "ACTIVE, PENDING, CANCELLED, EXPIRED, PAST_DUE, TRIAL"
+        decimal amount
+        string currency
+        timestamp start_date
+        timestamp end_date
+        timestamp next_billing_date
+        string stripe_subscription_id
+        string stripe_price_id
+        boolean auto_renewal
+        enum renewal_method "NOTIFICATION, STK_PUSH"
+    }
+
+    SUBSCRIPTION_PAYMENTS {
+        uuid id PK
+        uuid subscription_id FK
+        decimal amount
+        string currency
+        string stripe_payment_intent_id
+        enum status "PENDING, SUCCEEDED, FAILED"
+        timestamp paid_at
     }
 
     TRANSACTIONS {
         uuid id PK
         uuid user_id FK
-        uuid worker_id FK "Nullable"
+        uuid worker_id FK
+        uuid pay_period_id FK
         decimal amount
         string currency
-        enum type "SUBSCRIPTION, SALARY_PAYOUT"
-        enum status "PENDING, SUCCESS, FAILED"
+        enum type "SUBSCRIPTION, SALARY_PAYOUT, TOPUP, DEPOSIT"
+        enum status "PENDING, SUCCESS, FAILED, CLEARING, MANUAL_INTERVENTION"
         string provider_ref
+        string provider
+        enum payment_method "MPESA_STK, PESALINK, CARD, WALLET, STRIPE"
         jsonb metadata
         timestamp created_at
     }
 
-    LEAVE_REQUESTS {
+    TAX_SUBMISSIONS {
         uuid id PK
-        uuid worker_id FK
-        date start_date
-        date end_date
-        enum type "ANNUAL, SICK, MATERNITY"
-        enum status "PENDING, APPROVED, REJECTED"
-        string reason
-    }
-
-    TAX_REPORTS {
-        uuid id PK
+        uuid user_id FK
         uuid worker_id FK
         integer month
         integer year
         decimal paye_amount
         decimal nssf_amount
-        decimal nhif_amount
+        decimal shif_amount
         decimal housing_levy
-        timestamp generated_at
+        enum status "DRAFT, PENDING, SUBMITTED, ACCEPTED, REJECTED"
+        string submission_reference
+        timestamp submitted_at
+    }
+
+    GOV_SUBMISSIONS {
+        uuid id PK
+        uuid user_id FK
+        enum type "KRA, NSSF, SHIF"
+        string period
+        decimal amount
+        string reference_number
+        enum status "PENDING, SUBMITTED, ACCEPTED, REJECTED"
+        json response
+        timestamp submitted_at
     }
 ```
 
@@ -83,7 +148,7 @@ erDiagram
 
 ### Users Table
 ```sql
-CREATE TYPE user_tier AS ENUM ('FREE', 'BASIC', 'PRO', 'ENTERPRISE');
+CREATE TYPE user_tier AS ENUM ('FREE', 'BASIC', 'GOLD', 'PLATINUM');
 
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -116,8 +181,8 @@ CREATE TABLE workers (
 
 ### Transactions Table
 ```sql
-CREATE TYPE transaction_type AS ENUM ('SUBSCRIPTION', 'SALARY_PAYOUT');
-CREATE TYPE transaction_status AS ENUM ('PENDING', 'SUCCESS', 'FAILED');
+CREATE TYPE transaction_type AS ENUM ('SUBSCRIPTION', 'SALARY_PAYOUT', 'TOPUP', 'DEPOSIT');
+CREATE TYPE transaction_status AS ENUM ('PENDING', 'SUCCESS', 'FAILED', 'CLEARING', 'MANUAL_INTERVENTION');
 
 CREATE TABLE transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

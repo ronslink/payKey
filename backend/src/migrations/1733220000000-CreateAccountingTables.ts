@@ -5,10 +5,14 @@ export class CreateAccountingTables1733220000000 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
-      CREATE TYPE "public"."account_mappings_category_enum" AS ENUM('SALARY_EXPENSE', 'PAYE_LIABILITY', 'NSSF_LIABILITY', 'NHIF_LIABILITY', 'HOUSING_LEVY_LIABILITY', 'CASH_BANK')
+      DO $$ BEGIN
+        CREATE TYPE "public"."account_mappings_category_enum" AS ENUM('SALARY_EXPENSE', 'PAYE_LIABILITY', 'NSSF_LIABILITY', 'NHIF_LIABILITY', 'HOUSING_LEVY_LIABILITY', 'CASH_BANK');
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
     `);
     await queryRunner.query(`
-      CREATE TABLE "account_mappings" (
+      CREATE TABLE IF NOT EXISTS "account_mappings" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
         "userId" character varying NOT NULL,
         "category" "public"."account_mappings_category_enum" NOT NULL,
@@ -22,13 +26,21 @@ export class CreateAccountingTables1733220000000 implements MigrationInterface {
     `);
 
     await queryRunner.query(`
-      CREATE TYPE "public"."accounting_exports_format_enum" AS ENUM('CSV', 'EXCEL', 'QUICKBOOKS', 'XERO', 'SAGE')
+      DO $$ BEGIN
+        CREATE TYPE "public"."accounting_exports_format_enum" AS ENUM('CSV', 'EXCEL', 'QUICKBOOKS', 'XERO', 'SAGE');
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
     `);
     await queryRunner.query(`
-      CREATE TYPE "public"."accounting_exports_status_enum" AS ENUM('PENDING', 'COMPLETED', 'FAILED')
+      DO $$ BEGIN
+        CREATE TYPE "public"."accounting_exports_status_enum" AS ENUM('PENDING', 'COMPLETED', 'FAILED');
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
     `);
     await queryRunner.query(`
-      CREATE TABLE "accounting_exports" (
+      CREATE TABLE IF NOT EXISTS "accounting_exports" (
         "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
         "userId" character varying NOT NULL,
         "payPeriodId" uuid NOT NULL,

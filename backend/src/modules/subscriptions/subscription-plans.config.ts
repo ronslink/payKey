@@ -19,8 +19,12 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     priceKES: 0,
     priceUSDYearly: 0,
     priceKESYearly: 0,
-    workerLimit: 3,
-    features: ['Up to 3 workers', 'Automatic tax calculations'],
+    workerLimit: 1,
+    features: [
+      'Up to 1 worker',
+      'Basic worker management',
+      'Automatic tax calculations',
+    ],
     importAccess: false,
   },
   {

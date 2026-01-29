@@ -2,7 +2,7 @@
 
 ## 1. System Overview
 
-The PayKey platform consists of a mobile application (Flutter), a backend API (NestJS), and a relational database (PostgreSQL). The system integrates with external payment gateways (M-Pesa, Stripe) and notification services.
+The PayKey platform consists of a mobile application (Flutter), a backend API (NestJS), and a relational database (PostgreSQL). The system integrates with external payment gateways (M-Pesa via IntaSend, Stripe) and government APIs (KRA, NSSF, SHIF) for tax compliance.
 
 ## 2. Tech Stack & Infrastructure
 
@@ -11,13 +11,13 @@ The PayKey platform consists of a mobile application (Flutter), a backend API (N
     *   *Architecture*: Clean Architecture (Presentation, Domain, Data layers)
 *   **Backend**: Node.js with NestJS framework
     *   *Language*: TypeScript
-    *   *ORM*: TypeORM or Prisma
+    *   *ORM*: TypeORM
 *   **Database**: PostgreSQL 15+
 *   **Caching**: Redis (for session management and queue processing)
-*   **Infrastructure**: AWS
-    *   *Compute*: EC2 or ECS (Fargate)
-    *   *Database*: RDS for PostgreSQL
-    *   *Storage*: S3 (Document storage)
+*   **Infrastructure**: DigitalOcean/AWS
+    *   *Compute*: Docker containers on ECS/Fargate or Droplets
+    *   *Database*: Managed PostgreSQL (RDS or DO Managed)
+    *   *Storage*: S3-compatible object storage
     *   *CI/CD*: GitHub Actions
 
 ## 3. Backend Architecture (NestJS)
@@ -27,20 +27,54 @@ The PayKey platform consists of a mobile application (Flutter), a backend API (N
 src/
 ├── app.module.ts
 ├── main.ts
-├── common/                 # Shared utilities, decorators, guards
+├── common/                 # Shared utilities, decorators, guards, transformers
 │   ├── decorators/
 │   ├── filters/
 │   ├── guards/
-│   └── interceptors/
+│   ├── interceptors/
+│   └── transformers/
 ├── config/                 # Configuration (Env variables)
 ├── modules/
 │   ├── auth/               # Authentication & Authorization
 │   ├── users/              # User management
 │   ├── workers/            # Worker profiles & management
 │   ├── subscriptions/      # Subscription logic & Stripe integration
-│   ├── payments/           # Payment processing (M-Pesa, Wallet)
+│   │   ├── entities/
+│   │   ├── dto/
+│   │   └── subscription.processor.ts
+│   ├── payments/           # Payment processing (M-Pesa via IntaSend, Stripe)
+│   │   ├── entities/
+│   │   ├── intasend.service.ts
+│   │   ├── stripe.service.ts
+│   │   ├── unified-payments.controller.ts
+│   │   └── subscription-payments.controller.ts
+│   ├── payroll/            # Payroll processing & pay periods
+│   │   ├── entities/
+│   │   └── payroll.service.ts
 │   ├── taxes/              # Tax calculations & Reporting
-│   └── notifications/      # SMS/Email services
+│   ├── tax-config/         # Tax configuration management
+│   ├── tax-payments/       # Tax payment tracking
+│   ├── gov-integrations/   # KRA, NSSF, SHIF API integrations
+│   │   ├── entities/
+│   │   ├── services/
+│   │   │   ├── kra.service.ts
+│   │   │   ├── nssf.service.ts
+│   │   │   └── shif.service.ts
+│   │   └── gov-submissions.controller.ts
+│   ├── notifications/      # SMS/Email services
+│   ├── data-deletion/      # GDPR data deletion compliance
+│   ├── export/             # Data export functionality
+│   ├── activities/         # Activity feed & audit logging
+│   ├── properties/         # Property/branch management
+│   ├── reports/            # Reports generation
+│   ├── excel-import/       # Excel import functionality
+│   ├── time-tracking/      # Time tracking features
+│   ├── holidays/           # Holiday management
+│   ├── countries/          # Country data
+│   ├── cache/              # Caching layer
+│   ├── throttler/          # Rate limiting
+│   ├── uploads/            # File uploads
+│   └── testing/            # Testing utilities
 └── shared/                 # Shared services (e.g., S3, Redis)
 ```
 
@@ -76,10 +110,26 @@ lib/
 │   │   ├── data/           # Repositories, Data Sources
 │   │   ├── domain/         # Entities, UseCases
 │   │   └── presentation/   # BLoCs, Pages, Widgets
-│   ├── dashboard/
+│   ├── home/
 │   ├── workers/
+│   ├── payroll/
+│   │   ├── pay_periods/
+│   │   └── presentation/
 │   ├── payments/
-│   └── taxes/
+│   ├── subscriptions/
+│   ├── taxes/
+│   ├── gov_submissions/
+│   ├── time_tracking/
+│   ├── holidays/
+│   ├── leave_management/
+│   ├── reports/
+│   ├── properties/
+│   ├── employee_portal/
+│   ├── settings/
+│   ├── profile/
+│   ├── onboarding/
+│   ├── accounting/
+│   └── finance/
 └── shared/                 # Common widgets (Buttons, Inputs)
 ```
 
@@ -91,9 +141,29 @@ lib/
 *   `POST /auth/refresh-token`: Refresh access token
 
 ### Subscriptions
-*   `GET /subscriptions/plans`: List available tiers
-*   `POST /subscriptions/subscribe`: Initiate subscription (Stripe/M-Pesa)
-*   `POST /subscriptions/webhook`: Handle provider updates
+*   `GET /payments/subscriptions/plans`: List available tiers
+*   `GET /payments/subscriptions/current`: Get current subscription
+*   `POST /payments/subscriptions/checkout`: Create Stripe checkout
+*   `GET /payments/subscriptions/payment-history`: Payment history
+*   `POST /payments/subscriptions/webhook`: Stripe webhook
+*   `GET /subscriptions/features`: Get feature access
+*   `GET /subscriptions/usage`: Get usage statistics
+
+### Payroll
+*   `GET /pay-periods`: List all pay periods
+*   `POST /pay-periods`: Create pay period
+*   `POST /pay-periods/:id/activate`: Activate pay period
+*   `POST /pay-periods/:id/process`: Process pay period
+*   `POST /payroll/run`: Run payroll for pay period
+*   `GET /payroll/records`: Get payroll records
+
+### Payments
+*   `POST /payments/initiate-stk`: STK Push for wallet top-up
+*   `POST /payments/send-b2c`: B2C Payout (single or bulk)
+*   `GET /payments/intasend/status/:trackingId`: Check payout status
+*   `POST /payments/intasend/webhook`: IntaSend webhook handler
+*   `GET /payments/unified/wallet`: Get wallet balance
+*   `GET /payments/transactions`: List transaction history
 
 ### Workers
 *   `GET /workers`: List all workers for current user
@@ -102,15 +172,19 @@ lib/
 *   `PATCH /workers/:id`: Update worker
 *   `DELETE /workers/:id`: Archive worker (Soft delete)
 
-### Payments
-*   `POST /payments/mpesa/c2b`: Trigger STK Push (User -> App)
-*   `POST /payments/mpesa/b2c`: Trigger Payout (App -> Worker)
-*   `GET /payments/transactions`: List transaction history
-
 ### Taxes
-*   `POST /taxes/calculate`: Preview tax for a given salary
-*   `GET /taxes/reports`: Get list of generated reports
-*   `GET /taxes/reports/:id/download`: Download PDF/CSV
+*   `GET /taxes/config`: Get tax configuration
+*   `GET /taxes/submissions`: Get tax submissions
+*   `POST /taxes/submit`: Submit tax filing
+*   `GET /taxes/summary/:year`: Get annual summary
+*   `POST /tax-payments/pay`: Record tax payment
+
+### Government Integrations
+*   `GET /gov/submissions`: List government submissions
+*   `POST /gov/submit/kra`: Submit KRA filing
+*   `POST /gov/submit/nssf`: Submit NSSF contribution
+*   `POST /gov/submit/shif`: Submit SHIF contribution
+*   `GET /gov/status/:id`: Check submission status
 
 ## 6. Security Considerations
 
