@@ -30,6 +30,7 @@ import {
   TransactionStatus,
   TransactionType,
 } from '../payments/entities/transaction.entity';
+import { WorkersService } from '../workers/workers.service';
 
 @Controller('subscriptions')
 @UseGuards(JwtAuthGuard)
@@ -46,6 +47,7 @@ export class SubscriptionsController {
     private stripeService: StripeService,
     @InjectRepository(Transaction)
     private transactionRepository: Repository<Transaction>,
+    private workersService: WorkersService,
   ) { }
 
   @Get('plans')
@@ -258,14 +260,59 @@ export class SubscriptionsController {
         startDate: null,
         endDate: null,
         user: userData,
+        autoRenew: false,
       };
     }
 
     return {
       ...subscription,
+      autoRenew: subscription.autoRenewal,
       planName:
         SUBSCRIPTION_PLANS.find((p) => p.tier === subscription.tier)?.name ||
         'Unknown Plan',
+    };
+  }
+
+  @Post('auto-renew')
+  async toggleAutoRenewal(
+    @Request() req: any,
+    @Body() body: { enable: boolean; reason?: string },
+  ) {
+    const subscription = await this.subscriptionRepository.findOne({
+      where: {
+        userId: req.user.userId,
+        status: SubscriptionStatus.ACTIVE,
+      },
+    });
+
+    if (!subscription) {
+      throw new Error('No active subscription found');
+    }
+
+    subscription.autoRenewal = body.enable;
+
+    if (!body.enable && body.reason) {
+      const dateStr = new Date().toISOString().split('T')[0];
+      const newNote = `[Cancellation Reason: ${body.reason} - ${dateStr}]`;
+      subscription.notes = subscription.notes
+        ? `${subscription.notes}\n${newNote}`
+        : newNote;
+    }
+
+    const updatedSubscription = await this.subscriptionRepository.save(subscription);
+
+    return {
+      success: true,
+      message: body.enable
+        ? 'Auto-renewal enabled'
+        : 'Auto-renewal disabled. Your plan will remain active until the end of the billing period.',
+      subscription: {
+        ...updatedSubscription,
+        autoRenew: updatedSubscription.autoRenewal,
+        planName:
+          SUBSCRIPTION_PLANS.find((p) => p.tier === updatedSubscription.tier)?.name ||
+          'Unknown Plan',
+      },
     };
   }
 
@@ -334,22 +381,69 @@ export class SubscriptionsController {
 
         if (daysRemaining <= 3 && daysRemaining > 0) {
           daysUntilDowngrade = daysRemaining;
-          gracePeriodWarning = `Warning: Your grace period ends in ${daysRemaining} day(s). Bank transfers may take 1-3 business days to process. If payment is not received before the grace period ends, your subscription will be downgraded to FREE.`;
+          gracePeriodWarning = `Warning: Your grace period ends in ${daysRemaining} day(s). Bank transfers may take 1-3 business days to process.`;
         }
       }
+
+      const reference = `SUB-${req.user.userId}-${plan.tier}-${billingPeriod}-${Date.now()}`;
 
       const checkoutResult = await this.intaSendService.createCheckoutUrl(
         amountToCharge,
         user.email,
         user.firstName || 'User',
         user.lastName || '',
-        `SUB-${req.user.userId}-${plan.tier}-${billingPeriod}`,
+        reference,
       );
 
+      // Create or update subscription (PENDING until payment confirmed)
+      let subscription = existingSubscription;
+      if (!subscription) {
+        subscription = this.subscriptionRepository.create({
+          userId: req.user.userId,
+          tier: plan.tier as SubscriptionTier,
+          status: SubscriptionStatus.PENDING,
+          startDate: new Date(),
+        });
+      } else {
+        subscription.tier = plan.tier as SubscriptionTier;
+        subscription.status = SubscriptionStatus.PENDING;
+      }
+      const savedSubscription = await this.subscriptionRepository.save(subscription);
+
+      // Create pending payment record
+      const now = new Date();
+      const periodEnd = new Date(now);
+      periodEnd.setMonth(periodEnd.getMonth() + (billingPeriod === 'yearly' ? 12 : 1));
+
+      const payment = this.subscriptionPaymentRepository.create({
+        subscriptionId: savedSubscription.id,
+        userId: req.user.userId,
+        amount: amountToCharge,
+        currency: 'KES',
+        status: PaymentStatus.PENDING,
+        paymentMethod: PaymentMethod.BANK_TRANSFER,
+        billingPeriod: billingPeriod,
+        periodStart: now,
+        periodEnd: periodEnd,
+        dueDate: now,
+        paymentProvider: 'INTASEND',
+        transactionId: reference,
+        metadata: {
+          planId: plan.tier,
+          billingPeriod,
+          reference,
+          checkoutUrl: checkoutResult.url,
+        },
+      });
+      await this.subscriptionPaymentRepository.save(payment);
+
       return {
+        success: true,
+        message: 'Bank transfer checkout initiated',
         paymentMethod: 'BANK',
         checkoutUrl: checkoutResult.url,
-        reference: `SUB-${req.user.userId}-${plan.tier}-${billingPeriod}`,
+        reference: reference,
+        subscriptionId: savedSubscription.id,
         processingInfo: {
           estimatedTime: 'Instant (typically under 45 seconds)',
           note: 'Bank transfers via PesaLink are processed in real-time and typically complete within 45 seconds. Your subscription will be activated once payment is confirmed.',
@@ -450,11 +544,65 @@ export class SubscriptionsController {
       };
     }
 
-    // 3. Handle Free Tier
+
+    // 3. Handle Bank Transfers (PesaLink via IntaSend)
+    if (body.paymentMethod === 'BANK' && amountToCharge > 0) {
+      const user = await this.usersService.findOneById(req.user.userId);
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      // Generate Reference
+      const reference = `SUB_${req.user.userId}_${Date.now()}`;
+
+      // Initiate Checkout
+      const checkout = await this.intaSendService.createCheckoutUrl(
+        amountToCharge,
+        user.email || 'no-email@paykey.com',
+        user.firstName || 'Valued',
+        user.lastName || 'Customer',
+        reference
+      );
+
+      // Return Checkout Info
+      return {
+        success: true,
+        message: 'Bank transfer initiated',
+        checkoutUrl: checkout.url,
+        reference: reference,
+        processingInfo: { estimatedTime: 'Instant via PesaLink' }
+      };
+    }
+
+    // 4. Handle Free Tier
     if (amountToCharge === 0) {
       let subscription = await this.subscriptionRepository.findOne({
         where: { userId: req.user.userId },
       });
+
+      // Downgrade protection: If engaging Free tier while on an Active Paid plan, treat as cancellation
+      if (
+        subscription &&
+        subscription.status === SubscriptionStatus.ACTIVE &&
+        subscription.tier !== SubscriptionTier.FREE &&
+        subscription.endDate &&
+        subscription.endDate > new Date()
+      ) {
+        subscription.autoRenewal = false;
+        const dateStr = new Date().toISOString().split('T')[0];
+        const newNote = `[Downgrade to Free requested - ${dateStr}]`;
+        subscription.notes = subscription.notes
+          ? `${subscription.notes}\n${newNote}`
+          : newNote;
+
+        const updatedSub = await this.subscriptionRepository.save(subscription);
+
+        return {
+          success: true,
+          message: `Downgrade scheduled. Your current plan will remain active until the end of the billing period (${subscription.endDate.toISOString().split('T')[0]}). You will be switched to the Free tier then.`,
+          subscription: updatedSub
+        };
+      }
 
       if (!subscription) {
         subscription = this.subscriptionRepository.create({
@@ -469,6 +617,10 @@ export class SubscriptionsController {
         subscription.status = SubscriptionStatus.ACTIVE;
         subscription.updatedAt = new Date();
         subscription.billingPeriod = billingPeriod;
+        // Ensure no trial logic is carried over if switching strictly to Free immediately
+        subscription.startDate = new Date();
+        subscription.endDate = null; // Free forever
+        subscription.autoRenewal = false;
       }
 
       const savedSubscription =
@@ -543,8 +695,33 @@ export class SubscriptionsController {
         (p) => p.tier === plan.tier,
       );
 
+      // Downgrade: Schedule for end of period (Safe Downgrade)
+      if (newPlanIndex < currentPlanIndex) {
+        existingSubscription.pendingTier = plan.tier as SubscriptionTier;
+        existingSubscription.autoRenewal = true; // Ensure they verify renewal to switch
+
+        const dateStr = new Date().toISOString().split('T')[0];
+        const newNote = `[Downgrade to ${plan.name} scheduled - ${dateStr}]`;
+        existingSubscription.notes = existingSubscription.notes
+          ? `${existingSubscription.notes}\n${newNote}`
+          : newNote;
+
+        const savedSub = await this.subscriptionRepository.save(existingSubscription);
+
+        return {
+          success: true,
+          message: `Plan change scheduled. You will stay on ${existingSubscription.tier} until the billing period ends, then automatically switch to ${plan.name}.`,
+          subscription: savedSub,
+          amountCharged: 0,
+          isProrated: false
+        };
+      }
+
       // Only prorate for upgrades
       if (newPlanIndex > currentPlanIndex) {
+        // Clear any pending downgrade if upgrading
+        existingSubscription.pendingTier = null;
+
         const proration = this.calculateProration(
           existingSubscription.tier,
           plan.tier,
@@ -697,6 +874,36 @@ export class SubscriptionsController {
 
       throw new Error(`Payment initiation failed: ${error.message}`);
     }
+  }
+
+  // ============================================================================
+  // SUBSCRIPTION USAGE
+  // ============================================================================
+
+  @Get('usage')
+  async getUsage(@Request() req: any) {
+    // Get worker count for the current user
+    const workerCount = await this.workersService.getWorkerCount(req.user.userId);
+
+    // Get current subscription
+    const subscription = await this.subscriptionRepository.findOne({
+      where: { userId: req.user.userId, status: SubscriptionStatus.ACTIVE },
+    });
+
+    // Get plan limits
+    const tier = subscription?.tier || 'FREE';
+    const plan = SUBSCRIPTION_PLANS.find((p) => p.tier === tier);
+    const workerLimit = plan?.workerLimit || 1;
+
+    return {
+      workers: {
+        used: workerCount,
+        limit: workerLimit,
+        percentage: Math.min(100, Math.round((workerCount / workerLimit) * 100)),
+      },
+      tier: tier,
+      planName: plan?.name || 'Free',
+    };
   }
 
   @Get('mpesa-payment-status/:paymentId')

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import '../../data/repositories/subscription_repository.dart';
 import '../../data/models/subscription_model.dart';
 import '../providers/subscription_provider.dart';
 
@@ -702,12 +704,103 @@ class _SubscriptionManagementPageState
   }
 
   void _selectPlan(SubscriptionPlan plan) {
+    // Intercept Free/Zero-cost plans
+    if (plan.tier == 'FREE' || plan.priceUSD == 0) {
+      _handleFreePlanSelection(plan);
+      return;
+    }
+
     // Relay returnPath if present in current URL
     final returnPath = GoRouterState.of(context).uri.queryParameters['returnPath'];
     final path = returnPath != null && returnPath.isNotEmpty
         ? '/subscriptions/payment?returnPath=${Uri.encodeComponent(returnPath)}'
         : '/subscriptions/payment';
     context.push(path, extra: plan);
+  }
+
+  void _handleFreePlanSelection(SubscriptionPlan plan) {
+    final currentSub = ref.read(userSubscriptionProvider).value;
+    final isDowngrade = currentSub != null && 
+                       currentSub.status == 'ACTIVE' && 
+                       currentSub.plan.tier != 'FREE';
+
+    if (isDowngrade) {
+      final endDateStr = DateFormat('MMMM d, yyyy').format(currentSub.endDate);
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.orange),
+              SizedBox(width: 12),
+              Text('Switch to Free Tier?'),
+            ],
+          ),
+          content: Text(
+            'Your current plan will remain active until $endDateStr.\n\n'
+            'At the end of the billing period, you will be switched to the Free tier automatically.',
+            style: const TextStyle(fontSize: 14),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _processFreeSwitch(plan);
+              },
+              child: const Text('Confirm Switch'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      // Immediate switch or sign up
+       _processFreeSwitch(plan);
+    }
+  }
+
+  Future<void> _processFreeSwitch(SubscriptionPlan plan) async {
+    try {
+      final repo = ref.read(subscriptionRepositoryProvider);
+      
+      // Show loading indicator
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(child: CircularProgressIndicator()),
+        );
+      }
+
+      await repo.subscribeToFreePlan(plan.id);
+      
+      if (mounted) Navigator.of(context).pop(); // Dismiss loading
+
+      ref.invalidate(userSubscriptionProvider);
+      ref.invalidate(subscriptionPlansProvider); // Refresh plans to update "Current" badge
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Subscription updated successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) Navigator.of(context).pop(); // Dismiss loading
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   String _formatShortDate(DateTime date) {

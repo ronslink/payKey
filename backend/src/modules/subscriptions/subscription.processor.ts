@@ -55,6 +55,21 @@ export class SubscriptionProcessor extends WorkerHost {
             return;
         }
 
+
+        // Check for pending tier change (e.g. scheduled downgrade)
+        if (subscription.pendingTier) {
+            this.logger.log(`Applying pending tier change for Subscription ${subscriptionId}: ${subscription.tier} -> ${subscription.pendingTier}`);
+            subscription.tier = subscription.pendingTier;
+            subscription.pendingTier = null;
+            // Clear specific notes or add a record? 
+            // We just update the object. The save() call later (line 69 or 82) or explicit save here.
+            // Since we might exit early (if plan not found), let's save now to be safe, or just trust flow.
+            // Better to save logic state.
+            await this.subscriptionRepository.save(subscription);
+
+            // Note: We continue with the NEW tier.
+        }
+
         // Identify Plan Cost
         const plan = SUBSCRIPTION_PLANS.find(p => p.tier === subscription.tier);
         if (!plan) return;

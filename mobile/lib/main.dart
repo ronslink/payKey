@@ -23,6 +23,7 @@ import 'features/payroll/data/models/payroll_model.dart';
 
 import 'features/onboarding/presentation/pages/onboarding_page.dart';
 import 'features/subscriptions/presentation/pages/subscription_management_page.dart';
+import 'features/subscriptions/presentation/pages/subscription_details_page.dart';
 import 'features/subscriptions/presentation/pages/payment_page.dart';
 import 'features/subscriptions/data/models/subscription_model.dart';
 import 'features/time_tracking/presentation/pages/time_tracking_page.dart';
@@ -166,6 +167,8 @@ abstract class AppRoutes {
 
   // Subscriptions
   static const subscriptionPayment = '/subscriptions/payment';
+  static const subscriptionDetails = '/subscriptions/details';
+  static const pricing = '/pricing';
 
   // Time Tracking
   static const timeTrackingHistory = '/time-tracking/history';
@@ -465,6 +468,16 @@ final _subscriptionRoutes = <RouteBase>[
       final returnPath = state.uri.queryParameters['returnPath'];
       return PaymentPage(plan: plan, returnPath: returnPath);
     },
+  ),
+  GoRoute(
+    path: AppRoutes.subscriptionDetails,
+    name: 'subscriptionDetails',
+    builder: (_, _) => const SubscriptionDetailsPage(),
+  ),
+  GoRoute(
+    path: AppRoutes.pricing,
+    name: 'pricing',
+    builder: (_, _) => const SubscriptionManagementPage(),
   ),
 ];
 

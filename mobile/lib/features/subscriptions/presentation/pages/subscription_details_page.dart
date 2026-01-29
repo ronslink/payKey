@@ -6,6 +6,7 @@ import '../providers/subscription_provider.dart';
 import '../providers/subscription_payment_history_provider.dart';
 import '../../data/models/subscription_model.dart';
 import '../../data/models/subscription_payment_record.dart';
+import '../../data/repositories/subscription_repository.dart';
 
 class SubscriptionDetailsPage extends ConsumerStatefulWidget {
   const SubscriptionDetailsPage({super.key});
@@ -775,46 +776,121 @@ class _SubscriptionDetailsPageState
   }
 
   void _toggleAutoRenew(BuildContext context, Subscription subscription) {
+    if (!subscription.autoRenew) {
+      // Enabling auto-renew - simple confirmation
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.autorenew, color: Colors.green),
+              SizedBox(width: 12),
+              Text('Enable Auto-Renew?'),
+            ],
+          ),
+          content: const Text('Your subscription will automatically renew each month.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                _performToggle(context, subscription, true, null);
+              },
+              child: const Text('Enable'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    // Disabling auto-renew - Request reason
+    final reasonController = TextEditingController();
+    final endDateStr = DateFormat('MMMM d, yyyy').format(subscription.endDate);
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Row(
+        title: const Row(
           children: [
-            Icon(
-              subscription.autoRenew ? Icons.cancel : Icons.autorenew,
-              color: subscription.autoRenew ? Colors.orange : Colors.green,
-            ),
-            const SizedBox(width: 12),
-            Text(subscription.autoRenew ? 'Cancel Auto-Renew?' : 'Enable Auto-Renew?'),
+            Icon(Icons.warning_amber_rounded, color: Colors.orange),
+            SizedBox(width: 12),
+            Text('Cancel Subscription?'),
           ],
         ),
-        content: Text(
-          subscription.autoRenew
-              ? 'Your subscription will not renew automatically at the end of the current period.'
-              : 'Your subscription will automatically renew each month.',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Your subscription will remain active until $endDateStr.\n\n'
+              'At the end of the billing period, you will be switched to the Free tier.',
+              style: const TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Please tell us why you are leaving:',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: reasonController,
+              decoration: const InputDecoration(
+                hintText: 'e.g., Too expensive, Switching to another service...',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+              maxLines: 2,
+            ),
+          ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: const Text('Keep Subscription'),
           ),
           ElevatedButton(
-            onPressed: () {
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
               Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(subscription.autoRenew
-                      ? 'Auto-renewal disabled'
-                      : 'Auto-renewal enabled'),
-                  backgroundColor: Colors.green,
-                ),
-              );
+              _performToggle(context, subscription, false, reasonController.text);
             },
-            child: const Text('Confirm'),
+            child: const Text('Confirm Cancellation', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
-    );
+    ).then((_) => reasonController.dispose());
+  }
+
+  Future<void> _performToggle(BuildContext context, Subscription subscription, bool newValue, String? reason) async {
+    try {
+      final repo = ref.read(subscriptionRepositoryProvider);
+      await repo.toggleAutoRenew(newValue, reason: reason);
+      ref.invalidate(userSubscriptionProvider);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(newValue
+                ? 'Auto-renewal enabled'
+                : 'Auto-renewal disabled. Access continues until end of billing period.'),
+            backgroundColor: newValue ? Colors.green : Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _showSupportDialog(BuildContext context) {

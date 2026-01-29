@@ -11,6 +11,7 @@ import { UsersModule } from '../users/users.module';
 import { PaymentsModule } from '../payments/payments.module';
 import { Transaction } from '../payments/entities/transaction.entity';
 import { DeviceToken } from '../notifications/entities/device-token.entity';
+import { WorkersModule } from '../workers/workers.module';
 import { User } from '../users/entities/user.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
 
@@ -33,6 +34,7 @@ import { SubscriptionScheduler } from './subscription.scheduler';
     }),
     forwardRef(() => UsersModule),
     forwardRef(() => PaymentsModule),
+    forwardRef(() => WorkersModule),
     NotificationsModule,
   ],
   controllers: [

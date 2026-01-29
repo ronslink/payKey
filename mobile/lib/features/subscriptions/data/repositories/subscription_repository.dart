@@ -105,43 +105,10 @@ class SubscriptionRepository {
         final json = response.data as Map<String, dynamic>;
         
         // Convert API response to Subscription format - Backend structure is simpler than expected
-        return Subscription(
-          id: json['id']?.toString() ?? 'unknown',
-          userId: json['userId']?.toString() ?? '',
-          // Backend doesn't have separate planId - use tier as planId
-          planId: json['tier']?.toString() ?? 'unknown',
-          // Create a simple SubscriptionPlan from tier and planName
-          plan: SubscriptionPlan(
-            id: json['tier']?.toString() ?? 'unknown',
-            tier: json['tier']?.toString() ?? 'unknown',
-            name: json['planName']?.toString() ?? json['tier']?.toString() ?? 'Unknown Plan',
-            description: '${json['tier']?.toString() ?? 'Unknown'} subscription plan',
-            priceUSD: double.tryParse(json['amount']?.toString() ?? '0') ?? 0.0,
-            priceKES: 0.0, // Backend doesn't provide KES price
-            workerLimit: _getWorkerLimitForTier(json['tier']?.toString()),
-            features: _getFeaturesForTier(json['tier']?.toString()),
-            isPopular: json['tier']?.toString() == 'BASIC',
-            isActive: json['status']?.toString() == 'ACTIVE',
-          ),
-          status: json['status']?.toString() ?? 'inactive',
-          startDate: DateTime.tryParse(json['startDate']?.toString() ?? '') ?? DateTime.now(),
-          endDate: json['endDate'] != null && json['endDate'].toString() != 'null'
-              ? DateTime.tryParse(json['endDate'].toString()) ?? DateTime.now()
-              : DateTime.now(),
-          amountPaid: double.tryParse(json['amount']?.toString() ?? '0') ?? 0.0,
-          currency: json['currency']?.toString() ?? 'USD',
-          autoRenew: json['nextBillingDate'] != null, // If there's a next billing date, it's auto-renewing
-          cancelledAt: json['status']?.toString() == 'CANCELLED' ? DateTime.tryParse(json['updatedAt']?.toString() ?? '') : null,
-          cancellationReason: null,
-          metadata: {
-            'notes': json['notes']?.toString(),
-            'stripeSubscriptionId': json['stripeSubscriptionId']?.toString(),
-            'stripePriceId': json['stripePriceId']?.toString(),
-          },
-          createdAt: json['createdAt']?.toString() != null ? DateTime.tryParse(json['createdAt'].toString()) : null,
-          updatedAt: json['updatedAt']?.toString() != null ? DateTime.tryParse(json['updatedAt'].toString()) : null,
-        );
+        return _mapJsonToSubscription(json);
       }
+      
+      return null;
       
       return null;
     } on DioException catch (e) {
@@ -422,10 +389,11 @@ class SubscriptionRepository {
   ) async {
     try {
       final response = await _apiService.dio.post(
-        '/subscriptions/bank-subscribe',
+        '/subscriptions/subscribe',
         data: {
           'planId': planId,
           'billingPeriod': billingPeriod,
+          'paymentMethod': 'BANK',
         },
       );
       
@@ -438,8 +406,8 @@ class SubscriptionRepository {
         }
         
         return BankSubscriptionResult(
-          success: data['success'] ?? false,
-          message: data['message']?.toString() ?? 'Unknown response',
+          success: data['success'] ?? true, // Default to true if fields missing but call succeeded
+          message: data['message']?.toString() ?? 'Bank transfer initiated',
           checkoutUrl: data['checkoutUrl']?.toString() ?? '',
           reference: data['reference']?.toString(),
           subscriptionId: data['subscriptionId']?.toString(),
@@ -477,6 +445,97 @@ class SubscriptionRepository {
     } catch (e) {
       throw Exception('Failed to check payment status: $e');
     }
+  }
+
+
+  Future<Subscription> toggleAutoRenew(bool enable, {String? reason}) async {
+    try {
+      final response = await _apiService.dio.post(
+        '/subscriptions/auto-renew',
+        data: {
+          'enable': enable,
+          if (reason != null) 'reason': reason,
+        },
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = response.data;
+        if (data is Map<String, dynamic> && data['subscription'] != null) {
+          return _mapJsonToSubscription(data['subscription']);
+        }
+      }
+      throw Exception('Failed to update subscription');
+    } on DioException catch (e) {
+      throw Exception(_apiService.getErrorMessage(e));
+    }
+  }
+
+  Future<Subscription> subscribeToFreePlan(String planId) async {
+    try {
+      final response = await _apiService.dio.post(
+        '/subscriptions/subscribe',
+        data: {
+          'planId': planId,
+        },
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Response might be the subscription directly or { success, message, subscription }
+        final data = response.data;
+        if (data is Map<String, dynamic>) {
+             if (data.containsKey('subscription')) {
+                 return _mapJsonToSubscription(data['subscription']);
+             }
+             // Or if it's the subscription object itself (based on backend logic line 566)
+             try {
+                return _mapJsonToSubscription(data);
+             } catch (_) {
+                 // Might be a message response
+                 throw Exception(data['message'] ?? 'Subscription updated');
+             }
+        }
+      }
+      throw Exception('Failed to update subscription');
+    } on DioException catch (e) {
+      throw Exception(_apiService.getErrorMessage(e));
+    }
+  }
+
+  Subscription _mapJsonToSubscription(Map<String, dynamic> json) {
+    return Subscription(
+      id: json['id']?.toString() ?? 'unknown',
+      userId: json['userId']?.toString() ?? '',
+      planId: json['tier']?.toString() ?? 'unknown',
+      plan: SubscriptionPlan(
+        id: json['tier']?.toString() ?? 'unknown',
+        tier: json['tier']?.toString() ?? 'unknown',
+        name: json['planName']?.toString() ?? json['tier']?.toString() ?? 'Unknown Plan',
+        description: '${json['tier']?.toString() ?? 'Unknown'} subscription plan',
+        priceUSD: double.tryParse(json['amount']?.toString() ?? '0') ?? 0.0,
+        priceKES: 0.0,
+        workerLimit: _getWorkerLimitForTier(json['tier']?.toString()),
+        features: _getFeaturesForTier(json['tier']?.toString()),
+        isPopular: json['tier']?.toString() == 'BASIC',
+        isActive: json['status']?.toString() == 'ACTIVE',
+      ),
+      status: json['status']?.toString() ?? 'inactive',
+      startDate: DateTime.tryParse(json['startDate']?.toString() ?? '') ?? DateTime.now(),
+      endDate: json['endDate'] != null && json['endDate'].toString() != 'null'
+          ? DateTime.tryParse(json['endDate'].toString()) ?? DateTime.now()
+          : DateTime.now(),
+      amountPaid: double.tryParse(json['amount']?.toString() ?? '0') ?? 0.0,
+      currency: json['currency']?.toString() ?? 'USD',
+      autoRenew: json['autoRenewal'] == true || json['autoRenew'] == true || json['nextBillingDate'] != null, 
+      cancelledAt: json['status']?.toString() == 'CANCELLED' ? DateTime.tryParse(json['updatedAt']?.toString() ?? '') : null,
+      cancellationReason: null,
+      metadata: {
+        'notes': json['notes']?.toString(),
+        'stripeSubscriptionId': json['stripeSubscriptionId']?.toString(),
+        'stripePriceId': json['stripePriceId']?.toString(),
+      },
+      createdAt: json['createdAt']?.toString() != null ? DateTime.tryParse(json['createdAt'].toString()) : null,
+      updatedAt: json['updatedAt']?.toString() != null ? DateTime.tryParse(json['updatedAt'].toString()) : null,
+    );
   }
 }
 

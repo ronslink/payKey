@@ -7,6 +7,11 @@ import '../../data/models/subscription_model.dart';
 import '../../data/repositories/subscription_repository.dart';
 import '../providers/subscription_provider.dart';
 import '../../../../integrations/intasend/intasend.dart';
+import '../../../profile/data/repositories/profile_repository.dart';
+// Note: ProfileModel is implied by repository, but strict typing might need it. 
+// However, adding it ensures accessibility.
+import '../../../profile/data/models/profile_model.dart';
+
 
 enum PaymentMethod { stripe, mpesa, bank }
 enum BillingPeriod { monthly, yearly }
@@ -251,6 +256,29 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     setState(() => _isProcessing = true);
 
     try {
+      // 1. Check if user has bank details in profile
+      final profileRepo = ref.read(profileRepositoryProvider);
+      final profile = await profileRepo.getProfile();
+
+      if (profile.bankName == null || profile.bankName!.isEmpty ||
+          profile.bankAccount == null || profile.bankAccount!.isEmpty) {
+        
+        if (!mounted) return;
+        
+        // Prompt user for missing bank details
+        final details = await _showBankDetailsDialog();
+        
+        if (details == null) {
+          // User cancelled
+          if (mounted) setState(() => _isProcessing = false);
+          return;
+        }
+
+        // Save to profile
+        await profileRepo.updateComplianceProfile(details);
+      }
+
+      // 2. Proceed with Payment
       final repo = ref.read(subscriptionRepositoryProvider);
       final billingPeriod = _selectedBillingPeriod == BillingPeriod.yearly ? 'yearly' : 'monthly';
       final result = await repo.subscribeWithBank(
@@ -709,5 +737,67 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
       return widget.plan.priceUSD * 10; // 2 months free
     }
     return widget.plan.priceUSD;
+  }
+
+  Future<Map<String, dynamic>?> _showBankDetailsDialog() async {
+    final bankNameController = TextEditingController();
+    final accountController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    return showDialog<Map<String, dynamic>>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Bank Details Required'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'To process bank transfers, we need your bank details saved to your profile.',
+                style: TextStyle(fontSize: 14, color: Colors.grey),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: bankNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Bank Name',
+                  hintText: 'e.g. KCB, Equity',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: accountController,
+                decoration: const InputDecoration(
+                  labelText: 'Account Number',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, null),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (formKey.currentState?.validate() ?? false) {
+                Navigator.pop(context, {
+                  'bankName': bankNameController.text.trim(),
+                  'bankAccount': accountController.text.trim(),
+                });
+              }
+            },
+            child: const Text('Save & Continue'),
+          ),
+        ],
+      ),
+    );
   }
 }
