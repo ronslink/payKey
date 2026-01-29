@@ -8,6 +8,7 @@ import '../../auth/presentation/providers/auth_provider.dart';
 import '../../subscriptions/presentation/providers/subscription_provider.dart';
 import '../../properties/data/models/property_model.dart';
 import '../../properties/presentation/providers/properties_provider.dart';
+import '../../workers/presentation/providers/workers_provider.dart';
 import '../providers/settings_provider.dart';
 
 // Local imports
@@ -339,36 +340,132 @@ class _SettingsContent extends ConsumerWidget {
   }
 
   void _showBankAccountEditor(BuildContext context, WidgetRef ref) {
-    final bankNameController = TextEditingController(text: settings.bankName ?? '');
     final accountController = TextEditingController(text: settings.bankAccount ?? '');
+    String? selectedBankCode = settings.bankCode;
+    String? selectedBankName = settings.bankName;
 
-    SettingsBottomSheet.show(
+    showModalBottomSheet<void>(
       context: context,
-      title: 'Bank Account',
       isScrollControlled: true,
-      child: FormBottomSheet(
-        title: 'Bank Account',
-        fields: [
-          SettingsTextField(
-            controller: bankNameController,
-            label: 'Bank Name',
-            hint: 'e.g., Equity Bank',
-          ),
-          const SizedBox(height: 16),
-          SettingsTextField(
-            controller: accountController,
-            label: 'Account Number',
-            hint: '0123456789',
-            keyboardType: TextInputType.number,
-          ),
-        ],
-        submitLabel: 'Save',
-        onSubmit: () {
-          ref.read(settingsProvider.notifier).updateBankAccount(
-                bankNameController.text,
-                accountController.text,
-              );
-          _showSavedSnackbar(context, 'Bank account saved');
+      backgroundColor: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          final banksAsync = ref.watch(supportedBanksProvider);
+          
+          return Padding(
+            padding: EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 20,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Bank Account',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                
+                // Bank Dropdown
+                banksAsync.when(
+                  data: (banks) {
+                    // Try to find current bank by code or name
+                    if (selectedBankCode == null && selectedBankName != null) {
+                      final matchedBank = banks.firstWhere(
+                        (b) => b['bank_name']?.toString().toLowerCase() == selectedBankName?.toLowerCase(),
+                        orElse: () => {},
+                      );
+                      if (matchedBank.isNotEmpty) {
+                        selectedBankCode = matchedBank['bank_code']?.toString();
+                      }
+                    }
+                    
+                    return DropdownButtonFormField<String>(
+                      initialValue: selectedBankCode != null && banks.any((b) => b['bank_code'].toString() == selectedBankCode)
+                          ? selectedBankCode
+                          : null,
+                      decoration: const InputDecoration(
+                        labelText: 'Bank Name',
+                        border: OutlineInputBorder(),
+                      ),
+                      isExpanded: true,
+                      hint: const Text('Select Bank'),
+                      items: banks.map((b) {
+                        return DropdownMenuItem<String>(
+                          value: b['bank_code'].toString(),
+                          child: Text(
+                            b['bank_name']?.toString() ?? 'Unknown Bank',
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          final bank = banks.firstWhere(
+                            (b) => b['bank_code'].toString() == val,
+                            orElse: () => {},
+                          );
+                          setModalState(() {
+                            selectedBankCode = val;
+                            selectedBankName = bank['bank_name']?.toString();
+                          });
+                        }
+                      },
+                    );
+                  },
+                  loading: () => const LinearProgressIndicator(),
+                  error: (e, _) => Text('Error loading banks: $e', style: const TextStyle(color: Colors.red)),
+                ),
+                const SizedBox(height: 16),
+                
+                // Account Number
+                TextFormField(
+                  controller: accountController,
+                  decoration: const InputDecoration(
+                    labelText: 'Account Number',
+                    hintText: '0123456789',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 24),
+                
+                // Save Button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      if (selectedBankName != null && selectedBankName!.isNotEmpty) {
+                        ref.read(settingsProvider.notifier).updateBankAccount(
+                          selectedBankName!,
+                          selectedBankCode,
+                          accountController.text,
+                        );
+                        Navigator.pop(ctx);
+                        _showSavedSnackbar(context, 'Bank account saved');
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Please select a bank')),
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                    ),
+                    child: const Text('Save'),
+                  ),
+                ),
+              ],
+            ),
+          );
         },
       ),
     );

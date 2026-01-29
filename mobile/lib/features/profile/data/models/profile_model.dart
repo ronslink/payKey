@@ -13,6 +13,7 @@ class ProfileModel {
   final String? bankAccount;
   final String? mpesaPaybill;
   final String? mpesaTill;
+  final String? mpesaPhone;
   // Required compliance fields
   final String? idType;
   final String? idNumber;
@@ -37,6 +38,7 @@ class ProfileModel {
     this.bankAccount,
     this.mpesaPaybill,
     this.mpesaTill,
+    this.mpesaPhone,
     this.idType,
     this.idNumber,
     this.address,
@@ -63,6 +65,7 @@ class ProfileModel {
       bankAccount: json['bankAccount'],
       mpesaPaybill: json['mpesaPaybill'],
       mpesaTill: json['mpesaTill'],
+      mpesaPhone: json['mpesaPhone'],
       idType: json['idType'] ?? json['idtype'], // Handle case sensitive
       idNumber: json['idNumber'],
       address: json['address'],
@@ -89,6 +92,7 @@ class ProfileModel {
       'bankAccount': bankAccount,
       'mpesaPaybill': mpesaPaybill,
       'mpesaTill': mpesaTill,
+      'mpesaPhone': mpesaPhone,
     };
   }
 }

@@ -106,8 +106,13 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           controller: controller,
           keyboardType: keyboardType,
           obscureText: obscureText,
+          style: const TextStyle(
+            color: Color(0xFF111827),
+            fontSize: 16,
+          ),
           decoration: InputDecoration(
             hintText: hint,
+            hintStyle: TextStyle(color: Colors.grey[400]),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: Color(0xFFD1D5DB)),

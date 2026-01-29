@@ -449,6 +449,10 @@ class _EmployeeLoginPageState extends ConsumerState<EmployeeLoginPage> {
           keyboardType: keyboardType,
           obscureText: obscureText,
           maxLength: maxLength,
+          style: const TextStyle(
+            color: Color(0xFF1E293B),
+            fontSize: 16,
+          ),
           inputFormatters: keyboardType == TextInputType.number
               ? [FilteringTextInputFormatter.digitsOnly]
               : null,

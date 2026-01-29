@@ -22,6 +22,7 @@ class _SubscriptionDetailsPageState
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.invalidate(userSubscriptionProvider);
       ref
           .read(subscriptionPaymentHistoryProvider.notifier)
           .loadUserSubscriptionPaymentHistory();
@@ -168,7 +169,6 @@ class _SubscriptionDetailsPageState
     final isActive = subscription.status.toLowerCase() == 'active';
     final statusColor = isActive ? Colors.green : Colors.orange;
     final planColor = _getPlanColor(subscription.plan.tier);
-    final daysRemaining = subscription.endDate.difference(DateTime.now()).inDays;
 
     return Card(
       child: Padding(
@@ -253,12 +253,41 @@ class _SubscriptionDetailsPageState
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _buildStatCard(
-                    context,
-                    'Days Left',
-                    '$daysRemaining',
-                    Icons.timer,
-                    daysRemaining < 7 ? Colors.red : Colors.orange,
+                  child: Builder(
+                    builder: (context) {
+                      final now = DateTime.now();
+                      final difference = subscription.endDate.difference(now);
+                      final days = difference.inDays;
+                      final hours = difference.inHours;
+                      
+                      String displayValue;
+                      Color displayColor;
+                      
+                      if (difference.isNegative) {
+                        displayValue = 'Expired';
+                        displayColor = Colors.red;
+                      } else if (days == 0) {
+                         // Less than 24 hours left
+                         if (hours > 0) {
+                           displayValue = '$hours Hrs';
+                           displayColor = Colors.orange;
+                         } else {
+                           displayValue = '< 1 Hr';
+                           displayColor = Colors.red;
+                         }
+                      } else {
+                        displayValue = '$days';
+                        displayColor = days < 7 ? Colors.orange : Colors.green;
+                      }
+                      
+                      return _buildStatCard(
+                        context,
+                        'Days Left',
+                        displayValue,
+                        Icons.timer,
+                        displayColor,
+                      );
+                    }
                   ),
                 ),
               ],

@@ -82,6 +82,10 @@ export class UpdateUserDto {
 
   @IsOptional()
   @IsString()
+  bankCode?: string;
+
+  @IsOptional()
+  @IsString()
   mpesaPaybill?: string;
 
   @IsOptional()

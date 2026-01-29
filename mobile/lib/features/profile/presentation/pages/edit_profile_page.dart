@@ -5,6 +5,8 @@ import '../../data/repositories/profile_repository.dart';
 import '../../data/models/profile_model.dart';
 import '../../../onboarding/presentation/providers/countries_provider.dart';
 import '../../../workers/presentation/providers/workers_provider.dart';
+import '../../../settings/providers/settings_provider.dart';
+import '../providers/profile_provider.dart';
 
 class EditProfilePage extends ConsumerStatefulWidget {
   const EditProfilePage({super.key});
@@ -82,6 +84,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
     _lastNameCtrl.text = p.lastName ?? '';
     _emailCtrl.text = p.email;
     _phoneCtrl.text = p.phoneNumber ?? '';
+    _mpesaPhoneCtrl.text = p.mpesaPhone ?? '';
     
     _idTypeCtrl.text = p.idType ?? '';
     _idNumberCtrl.text = p.idNumber ?? '';
@@ -123,9 +126,14 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         'bankAccount': _bankAccountCtrl.text.isEmpty ? null : _bankAccountCtrl.text,
         'mpesaPaybill': _paybillCtrl.text.isEmpty ? null : _paybillCtrl.text,
         'mpesaTill': _tillCtrl.text.isEmpty ? null : _tillCtrl.text,
+        'mpesaPhone': _mpesaPhoneCtrl.text.isEmpty ? null : _mpesaPhoneCtrl.text,
       };
       
       await repo.updateComplianceProfile(data);
+      
+      // Force refresh of both profile and settings providers so other screens update
+      ref.invalidate(profileProvider);
+      ref.invalidate(settingsProvider);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -266,38 +274,109 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
             Consumer(
               builder: (context, ref, child) {
                 final banksAsync = ref.watch(supportedBanksProvider);
+                print('[EditProfilePage] banksAsync state: $banksAsync');
                 return banksAsync.when(
                   data: (banks) {
-                    final currentCode = _bankCodeCtrl.text;
-                    final isValid = currentCode.isNotEmpty && 
-                        banks.any((b) => b['bank_code'].toString() == currentCode);
+                    print('[EditProfilePage] Banks loaded: ${banks.length} items');
+                    if (banks.isEmpty) {
+                      return Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text('No banks available. Please check your connection.',
+                            style: TextStyle(color: Colors.orange)),
+                      );
+                    }
                     
-                    return DropdownButtonFormField<String>(
-                      key: ValueKey('bank_${_bankCodeCtrl.text}'),
-                      initialValue: isValid ? currentCode : null,
-                      decoration: const InputDecoration(labelText: 'Bank Name'),
-                      items: banks.map((b) {
-                        return DropdownMenuItem<String>(
-                          value: b['bank_code'].toString(),
-                          child: Text(
-                            b['bank_name']?.toString() ?? 'Unknown Bank',
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) {
-                          setState(() {
-                            _bankCodeCtrl.text = val;
-                            final bank = banks.firstWhere(
-                              (b) => b['bank_code'].toString() == val,
-                              orElse: () => {},
-                            );
-                            _bankNameCtrl.text = bank['bank_name']?.toString() ?? '';
+                    // Try to match by bankCode first, then fallback to bankName
+                    String? selectedCode;
+                    final currentCode = _bankCodeCtrl.text;
+                    final currentName = _bankNameCtrl.text;
+                    bool hasUnmatchedBank = false;
+                    
+                    if (currentCode.isNotEmpty && 
+                        banks.any((b) => b['bank_code'].toString() == currentCode)) {
+                      selectedCode = currentCode;
+                    } else if (currentName.isNotEmpty) {
+                      // Fallback: find bank by name
+                      final matchedBank = banks.firstWhere(
+                        (b) => b['bank_name']?.toString().toLowerCase() == currentName.toLowerCase(),
+                        orElse: () => {},
+                      );
+                      if (matchedBank.isNotEmpty) {
+                        selectedCode = matchedBank['bank_code']?.toString();
+                        // Also update the bankCode controller so save works correctly
+                        if (selectedCode != null && _bankCodeCtrl.text != selectedCode) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (mounted) {
+                              setState(() => _bankCodeCtrl.text = selectedCode!);
+                            }
                           });
                         }
-                      },
-                      hint: const Text('Select Bank'),
+                      } else {
+                        // Bank name is set but doesn't match any supported bank
+                        hasUnmatchedBank = true;
+                      }
+                    }
+                    
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Show warning if saved bank doesn't match
+                        if (hasUnmatchedBank) ...[
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            margin: const EdgeInsets.only(bottom: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.orange.shade300),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.warning_amber, color: Colors.orange.shade700, size: 20),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Current bank "$currentName" not found. Please select from the list below.',
+                                    style: TextStyle(fontSize: 12, color: Colors.orange.shade800),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        DropdownButtonFormField<String>(
+                          key: ValueKey('bank_${selectedCode ?? 'none'}'),
+                          initialValue: selectedCode,
+                          decoration: const InputDecoration(labelText: 'Bank Name'),
+                          isExpanded: true,
+                          items: banks.map((b) {
+                            return DropdownMenuItem<String>(
+                              value: b['bank_code'].toString(),
+                              child: Text(
+                                b['bank_name']?.toString() ?? 'Unknown Bank',
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() {
+                                _bankCodeCtrl.text = val;
+                                final bank = banks.firstWhere(
+                                  (b) => b['bank_code'].toString() == val,
+                                  orElse: () => {},
+                                );
+                                _bankNameCtrl.text = bank['bank_name']?.toString() ?? '';
+                              });
+                            }
+                          },
+                          hint: const Text('Select Bank'),
+                        ),
+                      ],
                     );
                   },
                   loading: () => const LinearProgressIndicator(),
@@ -369,6 +448,7 @@ class _EditProfilePageState extends ConsumerState<EditProfilePage> {
         return DropdownButtonFormField<String>(
           // Using key to force rebuild when value changes  
           key: ValueKey('${label}_$validValue'),
+          initialValue: validValue,
           decoration: InputDecoration(labelText: label),
           isExpanded: true,
           items: countries.map((country) {

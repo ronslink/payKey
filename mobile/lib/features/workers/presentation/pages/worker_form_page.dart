@@ -5,6 +5,8 @@ import '../../data/models/worker_model.dart';
 
 import '../../../settings/providers/settings_provider.dart';
 import '../providers/workers_provider.dart';
+import '../../../properties/presentation/providers/properties_provider.dart';
+import '../../../subscriptions/presentation/providers/subscription_provider.dart';
 
 // =============================================================================
 // CONSTANTS
@@ -78,6 +80,7 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
   DateTime? _dateOfBirth;
   DateTime _startDate = DateTime.now();
   String _employmentType = 'FIXED';
+  String? _selectedPropertyId;
   bool _isSaving = false;
 
   // ---------------------------------------------------------------------------
@@ -107,11 +110,16 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
       _dateOfBirth = worker.dateOfBirth;
       _startDate = worker.startDate ?? DateTime.now();
       _employmentType = worker.employmentType;
+      _selectedPropertyId = worker.propertyId;
     } else {
       _paymentFrequency = PaymentFrequency.monthly;
       _paymentMethod = PaymentMethod.mpesa;
       _startDate = DateTime.now();
       _employmentType = 'FIXED';
+      // If creating, we might want to default to settings default too?
+      // But _buildCreateRequest handles that if null.
+      // We can load it here if we want the dropdown to show it initially.
+      // For now, let's leave it null and let the user select or system default.
     }
   }
 
@@ -189,7 +197,7 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
       emergencyContactRelationship: _controllers.emergencyRelationship.nullableText,
       dateOfBirth: _dateOfBirth,
       // Link worker to default property (only if PLATINUM user has one set)
-      propertyId: defaultPropertyId,
+      propertyId: _selectedPropertyId ?? defaultPropertyId,
     );
   }
 
@@ -219,6 +227,7 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
       emergencyContactPhone: _controllers.emergencyPhone.nullableText,
       emergencyContactRelationship: _controllers.emergencyRelationship.nullableText,
       dateOfBirth: _dateOfBirth,
+      propertyId: _selectedPropertyId,
     );
   }
 
@@ -252,6 +261,13 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Fetch data for Property Dropdown
+    final subscriptionAsync = ref.watch(userSubscriptionProvider);
+    final propertiesAsync = ref.watch(propertiesProvider);
+    
+    final isPlatinum = subscriptionAsync.value?.plan.name.toUpperCase() == 'PLATINUM';
+    final properties = propertiesAsync.value ?? [];
+
     return Scaffold(
       backgroundColor: _AppColors.background,
       appBar: _buildAppBar(),
@@ -278,6 +294,10 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
                 onStartDateChanged: (date) => setState(() => _startDate = date),
                 employmentType: _employmentType,
                 onEmploymentTypeChanged: (type) => setState(() => _employmentType = type),
+                selectedPropertyId: _selectedPropertyId,
+                onPropertyIdChanged: (id) => setState(() => _selectedPropertyId = id),
+                properties: properties,
+                showPropertySelector: isPlatinum,
               ),
               const SizedBox(height: 24),
               _PaymentDetailsSection(
@@ -617,6 +637,10 @@ class _EmploymentDetailsSection extends StatelessWidget {
   final ValueChanged<DateTime> onStartDateChanged;
   final String employmentType;
   final ValueChanged<String> onEmploymentTypeChanged;
+  final String? selectedPropertyId;
+  final ValueChanged<String?> onPropertyIdChanged;
+  final List<dynamic> properties; // Using dynamic or PropertyModel if available
+  final bool showPropertySelector;
 
   const _EmploymentDetailsSection({
     required this.controllers,
@@ -624,6 +648,10 @@ class _EmploymentDetailsSection extends StatelessWidget {
     required this.onStartDateChanged,
     required this.employmentType,
     required this.onEmploymentTypeChanged,
+    required this.selectedPropertyId,
+    required this.onPropertyIdChanged,
+    required this.properties,
+    required this.showPropertySelector,
   });
 
   @override
@@ -637,6 +665,31 @@ class _EmploymentDetailsSection extends StatelessWidget {
           hint: 'e.g. Housekeeper, Gardener',
         ),
         
+        // Property Selector (Platinum Only)
+        if (showPropertySelector) ...[
+          DropdownButtonFormField<String>(
+            initialValue: selectedPropertyId,
+            decoration: const InputDecoration(
+              labelText: 'Property (Location)',
+              border: OutlineInputBorder(),
+              filled: true,
+              fillColor: _AppColors.background,
+            ),
+            items: [
+              const DropdownMenuItem<String>(
+                value: null,
+                child: Text('All Properties (Global)'),
+              ),
+              ...properties.map((p) => DropdownMenuItem<String>(
+                value: p.id,
+                child: Text(p.name),
+              )),
+            ],
+            onChanged: (value) => onPropertyIdChanged(value),
+          ),
+          const SizedBox(height: 16),
+        ],
+
         // Employment Type Dropdown
         DropdownButtonFormField<String>(
           initialValue: employmentType,

@@ -122,6 +122,9 @@ abstract class PayrollCalculation with _$PayrollCalculation {
 
     /// Whether this calculation has been manually edited.
     @Default(false) bool isEdited,
+
+    /// Property ID associated with this payroll record.
+    String? propertyId,
   }) = _PayrollCalculation;
 
   factory PayrollCalculation.fromJson(Map<String, dynamic> json) =>

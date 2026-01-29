@@ -40,9 +40,9 @@ class _FakePayPeriodStatistics_1 extends _i1.SmartFake
     : super(parent, parentInvocation);
 }
 
-class _FakePayrollProcessingResult_2 extends _i1.SmartFake
-    implements _i4.PayrollProcessingResult {
-  _FakePayrollProcessingResult_2(Object parent, Invocation parentInvocation)
+class _FakePayrollProcessResponse_2 extends _i1.SmartFake
+    implements _i4.PayrollProcessResponse {
+  _FakePayrollProcessResponse_2(Object parent, Invocation parentInvocation)
     : super(parent, parentInvocation);
 }
 
@@ -52,21 +52,27 @@ class _FakeFundVerificationResult_3 extends _i1.SmartFake
     : super(parent, parentInvocation);
 }
 
-class _FakePayrollCalculation_4 extends _i1.SmartFake
+class _FakeJobStatusResult_4 extends _i1.SmartFake
+    implements _i4.JobStatusResult {
+  _FakeJobStatusResult_4(Object parent, Invocation parentInvocation)
+    : super(parent, parentInvocation);
+}
+
+class _FakePayrollCalculation_5 extends _i1.SmartFake
     implements _i4.PayrollCalculation {
-  _FakePayrollCalculation_4(Object parent, Invocation parentInvocation)
+  _FakePayrollCalculation_5(Object parent, Invocation parentInvocation)
     : super(parent, parentInvocation);
 }
 
-class _FakePayslipPreview_5 extends _i1.SmartFake
+class _FakePayslipPreview_6 extends _i1.SmartFake
     implements _i4.PayslipPreview {
-  _FakePayslipPreview_5(Object parent, Invocation parentInvocation)
+  _FakePayslipPreview_6(Object parent, Invocation parentInvocation)
     : super(parent, parentInvocation);
 }
 
-class _FakePayrollSummary_6 extends _i1.SmartFake
+class _FakePayrollSummary_7 extends _i1.SmartFake
     implements _i4.PayrollSummary {
-  _FakePayrollSummary_6(Object parent, Invocation parentInvocation)
+  _FakePayrollSummary_7(Object parent, Invocation parentInvocation)
     : super(parent, parentInvocation);
 }
 
@@ -331,7 +337,7 @@ class MockPayrollRepository extends _i1.Mock implements _i6.PayrollRepository {
           as _i5.Future<List<_i4.PayrollCalculation>>);
 
   @override
-  _i5.Future<_i4.PayrollProcessingResult> processPayroll(
+  _i5.Future<_i4.PayrollProcessResponse> processPayroll(
     List<String>? workerIds,
     String? payPeriodId, {
     bool? skipPayout = false,
@@ -342,8 +348,8 @@ class MockPayrollRepository extends _i1.Mock implements _i6.PayrollRepository {
               [workerIds, payPeriodId],
               {#skipPayout: skipPayout},
             ),
-            returnValue: _i5.Future<_i4.PayrollProcessingResult>.value(
-              _FakePayrollProcessingResult_2(
+            returnValue: _i5.Future<_i4.PayrollProcessResponse>.value(
+              _FakePayrollProcessResponse_2(
                 this,
                 Invocation.method(
                   #processPayroll,
@@ -353,7 +359,7 @@ class MockPayrollRepository extends _i1.Mock implements _i6.PayrollRepository {
               ),
             ),
           )
-          as _i5.Future<_i4.PayrollProcessingResult>);
+          as _i5.Future<_i4.PayrollProcessResponse>);
 
   @override
   _i5.Future<_i4.FundVerificationResult> verifyFunds(String? payPeriodId) =>
@@ -367,6 +373,19 @@ class MockPayrollRepository extends _i1.Mock implements _i6.PayrollRepository {
             ),
           )
           as _i5.Future<_i4.FundVerificationResult>);
+
+  @override
+  _i5.Future<_i4.JobStatusResult> getJobStatus(String? jobId) =>
+      (super.noSuchMethod(
+            Invocation.method(#getJobStatus, [jobId]),
+            returnValue: _i5.Future<_i4.JobStatusResult>.value(
+              _FakeJobStatusResult_4(
+                this,
+                Invocation.method(#getJobStatus, [jobId]),
+              ),
+            ),
+          )
+          as _i5.Future<_i4.JobStatusResult>);
 
   @override
   _i5.Future<Map<String, dynamic>> devTopup(double? amount) =>
@@ -423,7 +442,7 @@ class MockPayrollRepository extends _i1.Mock implements _i6.PayrollRepository {
       (super.noSuchMethod(
             Invocation.method(#updatePayrollItem, [payrollRecordId, updates]),
             returnValue: _i5.Future<_i4.PayrollCalculation>.value(
-              _FakePayrollCalculation_4(
+              _FakePayrollCalculation_5(
                 this,
                 Invocation.method(#updatePayrollItem, [
                   payrollRecordId,
@@ -477,7 +496,7 @@ class MockPayrollRepository extends _i1.Mock implements _i6.PayrollRepository {
       (super.noSuchMethod(
             Invocation.method(#getPayslipPreview, [payrollRecordId]),
             returnValue: _i5.Future<_i4.PayslipPreview>.value(
-              _FakePayslipPreview_5(
+              _FakePayslipPreview_6(
                 this,
                 Invocation.method(#getPayslipPreview, [payrollRecordId]),
               ),
@@ -490,7 +509,7 @@ class MockPayrollRepository extends _i1.Mock implements _i6.PayrollRepository {
       (super.noSuchMethod(
             Invocation.method(#getPayrollSummary, [payPeriodId]),
             returnValue: _i5.Future<_i4.PayrollSummary>.value(
-              _FakePayrollSummary_6(
+              _FakePayrollSummary_7(
                 this,
                 Invocation.method(#getPayrollSummary, [payPeriodId]),
               ),

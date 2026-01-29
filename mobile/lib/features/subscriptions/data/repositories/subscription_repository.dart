@@ -110,7 +110,7 @@ class SubscriptionRepository {
       
       return null;
       
-      return null;
+
     } on DioException catch (e) {
       throw Exception(_apiService.getErrorMessage(e));
     } catch (e) {

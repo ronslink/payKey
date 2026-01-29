@@ -10,7 +10,10 @@ import '../../../../integrations/intasend/intasend.dart';
 import '../../../profile/data/repositories/profile_repository.dart';
 // Note: ProfileModel is implied by repository, but strict typing might need it. 
 // However, adding it ensures accessibility.
-import '../../../profile/data/models/profile_model.dart';
+// Note: ProfileModel is implied by repository, but strict typing might need it. 
+// However, adding it ensures accessibility.
+import '../../../workers/presentation/providers/workers_provider.dart';
+import '../../../profile/presentation/providers/profile_provider.dart';
 
 
 enum PaymentMethod { stripe, mpesa, bank }
@@ -34,6 +37,13 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
   String? _mpesaPaymentId;
   Timer? _statusPollTimer;
   String? _statusMessage;
+
+  @override
+  void initState() {
+    super.initState();
+  }
+  
+  // No explicit _loadProfile needed, we'll listen to the provider in build
 
   @override
   void dispose() {
@@ -388,6 +398,36 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Listen to profile changes to update phone number if not manually edited?
+    // Or just pre-fill once if empty.
+    ref.listen(profileProvider, (previous, next) {
+      if (next.hasValue && next.value != null) {
+        final profile = next.value!;
+        if (_phoneController.text == '07' || _phoneController.text.isEmpty) {
+           if (profile.mpesaPhone != null && profile.mpesaPhone!.isNotEmpty) {
+             _phoneController.text = profile.mpesaPhone!;
+           } else if (profile.phoneNumber != null && profile.phoneNumber!.isNotEmpty) {
+             _phoneController.text = profile.phoneNumber!;
+           }
+        }
+      }
+    });
+
+    // Also verify initial state if provider is already loaded
+    final profileAsync = ref.watch(profileProvider);
+    profileAsync.whenData((profile) {
+       if (_phoneController.text == '07') {
+           if (profile.mpesaPhone != null && profile.mpesaPhone!.isNotEmpty) {
+             // Defer update to avoid build collisions if strict
+             WidgetsBinding.instance.addPostFrameCallback((_) {
+               if (mounted && _phoneController.text == '07') {
+                 _phoneController.text = profile.mpesaPhone!;
+               }
+             });
+           }
+       }
+    });
+    
     return Scaffold(
       appBar: AppBar(title: const Text('Checkout')),
       body: SingleChildScrollView(
@@ -597,7 +637,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                         color: !isYearly ? Colors.white : Colors.transparent,
                         borderRadius: BorderRadius.circular(6),
                         boxShadow: !isYearly ? [
-                          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4)
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4)
                         ] : null,
                       ),
                       child: Center(
@@ -621,7 +661,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                         color: isYearly ? Colors.white : Colors.transparent,
                         borderRadius: BorderRadius.circular(6),
                         boxShadow: isYearly ? [
-                          BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4)
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4)
                         ] : null,
                       ),
                       child: Center(
@@ -741,6 +781,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
 
   Future<Map<String, dynamic>?> _showBankDetailsDialog() async {
     final bankNameController = TextEditingController();
+    final bankCodeController = TextEditingController();
     final accountController = TextEditingController();
     final formKey = GlobalKey<FormState>();
 
@@ -759,18 +800,59 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                 style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: bankNameController,
-                decoration: const InputDecoration(
-                  labelText: 'Bank Name',
-                  hintText: 'e.g. KCB, Equity',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+              Consumer(
+                builder: (context, ref, child) {
+                  final banksAsync = ref.watch(supportedBanksProvider);
+                  return banksAsync.when(
+                    data: (banks) {
+                      return DropdownButtonFormField<String>(
+                        decoration: const InputDecoration(
+                          labelText: 'Bank Name',
+                          border: OutlineInputBorder(),
+                        ),
+                        style: const TextStyle(
+                          color: Color(0xFF111827),
+                          fontSize: 16,
+                        ),
+                        dropdownColor: Colors.white,
+                        items: banks.map((b) {
+                          return DropdownMenuItem<String>(
+                            value: b['bank_code'].toString(),
+                            child: Text(
+                              b['bank_name']?.toString() ?? 'Unknown Bank',
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Color(0xFF111827),
+                                fontSize: 16,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            bankCodeController.text = val;
+                            final bank = banks.firstWhere(
+                              (b) => b['bank_code'].toString() == val,
+                              orElse: () => {},
+                            );
+                            bankNameController.text = bank['bank_name']?.toString() ?? '';
+                          }
+                        },
+                        validator: (v) => v == null ? 'Required' : null,
+                      );
+                    },
+                    loading: () => const LinearProgressIndicator(), 
+                    error: (e, s) => Text('Error loading banks: $e', style: const TextStyle(color: Colors.red)),
+                  );
+                },
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: accountController,
+                style: const TextStyle(
+                  color: Color(0xFF111827),
+                  fontSize: 16,
+                ),
                 decoration: const InputDecoration(
                   labelText: 'Account Number',
                   border: OutlineInputBorder(),
@@ -790,6 +872,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
               if (formKey.currentState?.validate() ?? false) {
                 Navigator.pop(context, {
                   'bankName': bankNameController.text.trim(),
+                  'bankCode': bankCodeController.text.trim(),
                   'bankAccount': accountController.text.trim(),
                 });
               }

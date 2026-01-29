@@ -28,6 +28,7 @@ class ProfileRepository {
       '/users/profile',
       options: Options(headers: {'Authorization': 'Bearer $token'}),
     );
+    print('[ProfileRepository] API Response: ${response.data}');
     return ProfileModel.fromJson(response.data);
   }
 

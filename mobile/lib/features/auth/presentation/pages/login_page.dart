@@ -103,6 +103,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           controller: controller,
           keyboardType: keyboardType,
           obscureText: obscureText,
+          style: const TextStyle(
+            color: Color(0xFF111827),
+            fontSize: 16,
+          ),
           decoration: InputDecoration(
             hintText: hint,
             suffixIcon: suffixIcon,
@@ -124,7 +128,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           ),
           validator: (value) {
             if (value == null || value.trim().isEmpty) {
-              return 'Please enter $label.toLowerCase()';
+              return 'Please enter ${label.toLowerCase()}';
             }
             if (label == 'Email' && !value.contains('@')) {
               return 'Please enter a valid email';

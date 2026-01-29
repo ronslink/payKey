@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/network/api_service.dart';
+import '../../profile/presentation/providers/profile_provider.dart';
 
 /// User settings model
 class UserSettings {
   final String? bankName;
+  final String? bankCode;
   final String? bankAccount;
   final String? mpesaPaybill;
   final String? mpesaTill;
@@ -20,6 +22,7 @@ class UserSettings {
 
   UserSettings({
     this.bankName,
+    this.bankCode,
     this.bankAccount,
     this.mpesaPaybill,
     this.mpesaTill,
@@ -34,6 +37,7 @@ class UserSettings {
 
   UserSettings copyWith({
     String? bankName,
+    String? bankCode,
     String? bankAccount,
     String? mpesaPaybill,
     String? mpesaTill,
@@ -47,6 +51,7 @@ class UserSettings {
   }) {
     return UserSettings(
       bankName: bankName ?? this.bankName,
+      bankCode: bankCode ?? this.bankCode,
       bankAccount: bankAccount ?? this.bankAccount,
       mpesaPaybill: mpesaPaybill ?? this.mpesaPaybill,
       mpesaTill: mpesaTill ?? this.mpesaTill,
@@ -63,6 +68,7 @@ class UserSettings {
   factory UserSettings.fromJson(Map<String, dynamic> json) {
     return UserSettings(
       bankName: json['bankName'],
+      bankCode: json['bankCode'],
       bankAccount: json['bankAccount'],
       mpesaPaybill: json['mpesaPaybill'],
       mpesaTill: json['mpesaTill'],
@@ -78,6 +84,7 @@ class UserSettings {
   Map<String, dynamic> toJson() {
     return {
       'bankName': bankName,
+      'bankCode': bankCode,
       'bankAccount': bankAccount,
       'mpesaPaybill': mpesaPaybill,
       'mpesaTill': mpesaTill,
@@ -107,22 +114,30 @@ class SettingsNotifier extends AsyncNotifier<UserSettings> {
     // Try to load settings from API if authenticated
     try {
       final token = await ApiService().getToken();
+      debugPrint('[SettingsProvider] Token present: ${token != null}');
       if (token != null) {
         final response = await ApiService().get('/users/profile');
+        debugPrint('[SettingsProvider] Profile API status: ${response.statusCode}');
         if (response.statusCode == 200) {
-          return UserSettings.fromJson(response.data).copyWith(
+          debugPrint('[SettingsProvider] Profile data: ${response.data}');
+          final settings = UserSettings.fromJson(response.data).copyWith(
             themeMode: themeMode,
           );
+          debugPrint('[SettingsProvider] Parsed bankName: ${settings.bankName}');
+          debugPrint('[SettingsProvider] Parsed mpesaPhone: ${settings.mpesaPhone}');
+          return settings;
         }
       }
     } catch (apiError) {
       // API failed, use defaults
+      debugPrint('[SettingsProvider] API Error: $apiError');
       if (apiError is! DioException || apiError.response?.statusCode != 401) {
         debugPrint('Failed to load settings: $apiError');
       }
     }
 
     // Fallback to defaults
+    debugPrint('[SettingsProvider] Using defaults');
     return UserSettings(themeMode: themeMode);
   }
 
@@ -140,16 +155,18 @@ class SettingsNotifier extends AsyncNotifier<UserSettings> {
     await prefs.setInt('themeMode', mode.index);
   }
 
-  Future<void> updateBankAccount(String bankName, String accountNumber) async {
+  Future<void> updateBankAccount(String bankName, String? bankCode, String accountNumber) async {
     final current = state.value ?? UserSettings();
     state = AsyncValue.data(current.copyWith(
       bankName: bankName,
+      bankCode: bankCode,
       bankAccount: accountNumber,
     ));
 
     // Persist to API
     await _saveToApi({
       'bankName': bankName,
+      'bankCode': bankCode,
       'bankAccount': accountNumber,
     });
   }
@@ -215,6 +232,8 @@ class SettingsNotifier extends AsyncNotifier<UserSettings> {
   Future<void> _saveToApi(Map<String, dynamic> updates) async {
     try {
       await ApiService().patch('/users/profile', data: updates);
+      // Invalidate profileProvider so Edit Profile page stays in sync
+      ref.invalidate(profileProvider);
     } catch (e) {
       // Silently fail - settings are still in local state
       debugPrint('Failed to save settings to API: $e');

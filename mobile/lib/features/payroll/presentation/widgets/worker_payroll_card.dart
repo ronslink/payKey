@@ -35,9 +35,17 @@ class WorkerPayrollCard extends StatelessWidget {
     required this.formatter,
     required this.onTap,
     required this.onInputChanged,
+
     this.isSelected = true,
     required this.onSelectionChanged,
+    this.selectedPropertyId,
+    this.onPropertyIdChanged,
+    this.properties = const [],
   });
+
+  final String? selectedPropertyId;
+  final ValueChanged<String?>? onPropertyIdChanged;
+  final List<dynamic> properties; // Can pass PropertyModel objects
 
   @override
   Widget build(BuildContext context) {
@@ -206,6 +214,12 @@ class WorkerPayrollCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Property Selector
+        if (properties.isNotEmpty && onPropertyIdChanged != null) ...[
+          _buildPropertySelector(context),
+          const SizedBox(height: 12),
+        ],
+
         // Days Worked toggle (only for monthly workers with partial periods)
         if (!isHourly && isPartialPeriod) ...[
           _buildDaysWorkedSection(context),
@@ -262,6 +276,41 @@ class WorkerPayrollCard extends StatelessWidget {
         const SizedBox(height: 12),
         _buildBaseRateInfo(context, isHourly),
       ],
+    );
+  }
+
+
+  Widget _buildPropertySelector(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: selectedPropertyId,
+          isExpanded: true,
+          hint: Text('Select Property (Default: Global)', style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+          icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
+          onChanged: onPropertyIdChanged,
+          items: [
+            DropdownMenuItem<String>(
+              value: null,
+              child: Text('All Properties (Global)', style: TextStyle(
+                fontSize: 13,
+                color: selectedPropertyId == null ? Colors.black : Colors.grey.shade700,
+                fontWeight: selectedPropertyId == null ? FontWeight.w500 : FontWeight.normal,
+              )),
+            ),
+            ...properties.map((p) => DropdownMenuItem<String>(
+              value: p.id,
+              child: Text(p.name, style: const TextStyle(fontSize: 13)),
+            )),
+          ],
+        ),
+      ),
     );
   }
 

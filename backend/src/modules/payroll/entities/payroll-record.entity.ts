@@ -48,6 +48,13 @@ export class PayrollRecord {
   @JoinColumn({ name: 'workerId' })
   worker: Worker;
 
+  @Column({ type: 'uuid', nullable: true })
+  propertyId: string;
+
+  @ManyToOne('Property', { nullable: true })
+  @JoinColumn({ name: 'propertyId' })
+  property: any;
+
   @Column({ type: 'date' })
   periodStart: Date;
 

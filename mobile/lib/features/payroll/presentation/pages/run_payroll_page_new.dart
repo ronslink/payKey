@@ -12,6 +12,8 @@ import '../../../workers/presentation/providers/workers_provider.dart';
 
 import '../../data/repositories/payroll_repository.dart';
 import '../../data/models/payroll_model.dart';
+import '../../../properties/presentation/providers/properties_provider.dart';
+import '../../../subscriptions/presentation/providers/subscription_provider.dart';
 
 // Local imports
 import '../constants/payroll_constants.dart';
@@ -50,6 +52,7 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
   bool _isProcessing = false;
   bool _isWorkersSectionExpanded = false;
   final Set<String> _selectedWorkerIds = {};
+  final Map<String, String?> _workerPropertyOverrides = {};
   bool _selectionInitialized = false;
 
   // Controllers and utilities
@@ -72,6 +75,8 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
   Widget build(BuildContext context) {
     final payPeriodsAsync = ref.watch(payPeriodsProvider);
     final workersAsync = ref.watch(workersProvider);
+    final propertiesAsync = ref.watch(propertiesProvider);
+    final userSubscriptionAsync = ref.watch(userSubscriptionProvider);
 
     return Scaffold(
       appBar: _buildAppBar(context),
@@ -88,7 +93,12 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildPeriodSelector(context, payPeriodsAsync),
-                  _buildWorkersSection(context, workersAsync),
+                  _buildWorkersSection(
+                    context,
+                    workersAsync,
+                    propertiesAsync.value ?? [],
+                    userSubscriptionAsync.value?.plan.name.toUpperCase() == 'PLATINUM',
+                  ),
                 ],
               ),
             ),
@@ -437,6 +447,8 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
   Widget _buildWorkersSection(
     BuildContext context,
     AsyncValue<List<WorkerModel>> workersAsync,
+    List<dynamic> properties,
+    bool isPlatinum,
   ) {
     return workersAsync.when(
       loading: () => const Padding(
@@ -450,11 +462,16 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
           style: const TextStyle(color: Colors.red),
         ),
       ),
-      data: (workers) => _buildWorkersList(context, workers),
+      data: (workers) => _buildWorkersList(context, workers, properties, isPlatinum),
     );
   }
 
-  Widget _buildWorkersList(BuildContext context, List<WorkerModel> workers) {
+  Widget _buildWorkersList(
+    BuildContext context,
+    List<WorkerModel> workers,
+    List<dynamic> properties,
+    bool isPlatinum,
+  ) {
     if (_selectedPayPeriod == null) {
       return const Padding(
         padding: EdgeInsets.all(32),
@@ -494,7 +511,7 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               children: workers.asMap().entries.map((entry) {
-                return _buildWorkerCard(context, entry.key, entry.value);
+                return _buildWorkerCard(context, entry.key, entry.value, properties, isPlatinum);
               }).toList(),
             ),
           ),
@@ -561,13 +578,24 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
     );
   }
 
-  Widget _buildWorkerCard(BuildContext context, int index, WorkerModel worker) {
+  Widget _buildWorkerCard(
+    BuildContext context,
+    int index,
+    WorkerModel worker,
+    List<dynamic> properties,
+    bool isPlatinum,
+  ) {
     final isHourly = worker.employmentType == EmploymentType.hourly;
     
     // Calculate total days in the selected pay period
     final periodStart = _selectedPayPeriod?.startDate ?? DateTime.now();
     final periodEnd = _selectedPayPeriod?.endDate ?? DateTime.now();
     final totalDaysInPeriod = periodEnd.difference(periodStart).inDays + 1;
+
+    // Determine current property (override > worker default > null)
+    final currentPropertyId = _workerPropertyOverrides.containsKey(worker.id)
+        ? _workerPropertyOverrides[worker.id]
+        : worker.propertyId;
 
     return WorkerPayrollCard(
       worker: worker,
@@ -602,6 +630,16 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
         _expandedWorkerIndex = _expandedWorkerIndex == index ? -1 : index;
       }),
       onInputChanged: () => setState(() {}),
+      // Property Logic
+      properties: isPlatinum ? properties : const [],
+      selectedPropertyId: currentPropertyId,
+      onPropertyIdChanged: isPlatinum
+          ? (id) {
+              setState(() {
+                _workerPropertyOverrides[worker.id] = id;
+              });
+            }
+          : null,
     );
   }
 
@@ -887,6 +925,11 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
         prorationFactor: prorationFactor,
       );
 
+      // Determine effective property ID
+      final propertyId = _workerPropertyOverrides.containsKey(worker.id)
+          ? _workerPropertyOverrides[worker.id]
+          : worker.propertyId;
+
       return {
         'workerId': calc.workerId,
         'grossSalary': grossPay,
@@ -895,6 +938,7 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
         'otherDeductions': deductions,
         'daysWorked': daysWorked,
         'totalDaysInPeriod': totalDaysInPeriod,
+        'propertyId': propertyId,
       };
     }).toList();
   }

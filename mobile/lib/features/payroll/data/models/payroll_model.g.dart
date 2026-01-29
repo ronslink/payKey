@@ -60,6 +60,7 @@ _PayrollCalculation _$PayrollCalculationFromJson(Map<String, dynamic> json) =>
       netPay: (json['netPay'] as num).toDouble(),
       status: json['status'] as String? ?? PayrollStatus.draft,
       isEdited: json['isEdited'] as bool? ?? false,
+      propertyId: json['propertyId'] as String?,
     );
 
 Map<String, dynamic> _$PayrollCalculationToJson(_PayrollCalculation instance) =>
@@ -75,6 +76,7 @@ Map<String, dynamic> _$PayrollCalculationToJson(_PayrollCalculation instance) =>
       'netPay': instance.netPay,
       'status': instance.status,
       'isEdited': instance.isEdited,
+      'propertyId': instance.propertyId,
     };
 
 _PayrollRequest _$PayrollRequestFromJson(Map<String, dynamic> json) =>
