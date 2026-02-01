@@ -358,10 +358,10 @@ export class IntaSendService {
    * Static fallback list of Kenyan banks (used when API is unavailable)
    */
   private static readonly KENYAN_BANKS = [
-    { bank_code: '01', bank_name: 'Kenya Commercial Bank' },
-    { bank_code: '02', bank_name: 'Standard Chartered Bank Kenya' },
-    { bank_code: '03', bank_name: 'Barclays Bank of Kenya' },
-    { bank_code: '07', bank_name: 'Commercial Bank of Africa' },
+    { bank_code: '1', bank_name: 'Kenya Commercial Bank' },
+    { bank_code: '2', bank_name: 'Standard Chartered Bank Kenya' },
+    { bank_code: '3', bank_name: 'Barclays Bank of Kenya' },
+    { bank_code: '7', bank_name: 'Commercial Bank of Africa' },
     { bank_code: '10', bank_name: 'Prime Bank' },
     { bank_code: '11', bank_name: 'Co-operative Bank of Kenya' },
     { bank_code: '12', bank_name: 'National Bank of Kenya' },

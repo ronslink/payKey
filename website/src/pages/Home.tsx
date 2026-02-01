@@ -1,6 +1,7 @@
 import React from 'react';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
+import { VideoSection } from '../components/VideoSection';
 import { ArrowRight, Shield, Globe, Smartphone } from 'lucide-react';
 
 export default function Home() {
@@ -31,12 +32,26 @@ export default function Home() {
                             <button className="btn btn-primary">
                                 Get Started <ArrowRight size={18} style={{ marginLeft: '0.5rem' }} />
                             </button>
-                            <button className="btn" style={{ background: '#1e293b', color: 'white' }}>
+                            <button
+                                className="btn"
+                                style={{ background: '#1e293b', color: 'white' }}
+                                onClick={() => {
+                                    document.getElementById('video-section')?.scrollIntoView({
+                                        behavior: 'smooth',
+                                        block: 'center'
+                                    });
+                                }}
+                            >
                                 View Demo
                             </button>
                         </div>
                     </div>
                 </section>
+
+                {/* Video Section */}
+                <div id="video-section">
+                    <VideoSection />
+                </div>
 
                 {/* Features Grid */}
                 <section className="section" style={{ background: '#0f172a' }}>

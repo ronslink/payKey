@@ -144,6 +144,17 @@ export class PayrollPaymentService {
         continue;
       }
 
+      // Check for already paid/processing
+      if (['paid', 'processing'].includes(record.paymentStatus)) {
+        results.push({
+          workerId: record.workerId,
+          workerName: record.worker.name,
+          success: true,
+          message: `Already ${record.paymentStatus}`
+        });
+        continue;
+      }
+
       let remainingAmount = Number(record.netSalary);
       try {
         while (remainingAmount > 0) {
@@ -243,7 +254,11 @@ export class PayrollPaymentService {
       await this.transactionRepository.save(savedTransactions);
 
       // Update Records
+      const processedRecordIds = new Set(allTransactions.map(tx => tx.metadata.payrollRecordId));
+
       for (const record of records) {
+        if (!processedRecordIds.has(record.id)) continue;
+
         record.paymentStatus = finalStatus;
         record.paymentDate = new Date();
         await this.payrollRecordRepository.save(record);
@@ -359,7 +374,18 @@ export class PayrollPaymentService {
           workerId: record.workerId,
           workerName: record.worker.name,
           success: false,
-          error: `Record ${record.id} is not finalized`
+          error: `Record ${record.id} is not finalized`,
+        });
+        continue;
+      }
+
+      // Check for already paid/processing
+      if (['paid', 'processing'].includes(record.paymentStatus)) {
+        results.push({
+          workerId: record.workerId,
+          workerName: record.worker.name,
+          success: true,
+          message: `Already ${record.paymentStatus}`,
         });
         continue;
       }
@@ -462,7 +488,11 @@ export class PayrollPaymentService {
       await this.transactionRepository.save(savedTransactions);
 
       // Update Records
+      const processedRecordIds = new Set(allTransactions.map(tx => tx.metadata.payrollRecordId));
+
       for (const record of records) {
+        if (!processedRecordIds.has(record.id)) continue;
+
         record.paymentStatus = finalStatus;
         await this.payrollRecordRepository.save(record);
 
