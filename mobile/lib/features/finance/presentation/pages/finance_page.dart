@@ -9,6 +9,7 @@ import '../../../settings/providers/settings_provider.dart';
 import '../../../subscriptions/presentation/providers/feature_access_provider.dart';
 import '../../../../core/utils/download_utils.dart';
 import '../../widgets/funding_sources_section.dart';
+import '../../../profile/presentation/providers/profile_provider.dart';
 import '../../../payroll/presentation/providers/pay_period_provider.dart';
 import '../../../payroll/data/models/pay_period_model.dart';
 
@@ -79,6 +80,7 @@ class _FinancePageState extends ConsumerState<FinancePage>
   Widget build(BuildContext context) {
     final payPeriodsAsync = ref.watch(payPeriodsProvider);
     final settingsAsync = ref.watch(settingsProvider);
+    final profileAsync = ref.watch(profileProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -91,21 +93,25 @@ class _FinancePageState extends ConsumerState<FinancePage>
 
             // Funding Sources
             SliverToBoxAdapter(
-              child: settingsAsync.when(
-                data: (settings) => FundingSourcesSection(
-                  isLoading: false,
-                  data: FundingSourceData(
-                    bankName: settings.bankName,
-                    bankAccount: settings.bankAccount,
-                    mpesaPhone: settings.mpesaPhone,
-                    mpesaPaybill: settings.mpesaPaybill,
-                    defaultPaymentMethod: settings.defaultPaymentMethod,
-                    isDirectMPesa: (settings.mpesaPaybill == null || settings.mpesaPaybill!.isEmpty) && 
-                                   (settings.mpesaPhone != null && settings.mpesaPhone!.isNotEmpty),
+              child: profileAsync.when(
+                data: (profile) => settingsAsync.when(
+                  data: (settings) => FundingSourcesSection(
+                    isLoading: false,
+                    data: FundingSourceData(
+                      bankName: profile.bankName,
+                      bankAccount: profile.bankAccount,
+                      mpesaPhone: profile.mpesaPhone,
+                      mpesaPaybill: profile.mpesaPaybill,
+                      defaultPaymentMethod: settings.defaultPaymentMethod,
+                      isDirectMPesa: (profile.mpesaPaybill == null || profile.mpesaPaybill!.isEmpty) && 
+                                     (profile.mpesaPhone != null && profile.mpesaPhone!.isNotEmpty),
+                    ),
                   ),
+                  loading: () => const FundingSourcesSection(isLoading: true),
+                  error: (_, __) => const FundingSourcesSection(isLoading: false), // Fallback to defaults
                 ),
                 loading: () => const FundingSourcesSection(isLoading: true),
-                error: (e, s) => const FundingSourcesSection(isLoading: false, error: 'Failed to load funding sources'),
+                error: (e, s) => const FundingSourcesSection(isLoading: false, error: 'Failed to load profile'),
               ),
             ),
 

@@ -426,6 +426,7 @@ export class PayrollService {
     userId: string,
     payPeriodId: string,
     skipPayout: boolean = false,
+    workerIds?: string[],
   ) {
     this.logger.log(`Queueing payroll finalization for period ${payPeriodId}`);
 
@@ -436,7 +437,7 @@ export class PayrollService {
 
     const job = await this.payrollQueue.add(
       'finalize-payroll',
-      { userId, payPeriodId, skipPayout },
+      { userId, payPeriodId, skipPayout, workerIds },
       {
         attempts: 3,
         backoff: {
@@ -463,6 +464,7 @@ export class PayrollService {
     userId: string,
     payPeriodId: string,
     skipPayout: boolean = false,
+    workerIds?: string[],
   ) {
     const startTime = Date.now();
     this.logger.log(
@@ -470,8 +472,15 @@ export class PayrollService {
     );
 
     // Find records that need to be finalized (draft status)
+    let query: any = { userId, payPeriodId, status: PayrollStatus.DRAFT };
+
+    // Filter by workerIds if provided
+    if (workerIds && workerIds.length > 0) {
+      query.workerId = In(workerIds);
+    }
+
     const records = await this.payrollRepository.find({
-      where: { userId, payPeriodId, status: PayrollStatus.DRAFT },
+      where: query,
       relations: ['worker', 'payPeriod'],
     });
 
@@ -542,12 +551,12 @@ export class PayrollService {
     await this.generateTaxSubmissionSafe(payPeriodId, userId);
 
     // 5. Mark PayPeriod as COMPLETED (The Fix)
-    // Verify all records are finalized before closing period
-    const nonFinalizedCount = await this.payrollRepository.count({
-      where: { payPeriodId, status: PayrollStatus.DRAFT }, // Should be 0
+    // Only check if ALL records are finalized if we didn't filter by IDs (or perform a check for remaining drafts)
+    const remainingDrafts = await this.payrollRepository.count({
+      where: { payPeriodId, status: PayrollStatus.DRAFT },
     });
 
-    if (nonFinalizedCount === 0) {
+    if (remainingDrafts === 0) {
       await this.payPeriodRepository.update(payPeriodId, {
         status: PayPeriodStatus.COMPLETED,
       });
@@ -700,6 +709,7 @@ export class PayrollService {
   async verifyFundsForPeriod(
     userId: string,
     payPeriodId: string,
+    workerIds?: string[],
   ): Promise<FundsVerificationResult> {
     const userResult = await this.dataSource
       .createQueryBuilder()
@@ -714,12 +724,18 @@ export class PayrollService {
 
     const walletBalance = parseFloat(userResult.walletBalance) || 0;
 
+    let query: any = {
+      payPeriodId,
+      userId,
+      status: In([PayrollStatus.FINALIZED, PayrollStatus.DRAFT]),
+    };
+
+    if (workerIds && workerIds.length > 0) {
+      query.workerId = In(workerIds);
+    }
+
     const records = await this.payrollRepository.find({
-      where: {
-        payPeriodId,
-        userId,
-        status: In([PayrollStatus.FINALIZED, PayrollStatus.DRAFT]),
-      },
+      where: query,
     });
 
     // Calculate minimum required balance

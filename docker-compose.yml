@@ -96,22 +96,6 @@ services:
     networks:
       - paykey-network
 
-  ngrok:
-    image: ngrok/ngrok:latest
-    container_name: paykey_ngrok
-    restart: unless-stopped
-    command: http backend:3000
-    env_file:
-      - ./backend/.env
-    environment:
-      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
-    ports:
-      - "4040:4040"
-    networks:
-      - paykey-network
-    depends_on:
-      - backend
-
 volumes:
   postgres_data:
   redis_data:

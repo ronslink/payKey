@@ -102,12 +102,16 @@ class PayrollRepository {
   ///
   /// Returns fund verification result with available balance, required amount,
   /// and whether payroll can proceed.
-  Future<FundVerificationResult> verifyFunds(String payPeriodId) async {
+  /// Supports partial verification for selected workers.
+  Future<FundVerificationResult> verifyFunds(String payPeriodId, {List<String>? workerIds}) async {
     return _executeRequest(
       operation: 'verify funds',
       request: () async {
-        final response = await _authenticatedGet(
+        final response = await _authenticatedPost(
           '/payroll/verify-funds/$payPeriodId',
+          data: {
+            if (workerIds != null) 'workerIds': workerIds,
+          },
         );
         return FundVerificationResult.fromJson(response.data);
       },

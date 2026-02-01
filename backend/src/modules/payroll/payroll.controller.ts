@@ -218,6 +218,7 @@ export class PayrollController {
       req.user.userId,
       body.payPeriodId,
       body.skipPayout ?? false, // Pass skipPayout flag
+      body.workerIds, // Pass workerIds for partial processing
     );
   }
   @Post('recalculate/:payPeriodId')
@@ -527,15 +528,18 @@ export class PayrollController {
 
   /**
    * Verify if user has sufficient wallet balance to process payroll for a period
+   * Now accepts optional workerIds for partial verification (POST request)
    */
-  @Get('verify-funds/:payPeriodId')
+  @Post('verify-funds/:payPeriodId')
   async verifyPayrollFunds(
     @Request() req: AuthenticatedRequest,
     @Param('payPeriodId') payPeriodId: string,
+    @Body() body: { workerIds?: string[] } = {},
   ) {
     return this.payrollService.verifyFundsForPeriod(
       req.user.userId,
       payPeriodId,
+      body.workerIds,
     );
   }
 
