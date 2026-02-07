@@ -246,7 +246,7 @@ export class IntaSendService {
   /**
    * Create a new Wallet
    */
-  async createWallet(currency: 'KES' | 'USD' | 'EUR' | 'GBP', label: string, canDisburse = true) {
+  async createWallet(currency: 'KES' | 'USD' | 'EUR' | 'GBP', label = 'Working Wallet', canDisburse = true) {
     const url = `${this.baseUrl}/v1/wallets/`;
     this.logger.log(`Creating IntaSend Wallet: ${label} (${currency})`);
 
