@@ -49,7 +49,8 @@ export class WalletProcessor extends WorkerHost {
 
             // Create wallet via IntaSend
             const walletResponse = await this.intaSendService.createWallet(
-                job.data.label,
+                'KES',
+                job.data.label || 'Default Wallet Label',
             );
 
             const walletId = (walletResponse as { wallet_id?: string })?.wallet_id;
