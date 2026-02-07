@@ -56,7 +56,12 @@ export class IntaSendService {
       `IntaSend Service initialized in ${this.isLive ? 'LIVE' : 'SANDBOX'} mode`,
     );
 
+    this.logger.debug(`INTASEND_IS_LIVE env: ${this.configService.get('INTASEND_IS_LIVE')}`);
+    this.logger.debug(`Publishable Key Set: ${this.publishableKey ? 'Yes' : 'No'} (${this.publishableKey ? this.publishableKey.substring(0, 10) + '...' : 'None'})`);
+    this.logger.debug(`Secret Key Set: ${this.secretKey ? 'Yes' : 'No'} (${this.secretKey ? this.secretKey.substring(0, 5) + '...' : 'None'})`);
+
     if (!this.publishableKey || !this.secretKey) {
+
       this.logger.warn(
         'IntaSend Keys are missing! Please check .env configuration',
       );
@@ -74,10 +79,28 @@ export class IntaSendService {
     }
   }
 
-  verifyWebhookSignature(signature: string, rawBody: Buffer): boolean {
+  verifyWebhookSignature(signature: string, rawBody: Buffer, challenge?: string): boolean {
+    const configuredChallenge = this.configService.get('INTASEND_CHALLENGE');
+
+    // 1. Prioritize Challenge Verification (Official Docs Method)
+    if (configuredChallenge && challenge) {
+      if (configuredChallenge === challenge) {
+        this.logger.log('✅ Webhook Challenge matched.');
+        return true;
+      }
+      this.logger.warn(`⛔ Webhook Challenge Mismatch: Expected ${configuredChallenge}, got ${challenge}`);
+      // Fallthrough to signature check? No, if challenge is mismatched, it's definitely invalid.
+      return false;
+    }
+
+    // 2. Fallback to Signature Verification (Security Best Practice)
     if (!signature) {
-      this.logger.warn('⚠️ Webhook missing X-IntaSend-Signature header');
-      return false; // Fail secure
+      if (!configuredChallenge) {
+        this.logger.warn('⚠️ Webhook missing both Signature and Challenge configuration. Rejecting.');
+        return false;
+      }
+      this.logger.warn('⚠️ Webhook missing Signature, but Challenge not verified (missing in request or config). Rejecting.');
+      return false;
     }
 
     if (!rawBody) {
@@ -100,6 +123,7 @@ export class IntaSendService {
       return false;
     }
 
+    this.logger.log('✅ Webhook Signature matched.');
     return true;
   }
 
@@ -220,8 +244,42 @@ export class IntaSendService {
   }
 
   /**
-   * Send Money (B2C / Payroll)
+   * Create a new Wallet
    */
+  async createWallet(currency: 'KES' | 'USD' | 'EUR' | 'GBP', label: string, canDisburse = true) {
+    const url = `${this.baseUrl}/v1/wallets/`;
+    this.logger.log(`Creating IntaSend Wallet: ${label} (${currency})`);
+
+    try {
+      const response = await lastValueFrom(
+        this.httpService.post(
+          url,
+          {
+            label: label,
+            wallet_type: 'WORKING',
+            currency: currency,
+            can_disburse: canDisburse,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${this.secretKey}`,
+            },
+          },
+        ),
+      );
+      this.logger.log('IntaSend Create Wallet response:', response.data);
+      return response.data;
+    } catch (error) {
+      this.logger.error(
+        'IntaSend Create Wallet failed',
+        error.response?.data || error.message,
+      );
+      throw new Error(
+        `IntaSend Create Wallet failed: ${JSON.stringify(error.response?.data)}`,
+      );
+    }
+  }
+
   /**
    * Send Money (B2C / Payroll) - Supports Bulk
    */
@@ -252,6 +310,69 @@ export class IntaSendService {
         narrative: t.narrative || 'Salary Payment',
       };
     });
+
+    // Validating Config
+    const simulateVar = this.configService.get('INTASEND_SIMULATE');
+    const isTestAmount = transactions.some(t => t.amount === 777);
+
+    // Simulation Block
+    if ((simulateVar === 'true' || isTestAmount) && !this.isLive) {
+      this.logger.log(`⚠️ SIMULATION: IntaSend Payout (B2C) for ${transactions.length} txns`);
+
+      const trackingId = `TRK_SIM_B2C_${Date.now()}`;
+      const invoiceId = `INV_SIM_B2C_${Date.now()}`;
+
+      // Simulate Webhook for EACH transaction? 
+      // IntaSend B2C sends one webhook per request or per transaction? 
+      // Usually per batch request (tracking_id) or per line item.
+      // For simplicity, let's assume we match by tracking_id for the batch.
+
+      setTimeout(async () => {
+        try {
+          this.logger.log('⚠️ SIMULATION: Sending B2C Webhook...');
+          const payload = {
+            tracking_id: trackingId,
+            invoice_id: invoiceId, // Sometimes B2C uses tracking_id as ref
+            state: 'COMPLETE',
+            provider: 'MPESA-B2C',
+            charges: '10.00',
+            net_amount: transactions.reduce((sum, t) => sum + t.amount, 0),
+            currency: 'KES',
+            value: transactions.reduce((sum, t) => sum + t.amount, 0),
+            account: transactions[0].account,
+            api_ref: null, // B2C might not return the api_ref we want? check docs.
+            host: 'localhost',
+            challenge: null,
+          };
+
+          const payloadString = JSON.stringify(payload);
+          const signature = crypto
+            .createHmac('sha256', this.webhookSecret || this.secretKey)
+            .update(payloadString)
+            .digest('hex');
+
+          await lastValueFrom(
+            this.httpService.post(
+              'http://localhost:3000/payments/intasend/webhook',
+              payloadString,
+              { headers: { 'X-IntaSend-Signature': signature, 'Content-Type': 'application/json' } }
+            )
+          );
+          this.logger.log('✅ SIMULATION: B2C Webhook sent');
+        } catch (e) {
+          this.logger.error('❌ Simulation Callback Failed:', e.message);
+        }
+      }, 3000);
+
+      return {
+        tracking_id: trackingId,
+        status: 'Processing',
+        transactions: transactions.map(t => ({
+          status: 'Pending',
+          ...t
+        }))
+      };
+    }
 
     try {
       const response = await lastValueFrom(
@@ -298,41 +419,6 @@ export class IntaSendService {
     } catch (error) {
       this.logger.error(
         `Failed to check status for ${trackingId}`,
-        error.response?.data || error.message,
-      );
-      throw error;
-    }
-  }
-
-  /**
-   * Create a Working Wallet
-   */
-  async createWallet(label: string, currency = 'KES', canDisburse = true) {
-    const url = `${this.baseUrl}/v1/wallets/`;
-    this.logger.log(`Creating IntaSend Wallet: ${label}`);
-
-    try {
-      const response = await lastValueFrom(
-        this.httpService.post(
-          url,
-          {
-            wallet_type: 'WORKING',
-            label: label,
-            currency: currency,
-            can_disburse: canDisburse,
-          },
-          {
-            headers: {
-              Authorization: `Bearer ${this.secretKey}`,
-            },
-          },
-        ),
-      );
-      this.logger.log('Wallet Created:', response.data);
-      return response.data; // Returns { wallet_id: "...", label: "...", ... }
-    } catch (error) {
-      this.logger.error(
-        'Failed to create wallet',
         error.response?.data || error.message,
       );
       throw error;
@@ -499,7 +585,9 @@ export class IntaSendService {
     firstName: string,
     lastName: string,
     reference: string,
+    walletId?: string,
   ) {
+    // Docs: https://developers.intasend.com/docs/working-wallets/collect-payments/#initiate-collection
     const url = `${this.baseUrl}/v1/checkout/`;
     try {
       const response = await lastValueFrom(
@@ -515,6 +603,7 @@ export class IntaSendService {
             api_ref: reference,
             redirect_url: 'https://paydome.co/payment/success', // Or mobile deep link
             method: 'M-PESA-STK-PUSH,CARD-PAYMENT,BANK-PAYMENT', // Enable PesaLink (BANK-PAYMENT)
+            wallet_id: walletId,
           },
           {
             headers: {

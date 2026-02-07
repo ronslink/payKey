@@ -140,6 +140,10 @@ jobs:
             
             echo "🧾 Seeding Tax Configurations..."
             docker exec paykey_backend_prod node dist/scripts/seed-tax-configs-2025.js || echo "⚠️ Tax seeding failed (non-critical)"
+
+            echo "💰 Running Wallet Backfill Script..."
+            # Execute the compiled script from dist/src/scripts
+            docker exec paykey_backend_prod node dist/src/scripts/backfill-wallets.js || echo "⚠️ Wallet backfill failed (check logs)"
             
             echo "🧹 Cleaning up old images..."
             docker image prune -f

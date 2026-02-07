@@ -11,7 +11,7 @@ export default new DataSource({
   username: process.env.DB_USER || process.env.DB_USERNAME || 'paykey',
   password: process.env.DB_PASSWORD || 'password',
   database: process.env.DB_NAME || 'paykey_test',
-  entities: ['dist/src/modules/**/*.entity.js'],
-  migrations: ['dist/src/migrations/*.js'],
+  entities: ['src/**/*.entity.ts'],
+  migrations: ['src/migrations/*.ts'],
   synchronize: false,
 });

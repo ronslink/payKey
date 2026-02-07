@@ -26,6 +26,8 @@ import { Holiday } from '../modules/holidays/entities/holiday.entity';
 import { DeletionRequest } from '../modules/data-deletion/entities/deletion-request.entity';
 import { WorkerDocument } from '../modules/workers/entities/worker-document.entity';
 import { GovSubmission } from '../modules/gov-integrations/entities/gov-submission.entity';
+import { Notification } from '../modules/notifications/entities/notification.entity';
+import { DeviceToken } from '../modules/notifications/entities/device-token.entity';
 
 /**
  * Get database configuration for TypeORM
@@ -76,9 +78,12 @@ export const getDatabaseConfig = (
         DeletionRequest,
         WorkerDocument,
         GovSubmission,
+        Notification,
+        DeviceToken,
       ],
-      synchronize: true,
+      synchronize: false, // Use migrations in production!
       logging: ['query', 'error'],
+      migrationsRun: true, // Auto-run migrations on startup
     };
   }
 
@@ -139,6 +144,8 @@ export const getDatabaseConfig = (
       DeletionRequest,
       WorkerDocument,
       GovSubmission,
+      Notification,
+      DeviceToken,
     ],
     synchronize: isTest || true, // Keep enabled for now
     logging: ['query', 'error'],
