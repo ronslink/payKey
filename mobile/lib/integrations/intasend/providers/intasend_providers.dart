@@ -242,15 +242,7 @@ final disbursementProvider = NotifierProvider<DisbursementNotifier, Disbursement
   DisbursementNotifier.new,
 );
 
-// =============================================================================
-// FUND VERIFICATION PROVIDERS
-// =============================================================================
 
-/// Provider for fund verification
-final fundVerificationProvider = FutureProvider.family<FundVerification, List<WorkerPayout>>((ref, workers) async {
-  final service = ref.watch(intaSendServiceProvider);
-  return service.verifyFundsForPayroll(workers: workers);
-});
 
 // =============================================================================
 // TRANSACTION PROVIDERS

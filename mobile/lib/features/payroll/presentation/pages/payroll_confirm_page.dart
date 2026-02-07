@@ -116,16 +116,17 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
       _preparedPayouts = payouts;
 
       // 4. Verify funds
-      final intaSendVerification = await ref.read(fundVerificationProvider(payouts).future);
+      // Use backend verification which supports worker filtering
+      final verification = await repo.verifyFunds(
+        widget.payPeriodId, 
+        workerIds: widget.workerIds,
+      );
       
-      // 5. Map to UI
-      final uiVerification = _convertIntaSendVerification(intaSendVerification);
-
       if (mounted) {
         setState(() {
           _state = _state.copyWith(
             status: PayrollConfirmStatus.ready,
-            verification: uiVerification,
+            verification: verification,
           );
         });
       }
@@ -139,17 +140,6 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
         });
       }
     }
-  }
-
-  FundVerificationResult _convertIntaSendVerification(FundVerification iv) {
-    return FundVerificationResult(
-      requiredAmount: iv.requiredAmount,
-      availableBalance: iv.availableBalance,
-      clearingBalance: iv.clearingBalance,
-      canProceed: iv.canProceed,
-      shortfall: iv.shortfall,
-      workerCount: iv.workerCount,
-    );
   }
 
   void _showTopupSheet() {

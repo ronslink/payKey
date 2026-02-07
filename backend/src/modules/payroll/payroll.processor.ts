@@ -15,6 +15,7 @@ export interface PayrollJobData {
   userId: string;
   payPeriodId: string;
   skipPayout: boolean;
+  workerIds?: string[];
 }
 
 export interface PayoutStatusCheckData {
@@ -75,6 +76,7 @@ export class PayrollProcessor extends WorkerHost {
       job.data.userId,
       job.data.payPeriodId,
       job.data.skipPayout,
+      job.data.workerIds,
     );
 
     await job.updateProgress(100);

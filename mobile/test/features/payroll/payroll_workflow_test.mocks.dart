@@ -362,13 +362,24 @@ class MockPayrollRepository extends _i1.Mock implements _i6.PayrollRepository {
           as _i5.Future<_i4.PayrollProcessResponse>);
 
   @override
-  _i5.Future<_i4.FundVerificationResult> verifyFunds(String? payPeriodId) =>
+  _i5.Future<_i4.FundVerificationResult> verifyFunds(
+    String? payPeriodId, {
+    List<String>? workerIds,
+  }) =>
       (super.noSuchMethod(
-            Invocation.method(#verifyFunds, [payPeriodId]),
+            Invocation.method(
+              #verifyFunds,
+              [payPeriodId],
+              {#workerIds: workerIds},
+            ),
             returnValue: _i5.Future<_i4.FundVerificationResult>.value(
               _FakeFundVerificationResult_3(
                 this,
-                Invocation.method(#verifyFunds, [payPeriodId]),
+                Invocation.method(
+                  #verifyFunds,
+                  [payPeriodId],
+                  {#workerIds: workerIds},
+                ),
               ),
             ),
           )
