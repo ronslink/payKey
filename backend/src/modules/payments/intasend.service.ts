@@ -13,6 +13,7 @@ export class IntaSendService {
   private readonly baseUrl: string;
   private readonly publishableKey: string;
   private readonly secretKey: string;
+  private readonly webhookSecret: string;
   private readonly isLive: boolean;
 
   constructor(
@@ -60,6 +61,17 @@ export class IntaSendService {
         'IntaSend Keys are missing! Please check .env configuration',
       );
     }
+
+    const configuredWebhookSecret = this.configService.get('INTASEND_WEBHOOK_SECRET');
+
+    if (configuredWebhookSecret) {
+      this.webhookSecret = configuredWebhookSecret;
+    } else {
+      this.logger.warn(
+        '⚠️ INTASEND_WEBHOOK_SECRET not set. Falling back to INTASEND_SECRET_KEY for webhook verification.',
+      );
+      this.webhookSecret = this.secretKey;
+    }
   }
 
   verifyWebhookSignature(signature: string, rawBody: Buffer): boolean {
@@ -75,9 +87,9 @@ export class IntaSendService {
       return false;
     }
 
-    // Use current secret key (Sandbox or Live depending on init)
+    // Use dedicated webhook secret (or fallback to secret key)
     const hmac = crypto
-      .createHmac('sha256', this.secretKey)
+      .createHmac('sha256', this.webhookSecret)
       .update(rawBody)
       .digest('hex');
 
