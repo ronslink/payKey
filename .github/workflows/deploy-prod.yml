@@ -44,6 +44,9 @@ jobs:
 
             echo "🚀 Starting Full Production Deployment..."
             
+            echo "📥 Stashing local changes..."
+            git stash || true
+            
             # 1. Update Codebase
             git pull origin main
 

@@ -81,6 +81,9 @@ jobs:
 
             cd /opt/paykey
             
+            echo "📥 Stashing local changes..."
+            git stash || true
+            
             echo "📥 Pulling latest deployment configs..."
             git pull origin main
 

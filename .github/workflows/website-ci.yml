@@ -89,6 +89,8 @@ jobs:
             cd /opt/paykey
             
             # Ensure latest files (e.g., new deploy/ folder)
+            echo "📥 Stashing local changes..."
+            git stash || true
             git pull origin main
 
             # Deploy Website
