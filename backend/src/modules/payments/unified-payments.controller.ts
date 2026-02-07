@@ -280,12 +280,20 @@ export class UnifiedPaymentsController {
 
       // 2. Generate Checkout URL
       // Use transaction ID as API Ref for reconciliation
+      // Docs: https://developers.intasend.com/docs/working-wallets/collect-payments/#initiate-collection
+      // Fetch user's wallet ID to ensure funds go to their specific wallet
+      const user = await this.usersRepository.findOne({
+        where: { id: userId },
+        select: ['intasendWalletId'],
+      });
+
       const result = await this.intaSendService.createCheckoutUrl(
         amount,
         email,
         name?.split(' ')[0] || 'User',
         name?.split(' ').slice(1).join(' ') || 'Name',
         transaction.id,
+        user?.intasendWalletId,
       );
 
       // 3. Update Transaction with Provider Ref
@@ -293,6 +301,7 @@ export class UnifiedPaymentsController {
       const checkoutId = result.id || transaction.id;
 
       transaction.providerRef = checkoutId;
+      transaction.walletId = user?.intasendWalletId || undefined; // Track which wallet was used
       transaction.metadata = {
         ...transaction.metadata,
         intaSendResponse: result,
@@ -399,10 +408,18 @@ export class UnifiedPaymentsController {
 
       // 2. Initiate IntaSend STK Push
       // Use transaction ID as API Ref for reconciliation
+      // Docs: https://developers.intasend.com/docs/working-wallets/collect-payments/#mpesa-stk-push
+      // Fetch user's wallet ID
+      const user = await this.usersRepository.findOne({
+        where: { id: userId },
+        select: ['intasendWalletId'],
+      });
+
       const result = await this.intaSendService.initiateStkPush(
         phoneNumber,
         amount,
         transaction.id,
+        user?.intasendWalletId,
       );
 
       // 3. Update Transaction with Provider Ref (Invoice ID)
@@ -412,6 +429,7 @@ export class UnifiedPaymentsController {
       const invoiceId = result.invoice?.invoice_id || result.id || 'PENDING';
 
       transaction.providerRef = invoiceId;
+      transaction.walletId = user?.intasendWalletId || undefined; // Track which wallet was used
       transaction.metadata = {
         ...transaction.metadata,
         intaSendResponse: result,

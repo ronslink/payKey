@@ -132,6 +132,14 @@ export class PayrollPaymentService {
     let totalBatchAmount = 0;
     let totalBatchFees = 0;
 
+    // Fetch Employer Wallet ID (assuming all records in batch belong to same employer)
+    const firstRecord = records[0];
+    const employer = await this.usersRepository.findOne({
+      where: { id: firstRecord.userId },
+      select: ['intasendWalletId'],
+    });
+    const walletId = employer?.intasendWalletId;
+
     // 1. Prepare Transactions (Splitting logic)
     for (const record of records) {
       if (record.status !== PayrollStatus.FINALIZED) {
@@ -177,6 +185,7 @@ export class PayrollPaymentService {
           const transaction = this.transactionRepository.create({
             userId: record.userId,
             workerId: record.workerId,
+            walletId: walletId, // Track source wallet
             amount: currentAmount,
             currency: 'KES',
             type: TransactionType.SALARY_PAYOUT,
@@ -212,13 +221,6 @@ export class PayrollPaymentService {
 
     const firstUserId = records[0].userId;
     const totalDeduction = totalBatchAmount + totalBatchFees;
-
-    // Fetch employer's IntaSend wallet ID
-    const employer = await this.usersRepository.findOne({
-      where: { id: firstUserId },
-      select: ['id', 'intasendWalletId'],
-    });
-    const walletId = employer?.intasendWalletId;
 
     // 2. Deduct Bundle Amount + Fees
     try {
@@ -367,6 +369,15 @@ export class PayrollPaymentService {
     let totalBatchAmount = 0;
     let totalBatchFees = 0;
 
+    // Fetch Employer Wallet ID
+    const firstRecord = records[0];
+    const employer = await this.usersRepository.findOne({
+      where: { id: firstRecord.userId },
+      select: ['intasendWalletId'],
+    });
+    const walletId = employer?.intasendWalletId;
+
+
     // 1. Prepare Transactions
     for (const record of records) {
       if (record.status !== PayrollStatus.FINALIZED) {
@@ -419,6 +430,7 @@ export class PayrollPaymentService {
       const transaction = this.transactionRepository.create({
         userId: record.userId,
         workerId: record.workerId,
+        walletId: walletId, // Track source wallet
         amount: amount,
         currency: 'KES',
         type: TransactionType.SALARY_PAYOUT,
@@ -443,13 +455,6 @@ export class PayrollPaymentService {
 
     const firstUserId = records[0].userId;
     const totalDeduction = totalBatchAmount + totalBatchFees;
-
-    // Fetch employer's IntaSend wallet ID
-    const employer = await this.usersRepository.findOne({
-      where: { id: firstUserId },
-      select: ['id', 'intasendWalletId'],
-    });
-    const walletId = employer?.intasendWalletId;
 
     // 2. Deduct Amount + Fees
     try {

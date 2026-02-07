@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
@@ -44,9 +44,9 @@ import { ExchangeRateService } from './exchange-rate.service';
       DeviceToken,
       ExchangeRate,
     ]),
-    TaxesModule,
-    TimeTrackingModule,
-    TaxPaymentsModule,
+    forwardRef(() => TaxesModule),
+    forwardRef(() => TimeTrackingModule),
+    forwardRef(() => TaxPaymentsModule),
     HttpModule,
     ConfigModule,
     BullModule.registerQueue(

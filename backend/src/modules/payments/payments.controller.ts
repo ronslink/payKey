@@ -7,8 +7,17 @@ import {
   Headers,
   UseGuards,
   Request,
+  Req,
   UnauthorizedException,
+  Logger,
+  BadRequestException,
 } from '@nestjs/common';
+import { Request as ExpressRequest } from 'express';
+
+// Interface for Request with rawBody (added by middleware)
+interface RawBodyRequest<T> extends ExpressRequest {
+  rawBody: Buffer;
+}
 import { IntaSendService } from './intasend.service';
 import { StripeService } from './stripe.service';
 
@@ -47,6 +56,8 @@ import { DeviceToken } from '../notifications/entities/device-token.entity';
 
 @Controller('payments')
 export class PaymentsController {
+  private readonly logger = new Logger(PaymentsController.name);
+
   constructor(
     @InjectRepository(Transaction)
     private transactionsRepository: Repository<Transaction>,
@@ -251,7 +262,7 @@ export class PaymentsController {
     // Sanitize label (alphanumeric only ideally, but API might be flexible)
 
     try {
-      const wallet = await this.intaSendService.createWallet(label);
+      const wallet = await this.intaSendService.createWallet('KES', label);
       if (wallet && wallet.wallet_id) {
         // Save to DB
         await this.usersRepository.update(userId, { intasendWalletId: wallet.wallet_id });
@@ -282,29 +293,37 @@ export class PaymentsController {
   }
 
   @Post('intasend/webhook')
-  async handleIntaSendWebhook(@Request() req: any, @Body() body: any) {
-    console.log('🔹 IntaSend Webhook Received:', JSON.stringify(body, null, 2));
+  async handleIntaSendWebhook(
+    @Req() req: RawBodyRequest<Request>,
+    @Headers('x-intasend-signature') signature: string,
+    @Body() body: any,
+  ) {
+    const challenge = body.challenge;
 
-    // If it's a pure verification challenge (no invoice/tracking data), return immediately
-    if (body.challenge && !body.invoice_id && !body.tracking_id) {
-      return { challenge: body.challenge };
+    // If it's a pure verification challenge (no invoice/tracking data), verify and return
+    if (challenge && !body.invoice_id && !body.tracking_id) {
+      if (!this.intaSendService.verifyWebhookSignature(signature, req.rawBody, challenge)) {
+        throw new BadRequestException('Invalid signature or challenge');
+      }
+      return { challenge: challenge };
     }
 
-    // Check if this is a simulation FIRST (before attempting signature verification)
+    // Check if this is a simulation FIRST
     const isSimulation =
       process.env.INTASEND_SIMULATE === 'true' ||
       (body.host === 'localhost' && body.invoice_id?.startsWith('INV_SIM_'));
 
     if (isSimulation) {
-      console.log('✅ Simulation mode detected - skipping signature verification');
+      this.logger.log('✅ Simulation mode detected - skipping signature verification');
     } else {
-      // Only verify signature for non-simulation webhooks
-      const signature = (req.headers['x-intasend-signature'] as string) || '';
-      if (!this.intaSendService.verifyWebhookSignature(signature, req.rawBody)) {
-        console.error('⛔ Invalid Webhook Signature');
-        throw new UnauthorizedException('Invalid Signature');
+      if (!this.intaSendService.verifyWebhookSignature(signature, req.rawBody, challenge)) {
+        throw new BadRequestException('Invalid signature or challenge');
       }
     }
+
+    this.logger.log('🔹 IntaSend Webhook Received:', body);
+
+    this.logger.log('🔹 IntaSend Webhook Received:', body);
 
     const { invoice_id, tracking_id, state, api_ref, value } = body;
 

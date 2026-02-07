@@ -50,6 +50,9 @@ export class Transaction {
   @Column({ nullable: true })
   workerId: string;
 
+  @Column({ nullable: true })
+  walletId?: string; // IntaSend Wallet ID used for this transaction
+
   @Column('decimal', { precision: 12, scale: 2 })
   amount: number;
 
