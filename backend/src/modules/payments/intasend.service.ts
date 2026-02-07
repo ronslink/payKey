@@ -246,16 +246,20 @@ export class IntaSendService {
   /**
    * Create a new Wallet
    */
-  async createWallet(currency: 'KES' | 'USD' | 'EUR' | 'GBP', label = 'Working Wallet', canDisburse = true) {
+  async createWallet(currency: 'KES' | 'USD' | 'EUR' | 'GBP', label: string = '', canDisburse = true) {
     const url = `${this.baseUrl}/v1/wallets/`;
-    this.logger.log(`Creating IntaSend Wallet: ${label} (${currency})`);
+
+    // Generate unique label if not provided or empty
+    const effectiveLabel = label || `WALLET-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+
+    this.logger.log(`Creating IntaSend Wallet: ${effectiveLabel} (${currency})`);
 
     try {
       const response = await lastValueFrom(
         this.httpService.post(
           url,
           {
-            label: label,
+            label: effectiveLabel,
             wallet_type: 'WORKING',
             currency: currency,
             can_disburse: canDisburse,
