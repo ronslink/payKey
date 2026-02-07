@@ -1,14 +1,18 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import { Injectable, ConflictException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
+import { IntaSendService } from '../payments/intasend.service';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    private intaSendService: IntaSendService,
   ) { }
 
   async create(
@@ -125,6 +129,22 @@ export class UsersService {
       hasRequiredResidencyInfo
     ) {
       updateUserDto.isOnboardingCompleted = true;
+
+      // Create IntaSend Wallet if not exists
+      if (!user.intasendWalletId) {
+        try {
+          const walletLabel = `WALLET-${user.id.substring(0, 8).toUpperCase()}`;
+          const wallet = await this.intaSendService.createWallet('KES', walletLabel, true);
+          if (wallet && wallet.wallet_id) {
+            updateUserDto.intasendWalletId = wallet.wallet_id;
+            this.logger.log(`Created IntaSend wallet ${wallet.wallet_id} for user ${user.id}`);
+          }
+        } catch (error) {
+          this.logger.error(`Failed to create IntaSend wallet for user ${user.id}`, error);
+          // We don't block onboarding completion if wallet creation fails, but we should log it.
+          // Or should we block? Safest to log for now to avoid UX blockers.
+        }
+      }
     }
 
     await this.usersRepository.update(id, updateUserDto);

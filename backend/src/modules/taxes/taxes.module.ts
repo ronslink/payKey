@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TaxesController } from './taxes.controller';
 import { TaxSubmissionController } from './tax-submission.controller';
@@ -13,7 +13,7 @@ import { ActivitiesModule } from '../activities/activities.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([TaxTable, TaxSubmission, PayrollRecord]),
-    UsersModule,
+    forwardRef(() => UsersModule),
     TaxConfigModule,
     ActivitiesModule,
   ],
@@ -21,4 +21,4 @@ import { ActivitiesModule } from '../activities/activities.module';
   providers: [TaxesService],
   exports: [TaxesService],
 })
-export class TaxesModule {}
+export class TaxesModule { }

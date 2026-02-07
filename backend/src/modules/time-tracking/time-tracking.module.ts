@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TimeTrackingController } from './time-tracking.controller';
 import { TimeTrackingService } from './time-tracking.service';
@@ -10,10 +10,10 @@ import { UsersModule } from '../users/users.module';
 @Module({
   imports: [
     TypeOrmModule.forFeature([TimeEntry, Worker, Property]),
-    UsersModule,
+    forwardRef(() => UsersModule),
   ],
   controllers: [TimeTrackingController],
   providers: [TimeTrackingService],
   exports: [TimeTrackingService],
 })
-export class TimeTrackingModule {}
+export class TimeTrackingModule { }
