@@ -367,7 +367,27 @@ export class PaymentsController {
 
     this.logger.log('🔹 IntaSend Webhook Received:', body);
 
-    const { invoice_id, tracking_id, state, api_ref, value } = body;
+    this.logger.log('🔹 IntaSend Webhook Received:', body);
+
+    let { invoice_id, tracking_id, state, api_ref, value, from_data, to_data } = body;
+
+    // HANDLE INTRA-WALLET TRANSFER EVENTS
+    // These events don't have top-level invoice_id/tracking_id but have nested data
+    if (to_data && to_data.transaction) {
+      const tx = to_data.transaction;
+      // Map fields from nested transaction object
+      if (!tracking_id) tracking_id = tx.transaction_id;
+
+      // Narrative often contains reference or account number
+      if (!api_ref && tx.narrative) api_ref = tx.narrative;
+
+      // Map Status: AVAILABLE -> SUCCESS
+      if (tx.status === 'AVAILABLE') {
+        state = 'COMPLETE';
+      }
+
+      this.logger.log(`🔹 Detected Intra-Wallet Transfer. ID: ${tracking_id}, Ref: ${api_ref}, Status: ${tx.status}`);
+    }
 
     // 1. Find Transactions (Handing Bulk by tracking_id)
     // We search for ANY transaction matching:
