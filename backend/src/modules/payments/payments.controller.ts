@@ -301,37 +301,45 @@ export class PaymentsController {
     // 0. Robust Signature Retrieval (Headers can be lowercase or different casing via proxies)
     const effectiveSignature = signature || (req.headers['x-intasend-signature'] as string) || (req.headers['X-IntaSend-Signature'] as string);
 
-    // Debug Logging for Webhooks
-    this.logger.log(`🔹 IntaSend Webhook Hit. Sig Present: ${!!effectiveSignature}. Body Size: ${req.rawBody?.length || 0}`);
+    // Debug Logging for Webhooks (Direct console.log to avoid NestJS logger suppression/truncation)
+    console.log(`[DEBUG] Webhook Hit. Sig Present: ${!!effectiveSignature}. Body Size: ${req.rawBody?.length || 0}`);
 
     if (!effectiveSignature) {
-      this.logger.warn('⚠️ Webhook missing Signature. Headers:', JSON.stringify(req.headers));
+      console.warn('[DEBUG] Webhook missing Signature. Headers:', JSON.stringify(req.headers));
     }
 
-    const challenge = body.challenge;
+    // CHECK FOR BYPASS
+    const isBypassed = process.env.INTASEND_DISABLE_SIG_CHECK === 'true';
 
-    // If it's a pure verification challenge (no invoice/tracking data), verify and return
-    if (challenge && !body.invoice_id && !body.tracking_id) {
-      if (!this.intaSendService.verifyWebhookSignature(effectiveSignature, req.rawBody, challenge)) {
-        this.logger.error(`⛔ Challenge Verification Failed for signature: ${effectiveSignature}`);
-        // Log headers to help debug
-        console.log('Headers:', JSON.stringify(req.headers));
-        throw new BadRequestException('Invalid signature or challenge');
-      }
-      return { challenge: challenge };
-    }
-
-    // Check if this is a simulation FIRST
-    const isSimulation =
-      process.env.INTASEND_SIMULATE === 'true' ||
-      (body.host === 'localhost' && body.invoice_id?.startsWith('INV_SIM_'));
-
-    if (isSimulation) {
-      this.logger.log('✅ Simulation mode detected - skipping signature verification');
+    if (isBypassed) {
+      console.warn('⚠️ SKIPPING SIGNATURE CHECK due to INTASEND_DISABLE_SIG_CHECK=true');
+      // Skip verification logic entirely
     } else {
-      if (!this.intaSendService.verifyWebhookSignature(effectiveSignature, req.rawBody, challenge)) {
-        this.logger.error(`⛔ Signature Verification Failed. Sig: ${effectiveSignature}`);
-        throw new BadRequestException('Invalid signature or challenge');
+      // Enforce Verification
+      const challenge = body.challenge;
+
+      // If it's a pure verification challenge (no invoice/tracking data), verify and return
+      if (challenge && !body.invoice_id && !body.tracking_id) {
+        if (!this.intaSendService.verifyWebhookSignature(effectiveSignature, req.rawBody, challenge)) {
+          console.error(`⛔ Challenge Verification Failed for signature: ${effectiveSignature}`);
+          console.log('Headers:', JSON.stringify(req.headers));
+          throw new BadRequestException('Invalid signature or challenge');
+        }
+        return { challenge: challenge };
+      }
+
+      // Check if this is a simulation FIRST
+      const isSimulation =
+        process.env.INTASEND_SIMULATE === 'true' ||
+        (body.host === 'localhost' && body.invoice_id?.startsWith('INV_SIM_'));
+
+      if (isSimulation) {
+        this.logger.log('✅ Simulation mode detected - skipping signature verification');
+      } else {
+        if (!this.intaSendService.verifyWebhookSignature(effectiveSignature, req.rawBody, challenge)) {
+          console.error(`⛔ Signature Verification Failed. Sig: ${effectiveSignature}`);
+          throw new BadRequestException('Invalid signature or challenge');
+        }
       }
     }
 
