@@ -78,6 +78,7 @@ jobs:
             df -h
 
             echo "🌐 Ensuring Docker Network Exists..."
+            docker network rm paykey-network-prod 2>/dev/null || true
             docker network create paykey-network-prod || true
 
             cd /opt/paykey
