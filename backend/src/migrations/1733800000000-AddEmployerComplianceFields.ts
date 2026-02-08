@@ -2,39 +2,33 @@ import { MigrationInterface, QueryRunner, TableColumn } from 'typeorm';
 
 export class AddEmployerComplianceFields1733800000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // 1. Rename nhifNumber to shifNumber in users table
-    // Note: We check if column exists first to be safe, although in migration sequence it should.
-    // If working with TypeORM renameColumn handles finding the column.
-    await queryRunner.renameColumn('users', 'nhifNumber', 'shifNumber');
+    // 1. Rename nhifNumber to shifNumber in users table (if nhifNumber exists)
+    const hasNhifColumn = await queryRunner.query(`
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_name = 'users' AND column_name = 'nhifNumber'
+    `);
+    if (hasNhifColumn.length > 0) {
+      await queryRunner.renameColumn('users', 'nhifNumber', 'shifNumber');
+    }
 
-    // 2. Add Compliance & Payment Fields
-    await queryRunner.addColumns('users', [
-      new TableColumn({
-        name: 'businessName',
-        type: 'varchar',
-        isNullable: true,
-      }),
-      new TableColumn({
-        name: 'bankName',
-        type: 'varchar',
-        isNullable: true,
-      }),
-      new TableColumn({
-        name: 'bankAccount',
-        type: 'varchar',
-        isNullable: true,
-      }),
-      new TableColumn({
-        name: 'mpesaPaybill',
-        type: 'varchar',
-        isNullable: true,
-      }),
-      new TableColumn({
-        name: 'mpesaTill',
-        type: 'varchar',
-        isNullable: true,
-      }),
-    ]);
+    // 2. Add Compliance & Payment Fields (only if they don't exist)
+    const columnsToAdd = [
+      { name: 'businessName', type: 'varchar', isNullable: true },
+      { name: 'bankName', type: 'varchar', isNullable: true },
+      { name: 'bankAccount', type: 'varchar', isNullable: true },
+      { name: 'mpesaPaybill', type: 'varchar', isNullable: true },
+      { name: 'mpesaTill', type: 'varchar', isNullable: true },
+    ];
+
+    for (const col of columnsToAdd) {
+      const exists = await queryRunner.query(`
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'users' AND column_name = '${col.name}'
+      `);
+      if (exists.length === 0) {
+        await queryRunner.addColumn('users', new TableColumn(col));
+      }
+    }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
