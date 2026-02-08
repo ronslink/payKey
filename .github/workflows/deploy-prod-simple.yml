@@ -140,6 +140,9 @@ jobs:
             echo "⏳ Waiting for backend to start..."
             sleep 15
             
+            echo "🔄 Running Database Migrations..."
+            docker exec paykey_backend_prod npm run typeorm:migration:run || echo "⚠️ Migrations failed (check logs)"
+            
             echo "🧾 Seeding Tax Configurations..."
             docker exec paykey_backend_prod node dist/src/scripts/seed-tax-configs-2025.js || echo "⚠️ Tax seeding failed (non-critical)"
 
