@@ -25,7 +25,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { AuthenticatedRequest } from '../../common/interfaces/user.interface';
 
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import {
   SubscriptionPayment,
   PaymentStatus,
@@ -222,19 +222,39 @@ export class PaymentsController {
     // For now, let's return the IntaSend balance as primary source of truth if available
     // But we also maintain local state for "Clearing" visualization.
 
+    // Fetch PENDING or CLEARING deposits from local DB to visualize "Clearing Funds"
+    // This ensures that even if IntaSend API doesn't report them yet (or excludes held funds from current_balance),
+    // the user sees them as pending/clearing in the App.
+    const pendingDeposits = await this.transactionsRepository.find({
+      where: {
+        userId: userId,
+        type: TransactionType.DEPOSIT,
+        status: In([TransactionStatus.PENDING, TransactionStatus.CLEARING]),
+      },
+    });
+
+    const pendingAmount = pendingDeposits.reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+
     const user = await this.usersRepository.findOne({
       where: { id: userId },
       select: ['walletBalance', 'clearingBalance'],
     });
 
+    // Calculate IntaSend reported clearing
+    let intaSendClearing = Number(intasendWallet.current_balance) - Number(intasendWallet.available_balance);
+    if (intaSendClearing < 0) intaSendClearing = 0;
+
+    // Total Clearing = IntaSend Reported + Local Pending
+    // We sum them to ensure visibility. (Note: slight risk of double counting if IntaSend includes it, 
+    // but better to show more than 0 for "missing" funds).
+    const totalClearing = intaSendClearing + pendingAmount;
+
     return {
       success: true,
       // Use IntaSend's available_balance as the truth for "Ready to Spend"
       available_balance: Number(intasendWallet.available_balance ?? user?.walletBalance ?? 0),
-      // Use local clearing balance as "Pending Logic" (since IntaSend API might just say pending)
-      clearing_balance: Number(intasendWallet.current_balance) - Number(intasendWallet.available_balance) > 0
-        ? Number(intasendWallet.current_balance) - Number(intasendWallet.available_balance) // Calculate pending from IntaSend
-        : user?.clearingBalance ?? 0,
+      // Use combined clearing balance
+      clearing_balance: totalClearing,
       currency: 'KES',
       can_disburse: true,
     };
