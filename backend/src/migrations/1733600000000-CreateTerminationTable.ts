@@ -101,12 +101,14 @@ export class CreateTerminationTable1733600000000 implements MigrationInterface {
       true,
     );
 
-    // Add Foreign Keys (idempotent - check if they exist first)
+    // Add Foreign Keys (idempotent - check if they exist first using pg_constraint)
     const workerFkExists = await queryRunner.query(`
-      SELECT 1 FROM information_schema.table_constraints 
-      WHERE constraint_type = 'FOREIGN KEY' 
-      AND table_name = 'terminations' 
-      AND constraint_name LIKE '%workerId%'
+      SELECT 1 FROM pg_constraint c
+      JOIN pg_class t ON t.oid = c.conrelid
+      JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(c.conkey)
+      WHERE c.contype = 'f' 
+      AND t.relname = 'terminations' 
+      AND a.attname = 'workerId'
     `);
     if (workerFkExists.length === 0) {
       await queryRunner.createForeignKey(
@@ -121,10 +123,12 @@ export class CreateTerminationTable1733600000000 implements MigrationInterface {
     }
 
     const userFkExists = await queryRunner.query(`
-      SELECT 1 FROM information_schema.table_constraints 
-      WHERE constraint_type = 'FOREIGN KEY' 
-      AND table_name = 'terminations' 
-      AND constraint_name LIKE '%userId%'
+      SELECT 1 FROM pg_constraint c
+      JOIN pg_class t ON t.oid = c.conrelid
+      JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = ANY(c.conkey)
+      WHERE c.contype = 'f' 
+      AND t.relname = 'terminations' 
+      AND a.attname = 'userId'
     `);
     if (userFkExists.length === 0) {
       await queryRunner.createForeignKey(
