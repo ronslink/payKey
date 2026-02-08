@@ -298,11 +298,24 @@ export class PaymentsController {
     @Headers('x-intasend-signature') signature: string,
     @Body() body: any,
   ) {
+    // 0. Robust Signature Retrieval (Headers can be lowercase or different casing via proxies)
+    const effectiveSignature = signature || (req.headers['x-intasend-signature'] as string) || (req.headers['X-IntaSend-Signature'] as string);
+
+    // Debug Logging for Webhooks
+    this.logger.log(`🔹 IntaSend Webhook Hit. Sig Present: ${!!effectiveSignature}. Body Size: ${req.rawBody?.length || 0}`);
+
+    if (!effectiveSignature) {
+      this.logger.warn('⚠️ Webhook missing Signature. Headers:', JSON.stringify(req.headers));
+    }
+
     const challenge = body.challenge;
 
     // If it's a pure verification challenge (no invoice/tracking data), verify and return
     if (challenge && !body.invoice_id && !body.tracking_id) {
-      if (!this.intaSendService.verifyWebhookSignature(signature, req.rawBody, challenge)) {
+      if (!this.intaSendService.verifyWebhookSignature(effectiveSignature, req.rawBody, challenge)) {
+        this.logger.error(`⛔ Challenge Verification Failed for signature: ${effectiveSignature}`);
+        // Log headers to help debug
+        console.log('Headers:', JSON.stringify(req.headers));
         throw new BadRequestException('Invalid signature or challenge');
       }
       return { challenge: challenge };
@@ -316,12 +329,13 @@ export class PaymentsController {
     if (isSimulation) {
       this.logger.log('✅ Simulation mode detected - skipping signature verification');
     } else {
-      if (!this.intaSendService.verifyWebhookSignature(signature, req.rawBody, challenge)) {
+      if (!this.intaSendService.verifyWebhookSignature(effectiveSignature, req.rawBody, challenge)) {
+        this.logger.error(`⛔ Signature Verification Failed. Sig: ${effectiveSignature}`);
         throw new BadRequestException('Invalid signature or challenge');
       }
     }
 
-    this.logger.log('🔹 IntaSend Webhook Received:', body);
+    this.logger.log('🔹 IntaSend Webhook Payload Verified:', body);
 
     this.logger.log('🔹 IntaSend Webhook Received:', body);
 

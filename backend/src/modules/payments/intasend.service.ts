@@ -118,8 +118,10 @@ export class IntaSendService {
 
     if (hmac !== signature) {
       this.logger.warn(
-        `⛔ Invalid Webhook Signature. Expected: ${hmac}, Received: ${signature}`,
+        `⛔ Invalid Webhook Signature. Expected: ${hmac.substring(0, 10)}..., Received: ${signature.substring(0, 10)}... | Secret used: ${this.webhookSecret ? 'YES' : 'NO'} | Body Len: ${rawBody.length}`,
       );
+      // Log raw body preview for debugging (careful with PII)
+      this.logger.debug(`Raw Body Preview: ${rawBody.toString('utf8').substring(0, 100)}...`);
       return false;
     }
 
