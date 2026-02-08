@@ -101,26 +101,42 @@ export class CreateTerminationTable1733600000000 implements MigrationInterface {
       true,
     );
 
-    // Add Foreign Keys
-    await queryRunner.createForeignKey(
-      'terminations',
-      new TableForeignKey({
-        columnNames: ['workerId'],
-        referencedColumnNames: ['id'],
-        referencedTableName: 'workers',
-        onDelete: 'CASCADE',
-      }),
-    );
+    // Add Foreign Keys (idempotent - check if they exist first)
+    const workerFkExists = await queryRunner.query(`
+      SELECT 1 FROM information_schema.table_constraints 
+      WHERE constraint_type = 'FOREIGN KEY' 
+      AND table_name = 'terminations' 
+      AND constraint_name LIKE '%workerId%'
+    `);
+    if (workerFkExists.length === 0) {
+      await queryRunner.createForeignKey(
+        'terminations',
+        new TableForeignKey({
+          columnNames: ['workerId'],
+          referencedColumnNames: ['id'],
+          referencedTableName: 'workers',
+          onDelete: 'CASCADE',
+        }),
+      );
+    }
 
-    await queryRunner.createForeignKey(
-      'terminations',
-      new TableForeignKey({
-        columnNames: ['userId'],
-        referencedColumnNames: ['id'],
-        referencedTableName: 'users',
-        onDelete: 'CASCADE',
-      }),
-    );
+    const userFkExists = await queryRunner.query(`
+      SELECT 1 FROM information_schema.table_constraints 
+      WHERE constraint_type = 'FOREIGN KEY' 
+      AND table_name = 'terminations' 
+      AND constraint_name LIKE '%userId%'
+    `);
+    if (userFkExists.length === 0) {
+      await queryRunner.createForeignKey(
+        'terminations',
+        new TableForeignKey({
+          columnNames: ['userId'],
+          referencedColumnNames: ['id'],
+          referencedTableName: 'users',
+          onDelete: 'CASCADE',
+        }),
+      );
+    }
 
     // Add columns to workers table if they don't exist
     const table = await queryRunner.getTable('workers');
