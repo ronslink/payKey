@@ -11,26 +11,124 @@ class WorkerHoursControllerManager {
   final Map<String, TextEditingController> _deductionsControllers = {};
   final Map<String, TextEditingController> _daysWorkedControllers = {};
   final Map<String, bool> _isPartialPeriod = {};
+  
+  /// Attendance hours from time tracking, indexed by workerId
+  /// These override defaults when available (for hourly workers)
+  Map<String, double> _attendanceHours = {};
+  
+  /// Attendance overtime hours (excess beyond standard threshold)
+  Map<String, double> _attendanceOvertimeHours = {};
+
+  /// Set attendance data from time tracking summary
+  /// Call this after fetching attendance summary to pre-populate hours
+  /// Hours exceeding the standard threshold are automatically split into overtime
+  void setAttendanceData(Map<String, double> attendanceHours) {
+    final standardHours = _getDefaultHoursForPeriod();
+    
+    // Clear previous overtime data
+    _attendanceOvertimeHours.clear();
+    
+    // Split hours into regular and overtime
+    final regularHours = <String, double>{};
+    for (final entry in attendanceHours.entries) {
+      if (entry.value > standardHours) {
+        // Hours exceed threshold - split into regular and overtime
+        regularHours[entry.key] = standardHours;
+        _attendanceOvertimeHours[entry.key] = entry.value - standardHours;
+      } else {
+        regularHours[entry.key] = entry.value;
+      }
+    }
+    
+    _attendanceHours = regularHours;
+    
+    // Update existing controllers with attendance data
+    for (final entry in regularHours.entries) {
+      if (_hoursControllers.containsKey(entry.key)) {
+        _hoursControllers[entry.key]!.text = entry.value.toStringAsFixed(1);
+      }
+    }
+    
+    // Update overtime controllers
+    for (final entry in _attendanceOvertimeHours.entries) {
+      if (_overtimeControllers.containsKey(entry.key)) {
+        _overtimeControllers[entry.key]!.text = entry.value.toStringAsFixed(1);
+      }
+    }
+  }
+  
+  /// Clear attendance data (e.g., when period changes)
+  void clearAttendanceData() {
+    _attendanceHours.clear();
+    _attendanceOvertimeHours.clear();
+  }
+
+  /// Pay period days - used to calculate default hours for hourly workers
+  int _payPeriodDays = 30; // Default to monthly
+  
+  /// Set the current pay period duration in days
+  /// This is used to calculate appropriate default hours:
+  /// - Weekly (7 days) → 40 hours
+  /// - Bi-weekly (14 days) → 80 hours  
+  /// - Monthly (28-31 days) → 160 hours
+  void setPayPeriodDays(int days) {
+    _payPeriodDays = days;
+  }
+  
+  /// Calculate default hours based on pay period duration
+  double _getDefaultHoursForPeriod() {
+    if (_payPeriodDays <= 7) {
+      return 40.0; // Weekly
+    } else if (_payPeriodDays <= 14) {
+      return 80.0; // Bi-weekly
+    } else {
+      return PayrollConstants.defaultMonthlyHours; // Monthly (160)
+    }
+  }
 
   /// Get or create hours controller for a worker
+  /// For hourly workers, uses attendance hours from time tracking if available,
+  /// otherwise uses pay period-based defaults (weekly=40h, bi-weekly=80h, monthly=160h)
   TextEditingController getHoursController(String workerId, {bool isHourly = false}) {
     return _hoursControllers.putIfAbsent(
       workerId,
-      () => TextEditingController(
-        text: isHourly 
-            ? PayrollConstants.defaultOvertimeHours.toStringAsFixed(0)
-            : PayrollConstants.defaultMonthlyHours.toStringAsFixed(0),
-      ),
+      () {
+        // For hourly workers, check if we have attendance data from time tracking
+        if (isHourly && _attendanceHours.containsKey(workerId)) {
+          final trackedHours = _attendanceHours[workerId]!;
+          return TextEditingController(
+            text: trackedHours.toStringAsFixed(1),
+          );
+        }
+        
+        // Use period-based default hours
+        final defaultHours = _getDefaultHoursForPeriod();
+        return TextEditingController(
+          text: defaultHours.toStringAsFixed(0),
+        );
+      },
     );
   }
 
   /// Get or create overtime controller for a worker
+  /// Uses attendance overtime data (hours exceeding threshold) if available
   TextEditingController getOvertimeController(String workerId) {
     return _overtimeControllers.putIfAbsent(
       workerId,
-      () => TextEditingController(
-        text: PayrollConstants.defaultOvertimeHours.toStringAsFixed(0),
-      ),
+      () {
+        // Check if we have overtime from attendance data (hours that exceeded threshold)
+        if (_attendanceOvertimeHours.containsKey(workerId)) {
+          final overtimeHours = _attendanceOvertimeHours[workerId]!;
+          return TextEditingController(
+            text: overtimeHours.toStringAsFixed(1),
+          );
+        }
+        
+        // Default to 0 overtime
+        return TextEditingController(
+          text: PayrollConstants.defaultOvertimeHours.toStringAsFixed(0),
+        );
+      },
     );
   }
 

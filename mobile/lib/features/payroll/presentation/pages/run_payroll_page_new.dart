@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+// Core imports
+import '../../../../core/network/api_service.dart';
+
 // Domain imports
 import '../../data/models/pay_period_model.dart';
 import '../../data/utils/pay_period_utils.dart';
@@ -69,6 +72,42 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
   void dispose() {
     _controllerManager.dispose();
     super.dispose();
+  }
+
+  /// Fetch attendance data from time tracking for the selected pay period
+  /// and pre-populate hours for hourly workers
+  Future<void> _fetchAttendanceData(PayPeriod period) async {
+    try {
+      final dateFormatter = DateFormat('yyyy-MM-dd');
+      final response = await ApiService().timeTracking.getAttendanceSummary(
+        startDate: dateFormatter.format(period.startDate),
+        endDate: dateFormatter.format(period.endDate),
+      );
+      
+      if (response.statusCode == 200 && response.data != null) {
+        final data = response.data as Map<String, dynamic>;
+        final workers = data['workers'] as List<dynamic>? ?? [];
+        
+        // Build map of workerId -> totalHours
+        final attendanceHours = <String, double>{};
+        for (final worker in workers) {
+          final workerId = worker['workerId'] as String?;
+          final totalHours = (worker['totalHours'] as num?)?.toDouble() ?? 0.0;
+          if (workerId != null && totalHours > 0) {
+            attendanceHours[workerId] = totalHours;
+          }
+        }
+        
+        if (attendanceHours.isNotEmpty) {
+          debugPrint('Loaded ${attendanceHours.length} workers\' attendance data');
+          _controllerManager.setAttendanceData(attendanceHours);
+        }
+      }
+    } catch (e) {
+      // Time tracking may not be available (not Platinum) or failed
+      // This is fine - we'll just use defaults
+      debugPrint('Could not fetch attendance data: $e');
+    }
   }
 
   @override
@@ -403,10 +442,15 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
         onChanged: (String? selectedId) {
           if (selectedId != null) {
             final period = periods.firstWhere((p) => p.id == selectedId);
+            final periodDays = period.endDate.difference(period.startDate).inDays + 1;
             setState(() {
               _selectedPayPeriod = period;
               _controllerManager.clearDaysWorkedControllers();
+              _controllerManager.clearAttendanceData();
+              _controllerManager.setPayPeriodDays(periodDays);
             });
+            // Fetch attendance data for the new period
+            _fetchAttendanceData(period);
           }
         },
       ),
@@ -414,27 +458,34 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
   }
 
 
+
   void _autoSelectFirstPeriod(List<PayPeriod> periods) {
     if (_selectedPayPeriod == null && periods.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
+          PayPeriod selectedPeriod;
+          
           // If a specific ID was requested, try to find it
           if (widget.payPeriodId != null) {
             try {
-              final requested = periods.firstWhere((p) => p.id == widget.payPeriodId);
-              setState(() {
-                _selectedPayPeriod = requested;
-                _controllerManager.clearDaysWorkedControllers();
-              });
-              return;
+              selectedPeriod = periods.firstWhere((p) => p.id == widget.payPeriodId);
             } catch (_) {
-              // Period not found, fall back to default behavior
+              // Period not found, fall back to first
+              selectedPeriod = periods.first;
             }
+          } else {
+            selectedPeriod = periods.first;
           }
+          
+          final periodDays = selectedPeriod.endDate.difference(selectedPeriod.startDate).inDays + 1;
           setState(() {
-            _selectedPayPeriod = periods.first;
+            _selectedPayPeriod = selectedPeriod;
             _controllerManager.clearDaysWorkedControllers();
+            _controllerManager.setPayPeriodDays(periodDays);
           });
+          
+          // Fetch attendance data for the selected period
+          _fetchAttendanceData(selectedPeriod);
         }
       });
     }
