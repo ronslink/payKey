@@ -1,10 +1,10 @@
 
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../src/app.module';
-import { UsersService } from '../src/modules/users/users.service';
-import { IntaSendService } from '../src/modules/payments/intasend.service';
+import { AppModule } from '../app.module';
+import { UsersService } from '../modules/users/users.service';
+import { IntaSendService } from '../modules/payments/intasend.service';
 import { Logger } from '@nestjs/common';
-import { User } from '../src/modules/users/entities/user.entity';
+import { User } from '../modules/users/entities/user.entity';
 
 async function bootstrap() {
     const app = await NestFactory.createApplicationContext(AppModule);
@@ -57,51 +57,3 @@ async function run() {
 
     try {
         const userRepository = app.get<Repository<User>>(getRepositoryToken(User));
-        const intaSendService = app.get(IntaSendService);
-
-        logger.log('🔍 Finding users with completed onboarding but NO wallet...');
-
-        const users = await userRepository.find({
-            where: {
-                isOnboardingCompleted: true,
-                // Using IsNull() operator correctly for TypeORM
-                intasendWalletId: IsNull(),
-            }
-        });
-
-        logger.log(`Found ${users.length} users to process.`);
-
-        for (const user of users) {
-            logger.log(`Processing user: ${user.email} (${user.id})`);
-
-            try {
-                const walletLabel = `WALLET-${user.id.substring(0, 8).toUpperCase()}`;
-                logger.log(`Creating wallet with label: ${walletLabel}`);
-
-                const wallet = await intaSendService.createWallet('KES', walletLabel, true);
-
-                if (wallet && wallet.wallet_id) {
-                    user.intasendWalletId = wallet.wallet_id;
-                    await userRepository.save(user);
-                    logger.log(`✅ Wallet created and saved: ${wallet.wallet_id}`);
-                } else {
-                    logger.error(`❌ Wallet creation response invalid for user ${user.id}`);
-                }
-
-            } catch (error: any) {
-                logger.error(`❌ Failed to process user ${user.id}: ${error.message}`);
-            }
-
-            // Sleep slightly to avoid rate limits?
-            await new Promise(resolve => setTimeout(resolve, 500));
-        }
-
-        logger.log('🎉 Backfill completed.');
-    } catch (error) {
-        logger.error('Script failed', error);
-    } finally {
-        await app.close();
-    }
-}
-
-run();
