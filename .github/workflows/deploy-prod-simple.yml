@@ -38,6 +38,7 @@ jobs:
     name: Deploy to Production
     needs: build-push
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     environment: PROD
 
     steps:
@@ -67,37 +68,45 @@ jobs:
           script: |
             set -e
             
+            # Move to correct directory FIRST
             cd /opt/paykey
             
             echo "📊 Checking Disk Space (Before Cleanup)..."
             df -h
             
-            echo "🧹 Aggressively Pruning Docker System..."
+            # =============================================
+            # CLEANUP PHASE - Force remove everything first
+            # =============================================
+            
+            echo "🧹 Force removing containers that may be blocking..."
+            # Force remove containers by name (ignore errors if they don't exist)
+            docker rm -f paykey_backend_prod 2>/dev/null || true
+            docker rm -f paykey_redis_prod 2>/dev/null || true
+            docker rm -f paykey_website_prod 2>/dev/null || true
+            docker rm -f paydome_website_prod 2>/dev/null || true
+            
+            echo "🧹 Stopping and removing all compose services..."
+            # Stop services first (this may fail if already stopped, which is fine)
+            docker compose -f deploy/docker-compose.backend.yml down 2>/dev/null || true
+            docker compose -f deploy/docker-compose.website.yml down 2>/dev/null || true
+            docker compose -f deploy/docker-compose.website.yml -f docker-compose.prod.yml down 2>/dev/null || true
+            docker compose -f deploy/docker-compose.infra.yml down 2>/dev/null || true
+            
+            echo "🌐 Removing Docker network (ignore if containers still attached)..."
+            docker network rm paykey-network-prod 2>/dev/null || true
+            
+            echo "🧹 Aggressively pruning Docker system..."
             # Prune everything (stopped containers, unused networks, dangling images) + volumes
-            # This fixes "failed to extract layer / overlayfs" errors due to disk space
             docker system prune -af --volumes || true
             
             echo "📊 Checking Disk Space (After Cleanup)..."
             df -h
 
-            echo "🌐 Fixing Docker Network..."
-            # First robustly shut down services that might be holding the network
-            # Stop backend first so it disconnects from network
-            docker compose -f deploy/docker-compose.backend.yml down || true
-            docker compose -f deploy/docker-compose.infra.yml down || true
-
-            # Force remove containers if they still exist
-            docker rm -f paykey_backend_prod paykey_redis_prod 2>/dev/null || true
-
-            # Remove the network if it exists
-            docker network rm paykey-network-prod 2>/dev/null || true
-            # Create the network fresh
-            docker network create paykey-network-prod || echo "Network already exists"
+            # =============================================
+            # PREPARE PHASE - Pull code and create .env
+            # =============================================
             
-            echo "📥 Stashing local changes..."
-            git stash || true
-            
-            echo "📥 Pulling latest deployment configs..."
+            echo "📥 Pulling latest code..."
             git pull origin main
 
             # Update docker-compose to use Docker Hub image if needed
@@ -133,20 +142,20 @@ jobs:
             NODE_EXTRA_CA_CERTS=/app/ca-certificate.crt
             EOF
             
-            echo "📦 Starting Infrastructure (Redis)..."
-            # Force remove existing containers to avoid conflicts from orphaned containers
-            docker rm -f paykey_redis_prod 2>/dev/null || true
-            docker compose --env-file .env -f deploy/docker-compose.infra.yml down || true
-            docker compose --env-file .env -f deploy/docker-compose.infra.yml up -d
+            # =============================================
+            # DEPLOY PHASE - Create network and bring up services
+            # =============================================
             
-            echo "🔙 Deploying Backend..."
-            # Force remove existing backend container
-            docker rm -f paykey_backend_prod 2>/dev/null || true
+            echo "🌐 Creating Docker network..."
+            docker network create paykey-network-prod 2>/dev/null || true
+            
+            echo "📦 Starting Infrastructure (Redis)..."
+            docker compose --env-file .env -f deploy/docker-compose.infra.yml up -d
             
             # PULL explicitly to ensure we get the latest image we just built
             docker compose --env-file .env -f deploy/docker-compose.backend.yml pull backend
             
-            docker compose --env-file .env -f deploy/docker-compose.backend.yml down || true
+            echo "🔙 Deploying Backend..."
             docker compose --env-file .env -f deploy/docker-compose.backend.yml up -d --force-recreate backend
             
             echo "📊 Checking container status..."
