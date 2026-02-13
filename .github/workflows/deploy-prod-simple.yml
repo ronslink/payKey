@@ -63,13 +63,16 @@ jobs:
           username: ${{ secrets.DO_USERNAME }}
           key: ${{ secrets.DO_SSH_KEY }}
           envs: DATABASE_URL,JWT_SECRET,INTASEND_PUBLISHABLE_KEY,INTASEND_SECRET,STRIPE_SECRET_KEY,STRIPE_WEBHOOK_SECRET,INTASEND_WEBHOOK_SECRET,INTASEND_CHALLENGE,DOCKER_USERNAME,GOOGLE_CLIENT_ID,APPLE_KEY_ID,APPLE_TEAM_ID,APPLE_BUNDLE_ID,APPLE_PRIVATE_KEY
+          timeout: 1200
           script: |
             set -e
+            
+            cd /opt/paykey
             
             echo "📊 Checking Disk Space (Before Cleanup)..."
             df -h
             
-            echo "🧹 aggressively Pruning Docker System..."
+            echo "🧹 Aggressively Pruning Docker System..."
             # Prune everything (stopped containers, unused networks, dangling images) + volumes
             # This fixes "failed to extract layer / overlayfs" errors due to disk space
             docker system prune -af --volumes || true
@@ -77,11 +80,19 @@ jobs:
             echo "📊 Checking Disk Space (After Cleanup)..."
             df -h
 
-            echo "🌐 Ensuring Docker Network Exists..."
-            docker network rm paykey-network-prod || true
-            docker network create paykey-network-prod || true
+            echo "🌐 Fixing Docker Network..."
+            # Disconnect any containers connected to the network before removing
+            # First robustly shut down services that might be holding the network
+            docker compose --env-file .env -f deploy/docker-compose.backend.yml down || true
+            docker compose --env-file .env -f deploy/docker-compose.infra.yml down || true
 
-            cd /opt/paykey
+            # Force remove containers if they still exist
+            docker rm -f paykey_backend_prod paykey_redis_prod 2>/dev/null || true
+
+            # Remove the network if it exists
+            docker network rm paykey-network-prod 2>/dev/null || true
+            # Create the network fresh
+            docker network create paykey-network-prod || echo "Network already exists"
             
             echo "📥 Stashing local changes..."
             git stash || true

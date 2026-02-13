@@ -41,9 +41,18 @@ jobs:
             # 0. Authenticate with Registry using GITHUB_TOKEN
             echo $GITHUB_TOKEN | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-            echo "🌐 Ensuring Docker Network Exists..."
-            docker network rm paykey-network-prod || true
-            docker network create paykey-network-prod || true
+            echo "🌐 Fixing Docker Network..."
+            # First robustly shut down services that might be holding the network
+            docker compose --env-file .env -f deploy/docker-compose.backend.yml down || true
+            docker compose --env-file .env -f deploy/docker-compose.infra.yml down || true
+
+            # Force remove containers if they still exist
+            docker rm -f paykey_backend_prod paykey_redis_prod 2>/dev/null || true
+
+            # Remove the network if it exists
+            docker network rm paykey-network-prod 2>/dev/null || true
+            # Create the network fresh
+            docker network create paykey-network-prod || echo "Network already exists"
 
 
             echo "🚀 Starting Full Production Deployment..."
