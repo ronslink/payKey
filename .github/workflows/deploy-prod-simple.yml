@@ -82,7 +82,7 @@ jobs:
 
             echo "🌐 Fixing Docker Network..."
             # First robustly shut down services that might be holding the network
-            # Note: We don't need --env-file here, just stopping containers
+            # Stop backend first so it disconnects from network
             docker compose -f deploy/docker-compose.backend.yml down || true
             docker compose -f deploy/docker-compose.infra.yml down || true
 
