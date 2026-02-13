@@ -72,7 +72,7 @@ jobs:
             cd /opt/paykey
             
             echo "📊 Checking Disk Space (Before Cleanup)..."
-            df -h
+            df -h || echo "⚠️ Unable to check disk space"
             
             # =============================================
             # CLEANUP PHASE - Force remove everything first
@@ -100,7 +100,7 @@ jobs:
             docker system prune -af --volumes || true
             
             echo "📊 Checking Disk Space (After Cleanup)..."
-            df -h
+            df -h || echo "⚠️ Unable to check disk space"
 
             # =============================================
             # PREPARE PHASE - Pull code and create .env
