@@ -153,7 +153,6 @@ export const getDatabaseConfig = (
       ExchangeRate,
       SystemConfig,
     ],
-    ],
     synchronize: isTest || true, // Keep enabled for now
     logging: ['query', 'error'],
   };
