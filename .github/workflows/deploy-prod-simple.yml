@@ -168,11 +168,19 @@ jobs:
             echo "📜 Recent Logs:"
             docker logs --tail 50 paykey_backend_prod
             
+            echo "🔍 Debug: Verify scripts exist in container..."
+            docker exec paykey_backend_prod ls -la dist/src/scripts/ 2>/dev/null || echo "⚠️ Scripts directory not found at dist/src/scripts/"
+            docker exec paykey_backend_prod ls -la dist/scripts/ 2>/dev/null || echo "⚠️ Scripts directory not found at dist/scripts/"
+            docker exec paykey_backend_prod node --version
+            
             echo "🔄 Running Database Migrations..."
             docker exec paykey_backend_prod npm run typeorm:migration:run || echo "⚠️ Migrations failed (check logs)"
             
             echo "🧾 Seeding Tax Configurations..."
-            docker exec paykey_backend_prod node dist/src/scripts/seed-tax-configs-2025.js || echo "⚠️ Tax seeding failed (non-critical)"
+            # Try both paths for the seed script
+            docker exec paykey_backend_prod node dist/src/scripts/seed-tax-configs-2025.js 2>/dev/null || \
+            docker exec paykey_backend_prod node dist/scripts/seed-tax-configs-2025.js 2>/dev/null || \
+            echo "⚠️ Tax seeding failed (non-critical)"
 
             echo "💰 Running Wallet Backfill Script..."
             # Execute the compiled script from dist/src/scripts

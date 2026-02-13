@@ -117,6 +117,11 @@ jobs:
             echo "📜 Recent Logs:"
             docker logs --tail 50 paykey_backend_prod
             
+            echo "🔍 Debug: Verify scripts exist in container..."
+            docker exec paykey_backend_prod ls -la dist/src/scripts/ 2>/dev/null || echo "⚠️ Scripts directory not found at dist/src/scripts/"
+            docker exec paykey_backend_prod ls -la dist/scripts/ 2>/dev/null || echo "⚠️ Scripts directory not found at dist/scripts/"
+            docker exec paykey_backend_prod node --version
+            
             # 5. Deploy Website
             echo "🌐 Deploying Website..."
             docker compose --env-file .env -f deploy/docker-compose.website.yml pull website
@@ -126,7 +131,10 @@ jobs:
             echo "🧾 Seeding Tax Configurations..."
             # Wait a few seconds for backend to be ready
             sleep 10
-            docker exec paykey_backend_prod node dist/scripts/seed-tax-configs-2025.js || echo "⚠️ Seeding failed, but continuing deployment..."
+            # Try both paths for the seed script
+            docker exec paykey_backend_prod node dist/src/scripts/seed-tax-configs-2025.js 2>/dev/null || \
+            docker exec paykey_backend_prod node dist/scripts/seed-tax-configs-2025.js 2>/dev/null || \
+            echo "⚠️ Seeding failed, but continuing deployment..."
 
             # 7. Cleanup
             docker image prune -f
