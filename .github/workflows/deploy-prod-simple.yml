@@ -64,7 +64,7 @@ jobs:
           username: ${{ secrets.DO_USERNAME }}
           key: ${{ secrets.DO_SSH_KEY }}
           envs: DATABASE_URL,JWT_SECRET,INTASEND_PUBLISHABLE_KEY,INTASEND_SECRET,STRIPE_SECRET_KEY,STRIPE_WEBHOOK_SECRET,INTASEND_WEBHOOK_SECRET,INTASEND_CHALLENGE,DOCKER_USERNAME,GOOGLE_CLIENT_ID,APPLE_KEY_ID,APPLE_TEAM_ID,APPLE_BUNDLE_ID,APPLE_PRIVATE_KEY
-          timeout: 1200
+          timeout: 20m
           script: |
             set -e
             
