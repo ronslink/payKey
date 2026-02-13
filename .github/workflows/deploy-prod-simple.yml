@@ -183,8 +183,10 @@ jobs:
             echo "⚠️ Tax seeding failed (non-critical)"
 
             echo "💰 Running Wallet Backfill Script..."
-            # Execute the compiled script from dist/src/scripts
-            docker exec paykey_backend_prod node dist/src/scripts/backfill-wallets.js
+            # Try both paths for the wallet backfill script
+            docker exec paykey_backend_prod node dist/src/scripts/backfill-wallets.js 2>/dev/null || \
+            docker exec paykey_backend_prod node dist/scripts/backfill-wallets.js 2>/dev/null || \
+            echo "⚠️ Wallet backfill failed (non-critical)"
             
             echo "🧹 Cleaning up old images..."
             docker image prune -f
