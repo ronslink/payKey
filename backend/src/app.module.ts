@@ -31,6 +31,7 @@ import { PropertiesModule } from './modules/properties/properties.module';
 import { DataDeletionModule } from './modules/data-deletion/data-deletion.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { GovIntegrationsModule } from './modules/gov-integrations/gov-integrations.module';
+import { SystemConfigModule } from './modules/system-config/system-config.module';
 import { getDatabaseConfig } from './config/database.config';
 
 // Explicit Entity Imports
@@ -112,6 +113,7 @@ import { GovSubmission } from './modules/gov-integrations/entities/gov-submissio
     DataDeletionModule,
     UploadsModule,
     GovIntegrationsModule,
+    SystemConfigModule,
   ],
   controllers: [AppController],
   providers: [AppService],

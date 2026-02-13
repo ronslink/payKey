@@ -23,6 +23,7 @@ import { Transaction, TransactionStatus, TransactionType } from './entities/tran
 import { ExchangeRateService } from './exchange-rate.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { DeviceToken } from '../notifications/entities/device-token.entity';
+import { SystemConfigService } from '../system-config/system-config.service';
 
 @Injectable()
 export class StripeService {
@@ -43,6 +44,7 @@ export class StripeService {
     private notificationsService: NotificationsService,
     @InjectRepository(DeviceToken)
     private deviceTokenRepository: Repository<DeviceToken>,
+    private systemConfigService: SystemConfigService,
   ) {
     const secretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
     if (!secretKey) {
@@ -117,6 +119,12 @@ export class StripeService {
         customer = await this.createCustomer(customerEmail, customerName);
       }
 
+      const frontendUrl = (await this.systemConfigService.get('FRONTEND_URL')) || this.configService.get<string>('FRONTEND_URL');
+
+      if (!frontendUrl) {
+        throw new BadRequestException('System configuration error: FRONTEND_URL not set');
+      }
+
       const session = await stripe.checkout.sessions.create({
         customer: customer.id,
         mode: 'subscription',
@@ -145,10 +153,10 @@ export class StripeService {
         },
         success_url:
           successUrl ||
-          `${this.configService.get<string>('FRONTEND_URL')}/payments/subscriptions/success?session_id={CHECKOUT_SESSION_ID}`,
+          `${frontendUrl}/payments/subscriptions/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url:
           cancelUrl ||
-          `${this.configService.get<string>('FRONTEND_URL')}/payments/subscriptions/cancel`,
+          `${frontendUrl}/payments/subscriptions/cancel`,
         allow_promotion_codes: true,
       });
 

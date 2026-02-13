@@ -105,6 +105,19 @@ export class PaymentsController {
     }
   }
 
+  /**
+   * Stripe Webhook Alias (Matches Stripe Dashboard Config)
+   * The user has configured https://api.paydome.co/payments/subscriptions/webhook
+   */
+  @Post('subscriptions/webhook')
+  async handleStripeWebhookAlias(
+    @Headers('stripe-signature') signature: string,
+    @Request() req: any,
+  ) {
+    console.log('🔵 Stripe Webhook Alias Received');
+    return this.handleStripeWebhook(signature, req);
+  }
+
   @Post('initiate-stk')
   @UseGuards(JwtAuthGuard)
   async initiateStkPush(
