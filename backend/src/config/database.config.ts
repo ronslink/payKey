@@ -29,6 +29,7 @@ import { GovSubmission } from '../modules/gov-integrations/entities/gov-submissi
 import { Notification } from '../modules/notifications/entities/notification.entity';
 import { DeviceToken } from '../modules/notifications/entities/device-token.entity';
 import { ExchangeRate } from '../modules/payments/entities/exchange-rate.entity';
+import { SystemConfig } from '../modules/system-config/entities/system-config.entity';
 
 /**
  * Get database configuration for TypeORM
@@ -82,6 +83,7 @@ export const getDatabaseConfig = (
         Notification,
         DeviceToken,
         ExchangeRate,
+        SystemConfig,
       ],
       synchronize: false, // Use migrations in production!
       logging: ['query', 'error'],
@@ -149,6 +151,8 @@ export const getDatabaseConfig = (
       Notification,
       DeviceToken,
       ExchangeRate,
+      SystemConfig,
+    ],
     ],
     synchronize: isTest || true, // Keep enabled for now
     logging: ['query', 'error'],

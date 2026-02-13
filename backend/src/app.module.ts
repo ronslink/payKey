@@ -61,6 +61,7 @@ import { DeletionRequest } from './modules/data-deletion/entities/deletion-reque
 import { Notification } from './modules/notifications/entities/notification.entity';
 import { DeviceToken } from './modules/notifications/entities/device-token.entity';
 import { GovSubmission } from './modules/gov-integrations/entities/gov-submission.entity';
+import { SystemConfig } from './modules/system-config/entities/system-config.entity';
 
 @Module({
   imports: [
