@@ -41,6 +41,10 @@ jobs:
             # 0. Authenticate with Registry using GITHUB_TOKEN
             echo $GITHUB_TOKEN | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
+            echo "🌐 Ensuring Docker Network Exists..."
+            docker network rm paykey-network-prod || true
+            docker network create paykey-network-prod || true
+
 
             echo "🚀 Starting Full Production Deployment..."
             
@@ -94,7 +98,13 @@ jobs:
             # 4. Deploy Backend
             echo "🔙 Deploying Backend..."
             docker compose --env-file .env -f deploy/docker-compose.backend.yml pull backend
-            docker compose --env-file .env -f deploy/docker-compose.backend.yml up -d backend --remove-orphans
+            docker compose --env-file .env -f deploy/docker-compose.backend.yml up -d backend --remove-orphans --force-recreate
+            
+            echo "📊 Checking container status..."
+            docker ps -a --filter name=paykey_backend_prod
+            
+            echo "📜 Recent Logs:"
+            docker logs --tail 50 paykey_backend_prod
             
             # 5. Deploy Website
             echo "🌐 Deploying Website..."

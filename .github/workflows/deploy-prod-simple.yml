@@ -78,7 +78,7 @@ jobs:
             df -h
 
             echo "🌐 Ensuring Docker Network Exists..."
-            docker network rm paykey-network-prod 2>/dev/null || true
+            docker network rm paykey-network-prod || true
             docker network create paykey-network-prod || true
 
             cd /opt/paykey
@@ -91,7 +91,7 @@ jobs:
 
             # Update docker-compose to use Docker Hub image if needed
             # (We will push a code change for this, but this sed is a safety net)
-            sed -i "s|ghcr.io/ronslink/paykey-backend|${DOCKER_USERNAME}/paykey-backend|g" deploy/docker-compose.backend.yml
+            sed -i "s|image:.*paykey-backend:.*|image: ${DOCKER_USERNAME}/paykey-backend:latest|g" deploy/docker-compose.backend.yml
             
             echo "🔐 Authenticating with Docker Hub..."
             # Not strictly needed for public images or if previously logged in, 
@@ -136,10 +136,17 @@ jobs:
             docker compose --env-file .env -f deploy/docker-compose.backend.yml pull backend
             
             docker compose --env-file .env -f deploy/docker-compose.backend.yml down || true
-            docker compose --env-file .env -f deploy/docker-compose.backend.yml up -d backend
+            docker compose --env-file .env -f deploy/docker-compose.backend.yml up -d --force-recreate backend
             
-            echo "⏳ Waiting for backend to start..."
+            echo "📊 Checking container status..."
+            docker ps -a --filter name=paykey_backend_prod
+            
+            echo "📊 Waiting for container to be ready..."
+            # Wait for healthcheck or just give it time
             sleep 15
+            
+            echo "📜 Recent Logs:"
+            docker logs --tail 50 paykey_backend_prod
             
             echo "🔄 Running Database Migrations..."
             docker exec paykey_backend_prod npm run typeorm:migration:run || echo "⚠️ Migrations failed (check logs)"
@@ -149,7 +156,7 @@ jobs:
 
             echo "💰 Running Wallet Backfill Script..."
             # Execute the compiled script from dist/src/scripts
-            docker exec paykey_backend_prod node dist/src/scripts/backfill-wallets.js || echo "⚠️ Wallet backfill failed (check logs)"
+            docker exec paykey_backend_prod node dist/src/scripts/backfill-wallets.js
             
             echo "🧹 Cleaning up old images..."
             docker image prune -f

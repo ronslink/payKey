@@ -1,12 +1,57 @@
+
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../app.module';
-import { IntaSendService } from '../modules/payments/intasend.service';
+import { AppModule } from '../src/app.module';
+import { UsersService } from '../src/modules/users/users.service';
+import { IntaSendService } from '../src/modules/payments/intasend.service';
 import { Logger } from '@nestjs/common';
-import { User } from '../modules/users/entities/user.entity';
+import { User } from '../src/modules/users/entities/user.entity';
+
+async function bootstrap() {
+    const app = await NestFactory.createApplicationContext(AppModule);
+    const logger = new Logger('BackfillWallets');
+
+    const usersService = app.get(UsersService);
+    const intaSendService = app.get(IntaSendService);
+
+    logger.log('🚀 Starting Wallet Backfill Script...');
+
+    // 1. Get all users
+    // Note: usersService doesn't have a findAll method exposed directly that returns everything we need?
+    // We might need to access the repository directly or add a method.
+    // For script simplicity, let's just use the repository if we can, or add a finder.
+    // Actually, we can just use TypeORM repository if we get it from module, but let's try to stick to service if possible.
+    // Since we don't have a "findAll", we'll use the repository injection pattern if possible, 
+    // but better to just use the module's repository if exported or add a temp method?
+    // Let's assume we can get the repository from the app context if it's exported, OR just add a "findAll" to service.
+    // Modifying the service might be cleaner for future use.
+
+    // Let's use the repository directly via getRepositoryToken logic or just add a helper to UsersService.
+    // Checking UsersService... it has findOneBy... but no findAll.
+    // I will add a `findAllOnboardedWithoutWallet` method to UsersService first? 
+    // No, I'll just use the repository directly since I can get it from the container 
+    // using `getRepositoryToken(User)`.
+
+    const repo = app.get<any>('UserRepository'); // Default token is usually 'UserRepository' or similar if custom,
+    // BUT TypeORM usually uses getRepositoryToken(User).
+    // Let's rely on adding a method to UsersService to be safe and clean.
+
+    logger.log('Fetching users without wallets...');
+
+    // We need to implement this search in the script or service. 
+    // Let's assume we can add a method to UsersService. 
+    // But I don't want to modify the service just for a one-off script if I can avoid it.
+    // Let's try to get the repository from the module.
+
+    // Actually, let's just make the script robust.
+    // We'll trust that we can access the repository if we import `getRepositoryToken`.
+
+}
+
+// Rewriting to include the repository access properly
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
 
-async function bootstrap() {
+async function run() {
     const app = await NestFactory.createApplicationContext(AppModule);
     const logger = new Logger('BackfillWallets');
 
@@ -14,78 +59,49 @@ async function bootstrap() {
         const userRepository = app.get<Repository<User>>(getRepositoryToken(User));
         const intaSendService = app.get(IntaSendService);
 
-        logger.log('🚀 Starting Production Wallet Backfill Script...');
-
-        // 1. Find users needing backfill
         logger.log('🔍 Finding users with completed onboarding but NO wallet...');
+
         const users = await userRepository.find({
             where: {
                 isOnboardingCompleted: true,
+                // Using IsNull() operator correctly for TypeORM
                 intasendWalletId: IsNull(),
-            },
+            }
         });
 
         logger.log(`Found ${users.length} users to process.`);
 
-        if (users.length === 0) {
-            logger.log('✅ No users need backfilling. Exiting.');
-            return;
-        }
-
-        let successCount = 0;
-        let failCount = 0;
-
-        // 2. Process each user
-        for (const [index, user] of users.entries()) {
-            const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown Name';
-            logger.log(
-                `[${index + 1}/${users.length}] Processing user: ${user.email} (${userName}) - ID: ${user.id}`,
-            );
+        for (const user of users) {
+            logger.log(`Processing user: ${user.email} (${user.id})`);
 
             try {
-                // Generate a label (e.g., WALLET-12345678)
                 const walletLabel = `WALLET-${user.id.substring(0, 8).toUpperCase()}`;
+                logger.log(`Creating wallet with label: ${walletLabel}`);
 
-                // Create Wallet in IntaSend
-                logger.log(`   creating wallet with label: ${walletLabel}...`);
-                const wallet = await intaSendService.createWallet(
-                    'KES',
-                    walletLabel,
-                    true,
-                );
+                const wallet = await intaSendService.createWallet('KES', walletLabel, true);
 
                 if (wallet && wallet.wallet_id) {
-                    // Update User Record
                     user.intasendWalletId = wallet.wallet_id;
                     await userRepository.save(user);
-                    logger.log(`   ✅ Wallet created and saved: ${wallet.wallet_id}`);
-                    successCount++;
+                    logger.log(`✅ Wallet created and saved: ${wallet.wallet_id}`);
                 } else {
-                    logger.error(
-                        `   ❌ Wallet creation response invalid for user ${user.id}: ${JSON.stringify(wallet)}`,
-                    );
-                    failCount++;
+                    logger.error(`❌ Wallet creation response invalid for user ${user.id}`);
                 }
+
             } catch (error: any) {
-                logger.error(
-                    `   ❌ Failed to process user ${user.id}: ${error.message}`,
-                    error.stack,
-                );
-                failCount++;
+                logger.error(`❌ Failed to process user ${user.id}: ${error.message}`);
             }
 
-            // Rate Limiting: Sleep 500ms between requests to be nice to IntaSend API
-            await new Promise((resolve) => setTimeout(resolve, 500));
+            // Sleep slightly to avoid rate limits?
+            await new Promise(resolve => setTimeout(resolve, 500));
         }
 
         logger.log('🎉 Backfill completed.');
-        logger.log(`Summary: ${successCount} Success, ${failCount} Failed.`);
     } catch (error) {
-        logger.error('🔥 Script failed with fatal error', error);
-        process.exit(1);
+        logger.error('Script failed', error);
     } finally {
         await app.close();
     }
 }
 
-bootstrap();
+run();
