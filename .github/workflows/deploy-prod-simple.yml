@@ -78,6 +78,8 @@ jobs:
             df -h
 
             echo "🌐 Ensuring Docker Network Exists..."
+            docker compose --env-file .env -f deploy/docker-compose.infra.yml down || true
+            docker compose --env-file .env -f deploy/docker-compose.backend.yml down || true
             docker network rm paykey-network-prod || true
             docker network create paykey-network-prod || true
 
