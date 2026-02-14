@@ -77,6 +77,17 @@ enum TerminationReason {
   }
 }
 
+/// Safely converts a dynamic value to double
+double _toDouble(dynamic value) {
+  if (value == null) return 0.0;
+  if (value is num) return value.toDouble();
+  if (value is String) {
+    final parsed = double.tryParse(value);
+    return parsed ?? 0.0;
+  }
+  return 0.0;
+}
+
 class Termination {
   final String id;
   final String workerId;
@@ -106,16 +117,16 @@ class Termination {
   
   factory Termination.fromJson(Map<String, dynamic> json) {
     return Termination(
-      id: json['id'],
-      workerId: json['workerId'],
+      id: json['id'] ?? '',
+      workerId: json['workerId'] ?? '',
       workerName: json['workerName'] ?? 'Unknown',
-      terminationDate: json['terminationDate'],
-      reason: TerminationReason.fromBackend(json['reason'] ?? 'OTHER'),
+      terminationDate: json['terminationDate'] ?? '',
+      reason: TerminationReason.fromBackend(json['reason']?.toString() ?? 'OTHER'),
       noticePeriodDays: json['noticePeriodDays'] ?? 0,
-      proratedSalary: (json['proratedSalary'] ?? 0).toDouble(),
-      unusedLeavePayout: (json['unusedLeavePayout'] ?? 0).toDouble(),
-      severancePay: (json['severancePay'] ?? 0).toDouble(),
-      totalFinalPayment: (json['totalFinalPayment'] ?? 0).toDouble(),
+      proratedSalary: _toDouble(json['proratedSalary']),
+      unusedLeavePayout: _toDouble(json['unusedLeavePayout']),
+      severancePay: _toDouble(json['severancePay']),
+      totalFinalPayment: _toDouble(json['totalFinalPayment']),
       notes: json['notes'],
     );
   }
@@ -140,11 +151,11 @@ class FinalPaymentCalculation {
 
   factory FinalPaymentCalculation.fromJson(Map<String, dynamic> json) {
     return FinalPaymentCalculation(
-      proratedSalary: (json['proratedSalary'] ?? 0).toDouble(),
-      unusedLeavePayout: (json['unusedLeavePayout'] ?? 0).toDouble(),
-      severancePay: (json['severancePay'] ?? 0).toDouble(),
-      taxDeductions: (json['taxDeductions'] ?? 0).toDouble(),
-      totalFinalPayment: (json['totalFinalPayment'] ?? 0).toDouble(),
+      proratedSalary: _toDouble(json['proratedSalary']),
+      unusedLeavePayout: _toDouble(json['unusedLeavePayout']),
+      severancePay: _toDouble(json['severancePay']),
+      taxDeductions: _toDouble(json['taxDeductions']),
+      totalFinalPayment: _toDouble(json['totalFinalPayment']),
       calculationDate: json['calculationDate'] ?? DateTime.now().toIso8601String(),
     );
   }
