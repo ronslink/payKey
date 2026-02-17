@@ -83,13 +83,9 @@ jobs:
             docker rm -f paykey_backend_prod 2>/dev/null || true
             docker rm -f paykey_redis_prod 2>/dev/null || true
             docker rm -f paykey_website_prod 2>/dev/null || true
-            docker rm -f paydome_website_prod 2>/dev/null || true
-            
-            echo "🧹 Stopping and removing all compose services..."
+            echo "🧹 Stopping and removing backend compose services..."
             # Stop services first (this may fail if already stopped, which is fine)
             docker compose -f deploy/docker-compose.backend.yml down 2>/dev/null || true
-            docker compose -f deploy/docker-compose.website.yml down 2>/dev/null || true
-            docker compose -f deploy/docker-compose.website.yml -f docker-compose.prod.yml down 2>/dev/null || true
             docker compose -f deploy/docker-compose.infra.yml down 2>/dev/null || true
             
             echo "🌐 Removing Docker network (ignore if containers still attached)..."

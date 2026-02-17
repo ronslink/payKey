@@ -1,5 +1,5 @@
-import React, { useRef, useState } from 'react';
-import { Play, Pause } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { Play } from 'lucide-react';
 
 export function VideoSection() {
     const videoRef = useRef<HTMLVideoElement>(null);
