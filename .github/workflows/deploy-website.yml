@@ -58,7 +58,9 @@ jobs:
             
             echo "📥 Updating codebase..."
             # Pull latest changes (optional if just updating image, but good for docker-compose files)
-            git pull origin main
+            # Force sync with origin/main to discard any local changes/conflicts
+            git fetch origin main
+            git reset --hard origin/main
 
             echo "🌐 Deploying Website..."
             

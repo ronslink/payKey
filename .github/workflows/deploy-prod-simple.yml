@@ -103,7 +103,9 @@ jobs:
             # =============================================
             
             echo "📥 Pulling latest code..."
-            git pull origin main
+            # Force sync with origin/main to discard any local changes/conflicts
+            git fetch origin main
+            git reset --hard origin/main
 
             # Update docker-compose to use Docker Hub image if needed
             # (We will push a code change for this, but this sed is a safety net)
