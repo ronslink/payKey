@@ -389,6 +389,7 @@ export class IntaSendService {
             currency: 'KES',
             transactions: formattedTransactions,
             wallet_id: walletId,
+            requires_approval: 'NO',
           },
           {
             headers: {
