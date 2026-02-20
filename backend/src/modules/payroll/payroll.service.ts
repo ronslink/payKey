@@ -102,6 +102,7 @@ export interface FundsVerificationResult {
   canProceed: boolean;
   shortfall: number;
   workerCount: number;
+  estimatedFees: number;
 }
 
 // =============================================================================
@@ -744,27 +745,28 @@ export class PayrollService {
       0,
     );
 
-    const totalBonuses = records.reduce(
-      (sum, r) =>
-        sum + Number(r.bonuses || 0) + Number(r.otherEarnings || 0),
-      0,
-    );
+    // Estimate IntaSend B2C payout fees per worker
+    // Fee tiers: <200 = KES 10, 200-1000 = KES 20, >1000 = KES 100
+    const estimatedFees = records.reduce((sum, r) => {
+      const net = parseFloat(r.netSalary as any) || 0;
+      if (net < 200) return sum + 10;
+      if (net <= 1000) return sum + 20;
+      return sum + 100;
+    }, 0);
 
-    const totalGross = records.reduce(
-      (sum, r) => sum + (parseFloat(r.grossSalary as any) || 0),
-      0,
-    );
+    const totalRequired = totalNetPay + estimatedFees;
 
     // In development, bypass wallet balance check
     const isDev = process.env.NODE_ENV !== 'production';
-    const hasMinimumBalance = isDev ? true : walletBalance >= totalNetPay;
+    const hasMinimumBalance = isDev ? true : walletBalance >= totalRequired;
 
     return {
-      requiredAmount: totalNetPay,
+      requiredAmount: totalRequired,
       availableBalance: walletBalance,
       canProceed: hasMinimumBalance,
-      shortfall: Math.max(0, totalNetPay - walletBalance),
+      shortfall: Math.max(0, totalRequired - walletBalance),
       workerCount: records.length,
+      estimatedFees,
     };
   }
 

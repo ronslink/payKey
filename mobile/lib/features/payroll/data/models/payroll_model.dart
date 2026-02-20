@@ -314,7 +314,7 @@ abstract class PayrollSummary with _$PayrollSummary {
 
 /// Result of pre-payroll fund verification check.
 class FundVerificationResult {
-  /// Total amount required to process payroll (sum of net pay for all workers)
+  /// Total amount required to process payroll (net pay + estimated fees)
   final double requiredAmount;
 
   /// User's current available wallet balance
@@ -332,6 +332,9 @@ class FundVerificationResult {
   /// Number of workers included in this calculation
   final int workerCount;
 
+  /// Estimated IntaSend B2C payout fees for all workers
+  final double estimatedFees;
+
   const FundVerificationResult({
     required this.requiredAmount,
     required this.availableBalance,
@@ -339,6 +342,7 @@ class FundVerificationResult {
     required this.canProceed,
     required this.shortfall,
     required this.workerCount,
+    this.estimatedFees = 0.0,
   });
 
   factory FundVerificationResult.fromJson(Map<String, dynamic> json) {
@@ -349,8 +353,12 @@ class FundVerificationResult {
       canProceed: json['canProceed'] as bool? ?? false,
       shortfall: (json['shortfall'] as num?)?.toDouble() ?? 0,
       workerCount: json['workerCount'] as int? ?? 0,
+      estimatedFees: (json['estimatedFees'] as num?)?.toDouble() ?? 0,
     );
   }
+
+  /// Net pay portion (requiredAmount minus fees)
+  double get netPayTotal => requiredAmount - estimatedFees;
 
   /// Returns true if user has sufficient funds
   bool get hasSufficientFunds => canProceed;
@@ -366,6 +374,9 @@ class FundVerificationResult {
 
   /// Returns formatted clearing balance for display
   String get formattedClearing => 'KES ${clearingBalance.toStringAsFixed(2)}';
+
+  /// Returns formatted estimated fees for display
+  String get formattedFees => 'KES ${estimatedFees.toStringAsFixed(2)}';
 }
 
 // =============================================================================

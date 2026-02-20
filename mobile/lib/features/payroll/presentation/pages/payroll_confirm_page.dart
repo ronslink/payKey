@@ -595,20 +595,32 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
         children: [
            const Text('Payroll Summary', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
            const SizedBox(height: 16),
-           _row('Total Net Pay', verification.formattedRequired),
-           const Divider(height: 24),
            _row('Workers', '${verification.workerCount}'),
+           const Divider(height: 24),
+           _row('Net Pay', 'KES ${verification.netPayTotal.toStringAsFixed(2)}'),
+           if (verification.estimatedFees > 0) ...[
+             const SizedBox(height: 8),
+             _row('M-Pesa Fees (by provider)', verification.formattedFees),
+           ],
+           const Divider(height: 24),
+           _row('Total Required', verification.formattedRequired, bold: true),
         ],
       ),
     );
   }
   
-  Widget _row(String label, String value) {
+  Widget _row(String label, String value, {bool bold = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-         Text(label, style: const TextStyle(color: Colors.grey)),
-         Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+         Text(label, style: TextStyle(
+           color: bold ? Colors.black : Colors.grey,
+           fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+         )),
+         Text(value, style: TextStyle(
+           fontWeight: FontWeight.bold,
+           fontSize: bold ? 16 : 14,
+         )),
       ],
     );
   }

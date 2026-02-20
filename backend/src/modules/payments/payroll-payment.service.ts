@@ -105,14 +105,16 @@ export class PayrollPaymentService {
   }
 
   /**
-   * Calculate IntaSend B2C/Payout fee
-   * Logic: 1.5% of amount, Min KES 10, Max KES 50.
-   */
+ * Calculate IntaSend B2C/Payout fee (confirmed tiered structure).
+ * < 200 KES  → KES 10
+ * 200–1000   → KES 20
+ * > 1000     → KES 100
+ */
   private calculatePayoutFee(amount: number): number {
-    const fee = amount * 0.015;
-    return Math.min(Math.max(fee, 10), 50);
+    if (amount < 200) return 10;
+    if (amount <= 1000) return 20;
+    return 100;
   }
-
   // PesaLink fee estimation (using safe upper bound or similar logic)
   // Often ranges KES 30-100. Using flat 50 for now as safe estimate.
   private readonly BANK_PAYOUT_FEE = 50;
