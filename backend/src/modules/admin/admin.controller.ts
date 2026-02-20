@@ -98,4 +98,19 @@ export class AdminController {
     async getPayrollRecords(@Param('payPeriodId') payPeriodId: string) {
         return this.adminService.getPayrollRecords(payPeriodId);
     }
+
+    // ─── Container Logs ─────────────────────────────────────────────────
+
+    @Get('containers/logs')
+    async getContainerLogs(
+        @Query('container') container?: string,
+        @Query('lines') lines = '100',
+    ) {
+        return this.adminService.getContainerLogs(container, parseInt(lines));
+    }
+
+    @Get('containers')
+    async getContainers() {
+        return this.adminService.getContainers();
+    }
 }

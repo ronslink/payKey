@@ -123,3 +123,10 @@ export const adminNotifications = {
     send: (data: { userIds?: string[]; broadcast?: boolean; type: string; subject?: string; message: string }) =>
         api.post('/api/admin/notifications/send', data).then(r => r.data),
 };
+
+// ─── Container Logs ────────────────────────────────────────────────────────
+export const adminLogs = {
+    list: (params?: { container?: string; lines?: number; page?: number; search?: string }) =>
+        api.get('/api/admin/containers/logs', { params }).then(r => r.data),
+    containers: () => api.get('/api/admin/containers').then(r => r.data),
+};

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { Table, Typography, Select, Tag, Button, Space, Input, Card, Statistic, Row, Col } from 'antd';
-import { FileTextOutlined, ReloadOutlined, SearchOutlined, BugOutlined, InfoCircleOutlined, WarningOutlined } from '@ant-design/icons';
-import { useState } from 'react';
+import { Table, Typography, Select, Tag, Button, Space, Input, Card, Statistic, Row, Col, Spin } from 'antd';
+import { FileTextOutlined, ReloadOutlined, SearchOutlined, BugOutlined, InfoCircleOutlined, WarningOutlined, ContainerOutlined } from '@ant-design/icons';
+import { useState, useEffect } from 'react';
 import { adminLogs } from '../api/client';
 
 const { Title, Text } = Typography;
@@ -16,8 +16,8 @@ interface LogEntry {
 interface LogsResponse {
     data: LogEntry[];
     total: number;
-    page: number;
-    limit: number;
+    container: string;
+    lines: number;
 }
 
 export default function LogsPage() {
@@ -25,12 +25,31 @@ export default function LogsPage() {
     const [level, setLevel] = useState<string>();
     const [search, setSearch] = useState<string>();
     const [searchInput, setSearchInput] = useState<string>();
+    const [selectedContainer, setSelectedContainer] = useState<string>();
 
-    const { data, isLoading, refetch } = useQuery<LogsResponse>({
-        queryKey: ['admin-logs', page, level, search],
-        queryFn: () => adminLogs.list({ page, level, search, limit: 100 }),
-        refetchInterval: 30000, // Auto-refresh every 30 seconds
+    // Fetch available containers
+    const { data: containersData } = useQuery({
+        queryKey: ['admin-containers'],
+        queryFn: () => adminLogs.containers(),
+        refetchInterval: 30000,
     });
+
+    // Fetch logs
+    const { data, isLoading, refetch } = useQuery<LogsResponse>({
+        queryKey: ['admin-logs', selectedContainer, page, level, search],
+        queryFn: () => {
+            // Get raw logs (no filtering by level/search on backend yet)
+            return adminLogs.list({ container: selectedContainer, lines: 500 });
+        },
+        refetchInterval: 30000,
+    });
+
+    // Client-side filtering
+    const filteredLogs = data?.data?.filter((log: LogEntry) => {
+        if (level && log.level !== level) return false;
+        if (search && !log.message.toLowerCase().includes(search.toLowerCase())) return false;
+        return true;
+    }) || [];
 
     const levelColors: Record<string, string> = {
         ERROR: 'red',
@@ -51,9 +70,9 @@ export default function LogsPage() {
     };
 
     // Calculate statistics
-    const errorCount = data?.data?.filter((log: LogEntry) => log.level === 'ERROR').length || 0;
-    const warnCount = data?.data?.filter((log: LogEntry) => log.level === 'WARN').length || 0;
-    const infoCount = data?.data?.filter((log: LogEntry) => log.level === 'INFO').length || 0;
+    const errorCount = filteredLogs.filter((log: LogEntry) => log.level === 'ERROR').length;
+    const warnCount = filteredLogs.filter((log: LogEntry) => log.level === 'WARN').length;
+    const infoCount = filteredLogs.filter((log: LogEntry) => log.level === 'INFO').length;
 
     const handleSearch = () => {
         setSearch(searchInput);
@@ -63,6 +82,8 @@ export default function LogsPage() {
     const handleClear = () => {
         setSearchInput('');
         setSearch(undefined);
+        setLevel(undefined);
+        setSelectedContainer(undefined);
         setPage(1);
     };
 
@@ -128,7 +149,7 @@ export default function LogsPage() {
                     <Card>
                         <Statistic
                             title="Total Logs"
-                            value={data?.total || 0}
+                            value={filteredLogs.length}
                             prefix={<FileTextOutlined />}
                             valueStyle={{ color: '#1890ff' }}
                         />
@@ -169,6 +190,24 @@ export default function LogsPage() {
             {/* Filters */}
             <Card style={{ marginBottom: 24 }}>
                 <Space size="middle" wrap>
+                    <Select
+                        placeholder="Select Container"
+                        allowClear
+                        style={{ width: 200 }}
+                        onChange={(value) => {
+                            setSelectedContainer(value);
+                            setPage(1);
+                        }}
+                        value={selectedContainer}
+                        suffixIcon={<ContainerOutlined />}
+                    >
+                        {(containersData?.data || []).map((c: any) => (
+                            <Select.Option key={c.name} value={c.name}>
+                                {c.name} ({c.status})
+                            </Select.Option>
+                        ))}
+                    </Select>
+
                     <Select
                         placeholder="Filter by Level"
                         allowClear
@@ -218,16 +257,16 @@ export default function LogsPage() {
             {/* Logs Table */}
             <Table
                 columns={columns}
-                dataSource={data?.data || []}
+                dataSource={filteredLogs.slice(0, 100)}
                 rowKey={(record: LogEntry, index?: number) => `${record.timestamp}-${index || 0}`}
                 loading={isLoading}
                 pagination={{
-                    total: data?.total,
+                    total: filteredLogs.length,
                     pageSize: 100,
                     current: page,
                     onChange: setPage,
                     showSizeChanger: false,
-                    showTotal: (total) => `Total ${total} logs`,
+                    showTotal: (total) => `Showing ${Math.min(total, 100)} of ${total} logs`,
                 }}
                 style={{ background: '#fff', borderRadius: 12 }}
                 scroll={{ y: 600 }}

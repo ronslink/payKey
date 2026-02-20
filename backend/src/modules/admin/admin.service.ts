@@ -314,6 +314,98 @@ export class AdminService {
         }
     }
 
+    // ─── Container Logs ─────────────────────────────────────────────────
+
+    async getContainers() {
+        try {
+            const { stdout } = await execAsync(
+                "docker ps --format '{{.Names}}|{{.Status}}|{{.Image}}' 2>/dev/null || echo ''"
+            );
+
+            if (!stdout.trim()) return { data: [] };
+
+            const containers = stdout.trim().split('\n').map(line => {
+                const [name, status, image] = line.split('|');
+                return {
+                    name: name?.trim(),
+                    status: status?.trim(),
+                    image: image?.trim(),
+                    healthy: status?.toLowerCase().includes('up'),
+                };
+            }).filter(c => c.name);
+
+            return { data: containers };
+        } catch (error) {
+            return { data: [], error: error.message };
+        }
+    }
+
+    async getContainerLogs(container?: string, lines = 100) {
+        try {
+            let cmd: string;
+            
+            if (container) {
+                // Get logs for specific container
+                cmd = `docker logs --tail ${lines} ${container} 2>&1`;
+            } else {
+                // Get logs from all containers (newest first)
+                cmd = `docker ps --format '{{.Names}}' 2>/dev/null | head -5 | xargs -I {} docker logs --tail ${lines} {} 2>&1 | head -500`;
+            }
+
+            const { stdout, stderr } = await execAsync(cmd);
+            
+            // Parse logs - each line: timestamp level message
+            const logLines = (stdout + stderr)
+                .split('\n')
+                .filter(line => line.trim())
+                .slice(-lines)
+                .reverse()
+                .map(line => {
+                    // Try to parse structured log (JSON)
+                    try {
+                        const parsed = JSON.parse(line);
+                        return {
+                            timestamp: parsed.timestamp || parsed.time || parsed.ts || new Date().toISOString(),
+                            level: parsed.level || parsed.severity || 'LOG',
+                            message: parsed.message || parsed.msg || line,
+                            raw: line,
+                        };
+                    } catch {
+                        // Plain text log - try to detect level
+                        const upperLine = line.toUpperCase();
+                        let level = 'LOG';
+                        if (upperLine.includes('ERROR') || upperLine.includes('ERR')) level = 'ERROR';
+                        else if (upperLine.includes('WARN')) level = 'WARN';
+                        else if (upperLine.includes('DEBUG')) level = 'DEBUG';
+                        else if (upperLine.includes('INFO')) level = 'INFO';
+                        
+                        // Try to extract timestamp
+                        const timestampMatch = line.match(/^(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2})/);
+                        
+                        return {
+                            timestamp: timestampMatch ? timestampMatch[1] : new Date().toISOString(),
+                            level,
+                            message: line,
+                            raw: line,
+                        };
+                    }
+                });
+
+            return {
+                data: logLines,
+                container: container || 'all',
+                lines,
+                total: logLines.length,
+            };
+        } catch (error) {
+            return {
+                data: [],
+                error: error.message,
+                container: container || 'all',
+            };
+        }
+    }
+
     // ─── Users ──────────────────────────────────────────────────────────────────
 
     async getUsers(search?: string, page = 1, limit = 20) {
