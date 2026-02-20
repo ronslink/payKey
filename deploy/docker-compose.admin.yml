@@ -1,0 +1,24 @@
+# Admin Dashboard service for production
+# Usage: docker-compose -f deploy/docker-compose.admin.yml up -d
+
+services:
+  admin:
+    image: rondockerlink/paykey-admin:latest
+    container_name: paykey_admin_prod
+    restart: always
+    ports:
+      - "1971:80"
+    environment:
+      - VITE_API_URL=http://paykey_backend_prod:3000
+    networks:
+      - paykey-network-prod
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  paykey-network-prod:
+    external: true
