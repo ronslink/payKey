@@ -43,6 +43,10 @@ class WorkersNotifier extends AsyncNotifier<List<WorkerModel>> {
       final newWorker = await _repository.createWorker(request);
       return [...?prevState, newWorker];
     });
+
+    if (state.hasError) {
+      throw state.error!;
+    }
   }
 
   Future<void> updateWorker(String workerId, UpdateWorkerRequest request) async {
@@ -56,6 +60,10 @@ class WorkersNotifier extends AsyncNotifier<List<WorkerModel>> {
           if (worker.id == workerId) updatedWorker else worker
       ];
     });
+
+    if (state.hasError) {
+      throw state.error!;
+    }
   }
 
   Future<void> deleteWorker(String workerId) async {
@@ -69,6 +77,10 @@ class WorkersNotifier extends AsyncNotifier<List<WorkerModel>> {
           if (worker.id != workerId) worker
       ];
     });
+
+    if (state.hasError) {
+      throw state.error!;
+    }
   }
 
   Future<void> uploadPhoto(String workerId, List<int> bytes, String filename) async {

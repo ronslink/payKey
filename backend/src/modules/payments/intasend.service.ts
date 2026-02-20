@@ -629,4 +629,30 @@ export class IntaSendService {
       throw error;
     }
   }
+  /**
+   * Initiate a Refund via B2C payout
+   * IntaSend does not have a dedicated refund API.
+   * We send a B2C payout to the original recipient's phone with a REFUND narrative.
+   */
+  async initiateRefund(
+    phoneNumber: string,
+    amount: number,
+    originalRef: string,
+    reason: string,
+    walletId?: string,
+  ) {
+    this.logger.log(
+      `Initiating refund of ${amount} KES to ${phoneNumber} for ref: ${originalRef}`,
+    );
+
+    return this.sendMoney(
+      [{
+        account: phoneNumber,
+        amount,
+        name: 'Refund',
+        narrative: `REFUND-${originalRef}: ${reason}`.substring(0, 50),
+      }],
+      walletId,
+    );
+  }
 }

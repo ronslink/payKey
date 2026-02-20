@@ -14,6 +14,7 @@ export enum TransactionType {
   SALARY_PAYOUT = 'SALARY_PAYOUT',
   TOPUP = 'TOPUP',
   DEPOSIT = 'DEPOSIT', // Alias for TOPUP/INCOMING
+  REFUND = 'REFUND', // Admin-initiated refund
 }
 
 export enum TransactionStatus {

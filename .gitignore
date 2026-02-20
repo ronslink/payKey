@@ -98,6 +98,7 @@ paykey_deploy
 # Secrets and Keys
 **/google-services.json
 **/firebase-service-account.json
+**/firebase-adminsdk.json
 **/GoogleService-Info.plist
 **/*.keystore
 **/*.jks

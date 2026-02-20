@@ -33,7 +33,7 @@ class AppEnvironment {
   /// Google Client ID (Web)
   static const String googleClientId = String.fromEnvironment(
     'GOOGLE_CLIENT_ID',
-    defaultValue: '104336380998-gi875vmfc1vtkoi9235qcosn5sg5h9nc.apps.googleusercontent.com',
+    defaultValue: '126777889122-v87pps2i4i9m5m3p8r2infbvspjq62mg.apps.googleusercontent.com',
   );
 
   /// Apple Service ID (Web)
@@ -48,6 +48,6 @@ class AppEnvironment {
     'APPLE_REDIRECT_URI',
     // Needs to match the one configured in Apple Developer Console
     // For localhost testing, this often requires tunneling or specific config
-    defaultValue: 'https://paykey-2711d.firebaseapp.com/__/auth/handler',
+    defaultValue: 'https://paydome-9f9a7.firebaseapp.com/__/auth/handler',
   );
 }

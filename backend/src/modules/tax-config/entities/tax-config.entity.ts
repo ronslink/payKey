@@ -56,7 +56,7 @@ export interface TaxConfiguration {
   maxInsuranceRelief?: number;
 }
 
-@Entity('tax_configs')
+@Entity('tax_config')
 export class TaxConfig {
   @PrimaryGeneratedColumn('uuid')
   id: string;

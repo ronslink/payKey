@@ -32,6 +32,8 @@ import { DataDeletionModule } from './modules/data-deletion/data-deletion.module
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { GovIntegrationsModule } from './modules/gov-integrations/gov-integrations.module';
 import { SystemConfigModule } from './modules/system-config/system-config.module';
+import { AdminModule } from './modules/admin/admin.module';
+import { SupportModule } from './modules/support/support.module';
 import { getDatabaseConfig } from './config/database.config';
 
 // Explicit Entity Imports
@@ -62,6 +64,9 @@ import { Notification } from './modules/notifications/entities/notification.enti
 import { DeviceToken } from './modules/notifications/entities/device-token.entity';
 import { GovSubmission } from './modules/gov-integrations/entities/gov-submission.entity';
 import { SystemConfig } from './modules/system-config/entities/system-config.entity';
+import { SubscriptionPlan } from './modules/subscriptions/entities/subscription-plan.entity';
+import { SupportTicket } from './modules/support/entities/support-ticket.entity';
+import { SupportMessage } from './modules/support/entities/support-message.entity';
 
 @Module({
   imports: [
@@ -115,6 +120,8 @@ import { SystemConfig } from './modules/system-config/entities/system-config.ent
     UploadsModule,
     GovIntegrationsModule,
     SystemConfigModule,
+    AdminModule,
+    SupportModule,
   ],
   controllers: [AppController],
   providers: [AppService],

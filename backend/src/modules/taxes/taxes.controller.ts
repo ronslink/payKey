@@ -10,7 +10,8 @@ import {
 } from '@nestjs/common';
 import { TaxesService } from './taxes.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard, Roles } from '../auth/guards/roles.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/entities/user.entity';
 import { TaxTable } from './entities/tax-table.entity';
 
@@ -21,7 +22,7 @@ class CalculateTaxDto {
 @Controller('taxes')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class TaxesController {
-  constructor(private readonly taxesService: TaxesService) {}
+  constructor(private readonly taxesService: TaxesService) { }
 
   @Post('calculate')
   calculateTaxes(@Body() dto: CalculateTaxDto) {

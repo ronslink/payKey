@@ -775,4 +775,15 @@ export class StripeService {
   private roundCurrency(amount: number): number {
     return Math.round(amount * 100) / 100;
   }
+
+  /**
+   * Create a Stripe refund for a payment intent
+   */
+  async createRefund(paymentIntentId: string, amount: number): Promise<Stripe.Refund> {
+    const stripe = this.ensureStripeConfigured();
+    return stripe.refunds.create({
+      payment_intent: paymentIntentId,
+      amount: Math.round(amount * 100), // Convert to cents
+    });
+  }
 }

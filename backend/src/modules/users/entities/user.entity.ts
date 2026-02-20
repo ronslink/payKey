@@ -14,7 +14,9 @@ export enum UserTier {
 }
 
 export enum UserRole {
+  SUPER_ADMIN = 'SUPER_ADMIN',
   ADMIN = 'ADMIN',
+  VIEWER = 'VIEWER',
   USER = 'USER', // Legacy, treat as EMPLOYER
   EMPLOYER = 'EMPLOYER',
   WORKER = 'WORKER',

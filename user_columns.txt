@@ -1,0 +1,5 @@
+    column_name     
+--------------------
+ intasend_wallet_id
+(1 row)
+

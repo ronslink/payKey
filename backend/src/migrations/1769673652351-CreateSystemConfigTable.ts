@@ -5,7 +5,7 @@ export class CreateSystemConfigTable1769673652351 implements MigrationInterface 
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`
-            CREATE TABLE "system_config" (
+            CREATE TABLE IF NOT EXISTS "system_config" (
                 "key" character varying NOT NULL,
                 "value" character varying NOT NULL,
                 "description" character varying,
@@ -19,6 +19,7 @@ export class CreateSystemConfigTable1769673652351 implements MigrationInterface 
         await queryRunner.query(`
             INSERT INTO "system_config" ("key", "value", "description")
             VALUES ('FRONTEND_URL', 'https://paydome.co', 'Base URL for redirection')
+            ON CONFLICT ("key") DO NOTHING
         `);
     }
 

@@ -30,6 +30,10 @@ import { Notification } from '../modules/notifications/entities/notification.ent
 import { DeviceToken } from '../modules/notifications/entities/device-token.entity';
 import { ExchangeRate } from '../modules/payments/entities/exchange-rate.entity';
 import { SystemConfig } from '../modules/system-config/entities/system-config.entity';
+import { SubscriptionPlan } from '../modules/subscriptions/entities/subscription-plan.entity';
+import { SupportTicket } from '../modules/support/entities/support-ticket.entity';
+import { SupportMessage } from '../modules/support/entities/support-message.entity';
+import { AdminAuditLog } from '../modules/admin/entities/audit-log.entity';
 
 /**
  * Get database configuration for TypeORM
@@ -85,6 +89,10 @@ export const getDatabaseConfig = (
         DeviceToken,
         ExchangeRate,
         SystemConfig,
+        SubscriptionPlan,
+        SupportTicket,
+        SupportMessage,
+        AdminAuditLog,
       ],
       synchronize: false, // Use migrations in production!
       logging: ['query', 'error'],
@@ -154,6 +162,10 @@ export const getDatabaseConfig = (
       DeviceToken,
       ExchangeRate,
       SystemConfig,
+      SubscriptionPlan,
+      SupportTicket,
+      SupportMessage,
+      AdminAuditLog,
     ],
     synchronize: isTest || true, // Keep enabled for now
     logging: ['query', 'error'],
