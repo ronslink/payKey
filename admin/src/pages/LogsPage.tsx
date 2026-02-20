@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { Table, Typography, Select, Tag, Button, Space, Input, Card, Statistic, Row, Col, Spin } from 'antd';
+import { Table, Typography, Select, Tag, Button, Space, Input, Card, Statistic, Row, Col } from 'antd';
 import { FileTextOutlined, ReloadOutlined, SearchOutlined, BugOutlined, InfoCircleOutlined, WarningOutlined, ContainerOutlined } from '@ant-design/icons';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { adminLogs } from '../api/client';
 
 const { Title, Text } = Typography;

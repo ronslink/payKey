@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Table, Typography, Button, Modal, Form, Input, Select, Tag, Switch, Space, message, Spin } from 'antd';
+import { Table, Typography, Button, Modal, Form, Input, Select, Tag, Switch, message, Spin } from 'antd';
 import { SendOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import { adminNotifications, adminUsers } from '../api/client';
@@ -21,7 +21,7 @@ export default function NotificationsPage() {
 
     const { data, isLoading } = useQuery({
         queryKey: ['admin-notifications', page, typeFilter],
-        queryFn: () => adminNotifications.list({ page, typeFilter }),
+        queryFn: () => adminNotifications.list({ page, type: typeFilter }),
     });
 
     const { data: usersData, isLoading: usersLoading } = useQuery({
