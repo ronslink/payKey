@@ -19,8 +19,8 @@ jobs:
           DO_SSH_KEY: ${{ secrets.DO_SSH_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          INTASEND_PUBLISHABLE_KEY: ${{ secrets.INTASEND_PUBLISHABLE_KEY }}
-          INTASEND_SECRET: ${{ secrets.INTASEND_SECRET }}
+          INTASEND_PUBLISHABLE_KEY: ${{ secrets.INTASEND_PUB_KEY_PROD }}
+          INTASEND_SECRET: ${{ secrets.INTASEND_SECRET_KEY_PROD }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
           INTASEND_WEBHOOK_SECRET: ${{ secrets.INTASEND_WEBHOOK_SECRET }}
@@ -69,7 +69,7 @@ jobs:
 
             # 2. Generate .env file from Secrets (Using Managed Database)
             echo "🔐 Generating secure .env file..."
-            cat <<EOF > .env
+            cat <<EOF | sed 's/^[ \t]*//' > .env
             NODE_ENV=production
             DATABASE_URL=$DATABASE_URL
             REDIS_HOST=paykey_redis_prod
