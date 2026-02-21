@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Table, Typography, Select, Tag, Button, Modal, Space } from 'antd';
+import { Table, Typography, Select, Tag, Button, Modal, Space, Input, DatePicker } from 'antd';
 import { EyeOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import { adminAuditLogs } from '../api/client';
@@ -10,11 +10,20 @@ export default function AuditLogsPage() {
     const [page, setPage] = useState(1);
     const [action, setAction] = useState<string>();
     const [entityType, setEntityType] = useState<string>();
+    const [adminEmail, setAdminEmail] = useState<string>();
+    const [dateRange, setDateRange] = useState<[string, string] | null>(null);
     const [detailModal, setDetailModal] = useState<{ open: boolean; log?: any }>({ open: false });
 
     const { data, isLoading } = useQuery({
-        queryKey: ['admin-audit-logs', page, action, entityType],
-        queryFn: () => adminAuditLogs.list({ page, action, entityType }),
+        queryKey: ['admin-audit-logs', page, action, entityType, adminEmail, dateRange],
+        queryFn: () => adminAuditLogs.list({
+            page,
+            action,
+            entityType,
+            adminEmail,
+            startDate: dateRange?.[0],
+            endDate: dateRange?.[1]
+        }),
     });
 
     const actionColors: Record<string, string> = {
@@ -41,14 +50,25 @@ export default function AuditLogsPage() {
 
     return (
         <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24, alignItems: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 24, alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
                 <Title level={3} style={{ margin: 0 }}>Audit Logs</Title>
-                <Space>
-                    <Select placeholder="Filter Action" allowClear style={{ width: 150 }} onChange={setAction}>
+                <Space wrap>
+                    <Input.Search placeholder="Search Admin Email" allowClear onSearch={setAdminEmail} style={{ width: 220 }} />
+                    <DatePicker.RangePicker
+                        allowClear
+                        onChange={(dates) => {
+                            if (dates && dates[0] && dates[1]) {
+                                setDateRange([dates[0].toISOString(), dates[1].toISOString()]);
+                            } else {
+                                setDateRange(null);
+                            }
+                        }}
+                    />
+                    <Select placeholder="Filter Action" allowClear style={{ width: 140 }} onChange={setAction}>
                         {['CREATE', 'UPDATE', 'DEACTIVATE', 'DELETE'].map((a) => <Select.Option key={a} value={a}>{a}</Select.Option>)}
                     </Select>
                     <Select placeholder="Filter Entity" allowClear style={{ width: 180 }} onChange={setEntityType}>
-                        {['SUBSCRIPTION_PLAN', 'TAX_CONFIG', 'SYSTEM_CONFIG'].map((e) => <Select.Option key={e} value={e}>{e}</Select.Option>)}
+                        {['SUBSCRIPTION_PLAN', 'TAX_CONFIG', 'SYSTEM_CONFIG', 'CAMPAIGN', 'PROMOTIONAL_ITEM'].map((e) => <Select.Option key={e} value={e}>{e}</Select.Option>)}
                     </Select>
                 </Space>
             </div>
@@ -71,15 +91,15 @@ export default function AuditLogsPage() {
             >
                 {detailModal.log && (
                     <div style={{ display: 'flex', gap: 16 }}>
-                        <div style={{ flex: 1 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                             <Title level={5}>Before Context</Title>
-                            <pre style={{ background: '#f8fafc', padding: 12, borderRadius: 8, fontSize: 12, overflowX: 'auto' }}>
+                            <pre style={{ background: '#f8fafc', padding: 16, borderRadius: 8, fontSize: 13, border: '1px solid #e2e8f0', overflowX: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                                 {JSON.stringify(detailModal.log.oldValues, null, 2)}
                             </pre>
                         </div>
-                        <div style={{ flex: 1 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                             <Title level={5}>After Context</Title>
-                            <pre style={{ background: '#f8fafc', padding: 12, borderRadius: 8, fontSize: 12, overflowX: 'auto' }}>
+                            <pre style={{ background: '#f8fafc', padding: 16, borderRadius: 8, fontSize: 13, border: '1px solid #e2e8f0', overflowX: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                                 {JSON.stringify(detailModal.log.newValues, null, 2)}
                             </pre>
                         </div>

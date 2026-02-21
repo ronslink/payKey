@@ -15,6 +15,7 @@ import SupportPage from './pages/SupportPage';
 import SettingsPage from './pages/SettingsPage';
 import AuditLogsPage from './pages/AuditLogsPage';
 import NotificationsPage from './pages/NotificationsPage';
+import LogsPage from './pages/LogsPage';
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -49,6 +50,7 @@ export default function App() {
         <Route path="tax-configs" element={<TaxConfigPage />} />
         <Route path="support" element={<SupportPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="logs" element={<LogsPage />} />
         <Route path="audit-logs" element={<AuditLogsPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

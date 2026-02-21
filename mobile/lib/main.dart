@@ -44,6 +44,8 @@ import 'features/employee_portal/presentation/pages/employee_payment_settings_pa
 import 'features/time_tracking/presentation/pages/attendance_dashboard_page.dart';
 import 'features/leave_management/presentation/pages/leave_dashboard_page.dart';
 import 'features/profile/presentation/pages/edit_profile_page.dart';
+import 'features/support/pages/support_page.dart';
+import 'features/support/pages/support_chat_page.dart';
 
 // Core
 import 'core/network/api_service.dart';
@@ -187,6 +189,8 @@ abstract class AppRoutes {
   static const attendance = '/attendance';
   static const leave = '/leave';
   static const profileEdit = '/profile/edit';
+  static const support = '/support';
+  static String supportChat(String id) => '/support/$id';
 
   // Employee Portal
   static const employeeLogin = '/employee/login';
@@ -579,6 +583,19 @@ final _otherRoutes = <RouteBase>[
     path: AppRoutes.profileEdit,
     name: 'profileEdit',
     builder: (_, _) => const EditProfilePage(),
+  ),
+  GoRoute(
+    path: AppRoutes.support,
+    name: 'support',
+    builder: (_, _) => const SupportPage(),
+  ),
+  GoRoute(
+    path: '/support/:id',
+    name: 'supportChat',
+    builder: (_, state) {
+      final id = state.pathParameters['id']!;
+      return SupportChatPage(ticketId: id);
+    },
   ),
   // Employee Portal Routes
   GoRoute(

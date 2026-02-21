@@ -79,6 +79,37 @@ export const adminPlans = {
         api.get('/api/admin/subscription-plans/subscribers').then(r => r.data),
     stats: () =>
         api.get('/api/admin/subscription-plans/stats').then(r => r.data),
+    dashboard: () =>
+        api.get('/api/admin/subscription-plans/dashboard').then(r => r.data),
+};
+
+// ─── Promotional Items ─────────────────────────────────────────────────────
+export const adminPromotionalItems = {
+    list: () => api.get('/api/admin/subscription-plans/promotional-items').then(r => r.data),
+    get: (id: string) => api.get(`/api/admin/subscription-plans/promotional-items/${id}`).then(r => r.data),
+    create: (data: any) => api.post('/api/admin/subscription-plans/promotional-items', data).then(r => r.data),
+    update: (id: string, data: any) =>
+        api.put(`/api/admin/subscription-plans/promotional-items/${id}`, data).then(r => r.data),
+    delete: (id: string) => api.delete(`/api/admin/subscription-plans/promotional-items/${id}`).then(r => r.data),
+};
+
+// ─── Campaigns ─────────────────────────────────────────────────────────────
+export const adminCampaigns = {
+    list: () => api.get('/api/admin/subscription-plans/campaigns').then(r => r.data),
+    get: (id: string) => api.get(`/api/admin/subscription-plans/campaigns/${id}`).then(r => r.data),
+    getActive: () => api.get('/api/admin/subscription-plans/campaigns/active').then(r => r.data),
+    create: (data: any) => api.post('/api/admin/subscription-plans/campaigns', data).then(r => r.data),
+    update: (id: string, data: any) =>
+        api.put(`/api/admin/subscription-plans/campaigns/${id}`, data).then(r => r.data),
+    updateStatus: (id: string, status: string) =>
+        api.put(`/api/admin/subscription-plans/campaigns/${id}/status`, { status }).then(r => r.data),
+    delete: (id: string) => api.delete(`/api/admin/subscription-plans/campaigns/${id}`).then(r => r.data),
+    trackImpression: (id: string) =>
+        api.post(`/api/admin/subscription-plans/campaigns/${id}/impression`).then(r => r.data),
+    trackClick: (id: string) =>
+        api.post(`/api/admin/subscription-plans/campaigns/${id}/click`).then(r => r.data),
+    trackConversion: (id: string) =>
+        api.post(`/api/admin/subscription-plans/campaigns/${id}/conversion`).then(r => r.data),
 };
 
 // ─── Tax Configs ────────────────────────────────────────────────────────────
@@ -112,7 +143,7 @@ export const adminSystemConfig = {
 
 // ─── Audit Logs ─────────────────────────────────────────────────────────────
 export const adminAuditLogs = {
-    list: (params?: { page?: number; entityType?: string; action?: string }) =>
+    list: (params?: { page?: number; entityType?: string; action?: string; adminEmail?: string; startDate?: string; endDate?: string; }) =>
         api.get('/api/admin/audit-logs', { params }).then(r => r.data),
 };
 

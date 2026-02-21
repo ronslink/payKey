@@ -9,57 +9,88 @@ class PropertiesPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final propertiesAsync = ref.watch(propertiesProvider);
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F6),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF111827),
-        elevation: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            Text(
-              'My Properties',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 24,
-                color: Color(0xFF111827),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF3F4F6),
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          foregroundColor: const Color(0xFF111827),
+          elevation: 0,
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text(
+                'My Properties',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 24,
+                  color: Color(0xFF111827),
+                ),
               ),
-            ),
-            Text(
-              'Manage your work locations',
-              style: TextStyle(
-                fontSize: 14,
-                color: Color(0xFF6B7280),
+              Text(
+                'Manage your work locations',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Color(0xFF6B7280),
+                ),
               ),
+            ],
+          ),
+          bottom: const TabBar(
+            labelColor: Color(0xFF3B82F6),
+            unselectedLabelColor: Color(0xFF6B7280),
+            indicatorColor: Color(0xFF3B82F6),
+            tabs: [
+              Tab(text: 'Active'),
+              Tab(text: 'Archived'),
+            ],
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh, color: Color(0xFF6B7280)),
+              onPressed: () {
+                ref.invalidate(propertiesProvider);
+                ref.invalidate(archivedPropertiesProvider);
+              },
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Color(0xFF6B7280)),
-            onPressed: () => ref.invalidate(propertiesProvider),
-          ),
-        ],
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => context.push('/properties/add'),
+          backgroundColor: const Color(0xFF3B82F6),
+          icon: const Icon(Icons.add),
+          label: const Text('Add Property'),
+        ),
+        body: TabBarView(
+          children: [
+            _buildTabContent(context, ref, propertiesProvider, false),
+            _buildTabContent(context, ref, archivedPropertiesProvider, true),
+          ],
+        ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/properties/add'),
-        backgroundColor: const Color(0xFF3B82F6),
-        icon: const Icon(Icons.add),
-        label: const Text('Add Property'),
-      ),
-      body: propertiesAsync.when(
-        data: (properties) {
-          if (properties.isEmpty) {
-            return _buildEmptyState(context);
-          }
-          return _buildPropertyList(context, ref, properties);
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => _buildErrorState(context, ref, error),
-      ),
+    );
+  }
+
+  Widget _buildTabContent(
+    BuildContext context, 
+    WidgetRef ref, 
+    FutureProvider<List<PropertyModel>> provider,
+    bool isArchivedTab,
+  ) {
+    final propertiesAsync = ref.watch(provider);
+    
+    return propertiesAsync.when(
+      data: (properties) {
+        if (properties.isEmpty) {
+          return isArchivedTab 
+              ? const Center(child: Text('No archived properties', style: TextStyle(color: Colors.grey)))
+              : _buildEmptyState(context);
+        }
+        return _buildPropertyList(context, ref, properties);
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => _buildErrorState(context, ref, error, provider),
     );
   }
 
@@ -137,7 +168,7 @@ class PropertiesPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildErrorState(BuildContext context, WidgetRef ref, Object error) {
+  Widget _buildErrorState(BuildContext context, WidgetRef ref, Object error, FutureProvider provider) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -162,7 +193,7 @@ class PropertiesPage extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: () => ref.invalidate(propertiesProvider),
+              onPressed: () => ref.invalidate(provider),
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
               style: ElevatedButton.styleFrom(

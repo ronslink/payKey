@@ -6,6 +6,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 
@@ -50,6 +51,7 @@ export class Subscription {
   @Column()
   userId: string;
 
+  @Index()
   @Column({
     type: 'enum',
     enum: SubscriptionTier,
@@ -57,6 +59,7 @@ export class Subscription {
   })
   tier: SubscriptionTier;
 
+  @Index()
   @Column({
     type: 'enum',
     enum: SubscriptionStatus,
@@ -64,6 +67,7 @@ export class Subscription {
   })
   status: SubscriptionStatus;
 
+  @Index()
   @Column({ default: 'monthly' })
   billingPeriod: string;
 
@@ -127,6 +131,7 @@ export class Subscription {
   })
   renewalMethod: RenewalMethod;
 
+  @Index()
   @CreateDateColumn()
   createdAt: Date;
 

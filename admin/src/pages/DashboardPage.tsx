@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Row, Col, Card, Statistic, Typography, Spin, Alert } from 'antd';
+import { Row, Col, Card, Statistic, Typography, Spin, Alert, Table, Tag } from 'antd';
 import {
     TeamOutlined,
     UserOutlined,
@@ -10,7 +10,7 @@ import {
     LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
     XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
-import { adminAnalytics } from '../api/client';
+import { adminAnalytics, adminPlans } from '../api/client';
 
 const { Title } = Typography;
 
@@ -35,11 +35,22 @@ export default function DashboardPage() {
         queryKey: ['admin-dashboard'],
         queryFn: adminAnalytics.dashboard,
     });
+    const { data: tierStats, isLoading: tierStatsLoading } = useQuery({
+        queryKey: ['admin-tier-stats'],
+        queryFn: adminPlans.stats,
+    });
 
     if (isLoading) return <Spin size="large" style={{ display: 'block', marginTop: 100, textAlign: 'center' }} />;
     if (error) return <Alert type="error" title="Failed to load dashboard data" />;
 
     const { summary, charts } = data;
+
+    const tierColumns = [
+        { title: 'Tier', dataIndex: 'tier', key: 'tier', render: (v: string) => <Tag color="blue">{v}</Tag> },
+        { title: 'Subscribers', dataIndex: 'subscriber_count', key: 'subscribers', align: 'right' as const },
+        { title: 'MRR', dataIndex: 'total_mrr', key: 'mrr', align: 'right' as const, render: (v: any, r: any) => `${r.currency} ${Number(v).toLocaleString()}` },
+        { title: 'Avg Workers', dataIndex: 'avg_workers', key: 'avg_workers', align: 'right' as const, render: (v: any) => Number(v).toFixed(0) },
+    ];
 
     return (
         <div>
@@ -48,17 +59,23 @@ export default function DashboardPage() {
 
             {/* Summary cards */}
             <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-                <Col xs={24} sm={12} lg={6}>
+                <Col xs={24} sm={12} lg={8} xl={4}>
                     <StatCard title="Total Employers" value={summary.totalUsers} prefix={<UserOutlined />} color="#6366f1" />
                 </Col>
-                <Col xs={24} sm={12} lg={6}>
+                <Col xs={24} sm={12} lg={8} xl={4}>
                     <StatCard title="Active Workers" value={summary.activeWorkers} prefix={<TeamOutlined />} color="#06b6d4" />
                 </Col>
-                <Col xs={24} sm={12} lg={6}>
+                <Col xs={24} sm={12} lg={8} xl={4}>
+                    <StatCard title="Portal Connections" value={summary.totalPortalLinks || 0} color="#10b981" />
+                </Col>
+                <Col xs={24} sm={12} lg={8} xl={4}>
+                    <StatCard title="Pending Invites" value={summary.pendingPortalInvites || 0} color="#f59e0b" />
+                </Col>
+                <Col xs={24} sm={12} lg={8} xl={4}>
                     <StatCard title="Monthly Revenue" value={(summary.monthlyRevenue || 0).toFixed(0)} prefix={<DollarOutlined />} suffix="KES" color="#10b981" />
                 </Col>
-                <Col xs={24} sm={12} lg={6}>
-                    <StatCard title="Open Support Tickets" value={summary.openSupportTickets} prefix={<CustomerServiceOutlined />} color="#f59e0b" />
+                <Col xs={24} sm={12} lg={8} xl={4}>
+                    <StatCard title="Open Tickets" value={summary.openSupportTickets} prefix={<CustomerServiceOutlined />} color="#ef4444" />
                 </Col>
             </Row>
 
@@ -126,6 +143,22 @@ export default function DashboardPage() {
                                 <Bar dataKey="payrolls" name="Payrolls Run" fill="#6366f1" radius={[4, 4, 0, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
+                    </Card>
+                </Col>
+            </Row>
+
+            {/* Tier Stats Table */}
+            <Row gutter={[16, 16]} style={{ marginTop: 24, marginBottom: 24 }}>
+                <Col xs={24}>
+                    <Card title="Subscription Tier Statistics" style={{ borderRadius: 12, border: 'none', boxShadow: '0 1px 3px rgba(0,0,0,.08)' }}>
+                        <Table
+                            columns={tierColumns}
+                            dataSource={tierStats || []}
+                            rowKey="tier"
+                            loading={tierStatsLoading}
+                            pagination={false}
+                            size="small"
+                        />
                     </Card>
                 </Col>
             </Row>

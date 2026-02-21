@@ -52,7 +52,7 @@ export class SupportService {
     async getTicketWithMessages(ticketId: string, userId?: string): Promise<SupportTicket> {
         const ticket = await this.ticketRepo.findOne({
             where: { id: ticketId },
-            relations: ['messages'],
+            relations: ['messages', 'user'],
             order: { messages: { createdAt: 'ASC' } } as any,
         });
 

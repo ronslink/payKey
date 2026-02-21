@@ -5,6 +5,8 @@ import { SubscriptionsController } from './subscriptions.controller';
 import { FeatureAccessController } from './feature-access.controller';
 import { Subscription } from './entities/subscription.entity';
 import { SubscriptionPayment } from './entities/subscription-payment.entity';
+import { PromotionalItem } from './entities/promotional-item.entity';
+import { Campaign } from './entities/campaign.entity';
 import { FeatureAccessService } from './feature-access.service';
 import { MockDataService } from './mock-data.service';
 import { UsersModule } from '../users/users.module';
@@ -25,6 +27,8 @@ import { SubscriptionScheduler } from './subscription.scheduler';
     TypeOrmModule.forFeature([
       Subscription,
       SubscriptionPayment,
+      PromotionalItem,
+      Campaign,
       Transaction,
       DeviceToken,
       User,

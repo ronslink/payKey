@@ -10,6 +10,8 @@ import { Worker } from '../workers/entities/worker.entity';
 import { Transaction } from '../payments/entities/transaction.entity';
 import { Subscription } from '../subscriptions/entities/subscription.entity';
 import { SubscriptionPlan } from '../subscriptions/entities/subscription-plan.entity';
+import { PromotionalItem } from '../subscriptions/entities/promotional-item.entity';
+import { Campaign } from '../subscriptions/entities/campaign.entity';
 import { PayPeriod } from '../payroll/entities/pay-period.entity';
 import { PayrollRecord } from '../payroll/entities/payroll-record.entity';
 import { SupportTicket } from '../support/entities/support-ticket.entity';
@@ -32,6 +34,8 @@ import { AdminAuditController } from './admin-audit.controller';
             Transaction,
             Subscription,
             SubscriptionPlan,
+            PromotionalItem,
+            Campaign,
             PayPeriod,
             PayrollRecord,
             SupportTicket,

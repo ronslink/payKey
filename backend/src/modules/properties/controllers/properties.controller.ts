@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   Request,
+  Query,
 } from '@nestjs/common';
 import { PropertiesService } from '../services/properties.service';
 import {
@@ -35,15 +36,19 @@ export class PropertiesController {
   }
 
   @Get()
-  async getProperties(@Request() req: any): Promise<Property[]> {
-    return this.propertiesService.getProperties(req.user.userId);
+  async getProperties(
+    @Request() req: any,
+    @Query('status') status?: 'active' | 'archived' | 'all',
+  ): Promise<Property[]> {
+    return this.propertiesService.getProperties(req.user.userId, status);
   }
 
   @Get('summaries')
   async getPropertySummaries(
     @Request() req: any,
+    @Query('status') status?: 'active' | 'archived' | 'all',
   ): Promise<PropertySummaryDto[]> {
-    return this.propertiesService.getPropertySummaries(req.user.userId);
+    return this.propertiesService.getPropertySummaries(req.user.userId, status);
   }
 
   @Get(':id')
@@ -69,5 +74,21 @@ export class PropertiesController {
     @Param('id') id: string,
   ): Promise<void> {
     return this.propertiesService.deleteProperty(id, req.user.userId);
+  }
+
+  @Post(':id/restore')
+  async restoreProperty(
+    @Request() req: any,
+    @Param('id') id: string,
+  ): Promise<Property> {
+    return this.propertiesService.restoreProperty(id, req.user.userId);
+  }
+
+  @Delete(':id/permanent')
+  async permanentlyDeleteProperty(
+    @Request() req: any,
+    @Param('id') id: string,
+  ): Promise<void> {
+    return this.propertiesService.permanentlyDeleteProperty(id, req.user.userId);
   }
 }

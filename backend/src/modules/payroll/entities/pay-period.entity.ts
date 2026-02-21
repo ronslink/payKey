@@ -259,6 +259,7 @@ export class PayPeriod {
   @Column({ type: 'timestamp', nullable: true })
   processedAt: Date | null;
 
+  @Index()
   @CreateDateColumn()
   createdAt: Date;
 

@@ -22,12 +22,18 @@ export class AdminAuditController {
         @Query('limit') limit = '20',
         @Query('entityType') entityType?: string,
         @Query('action') action?: string,
+        @Query('adminEmail') adminEmail?: string,
+        @Query('startDate') startDate?: string,
+        @Query('endDate') endDate?: string,
     ) {
         return this.adminService.getAuditLogs({
             page: parseInt(page),
             limit: parseInt(limit),
             entityType,
             action,
+            adminEmail,
+            startDate,
+            endDate,
         });
     }
 }

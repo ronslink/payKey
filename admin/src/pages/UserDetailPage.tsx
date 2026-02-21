@@ -63,6 +63,15 @@ export default function UserDetailPage() {
                                 { title: 'Phone', dataIndex: 'phoneNumber', key: 'phone' },
                                 { title: 'Gross Salary (KES)', dataIndex: 'salaryGross', key: 'salary', render: (v: number) => Number(v).toLocaleString() },
                                 { title: 'Active', dataIndex: 'isActive', key: 'active', render: (v: boolean) => <Tag color={v ? 'green' : 'red'}>{v ? 'Active' : 'Inactive'}</Tag> },
+                                {
+                                    title: 'Employee Portal',
+                                    key: 'portal',
+                                    render: (_: any, r: any) => {
+                                        if (r.linkedUserId) return <Tag color="green">Connected</Tag>;
+                                        if (r.inviteCode) return <Tag color="orange">Invite Sent</Tag>;
+                                        return <Tag color="default">Uninvited</Tag>;
+                                    }
+                                },
                             ]}
                             pagination={false}
                         />

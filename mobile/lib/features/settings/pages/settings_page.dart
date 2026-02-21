@@ -539,7 +539,7 @@ class _SettingsContent extends ConsumerWidget {
         icon: Icons.help_outline,
         title: 'Help & Support',
         subtitle: 'FAQs, guides & contact us',
-        onTap: () => _showComingSoon(context, 'Help & Support'),
+        onTap: () => context.push(AppRoutes.support),
       ),
       SettingItem(
         icon: Icons.info_outline,

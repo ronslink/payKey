@@ -47,7 +47,15 @@ export default function SupportPage() {
 
     const columns = [
         { title: 'Subject', dataIndex: 'subject', key: 'subject', render: (v: string) => <strong>{v}</strong> },
-        { title: 'User', dataIndex: 'userName', key: 'user', render: (v: string, r: any) => <span>{v}<br /><small style={{ color: '#94a3b8' }}>{r.userEmail}</small></span> },
+        {
+            title: 'User',
+            key: 'user',
+            render: (_: any, r: any) => {
+                const name = r.user ? `${r.user.firstName || ''} ${r.user.lastName || ''}`.trim() : 'Unknown';
+                const email = r.user?.email || 'No email';
+                return <span>{name || email}<br /><small style={{ color: '#94a3b8' }}>{email}</small></span>;
+            }
+        },
         { title: 'Category', dataIndex: 'category', key: 'cat', render: (v: string) => <Tag>{v}</Tag> },
         { title: 'Priority', dataIndex: 'priority', key: 'priority', render: (v: string) => <Tag color={priorityColors[v]}>{v}</Tag> },
         { title: 'Status', dataIndex: 'status', key: 'status', render: (v: string) => <Tag color={statusColors[v]}>{v}</Tag> },
@@ -126,7 +134,7 @@ export default function SupportPage() {
                     <>
                         <div style={{ marginBottom: 16, padding: 12, background: '#f8fafc', borderRadius: 8 }}>
                             <Text strong>Category: </Text><Tag>{ticket.category}</Tag>
-                            <Text strong style={{ marginLeft: 12 }}>User: </Text><Text>{ticket.userName} ({ticket.userEmail})</Text>
+                            <Text strong style={{ marginLeft: 12 }}>User: </Text><Text>{ticket.user ? `${ticket.user.firstName || ''} ${ticket.user.lastName || ''}`.trim() || ticket.user.email : 'Unknown'} ({ticket.user?.email || 'N/A'})</Text>
                             <div style={{ marginTop: 8 }}>
                                 <Text type="secondary">{ticket.description}</Text>
                             </div>

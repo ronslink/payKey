@@ -20,9 +20,12 @@ class PropertiesRepository {
 
   PropertiesRepository(this._dio);
 
-  Future<List<PropertyModel>> getProperties() async {
+  Future<List<PropertyModel>> getProperties({String status = 'all'}) async {
     try {
-      final response = await _dio.get('/properties');
+      final response = await _dio.get(
+        '/properties',
+        queryParameters: {'status': status},
+      );
       return (response.data as List)
           .map((e) => PropertyModel.fromJson(e))
           .toList();
@@ -37,9 +40,12 @@ class PropertiesRepository {
     }
   }
 
-  Future<List<PropertyModel>> getPropertySummaries() async {
+  Future<List<PropertyModel>> getPropertySummaries({String status = 'all'}) async {
     try {
-      final response = await _dio.get('/properties/summaries');
+      final response = await _dio.get(
+        '/properties/summaries',
+        queryParameters: {'status': status},
+      );
       return (response.data as List)
           .map((e) => PropertyModel.fromJson(e))
           .toList();
@@ -109,6 +115,33 @@ class PropertiesRepository {
     } on DioException catch (e) {
       if (e.response?.statusCode == 403) {
         throw Exception('Upgrade to PLATINUM to delete properties');
+      }
+      throw _handleError(e);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Future<PropertyModel> restoreProperty(String id) async {
+    try {
+      final response = await _dio.post('/properties/$id/restore');
+      return PropertyModel.fromJson(response.data);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 403) {
+        throw Exception('Upgrade to PLATINUM to restore properties');
+      }
+      throw _handleError(e);
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Future<void> permanentlyDeleteProperty(String id) async {
+    try {
+      await _dio.delete('/properties/$id/permanent');
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 403) {
+        throw Exception('Upgrade to PLATINUM to permanently delete properties');
       }
       throw _handleError(e);
     } catch (e) {

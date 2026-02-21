@@ -269,6 +269,26 @@ export class ReportsService {
     return summary;
   }
 
+  async getPropertyTimeReport(userId: string, startDateStr: string, endDateStr: string) {
+    const startDate = new Date(startDateStr);
+    const endDate = new Date(endDateStr);
+
+    const timeEntries = await this.workersRepository.manager.query(`
+      SELECT p.id as "propertyId", p.name as "propertyName", SUM(t."totalHours") as "totalHours"
+      FROM time_entries t
+      JOIN properties p on t."propertyId" = p.id
+      WHERE t."userId" = $1 AND t."clockIn" BETWEEN $2 AND $3 AND t.status = 'COMPLETED'
+      GROUP BY p.id, p.name
+      ORDER BY p.name ASC
+    `, [userId, startDate, endDate]);
+
+    return timeEntries.map((e: any) => ({
+      propertyId: e.propertyId,
+      propertyName: e.propertyName,
+      totalHours: Math.round((Number(e.totalHours) || 0) * 100) / 100
+    }));
+  }
+
   async getStatutoryReport(userId: string, payPeriodId: string) {
     const summary = await this.getPayrollSummaryByPeriod(userId, payPeriodId);
 

@@ -71,6 +71,18 @@ export class ReportsController {
     return this.reportsService.getMasterRoll(req.user.userId, payPeriodId);
   }
 
+  @Get('properties/time')
+  async getPropertyTimeReport(
+    @Request() req: any,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+  ) {
+    const end = endDate ? new Date(endDate) : new Date();
+    const start = startDate ? new Date(startDate) : new Date(end.getFullYear(), end.getMonth(), 1);
+
+    return this.reportsService.getPropertyTimeReport(req.user.userId, start.toISOString(), end.toISOString());
+  }
+
   @Get('dashboard')
   async getDashboardMetrics(@Request() req: any) {
     return this.reportsService.getDashboardMetrics(req.user.userId);

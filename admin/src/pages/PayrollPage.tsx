@@ -38,24 +38,42 @@ export default function PayrollPage() {
             key: 'employer',
             render: (v: string, r: any) => <span><strong>{v}</strong><br /><small style={{ color: '#94a3b8' }}>{r.employer_email}</small></span>,
         },
-        {
-            title: 'Period',
-            key: 'period',
-            render: (_: any, r: any) => `${new Date(r.startDate).toLocaleDateString()} – ${new Date(r.endDate).toLocaleDateString()}`,
-        },
-        { title: 'Status', dataIndex: 'status', key: 'status', render: (v: string) => <Tag color={statusColor[v] || 'default'}>{v}</Tag> },
-        { title: 'Workers Paid', dataIndex: 'recordCount', key: 'count', align: 'right' as const },
-        { title: 'Total Net Pay (KES)', dataIndex: 'totalNetPay', key: 'amount', align: 'right' as const, render: (v: number) => Number(v).toLocaleString() },
-        {
-            title: 'Actions',
-            key: 'actions',
-            render: (_: any, r: any) => (
-                <Button size="small" onClick={() => setDetailModal({ open: true, payPeriodId: r.id, employerName: r.employer_name })}>
-                    View Records
-                </Button>
-            ),
-        },
+        { title: 'Total Pay Periods', dataIndex: 'totalPayPeriods', key: 'count', align: 'right' as const },
+        { title: 'Lifetime Net Pay (KES)', dataIndex: 'lifetimeNetPay', key: 'amount', align: 'right' as const, render: (v: number) => Number(v || 0).toLocaleString() },
     ];
+
+    const expandedRowRender = (employer: any) => {
+        const nestedColumns = [
+            {
+                title: 'Period',
+                key: 'period',
+                render: (_: any, r: any) => `${new Date(r.startDate).toLocaleDateString()} – ${new Date(r.endDate).toLocaleDateString()}`,
+            },
+            { title: 'Status', dataIndex: 'status', key: 'status', render: (v: string) => <Tag color={statusColor[v] || 'default'}>{v}</Tag> },
+            { title: 'Workers Paid', dataIndex: 'recordCount', key: 'count', align: 'right' as const },
+            { title: 'Total Net Pay (KES)', dataIndex: 'totalNetPay', key: 'amount', align: 'right' as const, render: (v: number) => Number(v).toLocaleString() },
+            {
+                title: 'Actions',
+                key: 'actions',
+                render: (_: any, r: any) => (
+                    <Button size="small" onClick={() => setDetailModal({ open: true, payPeriodId: r.id, employerName: employer.employer_name })}>
+                        View Records
+                    </Button>
+                ),
+            },
+        ];
+
+        return (
+            <Table
+                columns={nestedColumns}
+                dataSource={employer.recentPeriods || []}
+                pagination={false}
+                rowKey="id"
+                size="small"
+                style={{ margin: 0 }}
+            />
+        );
+    };
 
     const recordColumns = [
         { title: 'Worker', dataIndex: 'worker_name', key: 'name' },
@@ -92,6 +110,32 @@ export default function PayrollPage() {
                         </div>
                     </Card>
                 </Col>
+                <Col xs={24} sm={12}>
+                    <Card size="small" title="Top-up Methods" loading={dashboardLoading} style={{ minHeight: 140 }}>
+                        {dashboard?.summary?.topupBreakdown?.map((t: any) => (
+                            <div key={t.method} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 15 }}>
+                                <span style={{ textTransform: 'capitalize' }}>{t.method.toLowerCase()}</span>
+                                <strong>KES {Number(t.volume).toLocaleString()} <span style={{ color: '#94a3b8', fontSize: 13 }}>({t.count})</span></strong>
+                            </div>
+                        ))}
+                        {(!dashboard?.summary?.topupBreakdown || dashboard.summary.topupBreakdown.length === 0) && (
+                            <div style={{ color: '#94a3b8', textAlign: 'center', marginTop: 16 }}>No data yet</div>
+                        )}
+                    </Card>
+                </Col>
+                <Col xs={24} sm={12}>
+                    <Card size="small" title="Payout Methods" loading={dashboardLoading} style={{ minHeight: 140 }}>
+                        {dashboard?.summary?.payoutBreakdown?.map((t: any) => (
+                            <div key={t.method} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 15 }}>
+                                <span style={{ textTransform: 'capitalize' }}>{t.method.toLowerCase()}</span>
+                                <strong>KES {Number(t.volume).toLocaleString()} <span style={{ color: '#94a3b8', fontSize: 13 }}>({t.count})</span></strong>
+                            </div>
+                        ))}
+                        {(!dashboard?.summary?.payoutBreakdown || dashboard.summary.payoutBreakdown.length === 0) && (
+                            <div style={{ color: '#94a3b8', textAlign: 'center', marginTop: 16 }}>No data yet</div>
+                        )}
+                    </Card>
+                </Col>
             </Row>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16 }}>
@@ -109,10 +153,11 @@ export default function PayrollPage() {
             <Table
                 columns={columns}
                 dataSource={data?.data || []}
-                rowKey="id"
+                rowKey="employer_id"
                 loading={isLoading}
                 pagination={{ total: data?.total, pageSize: 20, current: page, onChange: setPage }}
                 style={{ background: '#fff', borderRadius: 12 }}
+                expandable={{ expandedRowRender, expandRowByClick: true }}
             />
 
             <Modal

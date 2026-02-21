@@ -2,10 +2,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/property_model.dart';
 import '../../data/repositories/properties_repository.dart';
 
-/// Provider for fetching all properties with 403 fallback (via repository)
+// Default provider returns active properties
 final propertiesProvider = FutureProvider<List<PropertyModel>>((ref) async {
   final repository = ref.watch(propertiesRepositoryProvider);
-  return repository.getProperties();
+  return repository.getProperties(status: 'active');
+});
+
+// Provider for archived properties
+final archivedPropertiesProvider = FutureProvider<List<PropertyModel>>((ref) async {
+  final repository = ref.watch(propertiesRepositoryProvider);
+  return repository.getProperties(status: 'archived');
 });
 
 /// Provider for fetching a single property with 403 fallback (via repository)
@@ -58,5 +64,22 @@ class PropertyController {
     final repository = _ref.read(propertiesRepositoryProvider);
     await repository.deleteProperty(id);
     _ref.invalidate(propertiesProvider);
+    _ref.invalidate(archivedPropertiesProvider);
+    _ref.invalidate(propertyDetailProvider(id));
+  }
+
+  Future<void> restoreProperty(String id) async {
+    final repository = _ref.read(propertiesRepositoryProvider);
+    await repository.restoreProperty(id);
+    _ref.invalidate(propertiesProvider);
+    _ref.invalidate(archivedPropertiesProvider);
+    _ref.invalidate(propertyDetailProvider(id));
+  }
+
+  Future<void> permanentlyDeleteProperty(String id) async {
+    final repository = _ref.read(propertiesRepositoryProvider);
+    await repository.permanentlyDeleteProperty(id);
+    _ref.invalidate(propertiesProvider);
+    _ref.invalidate(archivedPropertiesProvider);
   }
 }

@@ -88,6 +88,7 @@ export class PayrollRecord {
   @Column('decimal', { precision: 10, scale: 2, transformer: new ColumnNumericTransformer() })
   taxAmount: number;
 
+  @Index()
   @Column({
     type: 'simple-enum',
     enum: PayrollStatus,
@@ -113,6 +114,7 @@ export class PayrollRecord {
   @Column({ type: 'json', nullable: true })
   deductions: Record<string, any>;
 
+  @Index()
   @CreateDateColumn()
   createdAt: Date;
 

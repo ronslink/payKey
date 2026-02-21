@@ -14,6 +14,7 @@ import {
     SettingOutlined,
     HistoryOutlined,
     NotificationOutlined,
+    ContainerOutlined,
 } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -32,6 +33,7 @@ const menuItems = [
     { key: '/tax-configs', icon: <FileTextOutlined />, label: 'Tax Configs' },
     { key: '/support', icon: <CustomerServiceOutlined />, label: 'Support Tickets' },
     { key: '/settings', icon: <SettingOutlined />, label: 'System Settings' },
+    { key: '/logs', icon: <ContainerOutlined />, label: 'Logs' },
     { key: '/audit-logs', icon: <HistoryOutlined />, label: 'Audit Logs' },
     { key: '/notifications', icon: <NotificationOutlined />, label: 'Notifications' },
 ];

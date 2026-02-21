@@ -4,6 +4,7 @@ import {
   PrimaryGeneratedColumn,
   ManyToOne,
   CreateDateColumn,
+  Index,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Worker } from '../../workers/entities/worker.entity';
@@ -60,6 +61,7 @@ export class Transaction {
   @Column({ default: 'KES' })
   currency: string;
 
+  @Index()
   @Column({
     type: 'enum',
     enum: TransactionType,
@@ -67,6 +69,7 @@ export class Transaction {
   })
   type: TransactionType;
 
+  @Index()
   @Column({
     type: 'enum',
     enum: TransactionStatus,
@@ -107,6 +110,7 @@ export class Transaction {
   @Column({ nullable: true })
   payPeriodId: string;
 
+  @Index()
   @CreateDateColumn()
   createdAt: Date;
 }

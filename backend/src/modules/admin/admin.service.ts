@@ -1,4 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In } from 'typeorm';
 import Redis from 'ioredis';
@@ -41,11 +43,18 @@ export class AdminService {
         private readonly auditLogRepo: Repository<AdminAuditLog>,
         private readonly dataSource: DataSource,
         private readonly configService: ConfigService,
+        @Inject(CACHE_MANAGER) private cacheManager: Cache,
     ) { }
 
     // ─── Analytics Dashboard ───────────────────────────────────────────────────
 
     async getDashboardMetrics() {
+        const cacheKey = 'admin_dashboard_metrics';
+        const cached = await this.cacheManager.get(cacheKey);
+        if (cached) {
+            return cached;
+        }
+
         const [
             totalUsers,
             activeUsers30d,
@@ -57,6 +66,8 @@ export class AdminService {
             payrollsProcessed,
             totalPayrollVolume,
             openSupportTickets,
+            totalPortalLinks,
+            pendingPortalInvites,
         ] = await Promise.all([
             // Total registered employers
             this.userRepo.count({ where: { role: In(['EMPLOYER', 'USER']) as any } }),
@@ -111,6 +122,18 @@ export class AdminService {
 
             // Open support tickets
             this.supportTicketRepo.count({ where: { status: 'OPEN' as any } }),
+
+            // Employee Portal Connections
+            this.dataSource.query(`
+                SELECT COUNT(*) as count 
+                FROM workers WHERE "linkedUserId" IS NOT NULL
+            `).then(r => parseInt(r[0]?.count || '0')),
+
+            // Pending Portal Invites
+            this.dataSource.query(`
+                SELECT COUNT(*) as count 
+                FROM workers WHERE "inviteCode" IS NOT NULL AND "linkedUserId" IS NULL
+            `).then(r => parseInt(r[0]?.count || '0')),
         ]);
 
         // Revenue chart — last 12 months
@@ -141,7 +164,7 @@ export class AdminService {
       ORDER BY month_date ASC
     `);
 
-        return {
+        const result = {
             summary: {
                 totalUsers,
                 activeUsers30d,
@@ -152,6 +175,8 @@ export class AdminService {
                 payrollsProcessed,
                 totalPayrollVolume,
                 openSupportTickets,
+                totalPortalLinks,
+                pendingPortalInvites,
             },
             charts: {
                 revenueByMonth: revenueChart.map((r: any) => ({
@@ -169,6 +194,10 @@ export class AdminService {
                 })),
             },
         };
+
+        // Cache for 15 minutes (900000 milliseconds)
+        await this.cacheManager.set(cacheKey, result, 900000);
+        return result;
     }
 
     // ─── Infrastructure Health ─────────────────────────────────────────────────
@@ -342,23 +371,24 @@ export class AdminService {
 
     async getContainerLogs(container?: string, lines = 100) {
         try {
+            const safeLines = Math.min(lines, 1000);
             let cmd: string;
-            
+
             if (container) {
                 // Get logs for specific container
-                cmd = `docker logs --tail ${lines} ${container} 2>&1`;
+                cmd = `docker logs --tail ${safeLines} ${container} 2>&1`;
             } else {
                 // Get logs from all containers (newest first)
-                cmd = `docker ps --format '{{.Names}}' 2>/dev/null | head -5 | xargs -I {} docker logs --tail ${lines} {} 2>&1 | head -500`;
+                cmd = `docker ps --format '{{.Names}}' 2>/dev/null | head -5 | xargs -I {} docker logs --tail ${safeLines} {} 2>&1 | head -500`;
             }
 
-            const { stdout, stderr } = await execAsync(cmd);
-            
+            const { stdout, stderr } = await execAsync(cmd, { maxBuffer: 1024 * 1024 * 5 });
+
             // Parse logs - each line: timestamp level message
             const logLines = (stdout + stderr)
                 .split('\n')
                 .filter(line => line.trim())
-                .slice(-lines)
+                .slice(-safeLines)
                 .reverse()
                 .map(line => {
                     // Try to parse structured log (JSON)
@@ -378,10 +408,10 @@ export class AdminService {
                         else if (upperLine.includes('WARN')) level = 'WARN';
                         else if (upperLine.includes('DEBUG')) level = 'DEBUG';
                         else if (upperLine.includes('INFO')) level = 'INFO';
-                        
+
                         // Try to extract timestamp
                         const timestampMatch = line.match(/^(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2})/);
-                        
+
                         return {
                             timestamp: timestampMatch ? timestampMatch[1] : new Date().toISOString(),
                             level,
@@ -394,7 +424,7 @@ export class AdminService {
             return {
                 data: logLines,
                 container: container || 'all',
-                lines,
+                lines: safeLines,
                 total: logLines.length,
             };
         } catch (error) {
@@ -485,6 +515,8 @@ export class AdminService {
         w."isActive",
         w."paymentMethod",
         w."createdAt",
+        w."linkedUserId",
+        w."inviteCode",
         u.id as employer_id,
         u.email as employer_email,
         COALESCE(u."businessName", CONCAT(u."firstName", ' ', u."lastName"), u.email) as employer_name
@@ -596,7 +628,9 @@ export class AdminService {
             totalPeriods,
             successfulPeriods,
             totalVolume,
-            recentPeriods
+            recentPeriods,
+            topupMethods,
+            payoutMethods
         ] = await Promise.all([
             // Total Pay Periods
             this.payPeriodRepo.count(),
@@ -625,6 +659,23 @@ export class AdminService {
                 GROUP BY pp.id, u.id
                 ORDER BY pp."createdAt" DESC
                 LIMIT 5
+            `),
+            // Top-up Methods (from transactions where type = 'TOPUP' and status = 'COMPLETED')
+            this.dataSource.query(`
+                SELECT "paymentMethod" as method, COUNT(*) as count, COALESCE(SUM(amount), 0) as volume
+                FROM transactions
+                WHERE type = 'TOPUP' AND status = 'COMPLETED'
+                GROUP BY "paymentMethod"
+                ORDER BY volume DESC
+            `),
+            // Payout Methods (from workers linked to finalized/paid payroll records)
+            this.dataSource.query(`
+                SELECT w."paymentMethod" as method, COUNT(pr.id) as count, COALESCE(SUM(pr."netSalary"), 0) as volume
+                FROM payroll_records pr
+                JOIN workers w ON w.id = pr."workerId"
+                WHERE pr.status IN ('paid', 'finalized')
+                GROUP BY w."paymentMethod"
+                ORDER BY volume DESC
             `)
         ]);
 
@@ -633,6 +684,16 @@ export class AdminService {
                 totalPeriods,
                 successfulPeriods,
                 totalVolume,
+                topupBreakdown: topupMethods.map((m: any) => ({
+                    method: m.method || 'Unknown',
+                    count: parseInt(m.count),
+                    volume: parseFloat(m.volume)
+                })),
+                payoutBreakdown: payoutMethods.map((m: any) => ({
+                    method: m.method || 'Unknown',
+                    count: parseInt(m.count),
+                    volume: parseFloat(m.volume)
+                })),
             },
             recentPeriods: recentPeriods.map((p: any) => ({
                 ...p,
@@ -643,40 +704,83 @@ export class AdminService {
     }
 
     async getPayPeriods(search?: string, page = 1, limit = 20) {
-        const [payPeriods, countResult] = await Promise.all([
+        // Step 1: Paginate over Employers who have pay periods.
+        const [employers, countResult] = await Promise.all([
             this.dataSource.query(`
-        SELECT
-          pp.id,
-          pp.status,
-          pp."startDate",
-          pp."endDate",
-          pp."createdAt",
-          COALESCE(u."businessName", CONCAT(u."firstName", ' ', u."lastName"), u.email) as employer_name,
-          u.email as employer_email,
-          u.id as employer_id,
-          COUNT(pr.id) as record_count,
-          COALESCE(SUM(pr."netSalary"), 0) as total_net_pay
-        FROM pay_periods pp
-        JOIN users u ON u.id = pp."userId"
-        LEFT JOIN payroll_records pr ON pr."payPeriodId" = pp.id
-        ${search ? `WHERE COALESCE(u."businessName", CONCAT(u."firstName", ' ', u."lastName")) ILIKE $1 OR u.email ILIKE $1` : ''}
-        GROUP BY pp.id, u.id
-        ORDER BY pp."createdAt" DESC
-        LIMIT ${limit} OFFSET ${(page - 1) * limit}
-      `, search ? [`%${search}%`] : []),
+                SELECT
+                    u.id as employer_id,
+                    u.email as employer_email,
+                    COALESCE(u."businessName", CONCAT(u."firstName", ' ', u."lastName"), u.email) as employer_name,
+                    COUNT(DISTINCT pp.id) as total_pay_periods,
+                    COALESCE(SUM(pr."netSalary"), 0) as lifetime_net_pay
+                FROM users u
+                JOIN pay_periods pp ON pp."userId" = u.id
+                LEFT JOIN payroll_records pr ON pr."payPeriodId" = pp.id
+                ${search ? `WHERE COALESCE(u."businessName", CONCAT(u."firstName", ' ', u."lastName")) ILIKE $1 OR u.email ILIKE $1` : ''}
+                GROUP BY u.id
+                ORDER BY total_pay_periods DESC
+                LIMIT ${limit} OFFSET ${(page - 1) * limit}
+            `, search ? [`%${search}%`] : []),
             this.dataSource.query(`
-        SELECT COUNT(*) as total FROM pay_periods pp
-        JOIN users u ON u.id = pp."userId"
-        ${search ? `WHERE COALESCE(u."businessName", CONCAT(u."firstName", ' ', u."lastName")) ILIKE $1 OR u.email ILIKE $1` : ''}
-      `, search ? [`%${search}%`] : []),
+                SELECT COUNT(DISTINCT u.id) as total 
+                FROM users u
+                JOIN pay_periods pp ON pp."userId" = u.id
+                ${search ? `WHERE COALESCE(u."businessName", CONCAT(u."firstName", ' ', u."lastName")) ILIKE $1 OR u.email ILIKE $1` : ''}
+            `, search ? [`%${search}%`] : []),
         ]);
 
+        if (employers.length === 0) {
+            return { data: [], total: 0, page, limit };
+        }
+
+        // Step 2: Fetch the top 3 pay periods for each employer
+        const employerIds = employers.map((e: any) => e.employer_id);
+        const placeholders = employerIds.map((_: any, i: number) => `$${i + 1}`).join(',');
+
+        const recentPayPeriods = await this.dataSource.query(`
+            WITH RankedPeriods AS (
+                SELECT 
+                    pp.id,
+                    pp."userId" as employer_id,
+                    pp.status,
+                    pp."startDate",
+                    pp."endDate",
+                    pp."createdAt",
+                    ROW_NUMBER() OVER(PARTITION BY pp."userId" ORDER BY pp."createdAt" DESC) as rn
+                FROM pay_periods pp
+                WHERE pp."userId" IN (${placeholders})
+            )
+            SELECT 
+                rp.*,
+                COUNT(pr.id) as record_count,
+                COALESCE(SUM(pr."netSalary"), 0) as total_net_pay
+            FROM RankedPeriods rp
+            LEFT JOIN payroll_records pr ON pr."payPeriodId" = rp.id
+            WHERE rp.rn <= 3
+            GROUP BY rp.id, rp.employer_id, rp.status, rp."startDate", rp."endDate", rp."createdAt", rp.rn
+            ORDER BY rp.employer_id, rp.rn ASC
+        `, employerIds);
+
+        // Map periods to employers
+        const formattedData = employers.map((emp: any) => ({
+            ...emp,
+            totalPayPeriods: parseInt(emp.total_pay_periods),
+            lifetimeNetPay: parseFloat(emp.lifetime_net_pay),
+            recentPeriods: recentPayPeriods
+                .filter((pp: any) => pp.employer_id === emp.employer_id)
+                .map((pp: any) => ({
+                    id: pp.id,
+                    status: pp.status,
+                    startDate: pp.startDate,
+                    endDate: pp.endDate,
+                    createdAt: pp.createdAt,
+                    recordCount: parseInt(pp.record_count),
+                    totalNetPay: parseFloat(pp.total_net_pay),
+                }))
+        }));
+
         return {
-            data: payPeriods.map((p: any) => ({
-                ...p,
-                recordCount: parseInt(p.record_count),
-                totalNetPay: parseFloat(p.total_net_pay),
-            })),
+            data: formattedData,
             total: parseInt(countResult[0]?.total || '0'),
             page,
             limit,
@@ -723,29 +827,57 @@ export class AdminService {
         }
     }
 
-    async getAuditLogs(filters: { page?: number; limit?: number; entityType?: string; action?: string }) {
-        const { page = 1, limit = 20, entityType, action } = filters;
+    async getAuditLogs(filters: {
+        page?: number;
+        limit?: number;
+        entityType?: string;
+        action?: string;
+        adminEmail?: string;
+        startDate?: string;
+        endDate?: string;
+    }) {
+        const { page = 1, limit = 20 } = filters;
+        const offset = (page - 1) * limit;
 
-        const qb = this.auditLogRepo.createQueryBuilder('log')
-            .leftJoinAndSelect('log.adminUser', 'adminUser')
-            .orderBy('log.createdAt', 'DESC')
-            .skip((page - 1) * limit)
-            .take(limit);
+        const query = this.auditLogRepo.createQueryBuilder('log')
+            .leftJoin('users', 'u', 'u.id = log."adminUserId"')
+            .select([
+                'log.id as id',
+                'log.action as action',
+                'log."entityType" as "entityType"',
+                'log."entityId" as "entityId"',
+                'log."oldValues" as "oldValues"',
+                'log."newValues" as "newValues"',
+                'log."ipAddress" as "ipAddress"',
+                'log."createdAt" as "createdAt"',
+                'u.email as "adminEmail"'
+            ]);
 
-        if (entityType) {
-            qb.andWhere('log.entityType = :entityType', { entityType });
+        if (filters.entityType) {
+            query.andWhere('log."entityType" = :entityType', { entityType: filters.entityType });
         }
-        if (action) {
-            qb.andWhere('log.action = :action', { action });
+        if (filters.action) {
+            query.andWhere('log.action = :action', { action: filters.action });
+        }
+        if (filters.adminEmail) {
+            query.andWhere('u.email ILIKE :adminEmail', { adminEmail: `%${filters.adminEmail}%` });
+        }
+        if (filters.startDate) {
+            query.andWhere('log."createdAt" >= :startDate', { startDate: filters.startDate });
+        }
+        if (filters.endDate) {
+            query.andWhere('log."createdAt" <= :endDate', { endDate: filters.endDate });
         }
 
-        const [data, total] = await qb.getManyAndCount();
+        query.orderBy('log."createdAt"', 'DESC')
+            .offset(offset)
+            .limit(limit);
+
+        const logs = await query.getRawMany();
+        const total = await query.getCount();
 
         return {
-            data: data.map(log => ({
-                ...log,
-                adminEmail: log.adminUser?.email,
-            })),
+            data: logs,
             total,
             page,
             limit,

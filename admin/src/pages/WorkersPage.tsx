@@ -22,6 +22,15 @@ export default function WorkersPage() {
         { title: 'Gross Salary (KES)', dataIndex: 'salaryGross', key: 'salary', align: 'right' as const, render: (v: number) => Number(v || 0).toLocaleString() },
         { title: 'Status', dataIndex: 'isActive', key: 'active', render: (v: boolean) => <Tag color={v ? 'green' : 'red'}>{v ? 'Active' : 'Inactive'}</Tag> },
         { title: 'Payment Method', dataIndex: 'paymentMethod', key: 'method', render: (v: string) => <Tag>{v || '—'}</Tag> },
+        {
+            title: 'Employee Portal',
+            key: 'portal',
+            render: (_: any, r: any) => {
+                if (r.linkedUserId) return <Tag color="green">Connected</Tag>;
+                if (r.inviteCode) return <Tag color="orange">Invite Sent</Tag>;
+                return <Tag color="default">Uninvited</Tag>;
+            }
+        },
         { title: 'Added', dataIndex: 'createdAt', key: 'created', render: (v: string) => new Date(v).toLocaleDateString() },
     ];
 

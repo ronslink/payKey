@@ -31,6 +31,8 @@ import { DeviceToken } from '../modules/notifications/entities/device-token.enti
 import { ExchangeRate } from '../modules/payments/entities/exchange-rate.entity';
 import { SystemConfig } from '../modules/system-config/entities/system-config.entity';
 import { SubscriptionPlan } from '../modules/subscriptions/entities/subscription-plan.entity';
+import { PromotionalItem } from '../modules/subscriptions/entities/promotional-item.entity';
+import { Campaign } from '../modules/subscriptions/entities/campaign.entity';
 import { SupportTicket } from '../modules/support/entities/support-ticket.entity';
 import { SupportMessage } from '../modules/support/entities/support-message.entity';
 import { AdminAuditLog } from '../modules/admin/entities/audit-log.entity';
@@ -90,6 +92,8 @@ export const getDatabaseConfig = (
         ExchangeRate,
         SystemConfig,
         SubscriptionPlan,
+        PromotionalItem,
+        Campaign,
         SupportTicket,
         SupportMessage,
         AdminAuditLog,
@@ -163,6 +167,8 @@ export const getDatabaseConfig = (
       ExchangeRate,
       SystemConfig,
       SubscriptionPlan,
+      PromotionalItem,
+      Campaign,
       SupportTicket,
       SupportMessage,
       AdminAuditLog,
