@@ -327,7 +327,7 @@ export class AdminService {
     private async getDockerInfo() {
         try {
             const containers = await docker.listContainers({ all: true });
-            
+
             const containerList = containers.map(c => ({
                 name: c.Names[0]?.replace(/^\//, ''),
                 status: c.Status,
@@ -336,7 +336,8 @@ export class AdminService {
             }));
 
             return { status: 'ok', containers: containerList };
-        } catch {
+        } catch (error: any) {
+            this.logger.warn(`Failed to access Docker daemon: ${error.message}`);
             return { status: 'unavailable', containers: [] };
         }
     }
@@ -346,7 +347,7 @@ export class AdminService {
     async getContainers() {
         try {
             const containers = await docker.listContainers({ all: true });
-            
+
             const data = containers.map(c => ({
                 name: c.Names[0]?.replace(/^\//, ''),
                 status: c.Status,
@@ -380,7 +381,7 @@ export class AdminService {
                 // Get logs from all running containers
                 const containers = await docker.listContainers({ all: false });
                 const logParts: string[] = [];
-                
+
                 for (const c of containers.slice(0, 5)) {
                     const containerObj = docker.getContainer(c.Id);
                     try {
@@ -674,11 +675,11 @@ export class AdminService {
                 ORDER BY pp."createdAt" DESC
                 LIMIT 5
             `),
-            // Top-up Methods (from transactions where type = 'TOPUP' and status = 'COMPLETED')
+            // Top-up Methods (from transactions where type = 'TOPUP' and status = 'SUCCESS')
             this.dataSource.query(`
                 SELECT "paymentMethod" as method, COUNT(*) as count, COALESCE(SUM(amount), 0) as volume
                 FROM transactions
-                WHERE type = 'TOPUP' AND status = 'COMPLETED'
+                WHERE type = 'TOPUP' AND status = 'SUCCESS'
                 GROUP BY "paymentMethod"
                 ORDER BY volume DESC
             `),
