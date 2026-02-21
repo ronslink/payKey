@@ -7,6 +7,7 @@ class TopupSelectionSheet extends StatefulWidget {
   final Function(double amount, String phone) onMpesaConfirm;
   final Function(double amount) onCheckoutConfirm;
   final Function(double amount) onStripeConfirm; // New
+  final String? defaultPhone;
 
   const TopupSelectionSheet({
     super.key,
@@ -14,6 +15,7 @@ class TopupSelectionSheet extends StatefulWidget {
     required this.onMpesaConfirm,
     required this.onCheckoutConfirm,
     required this.onStripeConfirm,
+    this.defaultPhone,
   });
 
   static Future<void> show({
@@ -22,6 +24,7 @@ class TopupSelectionSheet extends StatefulWidget {
     required Function(double amount, String phone) onMpesaConfirm,
     required Function(double amount) onCheckoutConfirm,
     required Function(double amount) onStripeConfirm,
+    String? defaultPhone,
   }) {
 
     final defaultAmount = shortfall > 0
@@ -37,6 +40,7 @@ class TopupSelectionSheet extends StatefulWidget {
         onMpesaConfirm: onMpesaConfirm,
         onCheckoutConfirm: onCheckoutConfirm,
         onStripeConfirm: onStripeConfirm,
+        defaultPhone: defaultPhone,
       ),
     );
   }
@@ -58,7 +62,7 @@ class _TopupSelectionSheetState extends State<TopupSelectionSheet> with SingleTi
       text: widget.defaultAmount.toStringAsFixed(0),
     );
     _phoneController = TextEditingController(
-      text: '07', // Default prefix
+      text: widget.defaultPhone ?? '07', // Default prefix or settings phone
     );
   }
 

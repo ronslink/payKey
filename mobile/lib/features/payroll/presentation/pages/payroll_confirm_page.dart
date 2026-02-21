@@ -9,6 +9,7 @@ import '../constants/payroll_confirm_constants.dart';
 import '../widgets/topup_selection_sheet.dart'; // New sheet
 import 'package:url_launcher/url_launcher.dart'; // For Checkout
 import '../models/payroll_confirm_state.dart';
+import '../../../settings/providers/settings_provider.dart';
 
 import '../widgets/payment_results_page.dart';
 import '../widgets/payroll_processing_dialog.dart';
@@ -144,10 +145,15 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
 
   void _showTopupSheet() {
     final shortfall = _state.verification?.shortfall ?? 0;
+    
+    // Attempt to get phone number from settings
+    final settingsAsync = ref.read(settingsProvider);
+    final defaultPhone = settingsAsync.valueOrNull?.mpesaPhone;
 
     TopupSelectionSheet.show(
       context: context,
       shortfall: shortfall,
+      defaultPhone: defaultPhone,
       onMpesaConfirm: _performTopup,
       onCheckoutConfirm: _performCheckoutTopup,
       onStripeConfirm: _performStripeTopup,

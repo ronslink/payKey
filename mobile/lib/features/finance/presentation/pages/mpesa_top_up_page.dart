@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../features/payments/presentation/providers/payments_provider.dart';
+import '../../../../features/settings/providers/settings_provider.dart';
 import '../../constants/finance_constants.dart';
 
 class MpesaTopUpPage extends ConsumerStatefulWidget {
@@ -18,6 +19,19 @@ class _MpesaTopUpPageState extends ConsumerState<MpesaTopUpPage> {
   
   // M-Pesa Transaction Limit
   static const int kMpesaMaxAmount = 150000;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final settings = ref.read(settingsProvider).valueOrNull;
+      if (settings?.mpesaPhone != null && settings!.mpesaPhone!.isNotEmpty) {
+        setState(() {
+          _phoneController.text = settings.mpesaPhone!;
+        });
+      }
+    });
+  }
 
   @override
   void dispose() {

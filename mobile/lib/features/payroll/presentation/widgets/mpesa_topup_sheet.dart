@@ -5,11 +5,13 @@ import '../constants/payroll_confirm_constants.dart';
 class MpesaTopupSheet extends StatefulWidget {
   final double defaultAmount;
   final Future<void> Function(double amount, String phone) onConfirm;
+  final String? defaultPhone;
 
   const MpesaTopupSheet({
     super.key,
     required this.defaultAmount,
     required this.onConfirm,
+    this.defaultPhone,
   });
 
   /// Show the topup sheet
@@ -17,6 +19,7 @@ class MpesaTopupSheet extends StatefulWidget {
     required BuildContext context,
     required double shortfall,
     required Future<void> Function(double amount, String phone) onConfirm,
+    String? defaultPhone,
   }) {
     final defaultAmount = shortfall > 0
         ? shortfall.ceilToDouble()
@@ -29,6 +32,7 @@ class MpesaTopupSheet extends StatefulWidget {
       builder: (context) => MpesaTopupSheet(
         defaultAmount: defaultAmount,
         onConfirm: onConfirm,
+        defaultPhone: defaultPhone,
       ),
     );
   }
@@ -48,7 +52,7 @@ class _MpesaTopupSheetState extends State<MpesaTopupSheet> {
       text: widget.defaultAmount.toStringAsFixed(0),
     );
     _phoneController = TextEditingController(
-      text: PayrollConfirmConstants.defaultPhonePrefix,
+      text: widget.defaultPhone ?? PayrollConfirmConstants.defaultPhonePrefix,
     );
   }
 
