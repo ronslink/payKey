@@ -120,6 +120,17 @@ export class TaxConfigService implements OnModuleInit {
    * Seed initial tax configurations for 2024/2025 (Idempotent)
    */
   async seedInitialConfigs(): Promise<void> {
+    // Check if table exists before seeding
+    try {
+      await this.taxConfigRepository.findOne({ where: { id: '00000000-0000-0000-0000-000000000000' } });
+    } catch (error: any) {
+      if (error.code === '42P01' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
+        this.logger.warn('⚠️ tax_config table does not exist yet. Skipping seed. Run migrations first.');
+        return;
+      }
+      throw error;
+    }
+
     const configs: Partial<TaxConfig>[] = [
       // PAYE - Graduated rates (Effective 2023-07-01)
       {
