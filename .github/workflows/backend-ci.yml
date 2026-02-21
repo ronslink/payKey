@@ -238,11 +238,12 @@ jobs:
         uses: appleboy/ssh-action@v1.0.0
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         with:
           host: ${{ secrets.DO_HOST }}
           username: ${{ secrets.DO_USERNAME }}
           key: ${{ secrets.DO_SSH_KEY }}
-          envs: DOCKER_USERNAME
+          envs: DOCKER_USERNAME,DOCKER_PASSWORD
           timeout: 20m
           script: |
             set -e
@@ -273,18 +274,22 @@ jobs:
               exit 1
             fi
 
-            # ── 3. Pull latest code ───────────────────────────────────────────
+            # ── 3. Authenticate with Docker Hub ──────────────────────────────
+            echo "🔐 Logging in to Docker Hub..."
+            echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+
+            # ── 4. Pull latest code ───────────────────────────────────────────
             git fetch origin main
             git reset --hard origin/main
 
-            # ── 4. Stop only the containers being redeployed ──────────────────
+            # ── 5. Stop only the containers being redeployed ──────────────────
             # Do NOT use --remove-orphans — each service lives in its own
             # compose file and would be incorrectly flagged as an orphan.
             docker rm -f paykey_backend_prod 2>/dev/null || true
             docker rm -f paykey_redis_prod   2>/dev/null || true
             docker network create paykey-network-prod 2>/dev/null || true
 
-            # ── 5. Pull new image then bring up services ──────────────────────
+            # ── 6. Pull new image then bring up services ──────────────────────
             docker compose --env-file .env -f deploy/docker-compose.infra.yml up -d
             docker compose --env-file .env -f deploy/docker-compose.backend.yml pull backend
             docker compose --env-file .env -f deploy/docker-compose.backend.yml up -d \

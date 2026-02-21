@@ -46,35 +46,37 @@ jobs:
     steps:
       - name: Deploy to DigitalOcean
         uses: appleboy/ssh-action@v1.0.0
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         with:
           host: ${{ secrets.DO_HOST }}
           username: ${{ secrets.DO_USERNAME }}
           key: ${{ secrets.DO_SSH_KEY }}
+          envs: DOCKER_USERNAME,DOCKER_PASSWORD
           timeout: 20m
           script: |
             set -e
-            
-            # Move to correct directory
             cd /opt/paykey
-            
+
+            echo "🔐 Logging in to Docker Hub..."
+            echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+
             echo "📥 Updating codebase..."
-            # Pull latest changes (for docker-compose files)
             git fetch origin main
             git reset --hard origin/main
-            
-            echo "📦 Pulling latest admin dashboard image..."
-            docker compose -f deploy/docker-compose.admin.yml pull admin
-            
-            echo "🚀 Deploying Admin Dashboard..."
-            docker compose -f deploy/docker-compose.admin.yml up -d admin
-            
+
+            echo "📦 Pulling and deploying admin dashboard..."
+            docker compose --env-file .env -f deploy/docker-compose.admin.yml pull admin
+            docker compose --env-file .env -f deploy/docker-compose.admin.yml up -d admin
+
             echo "🧹 Cleaning up old images..."
             docker image prune -f
-            
+
             echo "📊 Checking container status..."
             docker ps -a --filter name=paykey_admin_prod
-            
+
             echo "📜 Recent Logs:"
             docker logs --tail 30 paykey_admin_prod
-            
+
             echo "✅ Admin Dashboard Deployment Complete!"

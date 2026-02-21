@@ -3,7 +3,7 @@
 
 services:
   website:
-    image: ghcr.io/ronslink/paydome-website:latest
+    image: ${DOCKER_USERNAME:-ronslink}/paykey-website:latest
     container_name: paydome_website_prod
     restart: always
     ports:

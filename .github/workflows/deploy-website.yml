@@ -45,36 +45,32 @@ jobs:
     steps:
       - name: Deploy to DigitalOcean
         uses: appleboy/ssh-action@v1.0.0
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         with:
           host: ${{ secrets.DO_HOST }}
           username: ${{ secrets.DO_USERNAME }}
           key: ${{ secrets.DO_SSH_KEY }}
+          envs: DOCKER_USERNAME,DOCKER_PASSWORD
           timeout: 10m
           script: |
             set -e
-            
-            # Move to correct directory
             cd /opt/paykey
-            
+
+            echo "🔐 Logging in to Docker Hub..."
+            echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+
             echo "📥 Updating codebase..."
-            # Pull latest changes (optional if just updating image, but good for docker-compose files)
-            # Force sync with origin/main to discard any local changes/conflicts
             git fetch origin main
             git reset --hard origin/main
 
-            echo "🌐 Deploying Website..."
-            
-            # Update docker-compose to use Docker Hub image if desired (safety net)
-            # Assuming DOCKER_USERNAME is available or hardcoded/inferred
-            # sed -i "s|image:.*paydome-website:.*|image: ronslink/paykey-website:latest|g" deploy/docker-compose.website.yml
+            echo "🌐 Pulling and deploying website..."
+            docker compose --env-file .env -f deploy/docker-compose.website.yml pull website
+            docker compose --env-file .env -f deploy/docker-compose.website.yml up -d website
 
-            # Pull the new image
-            docker compose -f deploy/docker-compose.website.yml pull website
-            
-            # Restart the container
-            docker compose -f deploy/docker-compose.website.yml up -d website
-            
             echo "🧹 Cleaning up old images..."
             docker image prune -f
-            
+
             echo "✅ Website Deployment Complete!"
+            docker ps -a --filter name=paydome_website_prod

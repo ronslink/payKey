@@ -105,11 +105,12 @@ jobs:
         uses: appleboy/ssh-action@v1.0.0
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         with:
           host: ${{ secrets.DO_HOST }}
           username: ${{ secrets.DO_USERNAME }}
           key: ${{ secrets.DO_SSH_KEY }}
-          envs: DOCKER_USERNAME
+          envs: DOCKER_USERNAME,DOCKER_PASSWORD
           timeout: 20m
           script: |
             set -e
@@ -141,12 +142,16 @@ jobs:
               exit 1
             fi
 
-            # ── 3. Pull latest code ───────────────────────────────────────────
+            # ── 3. Authenticate with Docker Hub ──────────────────────────────
+            echo "🔐 Logging in to Docker Hub..."
+            echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+
+            # ── 4. Pull latest code ───────────────────────────────────────────
             echo "📥 Pulling latest code..."
             git fetch origin main
             git reset --hard origin/main
 
-            # ── 4. Stop only the containers being redeployed ──────────────────
+            # ── 5. Stop only the containers being redeployed ──────────────────
             echo "🧹 Stopping target containers only..."
             # Do NOT use --remove-orphans — each service (backend, admin, website)
             # lives in its own compose file and would be treated as an orphan.
@@ -156,7 +161,7 @@ jobs:
             echo "🌐 Ensuring network exists..."
             docker network create paykey-network-prod 2>/dev/null || true
 
-            # ── 5. Pull new image then bring up services ──────────────────────
+            # ── 6. Pull new image then bring up services ──────────────────────
             echo "📦 Starting infrastructure (Redis)..."
             docker compose --env-file .env -f deploy/docker-compose.infra.yml up -d
 
@@ -171,7 +176,7 @@ jobs:
             echo "📜 Recent logs:"
             docker logs --tail 50 paykey_backend_prod
 
-            # ── 6. Run migrations ─────────────────────────────────────────────
+            # ── 7. Run migrations ─────────────────────────────────────────────
             echo "🔄 Running migrations..."
             if ! docker exec paykey_backend_prod npm run typeorm:migration:run:prod; then
               echo "❌ Migration failed — dumping container logs:"
@@ -179,12 +184,12 @@ jobs:
               exit 1
             fi
 
-            # ── 7. Ensure admin and website are still up ──────────────────────
+            # ── 8. Ensure admin and website are still up ──────────────────────
             echo "🛡️  Ensuring admin and website are running..."
             docker compose --env-file .env -f deploy/docker-compose.admin.yml   up -d admin
             docker compose --env-file .env -f deploy/docker-compose.website.yml up -d website
 
-            # ── 8. Post-deploy cleanup and summary ────────────────────────────
+            # ── 9. Post-deploy cleanup and summary ────────────────────────────
             docker image prune -f
             echo "📊 Running containers:"
             docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" \
