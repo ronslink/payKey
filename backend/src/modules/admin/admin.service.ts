@@ -8,6 +8,7 @@ import * as os from 'os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { ConfigService } from '@nestjs/config';
+import Dockerode from 'dockerode';
 
 import { User } from '../users/entities/user.entity';
 import { Worker } from '../workers/entities/worker.entity';
@@ -19,6 +20,9 @@ import { SupportTicket } from '../support/entities/support-ticket.entity';
 import { AdminAuditLog } from './entities/audit-log.entity';
 
 const execAsync = promisify(exec);
+
+// Docker client using dockerode - connects via Docker socket
+const docker = new Dockerode({ socketPath: '/var/run/docker.sock' });
 
 @Injectable()
 export class AdminService {
@@ -322,23 +326,16 @@ export class AdminService {
 
     private async getDockerInfo() {
         try {
-            const { stdout } = await execAsync(
-                "docker ps --format '{{.Names}}|{{.Status}}|{{.Image}}' 2>/dev/null || echo ''"
-            );
+            const containers = await docker.listContainers({ all: true });
+            
+            const containerList = containers.map(c => ({
+                name: c.Names[0]?.replace(/^\//, ''),
+                status: c.Status,
+                image: c.Image,
+                healthy: c.State === 'running',
+            }));
 
-            if (!stdout.trim()) return { status: 'unavailable', containers: [] };
-
-            const containers = stdout.trim().split('\n').map(line => {
-                const [name, status, image] = line.split('|');
-                return {
-                    name: name?.trim(),
-                    status: status?.trim(),
-                    image: image?.trim(),
-                    healthy: status?.toLowerCase().includes('up'),
-                };
-            }).filter(c => c.name);
-
-            return { status: 'ok', containers };
+            return { status: 'ok', containers: containerList };
         } catch {
             return { status: 'unavailable', containers: [] };
         }
@@ -348,24 +345,17 @@ export class AdminService {
 
     async getContainers() {
         try {
-            const { stdout } = await execAsync(
-                "docker ps --format '{{.Names}}|{{.Status}}|{{.Image}}' 2>/dev/null || echo ''"
-            );
+            const containers = await docker.listContainers({ all: true });
+            
+            const data = containers.map(c => ({
+                name: c.Names[0]?.replace(/^\//, ''),
+                status: c.Status,
+                image: c.Image,
+                healthy: c.State === 'running',
+            }));
 
-            if (!stdout.trim()) return { data: [] };
-
-            const containers = stdout.trim().split('\n').map(line => {
-                const [name, status, image] = line.split('|');
-                return {
-                    name: name?.trim(),
-                    status: status?.trim(),
-                    image: image?.trim(),
-                    healthy: status?.toLowerCase().includes('up'),
-                };
-            }).filter(c => c.name);
-
-            return { data: containers };
-        } catch (error) {
+            return { data };
+        } catch (error: any) {
             return { data: [], error: error.message };
         }
     }
@@ -373,20 +363,43 @@ export class AdminService {
     async getContainerLogs(container?: string, lines = 100) {
         try {
             const safeLines = Math.min(lines, 1000);
-            let cmd: string;
+            let logs: string;
 
             if (container) {
-                // Get logs for specific container
-                cmd = `docker logs --tail ${safeLines} ${container} 2>&1`;
+                // Get logs for specific container using dockerode
+                const containerObj = docker.getContainer(container);
+                const logStream = await containerObj.logs({
+                    stdout: true,
+                    stderr: true,
+                    tail: safeLines,
+                    timestamps: true,
+                });
+                // Convert buffer to string
+                logs = logStream.toString('utf8');
             } else {
-                // Get logs from all containers (newest first)
-                cmd = `docker ps --format '{{.Names}}' 2>/dev/null | head -5 | xargs -I {} docker logs --tail ${safeLines} {} 2>&1 | head -500`;
+                // Get logs from all running containers
+                const containers = await docker.listContainers({ all: false });
+                const logParts: string[] = [];
+                
+                for (const c of containers.slice(0, 5)) {
+                    const containerObj = docker.getContainer(c.Id);
+                    try {
+                        const logStream = await containerObj.logs({
+                            stdout: true,
+                            stderr: true,
+                            tail: Math.floor(safeLines / 5),
+                            timestamps: true,
+                        });
+                        logParts.push(`[${c.Names[0]?.replace(/^\//, '')}]\n${logStream.toString('utf8')}`);
+                    } catch (e) {
+                        // Skip containers that can't be accessed
+                    }
+                }
+                logs = logParts.join('\n');
             }
 
-            const { stdout, stderr } = await execAsync(cmd, { maxBuffer: 1024 * 1024 * 5 });
-
             // Parse logs - each line: timestamp level message
-            const logLines = (stdout + stderr)
+            const logLines = logs
                 .split('\n')
                 .filter(line => line.trim())
                 .slice(-safeLines)
