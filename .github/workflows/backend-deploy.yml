@@ -124,23 +124,24 @@ jobs:
             sed -i "s|image:.*paykey-backend:.*|image: ${DOCKER_USERNAME}/paykey-backend:latest|g" \
               deploy/docker-compose.backend.yml || true
 
-            echo "🧹 Cleaning up old containers..."
+            echo "🧹 Stopping target containers only..."
+            # Explicitly remove only the containers we are redeploying.
+            # Do NOT use --remove-orphans on compose down/up — each service
+            # (backend, admin, website) lives in its own compose file and
+            # would be incorrectly treated as an orphan by the others.
             docker rm -f paykey_backend_prod 2>/dev/null || true
             docker rm -f paykey_redis_prod   2>/dev/null || true
-            docker compose -f deploy/docker-compose.infra.yml   down --remove-orphans 2>/dev/null || true
-            docker compose -f deploy/docker-compose.backend.yml down --remove-orphans 2>/dev/null || true
 
             echo "🌐 Ensuring network exists..."
             docker network create paykey-network-prod 2>/dev/null || true
 
             echo "📦 Starting infrastructure (Redis)..."
-            docker compose --env-file .env -f deploy/docker-compose.infra.yml up -d \
-              --remove-orphans
+            docker compose --env-file .env -f deploy/docker-compose.infra.yml up -d
 
             echo "🔙 Deploying backend..."
             docker compose --env-file .env -f deploy/docker-compose.backend.yml pull backend
             docker compose --env-file .env -f deploy/docker-compose.backend.yml up -d \
-              --force-recreate --remove-orphans backend
+              --force-recreate backend
 
             echo "⏳ Waiting for backend to start..."
             sleep 15
@@ -151,6 +152,14 @@ jobs:
             echo "🔄 Running migrations..."
             docker exec paykey_backend_prod npm run typeorm:migration:run || \
               echo "⚠️  Migrations failed — check logs above"
+
+            echo "🛡️  Ensuring admin and website are running..."
+            docker compose --env-file .env -f deploy/docker-compose.admin.yml   up -d admin
+            docker compose --env-file .env -f deploy/docker-compose.website.yml up -d website
+
+            echo "📊 Running containers:"
+            docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" \
+              --filter name=paykey --filter name=paydome
 
             docker image prune -f
             echo "✅ Backend deployment complete: $(date)"
