@@ -99,6 +99,7 @@ export class SupportService {
             .leftJoinAndSelect('ticket.messages', 'messages')
             .leftJoinAndMapOne('ticket.user', 'users', 'u', 'u.id = ticket.userId')
             .orderBy('ticket.updatedAt', 'DESC')
+            .addOrderBy('ticket.id', 'ASC')
             .take(limit)
             .skip((page - 1) * limit);
 

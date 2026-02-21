@@ -50,10 +50,10 @@ jobs:
             docker rm -f paydome_website_prod 2>/dev/null || true
             
             echo "🧹 Stopping all compose services..."
-            docker compose -f deploy/docker-compose.backend.yml down 2>/dev/null || true
-            docker compose -f deploy/docker-compose.website.yml down 2>/dev/null || true
-            docker compose -f deploy/docker-compose.website.yml -f docker-compose.prod.yml down 2>/dev/null || true
-            docker compose -f deploy/docker-compose.infra.yml down 2>/dev/null || true
+            docker compose --env-file .env -f deploy/docker-compose.backend.yml down 2>/dev/null || true
+            docker compose --env-file .env -f deploy/docker-compose.website.yml down 2>/dev/null || true
+            docker compose --env-file .env -f deploy/docker-compose.website.yml -f docker-compose.prod.yml down 2>/dev/null || true
+            docker compose --env-file .env -f deploy/docker-compose.infra.yml down 2>/dev/null || true
             
             echo "🌐 Removing Docker network..."
             docker network rm paykey-network-prod 2>/dev/null || true
