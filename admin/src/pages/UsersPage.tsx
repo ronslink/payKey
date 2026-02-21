@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Input, Typography, Tag, Button, Select, Space, Tooltip, Card, Row, Col, Avatar, Badge } from 'antd';
+import { Input, Typography, Tag, Button, Select, Space, Tooltip, Card, Row, Col, Avatar } from 'antd';
 import {
-    SearchOutlined, EyeOutlined, TeamOutlined, CrownOutlined, StarOutlined,
+    SearchOutlined, EyeOutlined, CrownOutlined, StarOutlined,
     TrophyOutlined, WalletOutlined, UserOutlined, CheckCircleOutlined, ClockCircleOutlined,
     ExclamationCircleOutlined, StopOutlined,
 } from '@ant-design/icons';

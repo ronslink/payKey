@@ -125,20 +125,28 @@ jobs:
               docker info || { echo "❌ Docker daemon failed to recover"; exit 1; }
             fi
 
-            # ── 2. Disk space report + pre-pull cleanup ───────────────────────
+            # ── 2. Disk space report + aggressive pre-pull cleanup ───────────
             echo "💾 Disk space before cleanup:"
-            df -h /var/lib/docker || df -h /
-            echo "🧹 Pruning dangling images and stopped containers (pre-pull)..."
+            df -h /var/lib/docker 2>/dev/null || df -h /
+
+            echo "🧹 Pruning dangling images and stopped containers..."
             docker image prune -f
             docker container prune -f
-            echo "💾 Disk space after cleanup:"
-            df -h /var/lib/docker || df -h /
 
-            # Abort early if less than 1 GB free (overlayfs will fail anyway)
+            # If still under 1 GB, do a full system prune (removes ALL unused images)
             AVAIL_KB=$(df /var/lib/docker 2>/dev/null | awk 'NR==2{print $4}' || df / | awk 'NR==2{print $4}')
             if [ "${AVAIL_KB:-0}" -lt 1048576 ]; then
-              echo "❌ Less than 1 GB free on Docker storage — aborting to avoid overlayfs errors"
-              echo "   Run: docker system prune -af  on the server to reclaim space, then retry."
+              echo "⚠️  Under 1 GB free — running full docker system prune to reclaim space..."
+              docker system prune -af
+            fi
+
+            echo "💾 Disk space after cleanup:"
+            df -h /var/lib/docker 2>/dev/null || df -h /
+
+            # Hard abort only if still under 512 MB after full prune
+            AVAIL_KB=$(df /var/lib/docker 2>/dev/null | awk 'NR==2{print $4}' || df / | awk 'NR==2{print $4}')
+            if [ "${AVAIL_KB:-0}" -lt 524288 ]; then
+              echo "❌ Under 512 MB free even after full prune — disk critically full, aborting."
               exit 1
             fi
 
@@ -186,6 +194,9 @@ jobs:
 
             # ── 8. Ensure admin and website are still up ──────────────────────
             echo "🛡️  Ensuring admin and website are running..."
+            # Explicitly remove first so --force-recreate never hits a name conflict
+            docker rm -f paykey_admin_prod   2>/dev/null || true
+            docker rm -f paydome_website_prod 2>/dev/null || true
             docker compose --env-file .env -f deploy/docker-compose.admin.yml   up -d --force-recreate admin
             docker compose --env-file .env -f deploy/docker-compose.website.yml up -d --force-recreate website
 

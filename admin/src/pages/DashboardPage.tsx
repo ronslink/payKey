@@ -164,7 +164,7 @@ export default function DashboardPage() {
                                     cx="50%"
                                     cy="50%"
                                     outerRadius={90}
-                                    label={({ tier, count }) => `${tier}: ${count}`}
+                                    label={({ tier, count }: any) => `${tier}: ${count}`}
                                 >
                                     {charts.subscriptionBreakdown.map((_: any, i: number) => (
                                         <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />

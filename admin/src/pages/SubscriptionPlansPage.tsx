@@ -1,12 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Table, Card, Typography, Tag, Button, Modal, Form, Input, InputNumber, Switch, Space, message, Divider, Tabs, Row, Col, Select, DatePicker, Badge, Popconfirm, Progress, Tooltip, Statistic } from 'antd';
+import { Table, Card, Typography, Tag, Button, Modal, Form, Input, InputNumber, Switch, Space, message, Divider, Tabs, Row, Col, Select, DatePicker, Badge, Popconfirm, Progress, Tooltip } from 'antd';
 import { EditOutlined, PlusOutlined, DeleteOutlined, PlayCircleOutlined, PauseCircleOutlined, RiseOutlined, TeamOutlined, CrownOutlined, TrophyOutlined, StarOutlined, PercentageOutlined, GiftOutlined, NotificationOutlined, EyeOutlined, BarChartOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import { adminPlans, adminPromotionalItems, adminCampaigns } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import dayjs from 'dayjs';
 
-const { Title, Text } = Typography;
+const { Title } = Typography;
 const { TextArea } = Input;
 
 const tierColors: Record<string, string> = { FREE: 'default', BASIC: 'blue', GOLD: 'gold', PLATINUM: 'purple' };
@@ -781,7 +781,7 @@ export default function SubscriptionPlansPage() {
                     <Form.Item label="Plan Name" name="name" rules={[{ required: true }]}>
                         <Input />
                     </Form.Item>
-                    <Divider orientation="left" style={{ fontSize: 13, color: '#64748b' }}>Monthly Pricing</Divider>
+                    <Divider titlePlacement="left" style={{ fontSize: 13, color: '#64748b' }}>Monthly Pricing</Divider>
                     <Row gutter={12}>
                         <Col span={12}>
                             <Form.Item label="Monthly (USD)" name="priceUSD">
@@ -794,7 +794,7 @@ export default function SubscriptionPlansPage() {
                             </Form.Item>
                         </Col>
                     </Row>
-                    <Divider orientation="left" style={{ fontSize: 13, color: '#64748b' }}>Yearly Pricing</Divider>
+                    <Divider titlePlacement="left" style={{ fontSize: 13, color: '#64748b' }}>Yearly Pricing</Divider>
                     <Row gutter={12}>
                         <Col span={12}>
                             <Form.Item label="Yearly (USD)" name="priceUSDYearly">

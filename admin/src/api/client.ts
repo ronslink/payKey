@@ -42,20 +42,20 @@ export const adminAnalytics = {
 
 // ─── Users ─────────────────────────────────────────────────────────────────
 export const adminUsers = {
-    list: (params?: { search?: string; page?: number; limit?: number }) =>
+    list: (params?: { search?: string; page?: number; limit?: number; tier?: string; subscriptionStatus?: string }) =>
         api.get('/api/admin/users', { params }).then(r => r.data),
     detail: (id: string) => api.get(`/api/admin/users/${id}`).then(r => r.data),
 };
 
 // ─── Workers ───────────────────────────────────────────────────────────────
 export const adminWorkers = {
-    list: (params?: { search?: string; page?: number; limit?: number }) =>
+    list: (params?: { search?: string; page?: number; limit?: number; isActive?: boolean; paymentMethod?: string; portalStatus?: string }) =>
         api.get('/api/admin/workers', { params }).then(r => r.data),
 };
 
 // ─── Transactions ───────────────────────────────────────────────────────────
 export const adminTransactions = {
-    list: (params?: { search?: string; status?: string; type?: string; page?: number; limit?: number }) =>
+    list: (params?: { search?: string; status?: string; type?: string; page?: number; limit?: number; startDate?: string; endDate?: string }) =>
         api.get('/api/admin/transactions', { params }).then(r => r.data),
     refund: (data: { transactionId: string; amount?: number; reason: string }) =>
         api.post('/api/admin/refunds', data).then(r => r.data),

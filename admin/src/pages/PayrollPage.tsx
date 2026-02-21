@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Input, Typography, Button, Modal, Row, Col, Progress, Tooltip, Space } from 'antd';
+import { Input, Typography, Button, Modal, Progress, Tooltip, Space } from 'antd';
 import {
     SearchOutlined, CalendarOutlined, TeamOutlined, DollarOutlined,
     CheckCircleOutlined, BankOutlined, MobileOutlined, WalletOutlined,
@@ -26,7 +26,7 @@ const METHOD_STYLE: Record<string, { color: string; bg: string; icon: React.Reac
     WALLET:{ color: '#7c3aed', bg: '#ede9fe', icon: <WalletOutlined /> },
 };
 
-const AVATAR_COLORS = [
+const AVATAR_COLORS: [string, string][] = [
     ['#6366f1', '#eef2ff'], ['#10b981', '#ecfdf5'], ['#f59e0b', '#fffbeb'],
     ['#ef4444', '#fee2e2'], ['#8b5cf6', '#f5f3ff'], ['#0ea5e9', '#e0f2fe'],
     ['#ec4899', '#fdf2f8'], ['#14b8a6', '#f0fdfa'],

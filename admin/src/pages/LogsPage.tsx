@@ -37,7 +37,7 @@ export default function LogsPage() {
 
     const { data, isLoading, refetch, dataUpdatedAt } = useQuery<LogsResponse>({
         queryKey: ['admin-logs', selectedContainer, level, search],
-        queryFn: () => adminLogs.list({ container: selectedContainer, lines: 500, search, level }),
+        queryFn: () => adminLogs.list({ container: selectedContainer, lines: 500, search }),
         refetchInterval: 30000,
     });
 
