@@ -109,18 +109,32 @@ export class CreateSupportAndSubscriptionPlans1740055200000 implements Migration
     `);
 
     // Indexes for common queries
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_support_tickets_userId" ON "support_tickets" ("userId")`);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_support_tickets_status" ON "support_tickets" ("status")`);
-    await queryRunner.query(`CREATE INDEX IF NOT EXISTS "IDX_support_messages_ticketId" ON "support_messages" ("ticketId")`);
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "IDX_support_tickets_userId" ON "support_tickets" ("userId")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "IDX_support_tickets_status" ON "support_tickets" ("status")`,
+    );
+    await queryRunner.query(
+      `CREATE INDEX IF NOT EXISTS "IDX_support_messages_ticketId" ON "support_messages" ("ticketId")`,
+    );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`DROP TABLE IF EXISTS "support_messages"`);
     await queryRunner.query(`DROP TABLE IF EXISTS "support_tickets"`);
-    await queryRunner.query(`DROP TYPE IF EXISTS "support_messages_senderrole_enum"`);
-    await queryRunner.query(`DROP TYPE IF EXISTS "support_tickets_category_enum"`);
-    await queryRunner.query(`DROP TYPE IF EXISTS "support_tickets_priority_enum"`);
-    await queryRunner.query(`DROP TYPE IF EXISTS "support_tickets_status_enum"`);
+    await queryRunner.query(
+      `DROP TYPE IF EXISTS "support_messages_senderrole_enum"`,
+    );
+    await queryRunner.query(
+      `DROP TYPE IF EXISTS "support_tickets_category_enum"`,
+    );
+    await queryRunner.query(
+      `DROP TYPE IF EXISTS "support_tickets_priority_enum"`,
+    );
+    await queryRunner.query(
+      `DROP TYPE IF EXISTS "support_tickets_status_enum"`,
+    );
     await queryRunner.query(`DROP TABLE IF EXISTS "subscription_plans"`);
   }
 }

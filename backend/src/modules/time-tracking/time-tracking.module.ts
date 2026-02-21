@@ -16,4 +16,4 @@ import { UsersModule } from '../users/users.module';
   providers: [TimeTrackingService],
   exports: [TimeTrackingService],
 })
-export class TimeTrackingModule { }
+export class TimeTrackingModule {}

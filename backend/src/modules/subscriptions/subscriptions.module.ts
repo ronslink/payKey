@@ -57,4 +57,4 @@ import { CampaignScheduler } from './campaign.scheduler';
   ],
   exports: [FeatureAccessService, MockDataService, ImportFeatureGuard],
 })
-export class SubscriptionsModule { }
+export class SubscriptionsModule {}

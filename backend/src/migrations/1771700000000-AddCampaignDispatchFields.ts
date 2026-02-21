@@ -1,4 +1,9 @@
-import { MigrationInterface, QueryRunner, TableColumn, TableIndex } from 'typeorm';
+import {
+  MigrationInterface,
+  QueryRunner,
+  TableColumn,
+  TableIndex,
+} from 'typeorm';
 
 /**
  * Adds campaign dispatch tracking fields to the campaigns table:
@@ -12,40 +17,43 @@ import { MigrationInterface, QueryRunner, TableColumn, TableIndex } from 'typeor
  *      Number of recipients reached on the last dispatch run.
  */
 export class AddCampaignDispatchFields1771700000000 implements MigrationInterface {
-    name = 'AddCampaignDispatchFields1771700000000';
+  name = 'AddCampaignDispatchFields1771700000000';
 
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.addColumn(
-            'campaigns',
-            new TableColumn({
-                name: 'lastDispatchedAt',
-                type: 'timestamptz',
-                isNullable: true,
-            }),
-        );
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.addColumn(
+      'campaigns',
+      new TableColumn({
+        name: 'lastDispatchedAt',
+        type: 'timestamptz',
+        isNullable: true,
+      }),
+    );
 
-        await queryRunner.addColumn(
-            'campaigns',
-            new TableColumn({
-                name: 'lastDispatchCount',
-                type: 'int',
-                default: 0,
-            }),
-        );
+    await queryRunner.addColumn(
+      'campaigns',
+      new TableColumn({
+        name: 'lastDispatchCount',
+        type: 'int',
+        default: 0,
+      }),
+    );
 
-        // Index so the scheduler can efficiently find un-dispatched campaigns
-        await queryRunner.createIndex(
-            'campaigns',
-            new TableIndex({
-                name: 'IDX_CAMPAIGNS_LAST_DISPATCHED_AT',
-                columnNames: ['lastDispatchedAt'],
-            }),
-        );
-    }
+    // Index so the scheduler can efficiently find un-dispatched campaigns
+    await queryRunner.createIndex(
+      'campaigns',
+      new TableIndex({
+        name: 'IDX_CAMPAIGNS_LAST_DISPATCHED_AT',
+        columnNames: ['lastDispatchedAt'],
+      }),
+    );
+  }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.dropIndex('campaigns', 'IDX_CAMPAIGNS_LAST_DISPATCHED_AT');
-        await queryRunner.dropColumn('campaigns', 'lastDispatchCount');
-        await queryRunner.dropColumn('campaigns', 'lastDispatchedAt');
-    }
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.dropIndex(
+      'campaigns',
+      'IDX_CAMPAIGNS_LAST_DISPATCHED_AT',
+    );
+    await queryRunner.dropColumn('campaigns', 'lastDispatchCount');
+    await queryRunner.dropColumn('campaigns', 'lastDispatchedAt');
+  }
 }

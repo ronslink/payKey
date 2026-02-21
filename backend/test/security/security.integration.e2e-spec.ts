@@ -15,9 +15,8 @@ import * as bcrypt from 'bcrypt';
 import { MockBullModule } from '../mock-bull.module';
 
 jest.mock('@nestjs/bullmq', () => {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const actual = jest.requireActual('@nestjs/bullmq');
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+
   return {
     ...actual,
     BullModule: {

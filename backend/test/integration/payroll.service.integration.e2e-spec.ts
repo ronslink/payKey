@@ -10,11 +10,19 @@ import { TaxesModule } from '../../src/modules/taxes/taxes.module';
 import { PayrollModule } from '../../src/modules/payroll/payroll.module';
 import { PayrollService } from '../../src/modules/payroll/payroll.service';
 import { WorkersService } from '../../src/modules/workers/workers.service';
-import { Worker, PaymentFrequency, PaymentMethod } from '../../src/modules/workers/entities/worker.entity';
+import {
+  Worker,
+  PaymentFrequency,
+  PaymentMethod,
+} from '../../src/modules/workers/entities/worker.entity';
 import { PayPeriod } from '../../src/modules/payroll/entities/pay-period.entity';
 import { PayrollRecord } from '../../src/modules/payroll/entities/payroll-record.entity';
 import { User } from '../../src/modules/users/entities/user.entity';
-import { TaxConfig, TaxType, RateType } from '../../src/modules/tax-config/entities/tax-config.entity';
+import {
+  TaxConfig,
+  TaxType,
+  RateType,
+} from '../../src/modules/tax-config/entities/tax-config.entity';
 import { MockBullModule } from '../mock-bull.module';
 import { v4 as uuidv4 } from 'uuid';
 import { PayPeriodStatus } from '../../src/modules/payroll/entities/pay-period.entity';
@@ -24,10 +32,16 @@ jest.mock('@nestjs/bullmq', () => {
   return {
     ...actual,
     BullModule: {
-      forRoot: jest.fn().mockReturnValue({ module: class { }, providers: [] }),
-      forRootAsync: jest.fn().mockReturnValue({ module: class { }, providers: [] }),
-      registerQueue: jest.fn().mockReturnValue({ module: class { }, providers: [] }),
-      registerQueueAsync: jest.fn().mockReturnValue({ module: class { }, providers: [] }),
+      forRoot: jest.fn().mockReturnValue({ module: class {}, providers: [] }),
+      forRootAsync: jest
+        .fn()
+        .mockReturnValue({ module: class {}, providers: [] }),
+      registerQueue: jest
+        .fn()
+        .mockReturnValue({ module: class {}, providers: [] }),
+      registerQueueAsync: jest
+        .fn()
+        .mockReturnValue({ module: class {}, providers: [] }),
     },
   };
 });
@@ -55,17 +69,27 @@ describe('PayrollService Integration', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, transform: true }),
+    );
     await app.init();
 
     payrollService = moduleFixture.get<PayrollService>(PayrollService);
     workersService = moduleFixture.get<WorkersService>(WorkersService);
 
-    workerRepo = moduleFixture.get<Repository<Worker>>(getRepositoryToken(Worker));
-    payPeriodRepo = moduleFixture.get<Repository<PayPeriod>>(getRepositoryToken(PayPeriod));
-    payrollRecordRepo = moduleFixture.get<Repository<PayrollRecord>>(getRepositoryToken(PayrollRecord));
+    workerRepo = moduleFixture.get<Repository<Worker>>(
+      getRepositoryToken(Worker),
+    );
+    payPeriodRepo = moduleFixture.get<Repository<PayPeriod>>(
+      getRepositoryToken(PayPeriod),
+    );
+    payrollRecordRepo = moduleFixture.get<Repository<PayrollRecord>>(
+      getRepositoryToken(PayrollRecord),
+    );
     userRepo = moduleFixture.get<Repository<User>>(getRepositoryToken(User));
-    taxConfigRepo = moduleFixture.get<Repository<TaxConfig>>(getRepositoryToken(TaxConfig));
+    taxConfigRepo = moduleFixture.get<Repository<TaxConfig>>(
+      getRepositoryToken(TaxConfig),
+    );
   });
 
   afterAll(async () => {
@@ -83,7 +107,7 @@ describe('PayrollService Integration', () => {
       const dataSource = app.get(DataSource);
       await cleanupTestData(dataSource);
 
-      const today = new Date();
+      const _today = new Date();
       const startOf2024 = new Date('2024-01-01');
 
       // Seed required tax configs for Kenya (every time because cleanupTestData truncates them)
@@ -107,7 +131,9 @@ describe('PayrollService Integration', () => {
           rateType: RateType.TIERED,
           effectiveFrom: startOf2024,
           configuration: {
-            tiers: [{ name: 'Tier 1', salaryFrom: 0, salaryTo: 7000, rate: 0.06 }]
+            tiers: [
+              { name: 'Tier 1', salaryFrom: 0, salaryTo: 7000, rate: 0.06 },
+            ],
           },
           isActive: true,
         },
@@ -116,7 +142,9 @@ describe('PayrollService Integration', () => {
           rateType: RateType.TIERED,
           effectiveFrom: startOf2024,
           configuration: {
-            tiers: [{ name: 'Tier 2', salaryFrom: 7001, salaryTo: 36000, rate: 0.06 }]
+            tiers: [
+              { name: 'Tier 2', salaryFrom: 7001, salaryTo: 36000, rate: 0.06 },
+            ],
           },
           isActive: true,
         },
@@ -175,7 +203,9 @@ describe('PayrollService Integration', () => {
 
     it('should calculate, save draft, and finalize payroll records', async () => {
       // 1. Calculate
-      const calculation = await payrollService.calculatePayrollForUser(testUser.id);
+      const calculation = await payrollService.calculatePayrollForUser(
+        testUser.id,
+      );
       expect(calculation.payrollItems).toHaveLength(2);
 
       // 2. Save Draft
@@ -186,15 +216,23 @@ describe('PayrollService Integration', () => {
         status: PayPeriodStatus.ACTIVE,
       });
 
-      const draftItems = calculation.payrollItems.map(item => ({
+      const draftItems = calculation.payrollItems.map((item) => ({
         workerId: item.workerId,
         grossSalary: item.grossSalary,
       }));
 
-      await payrollService.saveDraftPayroll(testUser.id, payPeriod.id, draftItems);
+      await payrollService.saveDraftPayroll(
+        testUser.id,
+        payPeriod.id,
+        draftItems,
+      );
 
       // 3. Finalize
-      await payrollService.executePayrollFinalization(testUser.id, payPeriod.id, true);
+      await payrollService.executePayrollFinalization(
+        testUser.id,
+        payPeriod.id,
+        true,
+      );
 
       // Assert
       const records = await payrollRecordRepo.find({
@@ -220,12 +258,18 @@ describe('PayrollService Integration', () => {
         status: PayPeriodStatus.ACTIVE,
       });
 
-      const draftItems = [{
-        workerId: testWorker1.id,
-        grossSalary: 50000,
-      }];
+      const draftItems = [
+        {
+          workerId: testWorker1.id,
+          grossSalary: 50000,
+        },
+      ];
 
-      const savedRecords = await payrollService.saveDraftPayroll(testUser.id, payPeriod.id, draftItems);
+      const savedRecords = await payrollService.saveDraftPayroll(
+        testUser.id,
+        payPeriod.id,
+        draftItems,
+      );
       const recordId = savedRecords[0].id;
 
       await payrollService.updateDraftPayrollItem(testUser.id, recordId, {
@@ -248,7 +292,9 @@ describe('PayrollService Integration', () => {
       });
 
       // calculatePayrollForUser doesn't throw if 0 workers, just returns empty
-      const calculation = await payrollService.calculatePayrollForUser(emptyUser.id);
+      const calculation = await payrollService.calculatePayrollForUser(
+        emptyUser.id,
+      );
       expect(calculation.payrollItems).toHaveLength(0);
     });
 

@@ -12,4 +12,4 @@ import { ExportController } from './controllers/export.controller';
   providers: [ExportService],
   exports: [ExportService],
 })
-export class ExportModule { }
+export class ExportModule {}

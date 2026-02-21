@@ -89,6 +89,9 @@ export class PropertiesController {
     @Request() req: any,
     @Param('id') id: string,
   ): Promise<void> {
-    return this.propertiesService.permanentlyDeleteProperty(id, req.user.userId);
+    return this.propertiesService.permanentlyDeleteProperty(
+      id,
+      req.user.userId,
+    );
   }
 }

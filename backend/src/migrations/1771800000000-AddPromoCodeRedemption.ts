@@ -1,4 +1,9 @@
-import { MigrationInterface, QueryRunner, TableColumn, TableIndex } from 'typeorm';
+import {
+  MigrationInterface,
+  QueryRunner,
+  TableColumn,
+  TableIndex,
+} from 'typeorm';
 
 /**
  * Adds promo code redemption fields across three tables:
@@ -86,9 +91,15 @@ export class AddPromoCodeRedemption1771800000000 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.dropIndex('subscriptions', 'IDX_SUBSCRIPTIONS_APPLIED_PROMO_ID');
+    await queryRunner.dropIndex(
+      'subscriptions',
+      'IDX_SUBSCRIPTIONS_APPLIED_PROMO_ID',
+    );
 
-    await queryRunner.dropColumn('subscription_payments', 'promoDiscountAmount');
+    await queryRunner.dropColumn(
+      'subscription_payments',
+      'promoDiscountAmount',
+    );
     await queryRunner.dropColumn('subscription_payments', 'promoCodeUsed');
 
     await queryRunner.dropColumn('subscriptions', 'promoDiscountAmount');

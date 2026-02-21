@@ -13,7 +13,7 @@ export class SubscriptionGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
     private usersService: UsersService,
-  ) { }
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();

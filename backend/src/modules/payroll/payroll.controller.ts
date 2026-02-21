@@ -44,7 +44,7 @@ export class PayrollController {
     private userRepository: Repository<User>,
     @InjectQueue('payroll-processing')
     private readonly payrollQueue: Queue,
-  ) { }
+  ) {}
 
   // Helper method to get employer name (fetch once, use for all payslips)
   private async getEmployerName(userId: string): Promise<string> {

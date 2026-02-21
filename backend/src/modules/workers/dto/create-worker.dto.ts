@@ -20,7 +20,9 @@ export class CreateWorkerDto {
   @IsString()
   @IsNotEmpty()
   @Length(2, 100)
-  @Transform(({ value }) => typeof value === 'string' ? value.replace(/<[^>]*>?/gm, '') : value)
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.replace(/<[^>]*>?/gm, '') : value,
+  )
   name: string;
 
   @IsString()

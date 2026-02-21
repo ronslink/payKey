@@ -138,7 +138,7 @@ describe('Pay Periods E2E', () => {
 
   describe('Pay Period Lifecycle', () => {
     let payPeriodId: string;
-    let workerId: string;
+    let _workerId: string;
 
     beforeAll(async () => {
       // Create a worker first (needed for payroll processing)
@@ -152,7 +152,7 @@ describe('Pay Periods E2E', () => {
           startDate: '2022-01-01',
         });
 
-      workerId = workerRes.body.id;
+      _workerId = workerRes.body.id;
 
       // Generate periods for lifecycle tests
       const res = await request(app.getHttpServer())

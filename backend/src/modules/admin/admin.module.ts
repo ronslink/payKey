@@ -32,46 +32,46 @@ import { DeletionRequest } from '../data-deletion/entities/deletion-request.enti
 import { DataDeletionModule } from '../data-deletion/data-deletion.module';
 
 @Module({
-    imports: [
-        TypeOrmModule.forFeature([
-            User,
-            Worker,
-            Transaction,
-            Subscription,
-            SubscriptionPlan,
-            PromotionalItem,
-            Campaign,
-            PayPeriod,
-            PayrollRecord,
-            SupportTicket,
-            TaxConfig,
-            SystemConfig,
-            AdminAuditLog,
-            Notification,
-            DeviceToken,
-            DeletionRequest,
-        ]),
-        BullModule.registerQueue(
-            { name: 'wallets' },
-            { name: 'subscriptions' },
-            { name: 'payroll-processing' },
-        ),
-        PaymentsModule, // for IntaSendService + StripeService injection in AdminRefundsController
-        SystemConfigModule,
-        NotificationsModule,
-        DataDeletionModule,
-    ],
-    controllers: [
-        AdminController,
-        AdminSubscriptionsController,
-        AdminRefundsController,
-        AdminTaxConfigController,
-        AdminSystemConfigController,
-        AdminAuditController,
-        AdminNotificationsController,
-        AdminOperationsController,
-    ],
-    providers: [AdminService],
-    exports: [AdminService],
+  imports: [
+    TypeOrmModule.forFeature([
+      User,
+      Worker,
+      Transaction,
+      Subscription,
+      SubscriptionPlan,
+      PromotionalItem,
+      Campaign,
+      PayPeriod,
+      PayrollRecord,
+      SupportTicket,
+      TaxConfig,
+      SystemConfig,
+      AdminAuditLog,
+      Notification,
+      DeviceToken,
+      DeletionRequest,
+    ]),
+    BullModule.registerQueue(
+      { name: 'wallets' },
+      { name: 'subscriptions' },
+      { name: 'payroll-processing' },
+    ),
+    PaymentsModule, // for IntaSendService + StripeService injection in AdminRefundsController
+    SystemConfigModule,
+    NotificationsModule,
+    DataDeletionModule,
+  ],
+  controllers: [
+    AdminController,
+    AdminSubscriptionsController,
+    AdminRefundsController,
+    AdminTaxConfigController,
+    AdminSystemConfigController,
+    AdminAuditController,
+    AdminNotificationsController,
+    AdminOperationsController,
+  ],
+  providers: [AdminService],
+  exports: [AdminService],
 })
-export class AdminModule { }
+export class AdminModule {}

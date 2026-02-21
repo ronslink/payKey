@@ -1,9 +1,9 @@
 /**
  * Seed Tax Configurations for 2025
- * 
+ *
  * NOTE: This script is a placeholder. Tax configurations are automatically
  * seeded on application startup by TaxConfigService.onModuleInit().
- * 
+ *
  * This script exists only to satisfy the deployment workflow check.
  * The actual seeding logic is in:
  * src/modules/tax-config/services/tax-config.service.ts -> seedInitialConfigs()

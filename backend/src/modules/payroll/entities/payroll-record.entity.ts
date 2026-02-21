@@ -61,16 +61,35 @@ export class PayrollRecord {
   @Column({ type: 'date' })
   periodEnd: Date;
 
-  @Column('decimal', { precision: 10, scale: 2, transformer: new ColumnNumericTransformer() })
+  @Column('decimal', {
+    precision: 10,
+    scale: 2,
+    transformer: new ColumnNumericTransformer(),
+  })
   grossSalary: number;
 
-  @Column('decimal', { precision: 10, scale: 2, default: 0, transformer: new ColumnNumericTransformer() })
+  @Column('decimal', {
+    precision: 10,
+    scale: 2,
+    default: 0,
+    transformer: new ColumnNumericTransformer(),
+  })
   bonuses: number;
 
-  @Column('decimal', { precision: 10, scale: 2, default: 0, transformer: new ColumnNumericTransformer() })
+  @Column('decimal', {
+    precision: 10,
+    scale: 2,
+    default: 0,
+    transformer: new ColumnNumericTransformer(),
+  })
   otherEarnings: number;
 
-  @Column('decimal', { precision: 10, scale: 2, default: 0, transformer: new ColumnNumericTransformer() })
+  @Column('decimal', {
+    precision: 10,
+    scale: 2,
+    default: 0,
+    transformer: new ColumnNumericTransformer(),
+  })
   otherDeductions: number;
 
   @Column('decimal', { precision: 10, scale: 2, default: 0 })
@@ -82,10 +101,18 @@ export class PayrollRecord {
   @Column('decimal', { precision: 10, scale: 2, default: 0 })
   overtimePay: number;
 
-  @Column('decimal', { precision: 10, scale: 2, transformer: new ColumnNumericTransformer() })
+  @Column('decimal', {
+    precision: 10,
+    scale: 2,
+    transformer: new ColumnNumericTransformer(),
+  })
   netSalary: number;
 
-  @Column('decimal', { precision: 10, scale: 2, transformer: new ColumnNumericTransformer() })
+  @Column('decimal', {
+    precision: 10,
+    scale: 2,
+    transformer: new ColumnNumericTransformer(),
+  })
   taxAmount: number;
 
   @Index()

@@ -6,7 +6,10 @@ export class RecreateTaxPaymentsTable1733560000000 implements MigrationInterface
     const tableExists = await queryRunner.hasTable('tax_payments');
     if (tableExists) {
       // Check if it's the old version (missing paymentYear)
-      const hasPaymentYear = await queryRunner.hasColumn('tax_payments', 'paymentYear');
+      const hasPaymentYear = await queryRunner.hasColumn(
+        'tax_payments',
+        'paymentYear',
+      );
       if (hasPaymentYear) {
         return; // Already migrated
       }

@@ -64,4 +64,4 @@ import { UploadsModule } from '../uploads/uploads.module';
   ],
   exports: [WorkersService, EmployeePortalService],
 })
-export class WorkersModule { }
+export class WorkersModule {}

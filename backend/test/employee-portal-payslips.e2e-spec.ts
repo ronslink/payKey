@@ -2,12 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
-import {
-  generateTestEmail,
-  generateTestPhone,
-  createTestUserData,
-  createTestWorkerData,
-} from './test-utils';
+import { createTestUserData, createTestWorkerData } from './test-utils';
 
 /**
  * Employee Portal - Payslips & Leave E2E Tests
@@ -22,7 +17,7 @@ import {
 describe('Employee Portal - Payslips & Leave E2E', () => {
   let app: INestApplication;
   let employerToken: string;
-  let employerUserId: string;
+  let _employerUserId: string;
   let workerId: string;
   let employeeToken: string;
   let inviteCode: string;
@@ -64,7 +59,7 @@ describe('Employee Portal - Payslips & Leave E2E', () => {
       .set('Authorization', `Bearer ${employerToken}`);
 
     if (profileRes.body && profileRes.body.id) {
-      employerUserId = profileRes.body.id;
+      _employerUserId = profileRes.body.id;
     }
 
     // Create a worker

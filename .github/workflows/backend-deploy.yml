@@ -1,162 +1,28 @@
-name: Backend CI (With Tests)
+name: Backend Deploy (No Tests)
 
-# Full CI pipeline — lint, build, unit tests, and E2E tests.
-# Runs on every push/PR to main or develop that touches backend code.
-# The Docker build + deploy only runs on pushes to main (not PRs).
+# Fast deployment path — builds the Docker image and deploys to production
+# without running the test suite. Use this for hotfixes or when tests are
+# already green and you just need to ship a new image quickly.
 
 on:
   workflow_dispatch:
   push:
-    branches: [main, develop]
+    branches: [main]
     paths:
       - 'backend/**'
-      - '.github/workflows/backend-ci.yml'
-  pull_request:
-    branches: [main, develop]
-    paths:
-      - 'backend/**'
-      - '.github/workflows/backend-ci.yml'
+      - 'deploy/docker-compose.backend.yml'
+      - 'deploy/docker-compose.infra.yml'
+      - '.github/workflows/backend-deploy.yml'
 
 env:
   NODE_VERSION: '20'
 
 jobs:
-  # ─── CI: Lint + Build + Test ─────────────────────────────────────────────────
-  backend-ci:
-    name: Backend CI
+  # ─── Build & Push Docker Image ──────────────────────────────────────────────
+  build-push:
+    name: Build & Push Backend Image
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    defaults:
-      run:
-        working-directory: ./backend
-
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_USER: paykey
-          POSTGRES_PASSWORD: password
-          POSTGRES_DB: paykey_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    env:
-      NODE_ENV: test
-      DB_HOST: localhost
-      DB_PORT: 5432
-      DB_USER: paykey
-      DB_USERNAME: paykey
-      DB_PASSWORD: password
-      DB_NAME: paykey_test
-      DB_LOGGING: false
-      REDIS_HOST: localhost
-      REDIS_PORT: 6379
-      JWT_SECRET: test_secret_key_for_ci_cd_pipeline_12345
-      JWT_EXPIRATION: 1h
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install PostgreSQL client
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y postgresql-client
-
-      - name: Create .env.test
-        run: |
-          cat > .env.test << 'EOF'
-          NODE_ENV=test
-          DB_HOST=localhost
-          DB_PORT=5432
-          DB_USER=paykey
-          DB_USERNAME=paykey
-          DB_PASSWORD=password
-          DB_NAME=paykey_test
-          DB_LOGGING=false
-          REDIS_HOST=localhost
-          REDIS_PORT=6379
-          JWT_SECRET=test_secret_key_for_ci_cd_pipeline_12345
-          JWT_EXPIRATION=1h
-          EOF
-
-      - name: Wait for PostgreSQL
-        run: |
-          until PGPASSWORD=password psql -U paykey -h localhost -d paykey_test \
-            -c "SELECT 1" > /dev/null 2>&1; do
-            echo "Waiting for PostgreSQL..."; sleep 2
-          done
-          echo "PostgreSQL is ready"
-
-      - name: Create root role (safety net)
-        run: |
-          PGPASSWORD=password psql -U paykey -h localhost -d paykey_test -c "
-            DO \$\$ BEGIN
-              IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'root') THEN
-                CREATE ROLE root WITH LOGIN SUPERUSER PASSWORD 'password';
-              END IF;
-            END \$\$;"
-
-      - name: Lint
-        run: npm run lint
-        continue-on-error: true
-
-      - name: Build
-        run: npm run build
-
-      - name: Unit tests
-        run: npm run test
-        continue-on-error: true
-
-      - name: Sync database schema
-        run: npm run typeorm:schema:sync
-        continue-on-error: true
-
-      - name: E2E tests
-        run: npm run test:e2e
-        timeout-minutes: 10
-        continue-on-error: true
-
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results
-          path: |
-            backend/coverage/
-            backend/test-results/
-
-  # ─── Build & Push Docker Image (main branch only) ───────────────────────────
-  docker-build:
-    name: Build Docker Image
-    runs-on: ubuntu-latest
-    needs: [backend-ci]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v4
@@ -181,12 +47,12 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ─── Deploy to Production (main push only) ──────────────────────────────────
+  # ─── Deploy to Production ───────────────────────────────────────────────────
   deploy:
     name: Deploy to Production
     runs-on: ubuntu-latest
-    needs: [docker-build]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [build-push]
+    timeout-minutes: 20
     environment: PROD
 
     steps:
@@ -250,26 +116,38 @@ jobs:
             set -e
             cd /opt/paykey
 
+            echo "📥 Pulling latest code..."
             git fetch origin main
             git reset --hard origin/main
 
+            # Ensure docker-compose uses the Hub image
             sed -i "s|image:.*paykey-backend:.*|image: ${DOCKER_USERNAME}/paykey-backend:latest|g" \
               deploy/docker-compose.backend.yml || true
 
+            echo "🧹 Cleaning up old containers..."
             docker rm -f paykey_backend_prod 2>/dev/null || true
             docker compose -f deploy/docker-compose.backend.yml down 2>/dev/null || true
+
+            echo "🌐 Ensuring network exists..."
             docker network create paykey-network-prod 2>/dev/null || true
 
+            echo "📦 Starting infrastructure (Redis)..."
             docker compose --env-file .env -f deploy/docker-compose.infra.yml up -d
+
+            echo "🔙 Deploying backend..."
             docker compose --env-file .env -f deploy/docker-compose.backend.yml pull backend
             docker compose --env-file .env -f deploy/docker-compose.backend.yml up -d \
               --force-recreate backend
 
+            echo "⏳ Waiting for backend to start..."
             sleep 15
+
+            echo "📜 Recent logs:"
             docker logs --tail 50 paykey_backend_prod
 
+            echo "🔄 Running migrations..."
             docker exec paykey_backend_prod npm run typeorm:migration:run || \
-              echo "Migrations failed — check logs"
+              echo "⚠️  Migrations failed — check logs above"
 
             docker image prune -f
-            echo "Deployment complete: $(date)"
+            echo "✅ Backend deployment complete: $(date)"

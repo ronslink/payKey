@@ -50,7 +50,7 @@ export class ReportsService {
     @InjectRepository(TaxSubmission)
     private taxSubmissionRepository: Repository<TaxSubmission>,
     @Optional() @Inject(CACHE_MANAGER) private cacheManager?: Cache,
-  ) { }
+  ) {}
 
   async getMonthlyPayrollReport(userId: string, year: number, month: number) {
     const startDate = new Date(year, month - 1, 1);
@@ -269,23 +269,30 @@ export class ReportsService {
     return summary;
   }
 
-  async getPropertyTimeReport(userId: string, startDateStr: string, endDateStr: string) {
+  async getPropertyTimeReport(
+    userId: string,
+    startDateStr: string,
+    endDateStr: string,
+  ) {
     const startDate = new Date(startDateStr);
     const endDate = new Date(endDateStr);
 
-    const timeEntries = await this.workersRepository.manager.query(`
+    const timeEntries = await this.workersRepository.manager.query(
+      `
       SELECT p.id as "propertyId", p.name as "propertyName", SUM(t."totalHours") as "totalHours"
       FROM time_entries t
       JOIN properties p on t."propertyId" = p.id
       WHERE t."userId" = $1 AND t."clockIn" BETWEEN $2 AND $3 AND t.status = 'COMPLETED'
       GROUP BY p.id, p.name
       ORDER BY p.name ASC
-    `, [userId, startDate, endDate]);
+    `,
+      [userId, startDate, endDate],
+    );
 
     return timeEntries.map((e: any) => ({
       propertyId: e.propertyId,
       propertyName: e.propertyName,
-      totalHours: Math.round((Number(e.totalHours) || 0) * 100) / 100
+      totalHours: Math.round((Number(e.totalHours) || 0) * 100) / 100,
     }));
   }
 
@@ -337,11 +344,11 @@ export class ReportsService {
     const leaveRequests =
       workerIds.length > 0
         ? await this.leaveRequestRepository.find({
-          where: { workerId: In(workerIds) },
-          order: { createdAt: 'DESC' },
-          take: 5,
-          relations: ['worker'],
-        })
+            where: { workerId: In(workerIds) },
+            order: { createdAt: 'DESC' },
+            take: 5,
+            relations: ['worker'],
+          })
         : [];
 
     const currentMonth = new Date();
@@ -884,12 +891,18 @@ export class ReportsService {
       doc.on('error', (err: any) => reject(err));
 
       // Header
-      doc.fontSize(20).font('Helvetica-Bold').text('PAYSLIP', { align: 'center' });
+      doc
+        .fontSize(20)
+        .font('Helvetica-Bold')
+        .text('PAYSLIP', { align: 'center' });
       doc.moveDown();
 
       // Company Info (Placeholder)
       doc.fontSize(12).font('Helvetica-Bold').text('My Company Name');
-      doc.font('Helvetica').fontSize(10).text('123 Business Road, Nairobi, Kenya');
+      doc
+        .font('Helvetica')
+        .fontSize(10)
+        .text('123 Business Road, Nairobi, Kenya');
       doc.text('PIN: P000000000A');
       doc.moveDown();
 
@@ -907,7 +920,12 @@ export class ReportsService {
       doc.font('Helvetica').text(record.worker.name, 150);
 
       doc.font('Helvetica-Bold').text('ID / PIN:', 50);
-      doc.font('Helvetica').text(`${record.worker.idNumber || 'N/A'} / ${record.worker.kraPin || 'N/A'}`, 150);
+      doc
+        .font('Helvetica')
+        .text(
+          `${record.worker.idNumber || 'N/A'} / ${record.worker.kraPin || 'N/A'}`,
+          150,
+        );
 
       doc.moveDown(2);
 
@@ -917,8 +935,14 @@ export class ReportsService {
 
       // Draw Box
       doc.rect(startX, currentY, 500, 25).fillAndStroke('#f0f0f0', '#cccccc');
-      doc.fillColor('black').font('Helvetica-Bold').text('Description', startX + 10, currentY + 7);
-      doc.text('Amount (KES)', 400, currentY + 7, { align: 'right', width: 140 });
+      doc
+        .fillColor('black')
+        .font('Helvetica-Bold')
+        .text('Description', startX + 10, currentY + 7);
+      doc.text('Amount (KES)', 400, currentY + 7, {
+        align: 'right',
+        width: 140,
+      });
 
       currentY += 35;
 
@@ -927,31 +951,43 @@ export class ReportsService {
         else doc.font('Helvetica');
 
         doc.text(label, startX + 10, currentY);
-        doc.text(this.formatMoney(amount), 400, currentY, { align: 'right', width: 140 });
+        doc.text(this.formatMoney(amount), 400, currentY, {
+          align: 'right',
+          width: 140,
+        });
         currentY += 20;
       };
 
       addRow('Basic Salary', Number(record.grossSalary));
 
       // Note: Using current worker allowances as historical data is not on record
-      if (Number(record.worker?.housingAllowance) > 0) addRow('Housing Allowance', Number(record.worker.housingAllowance));
-      if (Number(record.worker?.transportAllowance) > 0) addRow('Transport Allowance', Number(record.worker.transportAllowance));
+      if (Number(record.worker?.housingAllowance) > 0)
+        addRow('Housing Allowance', Number(record.worker.housingAllowance));
+      if (Number(record.worker?.transportAllowance) > 0)
+        addRow('Transport Allowance', Number(record.worker.transportAllowance));
 
       if (Number(record.bonuses) > 0) addRow('Bonuses', Number(record.bonuses));
-      if (Number(record.otherEarnings) > 0) addRow('Other Earnings', Number(record.otherEarnings));
+      if (Number(record.otherEarnings) > 0)
+        addRow('Other Earnings', Number(record.otherEarnings));
 
       doc.moveTo(startX, currentY).lineTo(550, currentY).stroke();
       currentY += 5;
 
       // Calculate Total Gross for display (may differ slightly if allowances changed, but best effort)
-      const calculatedGross = Number(record.grossSalary) + Number(record.bonuses) + Number(record.otherEarnings);
+      const calculatedGross =
+        Number(record.grossSalary) +
+        Number(record.bonuses) +
+        Number(record.otherEarnings);
       addRow('GROSS PAY', calculatedGross, true);
 
       currentY += 20;
 
       // Deductions Section
       doc.rect(startX, currentY, 500, 25).fillAndStroke('#f0f0f0', '#cccccc');
-      doc.fillColor('black').font('Helvetica-Bold').text('Deductions', startX + 10, currentY + 7);
+      doc
+        .fillColor('black')
+        .font('Helvetica-Bold')
+        .text('Deductions', startX + 10, currentY + 7);
       currentY += 35;
 
       const tax = record.taxBreakdown || {};
@@ -970,7 +1006,12 @@ export class ReportsService {
       doc.rect(startX, currentY, 500, 40).fillAndStroke('#e8f5e9', '#4caf50');
       doc.fillColor('black').fontSize(14).font('Helvetica-Bold');
       doc.text('NET PAY', startX + 20, currentY + 12);
-      doc.text(`KES ${this.formatMoney(Number(record.netSalary))}`, 300, currentY + 12, { align: 'right', width: 240 });
+      doc.text(
+        `KES ${this.formatMoney(Number(record.netSalary))}`,
+        300,
+        currentY + 12,
+        { align: 'right', width: 240 },
+      );
 
       doc.end();
     });
@@ -989,7 +1030,10 @@ export class ReportsService {
       doc.on('error', (err: any) => reject(err));
 
       // Header
-      doc.fontSize(16).font('Helvetica-Bold').text('STATUTORY DEDUCTIONS REPORT', { align: 'center' });
+      doc
+        .fontSize(16)
+        .font('Helvetica-Bold')
+        .text('STATUTORY DEDUCTIONS REPORT', { align: 'center' });
       doc.fontSize(12).text(report.payPeriod.name, { align: 'center' });
       doc.moveDown(2);
 
@@ -1015,7 +1059,11 @@ export class ReportsService {
       doc.text(`KES ${this.formatMoney(report.totals.nhif)}`, col1 + 50, y);
 
       doc.text('Housing Levy:', col2, y);
-      doc.text(`KES ${this.formatMoney(report.totals.housingLevy)}`, col2 + 80, y);
+      doc.text(
+        `KES ${this.formatMoney(report.totals.housingLevy)}`,
+        col2 + 80,
+        y,
+      );
 
       doc.moveDown(4);
 
@@ -1030,7 +1078,10 @@ export class ReportsService {
       doc.rect(startX, y, 550, 20).fill('#eeeeee');
       doc.fillColor('black');
       headers.forEach((h, i) => {
-        doc.text(h, x + 5, y + 5, { width: colWidths[i], align: i === 0 ? 'left' : 'right' });
+        doc.text(h, x + 5, y + 5, {
+          width: colWidths[i],
+          align: i === 0 ? 'left' : 'right',
+        });
         x += colWidths[i];
       });
 
@@ -1039,7 +1090,8 @@ export class ReportsService {
 
       // Draw Rows
       report.employees.forEach((emp: any, index: number) => {
-        if (y > 700) { // New Page
+        if (y > 700) {
+          // New Page
           doc.addPage();
           y = 30;
           // Redraw headers... (simplified for brevity)
@@ -1052,15 +1104,30 @@ export class ReportsService {
 
         doc.text(emp.name, x + 5, y, { width: colWidths[0] });
         x += colWidths[0];
-        doc.text(this.formatMoney(emp.grossPay), x + 5, y, { width: colWidths[1], align: 'right' });
+        doc.text(this.formatMoney(emp.grossPay), x + 5, y, {
+          width: colWidths[1],
+          align: 'right',
+        });
         x += colWidths[1];
-        doc.text(this.formatMoney(emp.nssf), x + 5, y, { width: colWidths[2], align: 'right' });
+        doc.text(this.formatMoney(emp.nssf), x + 5, y, {
+          width: colWidths[2],
+          align: 'right',
+        });
         x += colWidths[2];
-        doc.text(this.formatMoney(emp.nhif), x + 5, y, { width: colWidths[3], align: 'right' });
+        doc.text(this.formatMoney(emp.nhif), x + 5, y, {
+          width: colWidths[3],
+          align: 'right',
+        });
         x += colWidths[3];
-        doc.text(this.formatMoney(emp.housingLevy), x + 5, y, { width: colWidths[4], align: 'right' });
+        doc.text(this.formatMoney(emp.housingLevy), x + 5, y, {
+          width: colWidths[4],
+          align: 'right',
+        });
         x += colWidths[4];
-        doc.text(this.formatMoney(emp.paye), x + 5, y, { width: colWidths[5], align: 'right' });
+        doc.text(this.formatMoney(emp.paye), x + 5, y, {
+          width: colWidths[5],
+          align: 'right',
+        });
 
         y += 15;
       });
@@ -1070,6 +1137,9 @@ export class ReportsService {
   }
 
   private formatMoney(amount: number): string {
-    return (amount || 0).toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return (amount || 0).toLocaleString('en-KE', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
   }
 }

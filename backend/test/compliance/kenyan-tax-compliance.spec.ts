@@ -1,6 +1,5 @@
 // test/compliance/kenyan-tax-compliance.spec.ts
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
 import { TaxesService } from '../../src/modules/taxes/taxes.service';
 import { TaxConfigService } from '../../src/modules/tax-config/services/tax-config.service';
 import { Repository } from 'typeorm';
@@ -147,7 +146,7 @@ describe('Kenyan Tax Compliance Tests', () => {
     ];
 
     nssfTestCases.forEach(
-      ({ salary, employeeRate, employerRate, totalRate }) => {
+      ({ salary, employeeRate, employerRate, totalRate: _totalRate }) => {
         it(`should calculate NSSF correctly for salary KES ${salary}`, async () => {
           const nssf = await service.calculateNSSF(
             salary,
@@ -329,7 +328,6 @@ describe('Kenyan Tax Compliance Tests', () => {
     });
 
     it('should track tax calculation history', async () => {
-      const userId = 'test-user-123';
       const salary = 50000;
 
       // Multiple calculations

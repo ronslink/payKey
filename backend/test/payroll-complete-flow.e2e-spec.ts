@@ -32,7 +32,7 @@ describe('Payroll Complete Flow E2E', () => {
   let app: INestApplication;
   let helpers: TestHelpers;
   let authToken: string;
-  let userId: string;
+  let _userId: string;
   let payPeriodId: string;
   let workerId: string;
   let payrollRecordId: string;
@@ -62,7 +62,7 @@ describe('Payroll Complete Flow E2E', () => {
     });
 
     authToken = testUser.token;
-    userId = testUser.userId;
+    _userId = testUser.userId;
   });
 
   afterAll(async () => {

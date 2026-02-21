@@ -19,7 +19,11 @@ import {
   PaymentMethod,
 } from '../subscriptions/entities/subscription-payment.entity';
 import { User } from '../users/entities/user.entity';
-import { Transaction, TransactionStatus, TransactionType } from './entities/transaction.entity';
+import {
+  Transaction,
+  TransactionStatus,
+  TransactionType,
+} from './entities/transaction.entity';
 import { ExchangeRateService } from './exchange-rate.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { DeviceToken } from '../notifications/entities/device-token.entity';
@@ -66,7 +70,9 @@ export class StripeService {
    */
   constructEvent(payload: Buffer, signature: string): Stripe.Event {
     const stripe = this.ensureStripeConfigured();
-    const webhookSecret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET');
+    const webhookSecret = this.configService.get<string>(
+      'STRIPE_WEBHOOK_SECRET',
+    );
     if (!webhookSecret) {
       throw new BadRequestException('Stripe webhook secret not configured');
     }
@@ -119,10 +125,14 @@ export class StripeService {
         customer = await this.createCustomer(customerEmail, customerName);
       }
 
-      const frontendUrl = (await this.systemConfigService.get('FRONTEND_URL')) || this.configService.get<string>('FRONTEND_URL');
+      const frontendUrl =
+        (await this.systemConfigService.get('FRONTEND_URL')) ||
+        this.configService.get<string>('FRONTEND_URL');
 
       if (!frontendUrl) {
-        throw new BadRequestException('System configuration error: FRONTEND_URL not set');
+        throw new BadRequestException(
+          'System configuration error: FRONTEND_URL not set',
+        );
       }
 
       const session = await stripe.checkout.sessions.create({
@@ -154,9 +164,7 @@ export class StripeService {
         success_url:
           successUrl ||
           `${frontendUrl}/payments/subscriptions/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url:
-          cancelUrl ||
-          `${frontendUrl}/payments/subscriptions/cancel`,
+        cancel_url: cancelUrl || `${frontendUrl}/payments/subscriptions/cancel`,
         allow_promotion_codes: true,
       });
 
@@ -191,7 +199,7 @@ export class StripeService {
       provider: 'STRIPE',
       metadata: {
         description: 'Wallet Top Up via Stripe',
-        initiatedAt: new Date().toISOString()
+        initiatedAt: new Date().toISOString(),
       },
     });
     await this.transactionRepository.save(transaction);
@@ -222,7 +230,10 @@ export class StripeService {
     };
   }
 
-  private getPlanPrice(planTier: string, billingPeriod: 'monthly' | 'yearly' = 'monthly'): number {
+  private getPlanPrice(
+    planTier: string,
+    billingPeriod: 'monthly' | 'yearly' = 'monthly',
+  ): number {
     const monthlyPrices: Record<string, number> = {
       FREE: 0,
       BASIC: 999, // $9.99
@@ -238,7 +249,9 @@ export class StripeService {
       PLATINUM: 49999, // $499.99
     };
 
-    return billingPeriod === 'yearly' ? (yearlyPrices[planTier] || yearlyPrices.BASIC) : (monthlyPrices[planTier] || monthlyPrices.BASIC);
+    return billingPeriod === 'yearly'
+      ? yearlyPrices[planTier] || yearlyPrices.BASIC
+      : monthlyPrices[planTier] || monthlyPrices.BASIC;
   }
 
   /**
@@ -366,7 +379,7 @@ export class StripeService {
           await this.handleCheckoutCompleted(event.data.object);
           break;
         case 'payment_intent.succeeded':
-          await this.handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent);
+          await this.handlePaymentIntentSucceeded(event.data.object);
           break;
         case 'invoice.payment_succeeded':
           await this.handlePaymentSucceeded(event.data.object);
@@ -685,14 +698,18 @@ export class StripeService {
   /**
    * Handle Payment Intent Succeeded (Wallet Top Up)
    */
-  private async handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent): Promise<void> {
+  private async handlePaymentIntentSucceeded(
+    paymentIntent: Stripe.PaymentIntent,
+  ): Promise<void> {
     const { userId, transactionId, type } = paymentIntent.metadata;
 
     if (type !== 'WALLET_TOPUP' || !transactionId) {
       return; // Ignore non-wallet payments
     }
 
-    const transaction = await this.transactionRepository.findOne({ where: { id: transactionId } });
+    const transaction = await this.transactionRepository.findOne({
+      where: { id: transactionId },
+    });
     if (!transaction) {
       this.logger.error(`Transaction not found for PI: ${paymentIntent.id}`);
       return;
@@ -722,10 +739,16 @@ export class StripeService {
       targetCurrency = 'KES';
       try {
         // Fetch latest periodic rate (Cached/DB)
-        appliedRate = await this.exchangeRateService.getLatestRate('EUR', 'KES');
+        appliedRate = await this.exchangeRateService.getLatestRate(
+          'EUR',
+          'KES',
+        );
         amountToCredit = this.roundCurrency(amountReceivedEur * appliedRate);
       } catch (e) {
-        this.logger.error('FX Conversion Failed. Using 1:1 Fallback (Manual Review Required)', e);
+        this.logger.error(
+          'FX Conversion Failed. Using 1:1 Fallback (Manual Review Required)',
+          e,
+        );
         // Fallback is 1:1, effectively freezing real value transfer until resolved
       }
     }
@@ -738,18 +761,20 @@ export class StripeService {
         sourceCurrency: 'EUR',
         targetCurrency,
         rate: appliedRate,
-        creditedAmount: amountToCredit
-      }
+        creditedAmount: amountToCredit,
+      },
     };
     await this.transactionRepository.save(transaction);
 
     await this.userRepository.increment(
       { id: userId },
       'walletBalance',
-      amountToCredit
+      amountToCredit,
     );
 
-    this.logger.log(`Wallet credited for user ${userId}: ${amountToCredit} KES (Rate: ${appliedRate}, Source: ${amountReceivedEur} EUR)`);
+    this.logger.log(
+      `Wallet credited for user ${userId}: ${amountToCredit} KES (Rate: ${appliedRate}, Source: ${amountReceivedEur} EUR)`,
+    );
 
     // Send Push Notification
     try {
@@ -764,7 +789,7 @@ export class StripeService {
           'Wallet', // "Worker Name" context used as "Wallet" for topups
           amountToCredit,
           'SUCCESS',
-          'TOPUP'
+          'TOPUP',
         );
       }
     } catch (e) {
@@ -779,7 +804,10 @@ export class StripeService {
   /**
    * Create a Stripe refund for a payment intent
    */
-  async createRefund(paymentIntentId: string, amount: number): Promise<Stripe.Refund> {
+  async createRefund(
+    paymentIntentId: string,
+    amount: number,
+  ): Promise<Stripe.Refund> {
     const stripe = this.ensureStripeConfigured();
     return stripe.refunds.create({
       payment_intent: paymentIntentId,

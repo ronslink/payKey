@@ -25,10 +25,15 @@ import * as path from 'path';
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 // ── Config ────────────────────────────────────────────────────────────────────
-const YEAR = parseInt(process.env.CAMPAIGN_YEAR || String(new Date().getFullYear()));
+const YEAR = parseInt(
+  process.env.CAMPAIGN_YEAR || String(new Date().getFullYear()),
+);
 
 const dbConfig = process.env.DATABASE_URL
-  ? { connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } }
+  ? {
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false },
+    }
   : {
       host: process.env.DB_HOST || 'localhost',
       port: parseInt(process.env.DB_PORT || '5432'),
@@ -110,10 +115,21 @@ async function seedAnnualCampaigns() {
             "termsAndConditions" = EXCLUDED."termsAndConditions",
             "updatedAt" = NOW()
           RETURNING id, "promoCode"`,
-        [c.promoName, c.promoDesc, c.promoCode, c.discountPct, c.validFrom, c.validUntil, c.terms],
+        [
+          c.promoName,
+          c.promoDesc,
+          c.promoCode,
+          c.discountPct,
+          c.validFrom,
+          c.validUntil,
+          c.terms,
+        ],
       );
       const promoId = promoRes.rows[0].id;
-      const promoAction = promoRes.rowCount === 1 && promoRes.rows[0] ? '✅ Created' : '↺ Updated';
+      const promoAction =
+        promoRes.rowCount === 1 && promoRes.rows[0]
+          ? '✅ Created'
+          : '↺ Updated';
       console.log(`  ${promoAction} promo: ${c.promoCode} (id: ${promoId})`);
 
       // Helper to upsert a campaign
@@ -122,9 +138,17 @@ async function seedAnnualCampaigns() {
         const isEmail = type === 'EMAIL';
         const displaySettings = isEmail
           ? null
-          : JSON.stringify({ position: 'top', dismissible: true, autoHideAfter: null, showOnPages: ['dashboard', 'subscription'] });
+          : JSON.stringify({
+              position: 'top',
+              dismissible: true,
+              autoHideAfter: null,
+              showOnPages: ['dashboard', 'subscription'],
+            });
 
-        const existing = await client.query(`SELECT id FROM campaigns WHERE name = $1`, [name]);
+        const existing = await client.query(
+          `SELECT id FROM campaigns WHERE name = $1`,
+          [name],
+        );
 
         if (existing.rows.length > 0) {
           // Update but preserve lastDispatchedAt to avoid accidental re-sends
@@ -141,9 +165,14 @@ async function seedAnnualCampaigns() {
               `${c.label} ${YEAR} promotional campaign. ${isEmail ? 'Server-dispatched email.' : 'In-app banner.'}`,
               isEmail ? c.emailTitle : c.bannerTitle,
               isEmail ? c.emailMsg : c.bannerMsg,
-              'Upgrade Now', '/subscription/upgrade',
-              c.validFrom, c.validUntil,
-              c.priority, displaySettings, promoId, name,
+              'Upgrade Now',
+              '/subscription/upgrade',
+              c.validFrom,
+              c.validUntil,
+              c.priority,
+              displaySettings,
+              promoId,
+              name,
             ],
           );
           console.log(`  ↺ Updated ${type} campaign: "${name}"`);
@@ -174,9 +203,13 @@ async function seedAnnualCampaigns() {
               type,
               isEmail ? c.emailTitle : c.bannerTitle,
               isEmail ? c.emailMsg : c.bannerMsg,
-              'Upgrade Now', '/subscription/upgrade',
-              c.validFrom, c.validUntil,
-              c.priority, displaySettings, promoId,
+              'Upgrade Now',
+              '/subscription/upgrade',
+              c.validFrom,
+              c.validUntil,
+              c.priority,
+              displaySettings,
+              promoId,
             ],
           );
           console.log(`  ✅ Created ${type} campaign: "${name}"`);
@@ -190,9 +223,15 @@ async function seedAnnualCampaigns() {
     console.log('\n✅ Annual campaigns seeded successfully.');
     console.log('\nNext steps:');
     console.log('  1. Verify in Admin → Subscription Management → Campaigns');
-    console.log('  2. EMAIL campaigns auto-dispatch within 15 min once scheduledFrom ≤ now');
-    console.log('  3. BANNER campaigns appear in-app immediately when scheduledFrom ≤ now');
-    console.log(`  4. Promo codes active: XMAS${YEAR} (20% off, Dec), MIDYEAR${YEAR} (15% off, Jun)\n`);
+    console.log(
+      '  2. EMAIL campaigns auto-dispatch within 15 min once scheduledFrom ≤ now',
+    );
+    console.log(
+      '  3. BANNER campaigns appear in-app immediately when scheduledFrom ≤ now',
+    );
+    console.log(
+      `  4. Promo codes active: XMAS${YEAR} (20% off, Dec), MIDYEAR${YEAR} (15% off, Jun)\n`,
+    );
   } finally {
     await client.end();
   }

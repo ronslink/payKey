@@ -5,8 +5,8 @@ import { SystemConfigService } from './system-config.service';
 
 @Global()
 @Module({
-    imports: [TypeOrmModule.forFeature([SystemConfig])],
-    providers: [SystemConfigService],
-    exports: [SystemConfigService],
+  imports: [TypeOrmModule.forFeature([SystemConfig])],
+  providers: [SystemConfigService],
+  exports: [SystemConfigService],
 })
-export class SystemConfigModule { }
+export class SystemConfigModule {}

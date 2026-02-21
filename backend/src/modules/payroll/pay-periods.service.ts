@@ -35,7 +35,7 @@ export class PayPeriodsService {
     @InjectRepository(TaxSubmission)
     private taxSubmissionRepository: Repository<TaxSubmission>,
     private taxPaymentsService: TaxPaymentsService,
-  ) { }
+  ) {}
 
   async create(
     createPayPeriodDto: CreatePayPeriodDto,
@@ -635,14 +635,17 @@ export class PayPeriodsService {
       .createQueryBuilder('pp')
       .where('pp.userId = :userId', { userId })
       .andWhere('pp.frequency = :frequency', { frequency })
-      .andWhere('EXTRACT(YEAR FROM pp.startDate) BETWEEN :startYear AND :endYear', {
-        startYear,
-        endYear
-      })
+      .andWhere(
+        'EXTRACT(YEAR FROM pp.startDate) BETWEEN :startYear AND :endYear',
+        {
+          startYear,
+          endYear,
+        },
+      )
       .getMany();
 
     // Create a Set of existing names for O(1) lookup
-    const existingNames = new Set(existingPeriods.map(p => p.name));
+    const existingNames = new Set(existingPeriods.map((p) => p.name));
 
     while (currentDate <= endDate) {
       const periodStart = new Date(currentDate);
@@ -698,7 +701,7 @@ export class PayPeriodsService {
         existingNames.add(name); // Add to set to prevent internal dupes if loop is weird
       } else {
         // If exists, find it in our list and add to returned list
-        const existing = existingPeriods.find(p => p.name === name);
+        const existing = existingPeriods.find((p) => p.name === name);
         if (existing) periods.push(existing);
       }
     }

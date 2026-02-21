@@ -16,7 +16,11 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { StripeService } from './stripe.service';
 
 import { IntaSendService } from './intasend.service';
-import { Transaction, TransactionStatus, TransactionType } from './entities/transaction.entity';
+import {
+  Transaction,
+  TransactionStatus,
+  TransactionType,
+} from './entities/transaction.entity';
 import {
   Subscription,
   SubscriptionStatus,
@@ -143,7 +147,7 @@ export class UnifiedPaymentsController {
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
     private readonly intaSendService: IntaSendService,
-  ) { }
+  ) {}
 
   // ==========================================================================
   // Public Endpoints
@@ -252,7 +256,10 @@ export class UnifiedPaymentsController {
   ): Promise<{ success: boolean; url: string; message: string }> {
     const { userId, email, name } = req.user;
 
-    console.log(`[UnifiedPayments] Received Checkout TopUp Request for ${userId}`, JSON.stringify(body));
+    console.log(
+      `[UnifiedPayments] Received Checkout TopUp Request for ${userId}`,
+      JSON.stringify(body),
+    );
 
     try {
       const amount = Number(body.amount);
@@ -315,7 +322,8 @@ export class UnifiedPaymentsController {
       };
     } catch (error) {
       console.error('Unified Checkout TopUp Error:', error);
-      const message = error instanceof Error ? error.message : 'Failed to initiate checkout';
+      const message =
+        error instanceof Error ? error.message : 'Failed to initiate checkout';
       throw new HttpException(message, HttpStatus.BAD_REQUEST);
     }
   }
@@ -324,10 +332,17 @@ export class UnifiedPaymentsController {
   async initiateStripeTopup(
     @Request() req: AuthenticatedRequest,
     @Body() body: { amount: number; paymentMethodTypes?: string[] },
-  ): Promise<{ success: boolean; clientSecret: string; transactionId: string }> {
+  ): Promise<{
+    success: boolean;
+    clientSecret: string;
+    transactionId: string;
+  }> {
     const { userId } = req.user;
 
-    console.log(`[UnifiedPayments] Received Stripe TopUp Request for ${userId}`, JSON.stringify(body));
+    console.log(
+      `[UnifiedPayments] Received Stripe TopUp Request for ${userId}`,
+      JSON.stringify(body),
+    );
 
     try {
       const amount = Number(body.amount);
@@ -353,7 +368,10 @@ export class UnifiedPaymentsController {
       };
     } catch (error) {
       console.error('Unified Stripe TopUp Error:', error);
-      const message = error instanceof Error ? error.message : 'Failed to initiate stripe topup';
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Failed to initiate stripe topup';
       throw new HttpException(message, HttpStatus.BAD_REQUEST);
     }
   }
@@ -365,7 +383,10 @@ export class UnifiedPaymentsController {
   ): Promise<{ success: boolean; checkoutRequestId: string; message: string }> {
     const { userId } = req.user;
 
-    console.log(`[UnifiedPayments] Received TopUp Request for ${userId}`, JSON.stringify(body));
+    console.log(
+      `[UnifiedPayments] Received TopUp Request for ${userId}`,
+      JSON.stringify(body),
+    );
 
     try {
       // Validate amount
@@ -387,7 +408,9 @@ export class UnifiedPaymentsController {
       }
       // If it already starts with 254, leave it alone.
 
-      console.log(`[UnifiedPayments] Normalized Phone: ${body.phoneNumber} -> ${phoneNumber}`);
+      console.log(
+        `[UnifiedPayments] Normalized Phone: ${body.phoneNumber} -> ${phoneNumber}`,
+      );
 
       // 1. Create PENDING Transaction Record
       const transaction = this.transactionRepository.create({
@@ -443,7 +466,8 @@ export class UnifiedPaymentsController {
       };
     } catch (error) {
       console.error('Unified TopUp Error:', error);
-      const message = error instanceof Error ? error.message : 'Failed to initiate topup';
+      const message =
+        error instanceof Error ? error.message : 'Failed to initiate topup';
       // Return the actual error message to the frontend for better debugging
       throw new HttpException(message, HttpStatus.BAD_REQUEST);
     }

@@ -127,10 +127,11 @@ export async function rollbackTestTransaction(dataSource: DataSource) {
 /**
  * Create test database connection
  */
-export async function createTestDataSource(): Promise<DataSource> {
-  // This would typically use the test database configuration
-  // For now, we'll rely on the existing TypeORM configuration
-  throw new Error('Use existing AppModule configuration for tests');
+export function createTestDataSource(): Promise<DataSource> {
+  // Rely on the existing AppModule TypeORM configuration for tests
+  return Promise.reject(
+    new Error('Use existing AppModule configuration for tests'),
+  );
 }
 
 /**

@@ -1,27 +1,29 @@
 import {
-    Injectable,
-    CanActivate,
-    ExecutionContext,
-    ForbiddenException,
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
 } from '@nestjs/common';
 import { UserRole } from '../../users/entities/user.entity';
 
 @Injectable()
 export class AdminGuard implements CanActivate {
-    canActivate(context: ExecutionContext): boolean {
-        const request = context.switchToHttp().getRequest();
-        const user = request.user;
+  canActivate(context: ExecutionContext): boolean {
+    const request = context.switchToHttp().getRequest();
+    const user = request.user;
 
-        if (!user) {
-            throw new ForbiddenException('Authentication required');
-        }
-
-        if (![UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.VIEWER].includes(user.role)) {
-            throw new ForbiddenException(
-                'Admin access required',
-            );
-        }
-
-        return true;
+    if (!user) {
+      throw new ForbiddenException('Authentication required');
     }
+
+    if (
+      ![UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.VIEWER].includes(
+        user.role,
+      )
+    ) {
+      throw new ForbiddenException('Admin access required');
+    }
+
+    return true;
+  }
 }

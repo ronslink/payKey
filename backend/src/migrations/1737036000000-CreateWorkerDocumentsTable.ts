@@ -5,9 +5,9 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * This table stores uploaded documents for workers (ID copies, contracts, certificates, etc.)
  */
 export class CreateWorkerDocumentsTable1737036000000 implements MigrationInterface {
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        // Create document type enum
-        await queryRunner.query(`
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    // Create document type enum
+    await queryRunner.query(`
       DO $$ BEGIN
         CREATE TYPE worker_documents_type_enum AS ENUM (
           'ID_COPY',
@@ -21,8 +21,8 @@ export class CreateWorkerDocumentsTable1737036000000 implements MigrationInterfa
       END $$;
     `);
 
-        // Create worker_documents table
-        await queryRunner.query(`
+    // Create worker_documents table
+    await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS worker_documents (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         "workerId" UUID NOT NULL,
@@ -39,16 +39,18 @@ export class CreateWorkerDocumentsTable1737036000000 implements MigrationInterfa
       )
     `);
 
-        // Create index for performance
-        await queryRunner.query(`
+    // Create index for performance
+    await queryRunner.query(`
       CREATE INDEX IF NOT EXISTS "IDX_worker_documents_workerId_createdAt"
         ON worker_documents ("workerId", "createdAt")
     `);
-    }
+  }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`DROP INDEX IF EXISTS "IDX_worker_documents_workerId_createdAt"`);
-        await queryRunner.query(`DROP TABLE IF EXISTS worker_documents CASCADE`);
-        await queryRunner.query(`DROP TYPE IF EXISTS worker_documents_type_enum`);
-    }
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "IDX_worker_documents_workerId_createdAt"`,
+    );
+    await queryRunner.query(`DROP TABLE IF EXISTS worker_documents CASCADE`);
+    await queryRunner.query(`DROP TYPE IF EXISTS worker_documents_type_enum`);
+  }
 }

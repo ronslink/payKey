@@ -8,10 +8,10 @@ import { DataSource } from 'typeorm';
 describe('Payroll Payment Flow E2E', () => {
   let app: INestApplication;
   let authToken: string;
-  let userId: string;
+  let _userId: string;
   let payPeriodId: string;
-  let mpesaWorkerId: string;
-  let highNetSalaryWorkerId: string;
+  let _mpesaWorkerId: string;
+  let _highNetSalaryWorkerId: string;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -29,7 +29,7 @@ describe('Payroll Payment Flow E2E', () => {
     const email = `payment.flow.${Date.now()}@paykey.com`;
     const password = 'Password123!';
 
-    const registerRes = await request(app.getHttpServer())
+    const _registerRes = await request(app.getHttpServer())
       .post('/auth/register')
       .send({
         email,
@@ -46,7 +46,7 @@ describe('Payroll Payment Flow E2E', () => {
       .send({ email, password });
 
     authToken = loginRes.body.access_token;
-    userId = loginRes.body.user.id;
+    _userId = loginRes.body.user.id;
   });
 
   afterAll(async () => {
@@ -75,7 +75,7 @@ describe('Payroll Payment Flow E2E', () => {
         mpesaNumber: '+254712345678',
       })
       .expect(201);
-    mpesaWorkerId = res1.body.id;
+    _mpesaWorkerId = res1.body.id;
 
     // 2. High Salary Worker > 150k limit to test splitting
     // Net Pay > 150k required.
@@ -95,7 +95,7 @@ describe('Payroll Payment Flow E2E', () => {
         mpesaNumber: '+254722222222',
       })
       .expect(201);
-    highNetSalaryWorkerId = res2.body.id;
+    _highNetSalaryWorkerId = res2.body.id;
   });
 
   it('2. Should generate and activate pay period', async () => {

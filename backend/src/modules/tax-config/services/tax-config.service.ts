@@ -22,7 +22,7 @@ export class TaxConfigService implements OnModuleInit {
     @InjectRepository(TaxConfig)
     private taxConfigRepository: Repository<TaxConfig>,
     @Optional() @Inject(CACHE_MANAGER) private cacheManager?: Cache,
-  ) { }
+  ) {}
 
   /**
    * Automatically seed tax configurations on module initialization
@@ -122,10 +122,18 @@ export class TaxConfigService implements OnModuleInit {
   async seedInitialConfigs(): Promise<void> {
     // Check if table exists before seeding
     try {
-      await this.taxConfigRepository.findOne({ where: { id: '00000000-0000-0000-0000-000000000000' } });
+      await this.taxConfigRepository.findOne({
+        where: { id: '00000000-0000-0000-0000-000000000000' },
+      });
     } catch (error: any) {
-      if (error.code === '42P01' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
-        this.logger.warn('⚠️ tax_config table does not exist yet. Skipping seed. Run migrations first.');
+      if (
+        error.code === '42P01' ||
+        error.message?.includes('relation') ||
+        error.message?.includes('does not exist')
+      ) {
+        this.logger.warn(
+          '⚠️ tax_config table does not exist yet. Skipping seed. Run migrations first.',
+        );
         return;
       }
       throw error;

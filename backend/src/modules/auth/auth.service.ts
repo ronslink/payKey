@@ -27,16 +27,23 @@ export class AuthService {
     private usersService: UsersService,
     private jwtService: JwtService,
     private configService: ConfigService,
-  ) { }
+  ) {}
 
   async validateUser(
     email: string,
     password: string,
   ): Promise<Omit<User, 'passwordHash'> | null> {
     const user = await this.usersService.findOneByEmail(email);
-    if (user && user.passwordHash && (await bcrypt.compare(password, user.passwordHash))) {
+    if (
+      user &&
+      user.passwordHash &&
+      (await bcrypt.compare(password, user.passwordHash))
+    ) {
       const { passwordHash: _hash, ...result } = user;
-      console.debug('Login validated for user:', _hash ? user.email : 'unknown');
+      console.debug(
+        'Login validated for user:',
+        _hash ? user.email : 'unknown',
+      );
       return result as Omit<User, 'passwordHash'>;
     }
     return null;
@@ -88,7 +95,14 @@ export class AuthService {
   }
 
   async loginWithSocial(socialLoginDto: SocialLoginDto) {
-    const { provider, token, email: clientEmail, firstName, lastName, photoUrl } = socialLoginDto;
+    const {
+      provider,
+      token,
+      email: clientEmail,
+      firstName,
+      lastName,
+      photoUrl,
+    } = socialLoginDto;
 
     let socialId = token;
     let verifiedEmail = clientEmail;
@@ -121,9 +135,15 @@ export class AuthService {
     const appleTeamId = this.configService.get<string>('APPLE_TEAM_ID');
     const appleBundleId = this.configService.get<string>('APPLE_BUNDLE_ID');
     const appleKeyPath = this.configService.get<string>('APPLE_KEY_PATH');
-    const applePrivateKeyEnv = this.configService.get<string>('APPLE_PRIVATE_KEY');
+    const applePrivateKeyEnv =
+      this.configService.get<string>('APPLE_PRIVATE_KEY');
 
-    if (!appleKeyId || !appleTeamId || !appleBundleId || (!appleKeyPath && !applePrivateKeyEnv)) {
+    if (
+      !appleKeyId ||
+      !appleTeamId ||
+      !appleBundleId ||
+      (!appleKeyPath && !applePrivateKeyEnv)
+    ) {
       throw new Error('Apple configuration missing in environment variables');
     }
 
@@ -131,7 +151,10 @@ export class AuthService {
       if (applePrivateKeyEnv) {
         console.debug('Apple Sign-in: Using private key from environment');
       } else if (appleKeyPath) {
-        console.debug('Apple Sign-in: Using private key from file:', appleKeyPath);
+        console.debug(
+          'Apple Sign-in: Using private key from file:',
+          appleKeyPath,
+        );
       }
 
       const tokenPayload = await appleSignin.verifyIdToken(idToken, {
@@ -158,10 +181,12 @@ export class AuthService {
       });
       return ticket.getPayload()!;
     } catch (error) {
-      // If GOOGLE_CLIENT_ID is missing, we might still want to allow development 
+      // If GOOGLE_CLIENT_ID is missing, we might still want to allow development
       // but for production this is critical.
       if (!googleClientId) {
-        console.warn('GOOGLE_CLIENT_ID missing, skipping Google token verification');
+        console.warn(
+          'GOOGLE_CLIENT_ID missing, skipping Google token verification',
+        );
         return { sub: idToken, email: undefined }; // Fallback for dev
       }
       throw new Error(`Google token verification failed: ${error.message}`);

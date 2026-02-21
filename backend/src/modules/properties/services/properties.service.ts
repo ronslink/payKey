@@ -13,7 +13,7 @@ export class PropertiesService {
   constructor(
     @InjectRepository(Property)
     private propertyRepository: Repository<Property>,
-  ) { }
+  ) {}
 
   async createProperty(
     userId: string,
@@ -26,7 +26,10 @@ export class PropertiesService {
     return this.propertyRepository.save(property);
   }
 
-  async getProperties(userId: string, status?: 'active' | 'archived' | 'all'): Promise<Property[]> {
+  async getProperties(
+    userId: string,
+    status?: 'active' | 'archived' | 'all',
+  ): Promise<Property[]> {
     const whereClause: any = { userId };
     if (status === 'archived') {
       whereClause.isActive = false;
@@ -72,7 +75,9 @@ export class PropertiesService {
   }
 
   async restoreProperty(id: string, userId: string): Promise<Property> {
-    const property = await this.propertyRepository.findOne({ where: { id, userId } });
+    const property = await this.propertyRepository.findOne({
+      where: { id, userId },
+    });
     if (!property) {
       throw new NotFoundException('Property not found');
     }
@@ -81,14 +86,19 @@ export class PropertiesService {
   }
 
   async permanentlyDeleteProperty(id: string, userId: string): Promise<void> {
-    const property = await this.propertyRepository.findOne({ where: { id, userId } });
+    const property = await this.propertyRepository.findOne({
+      where: { id, userId },
+    });
     if (!property) {
       throw new NotFoundException('Property not found');
     }
     await this.propertyRepository.remove(property);
   }
 
-  async getPropertySummaries(userId: string, status?: 'active' | 'archived' | 'all'): Promise<PropertySummaryDto[]> {
+  async getPropertySummaries(
+    userId: string,
+    status?: 'active' | 'archived' | 'all',
+  ): Promise<PropertySummaryDto[]> {
     const query = this.propertyRepository
       .createQueryBuilder('property')
       .leftJoinAndSelect('property.workers', 'worker')

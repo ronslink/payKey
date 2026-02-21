@@ -2,11 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
-import {
-  generateTestEmail,
-  generateTestPhone,
-  createTestUserData,
-} from './test-utils';
+import { generateTestPhone, createTestUserData } from './test-utils';
 
 /**
  * Onboarding E2E Tests

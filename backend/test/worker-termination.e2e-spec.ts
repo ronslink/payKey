@@ -27,7 +27,7 @@ describe('Worker Termination E2E', () => {
   let app: INestApplication;
   let helpers: TestHelpers;
   let authToken: string;
-  let userId: string;
+  let _userId: string;
   let workerId: string;
 
   beforeAll(async () => {
@@ -50,7 +50,7 @@ describe('Worker Termination E2E', () => {
     });
 
     authToken = testUser.token;
-    userId = testUser.userId;
+    _userId = testUser.userId;
   });
 
   afterAll(async () => {

@@ -27,7 +27,7 @@ describe('Payroll Proration E2E', () => {
   let app: INestApplication;
   let helpers: TestHelpers;
   let authToken: string;
-  let userId: string;
+  let _userId: string;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -49,7 +49,7 @@ describe('Payroll Proration E2E', () => {
     });
 
     authToken = testUser.token;
-    userId = testUser.userId;
+    _userId = testUser.userId;
   });
 
   afterAll(async () => {

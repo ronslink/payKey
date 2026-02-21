@@ -1,11 +1,11 @@
 import {
-    Controller,
-    Get,
-    Put,
-    Body,
-    Param,
-    UseGuards,
-    Req,
+  Controller,
+  Get,
+  Put,
+  Body,
+  Param,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -21,44 +21,44 @@ import { AdminService } from './admin.service';
 @Controller('api/admin/system-config')
 @UseGuards(JwtAuthGuard, AdminGuard, RolesGuard)
 export class AdminSystemConfigController {
-    constructor(
-        @InjectRepository(SystemConfig)
-        private readonly configRepo: Repository<SystemConfig>,
-        private readonly configService: SystemConfigService,
-        private readonly adminService: AdminService,
-    ) { }
+  constructor(
+    @InjectRepository(SystemConfig)
+    private readonly configRepo: Repository<SystemConfig>,
+    private readonly configService: SystemConfigService,
+    private readonly adminService: AdminService,
+  ) {}
 
-    @Get()
-    getAll() {
-        return this.configRepo.find({ order: { key: 'ASC' } });
-    }
+  @Get()
+  getAll() {
+    return this.configRepo.find({ order: { key: 'ASC' } });
+  }
 
-    @Get(':key')
-    getByKey(@Param('key') key: string) {
-        return this.configRepo.findOne({ where: { key } });
-    }
+  @Get(':key')
+  getByKey(@Param('key') key: string) {
+    return this.configRepo.findOne({ where: { key } });
+  }
 
-    @Put(':key')
-    @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
-    async update(
-        @Param('key') key: string,
-        @Body() body: { value: string; description?: string },
-        @Req() req: any,
-    ) {
-        const oldConfig = await this.configRepo.findOne({ where: { key } });
-        await this.configService.set(key, body.value, body.description);
-        const newConfig = await this.configRepo.findOne({ where: { key } });
+  @Put(':key')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  async update(
+    @Param('key') key: string,
+    @Body() body: { value: string; description?: string },
+    @Req() req: any,
+  ) {
+    const oldConfig = await this.configRepo.findOne({ where: { key } });
+    await this.configService.set(key, body.value, body.description);
+    const newConfig = await this.configRepo.findOne({ where: { key } });
 
-        this.adminService.logAction({
-            adminUserId: req.user.id,
-            action: oldConfig ? 'UPDATE' : 'CREATE',
-            entityType: 'SYSTEM_CONFIG',
-            entityId: key,
-            oldValues: oldConfig,
-            newValues: newConfig,
-            ipAddress: req.ip,
-        });
+    this.adminService.logAction({
+      adminUserId: req.user.id,
+      action: oldConfig ? 'UPDATE' : 'CREATE',
+      entityType: 'SYSTEM_CONFIG',
+      entityId: key,
+      oldValues: oldConfig,
+      newValues: newConfig,
+      ipAddress: req.ip,
+    });
 
-        return newConfig;
-    }
+    return newConfig;
+  }
 }

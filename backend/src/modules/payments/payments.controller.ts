@@ -52,8 +52,6 @@ import {
 import { NotificationsService } from '../notifications/notifications.service';
 import { DeviceToken } from '../notifications/entities/device-token.entity';
 
-
-
 @Controller('payments')
 export class PaymentsController {
   private readonly logger = new Logger(PaymentsController.name);
@@ -76,9 +74,7 @@ export class PaymentsController {
     private intaSendService: IntaSendService,
     private stripeService: StripeService,
     private notificationsService: NotificationsService,
-  ) { }
-
-
+  ) {}
 
   /**
    * Stripe Webhook Endpoint
@@ -178,13 +174,16 @@ export class PaymentsController {
     // IntaSend Logic
     // Note: This endpoint processes single payment legacy style.
     // Ideally should be updated to use bulk if needed, but keeping for backward compat.
-    return this.intaSendService.sendMoney([
-      {
-        account: body.phoneNumber,
-        amount: body.amount,
-        narrative: body.remarks || 'Payment',
-      }
-    ], walletId); // Draw from specific wallet
+    return this.intaSendService.sendMoney(
+      [
+        {
+          account: body.phoneNumber,
+          amount: body.amount,
+          narrative: body.remarks || 'Payment',
+        },
+      ],
+      walletId,
+    ); // Draw from specific wallet
   }
 
   /**
@@ -229,7 +228,8 @@ export class PaymentsController {
     const walletId = await this._ensureWallet(userId);
 
     // Fetch REAL balance from IntaSend
-    const intasendWallet = await this.intaSendService.getWalletBalance(walletId);
+    const intasendWallet =
+      await this.intaSendService.getWalletBalance(walletId);
 
     // Fallback or Sync logic?
     // For now, let's return the IntaSend balance as primary source of truth if available
@@ -246,7 +246,10 @@ export class PaymentsController {
       },
     });
 
-    const pendingAmount = pendingDeposits.reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+    const pendingAmount = pendingDeposits.reduce(
+      (sum, tx) => sum + Number(tx.amount || 0),
+      0,
+    );
 
     const user = await this.usersRepository.findOne({
       where: { id: userId },
@@ -254,18 +257,22 @@ export class PaymentsController {
     });
 
     // Calculate IntaSend reported clearing
-    let intaSendClearing = Number(intasendWallet.current_balance) - Number(intasendWallet.available_balance);
+    let intaSendClearing =
+      Number(intasendWallet.current_balance) -
+      Number(intasendWallet.available_balance);
     if (intaSendClearing < 0) intaSendClearing = 0;
 
     // Total Clearing = IntaSend Reported + Local Pending
-    // We sum them to ensure visibility. (Note: slight risk of double counting if IntaSend includes it, 
+    // We sum them to ensure visibility. (Note: slight risk of double counting if IntaSend includes it,
     // but better to show more than 0 for "missing" funds).
     const totalClearing = intaSendClearing + pendingAmount;
 
     return {
       success: true,
       // Use IntaSend's available_balance as the truth for "Ready to Spend"
-      available_balance: Number(intasendWallet.available_balance ?? user?.walletBalance ?? 0),
+      available_balance: Number(
+        intasendWallet.available_balance ?? user?.walletBalance ?? 0,
+      ),
       // Use combined clearing balance
       clearing_balance: totalClearing,
       currency: 'KES',
@@ -279,7 +286,14 @@ export class PaymentsController {
   private async _ensureWallet(userId: string): Promise<string> {
     const user = await this.usersRepository.findOne({
       where: { id: userId },
-      select: ['id', 'email', 'firstName', 'lastName', 'businessName', 'intasendWalletId'],
+      select: [
+        'id',
+        'email',
+        'firstName',
+        'lastName',
+        'businessName',
+        'intasendWalletId',
+      ],
     });
 
     if (!user) {
@@ -291,14 +305,19 @@ export class PaymentsController {
     }
 
     // Create Wallet
-    const label = user.businessName || `${user.firstName} ${user.lastName}`.trim() || `User ${user.id}`;
+    const label =
+      user.businessName ||
+      `${user.firstName} ${user.lastName}`.trim() ||
+      `User ${user.id}`;
     // Sanitize label (alphanumeric only ideally, but API might be flexible)
 
     try {
       const wallet = await this.intaSendService.createWallet('KES', label);
       if (wallet && wallet.wallet_id) {
         // Save to DB
-        await this.usersRepository.update(userId, { intasendWalletId: wallet.wallet_id });
+        await this.usersRepository.update(userId, {
+          intasendWalletId: wallet.wallet_id,
+        });
         return wallet.wallet_id;
       }
       throw new Error('Wallet creation response missing ID');
@@ -332,20 +351,30 @@ export class PaymentsController {
     @Body() body: any,
   ) {
     // 0. Robust Signature Retrieval (Headers can be lowercase or different casing via proxies)
-    const effectiveSignature = signature || (req.headers['x-intasend-signature'] as string) || (req.headers['X-IntaSend-Signature'] as string);
+    const effectiveSignature =
+      signature ||
+      (req.headers['x-intasend-signature'] as string) ||
+      (req.headers['X-IntaSend-Signature'] as string);
 
     // Debug Logging for Webhooks (Direct console.log to avoid NestJS logger suppression/truncation)
-    console.log(`[DEBUG] Webhook Hit. Sig Present: ${!!effectiveSignature}. Body Size: ${req.rawBody?.length || 0}`);
+    console.log(
+      `[DEBUG] Webhook Hit. Sig Present: ${!!effectiveSignature}. Body Size: ${req.rawBody?.length || 0}`,
+    );
 
     if (!effectiveSignature) {
-      console.warn('[DEBUG] Webhook missing Signature. Headers:', JSON.stringify(req.headers));
+      console.warn(
+        '[DEBUG] Webhook missing Signature. Headers:',
+        JSON.stringify(req.headers),
+      );
     }
 
     // CHECK FOR BYPASS
     const isBypassed = process.env.INTASEND_DISABLE_SIG_CHECK === 'true';
 
     if (isBypassed) {
-      console.warn('⚠️ SKIPPING SIGNATURE CHECK due to INTASEND_DISABLE_SIG_CHECK=true');
+      console.warn(
+        '⚠️ SKIPPING SIGNATURE CHECK due to INTASEND_DISABLE_SIG_CHECK=true',
+      );
       // Skip verification logic entirely
     } else {
       // Enforce Verification
@@ -353,8 +382,16 @@ export class PaymentsController {
 
       // If it's a pure verification challenge (no invoice/tracking data), verify and return
       if (challenge && !body.invoice_id && !body.tracking_id) {
-        if (!this.intaSendService.verifyWebhookSignature(effectiveSignature, req.rawBody, challenge)) {
-          console.error(`⛔ Challenge Verification Failed for signature: ${effectiveSignature}`);
+        if (
+          !this.intaSendService.verifyWebhookSignature(
+            effectiveSignature,
+            req.rawBody,
+            challenge,
+          )
+        ) {
+          console.error(
+            `⛔ Challenge Verification Failed for signature: ${effectiveSignature}`,
+          );
           console.log('Headers:', JSON.stringify(req.headers));
           throw new BadRequestException('Invalid signature or challenge');
         }
@@ -367,10 +404,20 @@ export class PaymentsController {
         (body.host === 'localhost' && body.invoice_id?.startsWith('INV_SIM_'));
 
       if (isSimulation) {
-        this.logger.log('✅ Simulation mode detected - skipping signature verification');
+        this.logger.log(
+          '✅ Simulation mode detected - skipping signature verification',
+        );
       } else {
-        if (!this.intaSendService.verifyWebhookSignature(effectiveSignature, req.rawBody, challenge)) {
-          console.error(`⛔ Signature Verification Failed. Sig: ${effectiveSignature}`);
+        if (
+          !this.intaSendService.verifyWebhookSignature(
+            effectiveSignature,
+            req.rawBody,
+            challenge,
+          )
+        ) {
+          console.error(
+            `⛔ Signature Verification Failed. Sig: ${effectiveSignature}`,
+          );
           throw new BadRequestException('Invalid signature or challenge');
         }
       }
@@ -382,7 +429,8 @@ export class PaymentsController {
 
     this.logger.log('🔹 IntaSend Webhook Received:', body);
 
-    let { invoice_id, tracking_id, state, api_ref, value, from_data, to_data } = body;
+    let { invoice_id, tracking_id, state, api_ref, value, from_data, to_data } =
+      body;
 
     // HANDLE INTRA-WALLET TRANSFER EVENTS
     // These events don't have top-level invoice_id/tracking_id but have nested data
@@ -399,7 +447,9 @@ export class PaymentsController {
         state = 'COMPLETE';
       }
 
-      this.logger.log(`🔹 Detected Intra-Wallet Transfer. ID: ${tracking_id}, Ref: ${api_ref}, Status: ${tx.status}`);
+      this.logger.log(
+        `🔹 Detected Intra-Wallet Transfer. ID: ${tracking_id}, Ref: ${api_ref}, Status: ${tx.status}`,
+      );
     }
 
     // 1. Find Transactions (Handing Bulk by tracking_id)
@@ -413,7 +463,12 @@ export class PaymentsController {
     ];
 
     // Only add api_ref if it looks like a UUID (to avoid matching random strings against ID)
-    if (api_ref && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(api_ref)) {
+    if (
+      api_ref &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        api_ref,
+      )
+    ) {
       searchCriteria.push({ id: api_ref });
     }
 
@@ -438,9 +493,12 @@ export class PaymentsController {
     if (
       firstTx.status === TransactionStatus.SUCCESS ||
       firstTx.status === TransactionStatus.FAILED ||
-      (firstTx.status === TransactionStatus.CLEARING && body.clearing_status === 'CLEARING')
+      (firstTx.status === TransactionStatus.CLEARING &&
+        body.clearing_status === 'CLEARING')
     ) {
-      console.log(`🔹 Idempotency: Transaction(s) ${firstTx.providerRef} already final. Skipping.`);
+      console.log(
+        `🔹 Idempotency: Transaction(s) ${firstTx.providerRef} already final. Skipping.`,
+      );
       return { status: 'ignored', reason: 'Already finalized' };
     }
 
@@ -482,7 +540,9 @@ export class PaymentsController {
       }
 
       tx.metadata = {
-        ...(typeof tx.metadata === 'string' ? JSON.parse(tx.metadata) : tx.metadata),
+        ...(typeof tx.metadata === 'string'
+          ? JSON.parse(tx.metadata)
+          : tx.metadata),
         webhookEvent: body,
         updatedAt: new Date().toISOString(),
       };
@@ -520,7 +580,10 @@ export class PaymentsController {
       }
 
       // Handle B2C Payout Logic - Update PayrollRecord status
-      if (tx.type === TransactionType.SALARY_PAYOUT && tx.metadata?.payrollRecordId) {
+      if (
+        tx.type === TransactionType.SALARY_PAYOUT &&
+        tx.metadata?.payrollRecordId
+      ) {
         const payrollRecordId = tx.metadata.payrollRecordId;
         let paymentStatus: string;
 
@@ -534,13 +597,15 @@ export class PaymentsController {
 
         await this.payrollRecordRepository.update(payrollRecordId, {
           paymentStatus,
-          paymentDate: newStatus === TransactionStatus.SUCCESS ? new Date() : undefined,
+          paymentDate:
+            newStatus === TransactionStatus.SUCCESS ? new Date() : undefined,
         });
 
-        console.log(`📊 PayrollRecord ${payrollRecordId} updated to ${paymentStatus}`);
+        console.log(
+          `📊 PayrollRecord ${payrollRecordId} updated to ${paymentStatus}`,
+        );
       }
     }
-
 
     await this.transactionsRepository.save(transactions);
 
@@ -582,13 +647,19 @@ export class PaymentsController {
       });
 
       if (isSuccess) {
-        const payment = await this.subscriptionPaymentRepository.findOne({ where: { id: subPaymentId } });
+        const payment = await this.subscriptionPaymentRepository.findOne({
+          where: { id: subPaymentId },
+        });
         if (payment) {
-          const subscription = await this.subscriptionRepository.findOne({ where: { id: payment.subscriptionId } });
+          const subscription = await this.subscriptionRepository.findOne({
+            where: { id: payment.subscriptionId },
+          });
           if (subscription) {
             subscription.status = SubscriptionStatus.ACTIVE;
             await this.subscriptionRepository.save(subscription);
-            await this.usersRepository.update(payment.userId, { tier: subscription.tier as any });
+            await this.usersRepository.update(payment.userId, {
+              tier: subscription.tier as any,
+            });
             console.log(`🎉 Subscription Activated for User ${payment.userId}`);
           }
         }
@@ -598,7 +669,7 @@ export class PaymentsController {
     return {
       status: 'success',
       updated: transactions.length,
-      challenge: body.challenge // Echo challenge if present (required by IntaSend)
+      challenge: body.challenge, // Echo challenge if present (required by IntaSend)
     };
   }
 }

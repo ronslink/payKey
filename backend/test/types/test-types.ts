@@ -26,7 +26,7 @@ export interface LoginResponse {
   user: UserResponse;
 }
 
-export interface RegisterResponse extends LoginResponse {}
+export type RegisterResponse = LoginResponse;
 
 // =============================================================================
 // Worker Types

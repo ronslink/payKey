@@ -14,7 +14,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 @Controller('reports')
 @UseGuards(JwtAuthGuard)
 export class ReportsController {
-  constructor(private readonly reportsService: ReportsService) { }
+  constructor(private readonly reportsService: ReportsService) {}
 
   @Get('payroll')
   async getMonthlyPayrollReport(
@@ -78,9 +78,15 @@ export class ReportsController {
     @Query('endDate') endDate: string,
   ) {
     const end = endDate ? new Date(endDate) : new Date();
-    const start = startDate ? new Date(startDate) : new Date(end.getFullYear(), end.getMonth(), 1);
+    const start = startDate
+      ? new Date(startDate)
+      : new Date(end.getFullYear(), end.getMonth(), 1);
 
-    return this.reportsService.getPropertyTimeReport(req.user.userId, start.toISOString(), end.toISOString());
+    return this.reportsService.getPropertyTimeReport(
+      req.user.userId,
+      start.toISOString(),
+      end.toISOString(),
+    );
   }
 
   @Get('dashboard')
@@ -146,7 +152,9 @@ export class ReportsController {
     @Request() req: any,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const buffer = await this.reportsService.generatePayslipPdf(req.params.recordId);
+    const buffer = await this.reportsService.generatePayslipPdf(
+      req.params.recordId,
+    );
 
     res.set({
       'Content-Type': 'application/pdf',

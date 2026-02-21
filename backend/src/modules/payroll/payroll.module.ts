@@ -54,4 +54,4 @@ import { PayrollProcessor } from './payroll.processor';
   ],
   exports: [PayrollService, PayPeriodsService],
 })
-export class PayrollModule { }
+export class PayrollModule {}

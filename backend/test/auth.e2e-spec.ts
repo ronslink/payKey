@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
+import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
 import { TestHelpers, createTestHelpers } from './helpers/test-helpers';
@@ -70,7 +70,7 @@ describe('Auth E2E', () => {
 
     it('should reject registration with duplicate email', async () => {
       // 1. Create a user first using Helper (handles setup robustly)
-      const { email, password } = await helpers.createTestUser({
+      const { email } = await helpers.createTestUser({
         emailPrefix: 'auth.dup',
       });
 

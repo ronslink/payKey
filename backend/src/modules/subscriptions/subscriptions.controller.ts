@@ -10,7 +10,13 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull, LessThanOrEqual, MoreThanOrEqual, Or } from 'typeorm';
+import {
+  Repository,
+  IsNull,
+  LessThanOrEqual,
+  MoreThanOrEqual,
+  Or,
+} from 'typeorm';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import {
   Subscription,
@@ -22,8 +28,15 @@ import {
   PaymentStatus,
   PaymentMethod,
 } from './entities/subscription-payment.entity';
-import { Campaign, CampaignStatus, CampaignType } from './entities/campaign.entity';
-import { PromotionalItem, PromoStatus } from './entities/promotional-item.entity';
+import {
+  Campaign,
+  CampaignStatus,
+  CampaignType,
+} from './entities/campaign.entity';
+import {
+  PromotionalItem,
+  PromoStatus,
+} from './entities/promotional-item.entity';
 import { SUBSCRIPTION_PLANS } from './subscription-plans.config';
 import { UsersService } from '../users/users.service';
 import { IntaSendService } from '../payments/intasend.service';
@@ -55,7 +68,7 @@ export class SubscriptionsController {
     @InjectRepository(Transaction)
     private transactionRepository: Repository<Transaction>,
     private workersService: WorkersService,
-  ) { }
+  ) {}
 
   /**
    * GET /subscriptions/campaigns/active
@@ -86,7 +99,9 @@ export class SubscriptionsController {
       .leftJoinAndSelect('c.promotionalItem', 'promo')
       .where('c.status = :status', { status: CampaignStatus.ACTIVE })
       .andWhere('(c.scheduledFrom IS NULL OR c.scheduledFrom <= :now)', { now })
-      .andWhere('(c.scheduledUntil IS NULL OR c.scheduledUntil >= :now)', { now })
+      .andWhere('(c.scheduledUntil IS NULL OR c.scheduledUntil >= :now)', {
+        now,
+      })
       .andWhere('c.type IN (:...types)', {
         types: [CampaignType.BANNER, CampaignType.POPUP, CampaignType.SIDEBAR],
       })
@@ -142,7 +157,12 @@ export class SubscriptionsController {
   @Post('validate-promo')
   async validatePromo(
     @Request() req: any,
-    @Body() body: { promoCode: string; planId: string; billingPeriod?: 'monthly' | 'yearly' },
+    @Body()
+    body: {
+      promoCode: string;
+      planId: string;
+      billingPeriod?: 'monthly' | 'yearly';
+    },
   ) {
     const { promoCode, planId } = body;
     const billingPeriod = body.billingPeriod || 'monthly';
@@ -158,19 +178,27 @@ export class SubscriptionsController {
       throw new BadRequestException('Invalid plan ID');
     }
 
-    const originalAmount = billingPeriod === 'yearly' ? plan.priceKESYearly : plan.priceKES;
+    const originalAmount =
+      billingPeriod === 'yearly' ? plan.priceKESYearly : plan.priceKES;
 
     // Fetch the user's current tier for tier eligibility check
     const user = await this.usersService.findOneById(req.user.userId);
     const userTier = user?.tier || 'FREE';
 
-    const { promo, error } = await this.resolvePromoCode(promoCode.trim().toUpperCase(), plan.tier, userTier);
+    const { promo, error } = await this.resolvePromoCode(
+      promoCode.trim().toUpperCase(),
+      plan.tier,
+      userTier,
+    );
 
     if (error || !promo) {
       return { valid: false, error: error || 'Invalid promo code' };
     }
 
-    const { discountedAmount, savings } = this.applyPromoDiscount(originalAmount, promo);
+    const { discountedAmount, savings } = this.applyPromoDiscount(
+      originalAmount,
+      promo,
+    );
 
     return {
       valid: true,
@@ -201,11 +229,14 @@ export class SubscriptionsController {
     });
 
     if (!promo) return { error: 'Promo code not found' };
-    if (promo.status !== PromoStatus.ACTIVE) return { error: 'Promo code is not active' };
+    if (promo.status !== PromoStatus.ACTIVE)
+      return { error: 'Promo code is not active' };
 
     const now = new Date();
-    if (promo.validFrom && promo.validFrom > now) return { error: 'Promo code is not yet valid' };
-    if (promo.validUntil && promo.validUntil < now) return { error: 'Promo code has expired' };
+    if (promo.validFrom && promo.validFrom > now)
+      return { error: 'Promo code is not yet valid' };
+    if (promo.validUntil && promo.validUntil < now)
+      return { error: 'Promo code has expired' };
 
     if (promo.maxUses !== null && promo.currentUses >= promo.maxUses) {
       return { error: 'Promo code usage limit reached' };
@@ -213,8 +244,13 @@ export class SubscriptionsController {
 
     // Tier eligibility: check both the plan being purchased and the user's current tier
     if (promo.applicableTiers && promo.applicableTiers.length > 0) {
-      if (!promo.applicableTiers.includes(targetTier) && !promo.applicableTiers.includes(userTier)) {
-        return { error: 'Promo code is not applicable to your subscription tier' };
+      if (
+        !promo.applicableTiers.includes(targetTier) &&
+        !promo.applicableTiers.includes(userTier)
+      ) {
+        return {
+          error: 'Promo code is not applicable to your subscription tier',
+        };
       }
     }
 
@@ -232,9 +268,14 @@ export class SubscriptionsController {
     let savings = 0;
 
     if (promo.discountPercentage) {
-      savings = Math.round((originalAmount * Number(promo.discountPercentage)) / 100);
+      savings = Math.round(
+        (originalAmount * Number(promo.discountPercentage)) / 100,
+      );
     } else if (promo.discountAmount) {
-      savings = Math.min(Math.round(Number(promo.discountAmount)), originalAmount);
+      savings = Math.min(
+        Math.round(Number(promo.discountAmount)),
+        originalAmount,
+      );
     }
 
     const discountedAmount = Math.max(0, originalAmount - savings);
@@ -490,7 +531,8 @@ export class SubscriptionsController {
         : newNote;
     }
 
-    const updatedSubscription = await this.subscriptionRepository.save(subscription);
+    const updatedSubscription =
+      await this.subscriptionRepository.save(subscription);
 
     return {
       success: true,
@@ -501,8 +543,8 @@ export class SubscriptionsController {
         ...updatedSubscription,
         autoRenew: updatedSubscription.autoRenewal,
         planName:
-          SUBSCRIPTION_PLANS.find((p) => p.tier === updatedSubscription.tier)?.name ||
-          'Unknown Plan',
+          SUBSCRIPTION_PLANS.find((p) => p.tier === updatedSubscription.tier)
+            ?.name || 'Unknown Plan',
       },
     };
   }
@@ -547,7 +589,9 @@ export class SubscriptionsController {
       amountToCharge = result.discountedAmount;
       promoSavings = result.savings;
       appliedPromo = promo;
-      this.logger.log(`Promo "${promo.promoCode}" applied: -${promoSavings} KES → ${amountToCharge} KES`);
+      this.logger.log(
+        `Promo "${promo.promoCode}" applied: -${promoSavings} KES → ${amountToCharge} KES`,
+      );
     }
 
     // 1. Handle Stripe Payments
@@ -589,8 +633,12 @@ export class SubscriptionsController {
 
       if (existingSubscription?.gracePeriodEndDate) {
         const now = new Date();
-        const gracePeriodEnd = new Date(existingSubscription.gracePeriodEndDate);
-        const daysRemaining = Math.ceil((gracePeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        const gracePeriodEnd = new Date(
+          existingSubscription.gracePeriodEndDate,
+        );
+        const daysRemaining = Math.ceil(
+          (gracePeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+        );
 
         if (daysRemaining <= 3 && daysRemaining > 0) {
           daysUntilDowngrade = daysRemaining;
@@ -621,12 +669,15 @@ export class SubscriptionsController {
         subscription.tier = plan.tier as SubscriptionTier;
         subscription.status = SubscriptionStatus.PENDING;
       }
-      const savedSubscription = await this.subscriptionRepository.save(subscription);
+      const savedSubscription =
+        await this.subscriptionRepository.save(subscription);
 
       // Create pending payment record
       const now = new Date();
       const periodEnd = new Date(now);
-      periodEnd.setMonth(periodEnd.getMonth() + (billingPeriod === 'yearly' ? 12 : 1));
+      periodEnd.setMonth(
+        periodEnd.getMonth() + (billingPeriod === 'yearly' ? 12 : 1),
+      );
 
       const payment = this.subscriptionPaymentRepository.create({
         subscriptionId: savedSubscription.id,
@@ -723,7 +774,8 @@ export class SubscriptionsController {
         subscription.nextBillingDate = periodEnd;
         subscription.lockedPrice = amountToCharge;
         subscription.appliedPromoId = appliedPromo?.id ?? null;
-        subscription.promoDiscountAmount = promoSavings > 0 ? promoSavings : null;
+        subscription.promoDiscountAmount =
+          promoSavings > 0 ? promoSavings : null;
       }
       const savedSubscription =
         await this.subscriptionRepository.save(subscription);
@@ -733,7 +785,11 @@ export class SubscriptionsController {
 
       // Increment promo usage
       if (appliedPromo) {
-        await this.promoRepository.increment({ id: appliedPromo.id }, 'currentUses', 1);
+        await this.promoRepository.increment(
+          { id: appliedPromo.id },
+          'currentUses',
+          1,
+        );
       }
 
       // Record Payment
@@ -756,7 +812,9 @@ export class SubscriptionsController {
           planId: plan.tier,
           billingPeriod: billingPeriod,
           description: `Subscription to ${plan.name} (${billingPeriod}) via Wallet`,
-          promoApplied: appliedPromo ? { code: appliedPromo.promoCode, savings: promoSavings } : null,
+          promoApplied: appliedPromo
+            ? { code: appliedPromo.promoCode, savings: promoSavings }
+            : null,
         },
       });
       await this.subscriptionPaymentRepository.save(payment);
@@ -765,10 +823,11 @@ export class SubscriptionsController {
         success: true,
         message: 'Subscription activated via Wallet',
         subscription: savedSubscription,
-        promoApplied: appliedPromo ? { code: appliedPromo.promoCode, savings: promoSavings } : null,
+        promoApplied: appliedPromo
+          ? { code: appliedPromo.promoCode, savings: promoSavings }
+          : null,
       };
     }
-
 
     // 3. Handle Bank Transfers (PesaLink via IntaSend)
     if (body.paymentMethod === 'BANK' && amountToCharge > 0) {
@@ -786,7 +845,7 @@ export class SubscriptionsController {
         user.email || 'no-email@paykey.com',
         user.firstName || 'Valued',
         user.lastName || 'Customer',
-        reference
+        reference,
       );
 
       // Return Checkout Info
@@ -795,7 +854,7 @@ export class SubscriptionsController {
         message: 'Bank transfer initiated',
         checkoutUrl: checkout.url,
         reference: reference,
-        processingInfo: { estimatedTime: 'Instant via PesaLink' }
+        processingInfo: { estimatedTime: 'Instant via PesaLink' },
       };
     }
 
@@ -825,7 +884,7 @@ export class SubscriptionsController {
         return {
           success: true,
           message: `Downgrade scheduled. Your current plan will remain active until the end of the billing period (${subscription.endDate.toISOString().split('T')[0]}). You will be switched to the Free tier then.`,
-          subscription: updatedSub
+          subscription: updatedSub,
         };
       }
 
@@ -882,7 +941,13 @@ export class SubscriptionsController {
   @Post('mpesa-subscribe')
   async mpesaSubscribe(
     @Request() req: any,
-    @Body() body: { planId: string; phoneNumber: string; billingPeriod?: 'monthly' | 'yearly'; promoCode?: string },
+    @Body()
+    body: {
+      planId: string;
+      phoneNumber: string;
+      billingPeriod?: 'monthly' | 'yearly';
+      promoCode?: string;
+    },
   ) {
     const { planId, phoneNumber } = body;
     const billingPeriod = body.billingPeriod || 'monthly';
@@ -907,7 +972,8 @@ export class SubscriptionsController {
     });
 
     // Use yearly pricing if applicable
-    let amountToCharge = billingPeriod === 'yearly' ? plan.priceKESYearly : plan.priceKES;
+    let amountToCharge =
+      billingPeriod === 'yearly' ? plan.priceKESYearly : plan.priceKES;
     let isProrated = false;
     let prorationDetails: any = null;
 
@@ -930,7 +996,9 @@ export class SubscriptionsController {
       appliedPromo = promo;
       // Apply promo BEFORE proration so any proration is calculated on the discounted base
       amountToCharge = result.discountedAmount;
-      this.logger.log(`Promo "${promo.promoCode}" applied to M-Pesa: -${promoSavings} KES → ${amountToCharge} KES`);
+      this.logger.log(
+        `Promo "${promo.promoCode}" applied to M-Pesa: -${promoSavings} KES → ${amountToCharge} KES`,
+      );
     }
 
     // Calculate proration if upgrading from an existing paid plan
@@ -953,14 +1021,15 @@ export class SubscriptionsController {
           ? `${existingSubscription.notes}\n${newNote}`
           : newNote;
 
-        const savedSub = await this.subscriptionRepository.save(existingSubscription);
+        const savedSub =
+          await this.subscriptionRepository.save(existingSubscription);
 
         return {
           success: true,
           message: `Plan change scheduled. You will stay on ${existingSubscription.tier} until the billing period ends, then automatically switch to ${plan.name}.`,
           subscription: savedSub,
           amountCharged: 0,
-          isProrated: false
+          isProrated: false,
         };
       }
 
@@ -977,7 +1046,10 @@ export class SubscriptionsController {
 
         // Apply promo discount on top of prorated amount (if promo was provided)
         if (appliedPromo) {
-          const promoResult = this.applyPromoDiscount(proration.proratedAmount, appliedPromo);
+          const promoResult = this.applyPromoDiscount(
+            proration.proratedAmount,
+            appliedPromo,
+          );
           promoSavings = promoResult.savings;
           amountToCharge = promoResult.discountedAmount;
         } else {
@@ -1118,7 +1190,11 @@ export class SubscriptionsController {
 
       // Increment promo usage when STK push is initiated (code is reserved)
       if (appliedPromo) {
-        await this.promoRepository.increment({ id: appliedPromo.id }, 'currentUses', 1);
+        await this.promoRepository.increment(
+          { id: appliedPromo.id },
+          'currentUses',
+          1,
+        );
       }
 
       return {
@@ -1127,7 +1203,9 @@ export class SubscriptionsController {
         paymentId: savedPayment.id,
         checkoutRequestId: invoiceId,
         subscriptionId: savedSubscription.id,
-        promoApplied: appliedPromo ? { code: appliedPromo.promoCode, savings: promoSavings } : null,
+        promoApplied: appliedPromo
+          ? { code: appliedPromo.promoCode, savings: promoSavings }
+          : null,
       };
     } catch (error) {
       this.logger.error('IntaSend STK Push failed:', error);
@@ -1149,7 +1227,9 @@ export class SubscriptionsController {
   @Get('usage')
   async getUsage(@Request() req: any) {
     // Get worker count for the current user
-    const workerCount = await this.workersService.getWorkerCount(req.user.userId);
+    const workerCount = await this.workersService.getWorkerCount(
+      req.user.userId,
+    );
 
     // Get current subscription
     const subscription = await this.subscriptionRepository.findOne({
@@ -1165,7 +1245,10 @@ export class SubscriptionsController {
       workers: {
         used: workerCount,
         limit: workerLimit,
-        percentage: Math.min(100, Math.round((workerCount / workerLimit) * 100)),
+        percentage: Math.min(
+          100,
+          Math.round((workerCount / workerLimit) * 100),
+        ),
       },
       tier: tier,
       planName: plan?.name || 'Free',

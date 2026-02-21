@@ -56,18 +56,25 @@ export class IntaSendService {
       `IntaSend Service initialized in ${this.isLive ? 'LIVE' : 'SANDBOX'} mode`,
     );
 
-    this.logger.debug(`INTASEND_IS_LIVE env: ${this.configService.get('INTASEND_IS_LIVE')}`);
-    this.logger.debug(`Publishable Key Set: ${this.publishableKey ? 'Yes' : 'No'} (${this.publishableKey ? this.publishableKey.substring(0, 10) + '...' : 'None'})`);
-    this.logger.debug(`Secret Key Set: ${this.secretKey ? 'Yes' : 'No'} (${this.secretKey ? this.secretKey.substring(0, 5) + '...' : 'None'})`);
+    this.logger.debug(
+      `INTASEND_IS_LIVE env: ${this.configService.get('INTASEND_IS_LIVE')}`,
+    );
+    this.logger.debug(
+      `Publishable Key Set: ${this.publishableKey ? 'Yes' : 'No'} (${this.publishableKey ? this.publishableKey.substring(0, 10) + '...' : 'None'})`,
+    );
+    this.logger.debug(
+      `Secret Key Set: ${this.secretKey ? 'Yes' : 'No'} (${this.secretKey ? this.secretKey.substring(0, 5) + '...' : 'None'})`,
+    );
 
     if (!this.publishableKey || !this.secretKey) {
-
       this.logger.warn(
         'IntaSend Keys are missing! Please check .env configuration',
       );
     }
 
-    const configuredWebhookSecret = this.configService.get('INTASEND_WEBHOOK_SECRET');
+    const configuredWebhookSecret = this.configService.get(
+      'INTASEND_WEBHOOK_SECRET',
+    );
 
     if (configuredWebhookSecret) {
       this.webhookSecret = configuredWebhookSecret;
@@ -79,7 +86,11 @@ export class IntaSendService {
     }
   }
 
-  verifyWebhookSignature(signature: string, rawBody: Buffer, challenge?: string): boolean {
+  verifyWebhookSignature(
+    signature: string,
+    rawBody: Buffer,
+    challenge?: string,
+  ): boolean {
     const configuredChallenge = this.configService.get('INTASEND_CHALLENGE');
 
     // 1. Prioritize Challenge Verification (Official Docs Method)
@@ -88,7 +99,9 @@ export class IntaSendService {
         this.logger.log('✅ Webhook Challenge matched.');
         return true;
       }
-      this.logger.warn(`⛔ Webhook Challenge Mismatch: Expected ${configuredChallenge}, got ${challenge}`);
+      this.logger.warn(
+        `⛔ Webhook Challenge Mismatch: Expected ${configuredChallenge}, got ${challenge}`,
+      );
       // Fallthrough to signature check? No, if challenge is mismatched, it's definitely invalid.
       return false;
     }
@@ -96,10 +109,14 @@ export class IntaSendService {
     // 2. Fallback to Signature Verification (Security Best Practice)
     if (!signature) {
       if (!configuredChallenge) {
-        this.logger.warn('⚠️ Webhook missing both Signature and Challenge configuration. Rejecting.');
+        this.logger.warn(
+          '⚠️ Webhook missing both Signature and Challenge configuration. Rejecting.',
+        );
         return false;
       }
-      this.logger.warn('⚠️ Webhook missing Signature, but Challenge not verified (missing in request or config). Rejecting.');
+      this.logger.warn(
+        '⚠️ Webhook missing Signature, but Challenge not verified (missing in request or config). Rejecting.',
+      );
       return false;
     }
 
@@ -121,7 +138,9 @@ export class IntaSendService {
         `⛔ Invalid Webhook Signature. Expected: ${hmac.substring(0, 10)}..., Received: ${signature.substring(0, 10)}... | Secret used: ${this.webhookSecret ? 'YES' : 'NO'} | Body Len: ${rawBody.length}`,
       );
       // Log raw body preview for debugging (careful with PII)
-      this.logger.debug(`Raw Body Preview: ${rawBody.toString('utf8').substring(0, 100)}...`);
+      this.logger.debug(
+        `Raw Body Preview: ${rawBody.toString('utf8').substring(0, 100)}...`,
+      );
       return false;
     }
 
@@ -143,7 +162,9 @@ export class IntaSendService {
     // We removed the blanket 'sandbox' check to allow testing against the REAL IntaSend Sandbox if desired.
     // FIX: Ensure we NEVER simulate in Live mode/Production
     const simulateVar = this.configService.get('INTASEND_SIMULATE');
-    this.logger.log(`[DEBUG] Simulate Check: Var=${simulateVar} (${typeof simulateVar}), Amount=${amount}, IsLive=${this.isLive}`);
+    this.logger.log(
+      `[DEBUG] Simulate Check: Var=${simulateVar} (${typeof simulateVar}), Amount=${amount}, IsLive=${this.isLive}`,
+    );
 
     if ((simulateVar === 'true' || amount === 777) && !this.isLive) {
       this.logger.log(
@@ -183,7 +204,7 @@ export class IntaSendService {
           const response = await lastValueFrom(
             this.httpService.post(
               'http://localhost:3000/payments/intasend/webhook',
-              payloadString,  // Send as string for signature verification
+              payloadString, // Send as string for signature verification
               {
                 headers: {
                   'Content-Type': 'application/json',
@@ -192,9 +213,15 @@ export class IntaSendService {
               },
             ),
           );
-          this.logger.log('✅ SIMULATION: Webhook sent successfully', response.data);
+          this.logger.log(
+            '✅ SIMULATION: Webhook sent successfully',
+            response.data,
+          );
         } catch (e) {
-          this.logger.error('❌ Simulation Callback Failed:', e.response?.data || e.message);
+          this.logger.error(
+            '❌ Simulation Callback Failed:',
+            e.response?.data || e.message,
+          );
         }
       }, 3000);
 
@@ -205,7 +232,7 @@ export class IntaSendService {
       };
     }
 
-    // Use the provided phone number directly. 
+    // Use the provided phone number directly.
     // IntaSend Sandbox supports real STK pushes to real numbers for verification.
     const effectivePhone = phoneNumber;
 
@@ -248,13 +275,21 @@ export class IntaSendService {
   /**
    * Create a new Wallet
    */
-  async createWallet(currency: 'KES' | 'USD' | 'EUR' | 'GBP', label: string = '', canDisburse = true) {
+  async createWallet(
+    currency: 'KES' | 'USD' | 'EUR' | 'GBP',
+    label: string = '',
+    canDisburse = true,
+  ) {
     const url = `${this.baseUrl}/v1/wallets/`;
 
     // Generate unique label if not provided or empty
-    const effectiveLabel = label || `WALLET-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+    const effectiveLabel =
+      label ||
+      `WALLET-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
 
-    this.logger.log(`Creating IntaSend Wallet: ${effectiveLabel} (${currency})`);
+    this.logger.log(
+      `Creating IntaSend Wallet: ${effectiveLabel} (${currency})`,
+    );
 
     try {
       const response = await lastValueFrom(
@@ -319,17 +354,19 @@ export class IntaSendService {
 
     // Validating Config
     const simulateVar = this.configService.get('INTASEND_SIMULATE');
-    const isTestAmount = transactions.some(t => t.amount === 777);
+    const isTestAmount = transactions.some((t) => t.amount === 777);
 
     // Simulation Block
     if ((simulateVar === 'true' || isTestAmount) && !this.isLive) {
-      this.logger.log(`⚠️ SIMULATION: IntaSend Payout (B2C) for ${transactions.length} txns`);
+      this.logger.log(
+        `⚠️ SIMULATION: IntaSend Payout (B2C) for ${transactions.length} txns`,
+      );
 
       const trackingId = `TRK_SIM_B2C_${Date.now()}`;
       const invoiceId = `INV_SIM_B2C_${Date.now()}`;
 
-      // Simulate Webhook for EACH transaction? 
-      // IntaSend B2C sends one webhook per request or per transaction? 
+      // Simulate Webhook for EACH transaction?
+      // IntaSend B2C sends one webhook per request or per transaction?
       // Usually per batch request (tracking_id) or per line item.
       // For simplicity, let's assume we match by tracking_id for the batch.
 
@@ -361,8 +398,13 @@ export class IntaSendService {
             this.httpService.post(
               'http://localhost:3000/payments/intasend/webhook',
               payloadString,
-              { headers: { 'X-IntaSend-Signature': signature, 'Content-Type': 'application/json' } }
-            )
+              {
+                headers: {
+                  'X-IntaSend-Signature': signature,
+                  'Content-Type': 'application/json',
+                },
+              },
+            ),
           );
           this.logger.log('✅ SIMULATION: B2C Webhook sent');
         } catch (e) {
@@ -373,10 +415,10 @@ export class IntaSendService {
       return {
         tracking_id: trackingId,
         status: 'Processing',
-        transactions: transactions.map(t => ({
+        transactions: transactions.map((t) => ({
           status: 'Pending',
-          ...t
-        }))
+          ...t,
+        })),
       };
     }
 
@@ -517,7 +559,9 @@ export class IntaSendService {
           },
         }),
       );
-      this.logger.log(`Fetched ${response.data.length || 0} bank codes from API`);
+      this.logger.log(
+        `Fetched ${response.data.length || 0} bank codes from API`,
+      );
       return response.data;
     } catch (error) {
       this.logger.warn(
@@ -646,12 +690,14 @@ export class IntaSendService {
     );
 
     return this.sendMoney(
-      [{
-        account: phoneNumber,
-        amount,
-        name: 'Refund',
-        narrative: `REFUND-${originalRef}: ${reason}`.substring(0, 50),
-      }],
+      [
+        {
+          account: phoneNumber,
+          amount,
+          name: 'Refund',
+          narrative: `REFUND-${originalRef}: ${reason}`.substring(0, 50),
+        },
+      ],
       walletId,
     );
   }

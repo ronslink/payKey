@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThanOrEqual, Between } from 'typeorm';
 import { Worker } from './entities/worker.entity';
@@ -16,7 +20,7 @@ export class WorkersService {
     @InjectRepository(User)
     private usersRepository: Repository<User>,
     private activitiesService: ActivitiesService,
-  ) { }
+  ) {}
 
   async create(
     userId: string,

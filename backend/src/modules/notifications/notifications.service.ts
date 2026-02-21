@@ -45,7 +45,7 @@ export class NotificationsService implements OnModuleInit {
   constructor(
     private configService: ConfigService,
     private httpService: HttpService,
-  ) { }
+  ) {}
 
   onModuleInit() {
     this.initializeFirebase();

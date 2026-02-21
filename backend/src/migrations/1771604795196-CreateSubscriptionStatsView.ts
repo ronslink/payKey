@@ -1,8 +1,8 @@
-import { MigrationInterface, QueryRunner } from "typeorm";
+import { MigrationInterface, QueryRunner } from 'typeorm';
 
 export class CreateSubscriptionStatsView1771604795196 implements MigrationInterface {
-    public async up(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`
+  public async up(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`
             CREATE VIEW subscription_tier_stats AS
             SELECT
                 s.tier,
@@ -20,9 +20,9 @@ export class CreateSubscriptionStatsView1771604795196 implements MigrationInterf
             WHERE s.status = 'ACTIVE'
             GROUP BY s.tier, s.currency;
         `);
-    }
+  }
 
-    public async down(queryRunner: QueryRunner): Promise<void> {
-        await queryRunner.query(`DROP VIEW subscription_tier_stats`);
-    }
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`DROP VIEW subscription_tier_stats`);
+  }
 }

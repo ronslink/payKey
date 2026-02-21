@@ -35,7 +35,7 @@ export class PayrollPaymentService {
     private configService: ConfigService,
     @InjectQueue('payroll-processing')
     private payrollQueue: Queue,
-  ) { }
+  ) {}
 
   /**
    * Process payouts for a list of finalized payroll records
@@ -105,11 +105,11 @@ export class PayrollPaymentService {
   }
 
   /**
- * Calculate IntaSend B2C/Payout fee (confirmed tiered structure).
- * < 200 KES  → KES 10
- * 200–1000   → KES 20
- * > 1000     → KES 100
- */
+   * Calculate IntaSend B2C/Payout fee (confirmed tiered structure).
+   * < 200 KES  → KES 10
+   * 200–1000   → KES 20
+   * > 1000     → KES 100
+   */
   private calculatePayoutFee(amount: number): number {
     if (amount < 200) return 10;
     if (amount <= 1000) return 20;
@@ -149,7 +149,7 @@ export class PayrollPaymentService {
           workerId: record.workerId,
           workerName: record.worker.name,
           success: false,
-          error: `Record ${record.id} is not finalized`
+          error: `Record ${record.id} is not finalized`,
         });
         continue;
       }
@@ -160,7 +160,7 @@ export class PayrollPaymentService {
           workerId: record.workerId,
           workerName: record.worker.name,
           success: true,
-          message: `Already ${record.paymentStatus}`
+          message: `Already ${record.paymentStatus}`,
         });
         continue;
       }
@@ -176,7 +176,7 @@ export class PayrollPaymentService {
             amount: currentAmount,
             narrative: `Salary Payment${Number(record.netSalary) > this.MPESA_LIMIT ? ' (Part)' : ''}`,
             name: 'Worker',
-            recordId: record.id
+            recordId: record.id,
           });
 
           // Calculate Fee for this transaction chunk
@@ -214,7 +214,7 @@ export class PayrollPaymentService {
           workerId: record.workerId,
           workerName: record.worker.name,
           success: false,
-          error: `Preparation Failed: ${err.message}`
+          error: `Preparation Failed: ${err.message}`,
         });
       }
     }
@@ -226,29 +226,38 @@ export class PayrollPaymentService {
 
     // 2. Deduct Bundle Amount + Fees
     try {
-      await this.usersRepository.decrement({ id: firstUserId }, 'walletBalance', totalDeduction);
+      await this.usersRepository.decrement(
+        { id: firstUserId },
+        'walletBalance',
+        totalDeduction,
+      );
     } catch (e) {
       this.logger.error(`Failed to deduct batch amount ${totalDeduction}`, e);
-      records.forEach(r => {
+      records.forEach((r) => {
         results.push({
           workerId: r.workerId,
           workerName: r.worker.name,
           success: false,
-          error: 'Insufficient Funds or Wallet Error'
+          error: 'Insufficient Funds or Wallet Error',
         });
       });
       return results;
     }
 
     // 3. Save Pending Transactions
-    const savedTransactions = await this.transactionRepository.save(allTransactions);
+    const savedTransactions =
+      await this.transactionRepository.save(allTransactions);
 
     // 4. Send Bulk Request to IntaSend
     try {
-      const b2cResponse = await this.intaSendService.sendMoney(intaSendPayload, walletId);
+      const b2cResponse = await this.intaSendService.sendMoney(
+        intaSendPayload,
+        walletId,
+      );
 
       const trackingId = (b2cResponse as { tracking_id?: string })?.tracking_id;
-      const finalStatus = process.env.NODE_ENV === 'production' ? 'processing' : 'paid';
+      const finalStatus =
+        process.env.NODE_ENV === 'production' ? 'processing' : 'paid';
 
       // Update all transactions with tracking_id
       for (const tx of savedTransactions) {
@@ -258,7 +267,9 @@ export class PayrollPaymentService {
       await this.transactionRepository.save(savedTransactions);
 
       // Update Records
-      const processedRecordIds = new Set(allTransactions.map(tx => tx.metadata.payrollRecordId));
+      const processedRecordIds = new Set(
+        allTransactions.map((tx) => tx.metadata.payrollRecordId),
+      );
 
       for (const record of records) {
         if (!processedRecordIds.has(record.id)) continue;
@@ -272,7 +283,7 @@ export class PayrollPaymentService {
           workerName: record.worker.name,
           success: true,
           transactionId: trackingId, // Batch ID
-          message: 'Batch processing initiated'
+          message: 'Batch processing initiated',
         });
       }
 
@@ -280,9 +291,11 @@ export class PayrollPaymentService {
       if (finalStatus === 'processing' && trackingId) {
         const payPeriodId = records[0]?.payPeriodId;
         const userId = records[0]?.userId;
-        const recordIds = records.map(r => r.id);
+        const recordIds = records.map((r) => r.id);
 
-        this.logger.log(`Scheduling status check for tracking ID ${trackingId} in ${this.STATUS_CHECK_DELAY_MS / 1000}s`);
+        this.logger.log(
+          `Scheduling status check for tracking ID ${trackingId} in ${this.STATUS_CHECK_DELAY_MS / 1000}s`,
+        );
 
         await this.payrollQueue.add(
           'check-payout-status',
@@ -300,10 +313,9 @@ export class PayrollPaymentService {
               type: 'exponential',
               delay: 60000, // 1 minute base delay for retries
             },
-          }
+          },
         );
       }
-
     } catch (e: any) {
       this.logger.error('Bulk Payout Failed', e);
 
@@ -312,7 +324,11 @@ export class PayrollPaymentService {
 
       if (isSafeToRefund) {
         // Safe to refund (Request rejected)
-        await this.usersRepository.increment({ id: firstUserId }, 'walletBalance', totalDeduction);
+        await this.usersRepository.increment(
+          { id: firstUserId },
+          'walletBalance',
+          totalDeduction,
+        );
 
         for (const tx of savedTransactions) {
           tx.status = TransactionStatus.FAILED;
@@ -326,16 +342,22 @@ export class PayrollPaymentService {
             workerId: record.workerId,
             workerName: record.worker.name,
             success: false,
-            error: e.message
+            error: e.message,
           });
         }
       } else {
         // Unsafe to refund (Network/Server Error - Unknown State)
-        this.logger.warn(`CRITICAL: Potential Partial Failure (Status: ${status}). NOT Refunding automatically.`);
+        this.logger.warn(
+          `CRITICAL: Potential Partial Failure (Status: ${status}). NOT Refunding automatically.`,
+        );
 
         for (const tx of savedTransactions) {
           tx.status = TransactionStatus.MANUAL_INTERVENTION;
-          tx.metadata = { ...tx.metadata, error: e.message, partialFailure: true };
+          tx.metadata = {
+            ...tx.metadata,
+            error: e.message,
+            partialFailure: true,
+          };
         }
 
         for (const record of records) {
@@ -346,7 +368,7 @@ export class PayrollPaymentService {
             workerId: record.workerId,
             workerName: record.worker.name,
             success: false,
-            error: 'Partial Failure: Manual Check Required'
+            error: 'Partial Failure: Manual Check Required',
           });
         }
       }
@@ -379,7 +401,6 @@ export class PayrollPaymentService {
     });
     const walletId = employer?.intasendWalletId;
 
-
     // 1. Prepare Transactions
     for (const record of records) {
       if (record.status !== PayrollStatus.FINALIZED) {
@@ -409,7 +430,7 @@ export class PayrollPaymentService {
           workerId: record.workerId,
           workerName: record.worker.name,
           success: false,
-          error: 'Missing Bank Account or Bank Code'
+          error: 'Missing Bank Account or Bank Code',
         });
         continue;
       }
@@ -421,7 +442,7 @@ export class PayrollPaymentService {
         account: record.worker.bankAccount,
         bankCode: record.worker.bankCode,
         amount: amount,
-        narrative: 'Salary Payment'
+        narrative: 'Salary Payment',
       });
 
       // Calculate Fee (Flat bank fee for now)
@@ -460,28 +481,39 @@ export class PayrollPaymentService {
 
     // 2. Deduct Amount + Fees
     try {
-      await this.usersRepository.decrement({ id: firstUserId }, 'walletBalance', totalDeduction);
+      await this.usersRepository.decrement(
+        { id: firstUserId },
+        'walletBalance',
+        totalDeduction,
+      );
     } catch (e) {
-      this.logger.error(`Failed to deduct bank batch amount ${totalDeduction}`, e);
-      records.forEach(r => {
+      this.logger.error(
+        `Failed to deduct bank batch amount ${totalDeduction}`,
+        e,
+      );
+      records.forEach((r) => {
         results.push({
           workerId: r.workerId,
           workerName: r.worker.name,
           success: false,
-          error: 'Insufficient Funds'
+          error: 'Insufficient Funds',
         });
       });
       return results;
     }
 
     // 3. Save Pending Transactions
-    const savedTransactions = await this.transactionRepository.save(allTransactions);
+    const savedTransactions =
+      await this.transactionRepository.save(allTransactions);
 
     // 4. Send Bulk Request
     try {
       // NOTE: sendToBank might need update to accept walletId if using sub-wallets?
       // For now, assuming standard payout or master wallet if not supported.
-      const response = await this.intaSendService.sendToBank(intaSendPayload, walletId) as any;
+      const response = await this.intaSendService.sendToBank(
+        intaSendPayload,
+        walletId,
+      );
 
       // Assuming similar response structure for tracking
       const trackingId = response.tracking_id || response.invoice_id;
@@ -495,7 +527,9 @@ export class PayrollPaymentService {
       await this.transactionRepository.save(savedTransactions);
 
       // Update Records
-      const processedRecordIds = new Set(allTransactions.map(tx => tx.metadata.payrollRecordId));
+      const processedRecordIds = new Set(
+        allTransactions.map((tx) => tx.metadata.payrollRecordId),
+      );
 
       for (const record of records) {
         if (!processedRecordIds.has(record.id)) continue;
@@ -508,10 +542,9 @@ export class PayrollPaymentService {
           workerName: record.worker.name,
           success: true,
           transactionId: trackingId,
-          message: 'Bank transfer initiated'
+          message: 'Bank transfer initiated',
         });
       }
-
     } catch (e: any) {
       this.logger.error('Bank Bulk Payout Failed', e);
 
@@ -520,40 +553,50 @@ export class PayrollPaymentService {
 
       if (isSafeToRefund) {
         // Safe to Refund
-        await this.usersRepository.increment({ id: firstUserId }, 'walletBalance', totalDeduction);
+        await this.usersRepository.increment(
+          { id: firstUserId },
+          'walletBalance',
+          totalDeduction,
+        );
 
         for (const tx of savedTransactions) {
           tx.status = TransactionStatus.FAILED;
           tx.metadata = { ...tx.metadata, error: e.message };
         }
 
-        records.forEach(async r => {
+        records.forEach(async (r) => {
           r.paymentStatus = 'failed';
           await this.payrollRecordRepository.save(r);
           results.push({
             workerId: r.workerId,
             workerName: r.worker.name,
             success: false,
-            error: e.message
+            error: e.message,
           });
         });
       } else {
         // Unsafe
-        this.logger.warn(`CRITICAL: Potential Bank Partial Failure (Status: ${status}). NOT Refunding automatically.`);
+        this.logger.warn(
+          `CRITICAL: Potential Bank Partial Failure (Status: ${status}). NOT Refunding automatically.`,
+        );
 
         for (const tx of savedTransactions) {
           tx.status = TransactionStatus.MANUAL_INTERVENTION;
-          tx.metadata = { ...tx.metadata, error: e.message, partialFailure: true };
+          tx.metadata = {
+            ...tx.metadata,
+            error: e.message,
+            partialFailure: true,
+          };
         }
 
-        records.forEach(async r => {
+        records.forEach(async (r) => {
           r.paymentStatus = 'manual_check';
           await this.payrollRecordRepository.save(r);
           results.push({
             workerId: r.workerId,
             workerName: r.worker.name,
             success: false,
-            error: 'Partial Failure: Manual Check Required'
+            error: 'Partial Failure: Manual Check Required',
           });
         });
       }

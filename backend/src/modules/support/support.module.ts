@@ -7,9 +7,9 @@ import { SupportService } from './support.service';
 import { AdminSupportController } from './admin-support.controller';
 
 @Module({
-    imports: [TypeOrmModule.forFeature([SupportTicket, SupportMessage])],
-    controllers: [SupportController, AdminSupportController],
-    providers: [SupportService],
-    exports: [SupportService],
+  imports: [TypeOrmModule.forFeature([SupportTicket, SupportMessage])],
+  controllers: [SupportController, AdminSupportController],
+  providers: [SupportService],
+  exports: [SupportService],
 })
-export class SupportModule { }
+export class SupportModule {}

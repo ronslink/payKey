@@ -26,7 +26,7 @@ export class TaxesService {
     private taxConfigService: TaxConfigService,
     private usersService: UsersService,
     private activitiesService: ActivitiesService,
-  ) { }
+  ) {}
 
   async createTaxTable(data: Partial<TaxTable>): Promise<TaxTable> {
     const taxTable = this.taxTableRepository.create(data);
@@ -47,7 +47,9 @@ export class TaxesService {
     });
 
     if (!taxTable) {
-      throw new NotFoundException(`No tax table found for date ${date.toISOString()}`);
+      throw new NotFoundException(
+        `No tax table found for date ${date.toISOString()}`,
+      );
     }
     return taxTable;
   }
@@ -157,7 +159,9 @@ export class TaxesService {
       return Math.round(Math.max(shifAmount, minAmount) * 100) / 100;
     }
 
-    throw new NotFoundException(`SHIF tax configuration not found for date ${date.toISOString()}`);
+    throw new NotFoundException(
+      `SHIF tax configuration not found for date ${date.toISOString()}`,
+    );
   }
 
   /**
@@ -182,7 +186,9 @@ export class TaxesService {
       );
     }
 
-    throw new NotFoundException(`Housing Levy tax configuration not found for date ${date.toISOString()}`);
+    throw new NotFoundException(
+      `Housing Levy tax configuration not found for date ${date.toISOString()}`,
+    );
   }
 
   /**
@@ -474,13 +480,20 @@ export class TaxesService {
 
       // Validate date to prevent RangeError
       if (isNaN(date.getTime())) {
-        console.warn(`[TaxesService] Invalid date found for submission ${sub.id}, falling back to createdAt`);
-        date = sub.createdAt instanceof Date ? sub.createdAt : new Date(sub.createdAt);
+        console.warn(
+          `[TaxesService] Invalid date found for submission ${sub.id}, falling back to createdAt`,
+        );
+        date =
+          sub.createdAt instanceof Date
+            ? sub.createdAt
+            : new Date(sub.createdAt);
       }
 
       // Final fallback if even createdAt is invalid (unlikely but safe)
       if (isNaN(date.getTime())) {
-        console.warn(`[TaxesService] Invalid createdAt for submission ${sub.id}, falling back to current date`);
+        console.warn(
+          `[TaxesService] Invalid createdAt for submission ${sub.id}, falling back to current date`,
+        );
         date = new Date();
       }
 
@@ -491,9 +504,13 @@ export class TaxesService {
       if (!summaries.has(key)) {
         let monthName = 'Unknown';
         try {
-          monthName = new Intl.DateTimeFormat('en-US', { month: 'long' }).format(date);
+          monthName = new Intl.DateTimeFormat('en-US', {
+            month: 'long',
+          }).format(date);
         } catch (e) {
-          console.error(`[TaxesService] Failed to format month for date ${date}: ${e.message}`);
+          console.error(
+            `[TaxesService] Failed to format month for date ${date}: ${e.message}`,
+          );
         }
 
         summaries.set(key, {

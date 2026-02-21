@@ -22,7 +22,7 @@ export class EmployeePortalController {
     private readonly employeePortalService: EmployeePortalService,
     private readonly leaveManagementService: LeaveManagementService,
     private readonly featureAccessService: FeatureAccessService,
-  ) { }
+  ) {}
 
   // ============================================================
   // PUBLIC ENDPOINTS (No Auth Required)

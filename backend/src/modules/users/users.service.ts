@@ -13,7 +13,7 @@ export class UsersService {
     @InjectRepository(User)
     private usersRepository: Repository<User>,
     private intaSendService: IntaSendService,
-  ) { }
+  ) {}
 
   async create(
     createUserDto: CreateUserDto & { passwordHash: string },
@@ -79,7 +79,9 @@ export class UsersService {
 
       if (Object.keys(updates).length > 0) {
         await this.usersRepository.update(existingUser.id, updates);
-        return this.usersRepository.findOne({ where: { id: existingUser.id } }) as Promise<User>;
+        return this.usersRepository.findOne({
+          where: { id: existingUser.id },
+        }) as Promise<User>;
       }
       return existingUser;
     }
@@ -134,13 +136,22 @@ export class UsersService {
       if (!user.intasendWalletId) {
         try {
           const walletLabel = `WALLET-${user.id.substring(0, 8).toUpperCase()}`;
-          const wallet = await this.intaSendService.createWallet('KES', walletLabel, true);
+          const wallet = await this.intaSendService.createWallet(
+            'KES',
+            walletLabel,
+            true,
+          );
           if (wallet && wallet.wallet_id) {
             updateUserDto.intasendWalletId = wallet.wallet_id;
-            this.logger.log(`Created IntaSend wallet ${wallet.wallet_id} for user ${user.id}`);
+            this.logger.log(
+              `Created IntaSend wallet ${wallet.wallet_id} for user ${user.id}`,
+            );
           }
         } catch (error) {
-          this.logger.error(`Failed to create IntaSend wallet for user ${user.id}`, error);
+          this.logger.error(
+            `Failed to create IntaSend wallet for user ${user.id}`,
+            error,
+          );
           // We don't block onboarding completion if wallet creation fails, but we should log it.
           // Or should we block? Safest to log for now to avoid UX blockers.
         }

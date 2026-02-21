@@ -75,5 +75,4 @@ import { ExchangeRateService } from './exchange-rate.service';
     ExchangeRateService,
   ],
 })
-export class PaymentsModule { }
-
+export class PaymentsModule {}

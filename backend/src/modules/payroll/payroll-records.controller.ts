@@ -22,7 +22,7 @@ export class PayrollRecordsController {
   constructor(
     @InjectRepository(PayrollRecord)
     private payrollRepository: Repository<PayrollRecord>,
-  ) { }
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Get payroll records for the current user' })
@@ -53,7 +53,9 @@ export class PayrollRecordsController {
   }
 
   @Get('pay-period/:payPeriodId/status')
-  @ApiOperation({ summary: 'Get payment status for all workers in a pay period' })
+  @ApiOperation({
+    summary: 'Get payment status for all workers in a pay period',
+  })
   async getPayPeriodPaymentStatus(
     @Request() req: any,
     @Param('payPeriodId') payPeriodId: string,

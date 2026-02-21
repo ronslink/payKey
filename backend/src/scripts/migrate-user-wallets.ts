@@ -17,68 +17,70 @@ import { Queue } from 'bullmq';
 import { getQueueToken } from '@nestjs/bullmq';
 
 async function bootstrap() {
-    console.log('🚀 Starting User Wallet Migration...');
+  console.log('🚀 Starting User Wallet Migration...');
 
-    const app = await NestFactory.createApplicationContext(AppModule);
+  const app = await NestFactory.createApplicationContext(AppModule);
 
-    const usersRepository = app.get<Repository<User>>(getRepositoryToken(User));
-    const walletsQueue = app.get<Queue>(getQueueToken('wallets'));
+  const usersRepository = app.get<Repository<User>>(getRepositoryToken(User));
+  const walletsQueue = app.get<Queue>(getQueueToken('wallets'));
 
-    // Find all employer users (role = 'employer') without a wallet
-    const usersWithoutWallets = await usersRepository.find({
-        where: {
-            role: UserRole.EMPLOYER,
-            intasendWalletId: IsNull(),
+  // Find all employer users (role = 'employer') without a wallet
+  const usersWithoutWallets = await usersRepository.find({
+    where: {
+      role: UserRole.EMPLOYER,
+      intasendWalletId: IsNull(),
+    },
+    select: ['id', 'firstName', 'lastName', 'businessName', 'email'],
+  });
+
+  console.log(
+    `📋 Found ${usersWithoutWallets.length} employer(s) without wallets`,
+  );
+
+  if (usersWithoutWallets.length === 0) {
+    console.log('✅ All employers already have wallets. Nothing to do.');
+    await app.close();
+    return;
+  }
+
+  // Queue wallet creation jobs for each user
+  let queued = 0;
+  for (const user of usersWithoutWallets) {
+    const label =
+      user.businessName ||
+      `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
+      user.email ||
+      user.id;
+
+    await walletsQueue.add(
+      'create-wallet',
+      {
+        userId: user.id,
+        label: label,
+      },
+      {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 5000,
         },
-        select: ['id', 'firstName', 'lastName', 'businessName', 'email'],
-    });
-
-    console.log(
-        `📋 Found ${usersWithoutWallets.length} employer(s) without wallets`,
+        removeOnComplete: true,
+      },
     );
 
-    if (usersWithoutWallets.length === 0) {
-        console.log('✅ All employers already have wallets. Nothing to do.');
-        await app.close();
-        return;
-    }
+    queued++;
+    console.log(`  📤 Queued wallet job for: ${label} (${user.id})`);
+  }
 
-    // Queue wallet creation jobs for each user
-    let queued = 0;
-    for (const user of usersWithoutWallets) {
-        const label =
-            user.businessName ||
-            `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
-            user.email ||
-            user.id;
+  console.log(`\n✅ Queued ${queued} wallet creation job(s)`);
+  console.log(
+    '💡 Jobs will be processed asynchronously by the WalletProcessor',
+  );
 
-        await walletsQueue.add(
-            'create-wallet',
-            {
-                userId: user.id,
-                label: label,
-            },
-            {
-                attempts: 3,
-                backoff: {
-                    type: 'exponential',
-                    delay: 5000,
-                },
-                removeOnComplete: true,
-            },
-        );
-
-        queued++;
-        console.log(`  📤 Queued wallet job for: ${label} (${user.id})`);
-    }
-
-    console.log(`\n✅ Queued ${queued} wallet creation job(s)`);
-    console.log('💡 Jobs will be processed asynchronously by the WalletProcessor');
-
-    await app.close();
+  await app.close();
 }
 
 bootstrap().catch((err) => {
-    console.error('❌ Migration failed:', err);
-    process.exit(1);
+  console.error('❌ Migration failed:', err);
+  process.exit(1);
 });

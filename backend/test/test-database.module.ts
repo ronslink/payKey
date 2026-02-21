@@ -39,9 +39,13 @@ import { ExchangeRate } from '../src/modules/payments/entities/exchange-rate.ent
         host: configService.get<string>('DB_HOST', 'localhost'),
         port: parseInt(configService.get<string>('DB_PORT', '5432')),
         // Use paykey as default to match CI configuration
-        username: configService.get<string>('DB_USER') || configService.get<string>('DB_USERNAME', 'paykey'),
+        username:
+          configService.get<string>('DB_USER') ||
+          configService.get<string>('DB_USERNAME', 'paykey'),
         password: configService.get<string>('DB_PASSWORD', 'password'),
-        database: configService.get<string>('DB_NAME') || configService.get<string>('DB_DATABASE', 'paykey_test'),
+        database:
+          configService.get<string>('DB_NAME') ||
+          configService.get<string>('DB_DATABASE', 'paykey_test'),
         entities: [
           User,
           Worker,
@@ -86,4 +90,4 @@ import { ExchangeRate } from '../src/modules/payments/entities/exchange-rate.ent
     }),
   ],
 })
-export class TestDatabaseModule { }
+export class TestDatabaseModule {}

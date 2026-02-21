@@ -20,7 +20,7 @@ import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 @Controller('export')
 @UseGuards(JwtAuthGuard)
 export class ExportController {
-  constructor(private readonly exportService: ExportService) { }
+  constructor(private readonly exportService: ExportService) {}
 
   @Post()
   async createExport(

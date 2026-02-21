@@ -6,9 +6,7 @@ import {
   Transaction,
   TransactionType,
 } from '../../payments/entities/transaction.entity';
-import {
-  PayrollRecord,
-} from '../../payroll/entities/payroll-record.entity';
+import { PayrollRecord } from '../../payroll/entities/payroll-record.entity';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -55,7 +53,9 @@ export class ExportService {
     startDate: Date,
     endDate: Date,
   ): Promise<ExportRecord[]> {
-    console.log(`[Export Service] Fetching data for user ${userId} from ${startDate} to ${endDate}`);
+    console.log(
+      `[Export Service] Fetching data for user ${userId} from ${startDate} to ${endDate}`,
+    );
 
     const records = await this.payrollRecordRepository
       .createQueryBuilder('record')
@@ -70,7 +70,9 @@ export class ExportService {
 
     return records.map((r) => {
       // Use payment date if paid, otherwise period end date or current date
-      let date = r.paymentDate ? new Date(r.paymentDate) : new Date(r.periodEnd);
+      let date = r.paymentDate
+        ? new Date(r.paymentDate)
+        : new Date(r.periodEnd);
       if (isNaN(date.getTime())) date = new Date(r.periodEnd || new Date());
 
       // Ensure tax breakdown exists with defaults
@@ -80,7 +82,9 @@ export class ExportService {
 
       // Debug log for zero values
       if (grossSalary === 0) {
-        console.warn(`[Export Service] Warning: Zero gross salary for worker ${r.worker?.name} (${r.workerId})`);
+        console.warn(
+          `[Export Service] Warning: Zero gross salary for worker ${r.worker?.name} (${r.workerId})`,
+        );
       }
 
       return {
@@ -218,7 +222,8 @@ export class ExportService {
       const overtime = 0;
       const otherAllow = 0;
 
-      const totalCash = basic + houseAllow + transportAllow + overtime + otherAllow;
+      const totalCash =
+        basic + houseAllow + transportAllow + overtime + otherAllow;
 
       const carBen = 0;
       const otherNonCash = 0;
@@ -478,7 +483,7 @@ export class ExportService {
       // Clean up the file if DB save fails
       try {
         fs.unlinkSync(filePath);
-      } catch { }
+      } catch {}
       throw new Error(`Failed to save export record: ${error.message}`);
     }
   }

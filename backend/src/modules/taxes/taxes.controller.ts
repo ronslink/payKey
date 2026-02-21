@@ -22,7 +22,7 @@ class CalculateTaxDto {
 @Controller('taxes')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class TaxesController {
-  constructor(private readonly taxesService: TaxesService) { }
+  constructor(private readonly taxesService: TaxesService) {}
 
   @Post('calculate')
   calculateTaxes(@Body() dto: CalculateTaxDto) {

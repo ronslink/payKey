@@ -22,7 +22,7 @@ export class EmployeePortalService {
     @InjectRepository(Property)
     private propertyRepository: Repository<Property>,
     private jwtService: JwtService,
-  ) { }
+  ) {}
 
   /**
    * Generate an invite code for a worker
