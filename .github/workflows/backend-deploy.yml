@@ -115,25 +115,52 @@ jobs:
             set -e
             cd /opt/paykey
 
+            # ── 1. Docker health check ────────────────────────────────────────
+            echo "🩺 Checking Docker daemon..."
+            if ! docker info > /dev/null 2>&1; then
+              echo "⚠️  Docker daemon unresponsive — restarting..."
+              sudo systemctl restart docker
+              sleep 5
+              docker info || { echo "❌ Docker daemon failed to recover"; exit 1; }
+            fi
+
+            # ── 2. Disk space report + pre-pull cleanup ───────────────────────
+            echo "💾 Disk space before cleanup:"
+            df -h /var/lib/docker || df -h /
+            echo "🧹 Pruning dangling images and stopped containers (pre-pull)..."
+            docker image prune -f
+            docker container prune -f
+            echo "💾 Disk space after cleanup:"
+            df -h /var/lib/docker || df -h /
+
+            # Abort early if less than 1 GB free (overlayfs will fail anyway)
+            AVAIL_KB=$(df /var/lib/docker 2>/dev/null | awk 'NR==2{print $4}' || df / | awk 'NR==2{print $4}')
+            if [ "${AVAIL_KB:-0}" -lt 1048576 ]; then
+              echo "❌ Less than 1 GB free on Docker storage — aborting to avoid overlayfs errors"
+              echo "   Run: docker system prune -af  on the server to reclaim space, then retry."
+              exit 1
+            fi
+
+            # ── 3. Pull latest code ───────────────────────────────────────────
             echo "📥 Pulling latest code..."
             git fetch origin main
             git reset --hard origin/main
 
+            # ── 4. Stop only the containers being redeployed ──────────────────
             echo "🧹 Stopping target containers only..."
-            # Explicitly remove only the containers we are redeploying.
-            # Do NOT use --remove-orphans on compose down/up — each service
-            # (backend, admin, website) lives in its own compose file and
-            # would be incorrectly treated as an orphan by the others.
+            # Do NOT use --remove-orphans — each service (backend, admin, website)
+            # lives in its own compose file and would be treated as an orphan.
             docker rm -f paykey_backend_prod 2>/dev/null || true
             docker rm -f paykey_redis_prod   2>/dev/null || true
 
             echo "🌐 Ensuring network exists..."
             docker network create paykey-network-prod 2>/dev/null || true
 
+            # ── 5. Pull new image then bring up services ──────────────────────
             echo "📦 Starting infrastructure (Redis)..."
             docker compose --env-file .env -f deploy/docker-compose.infra.yml up -d
 
-            echo "🔙 Deploying backend..."
+            echo "🔙 Pulling and deploying backend..."
             docker compose --env-file .env -f deploy/docker-compose.backend.yml pull backend
             docker compose --env-file .env -f deploy/docker-compose.backend.yml up -d \
               --force-recreate backend
@@ -144,6 +171,7 @@ jobs:
             echo "📜 Recent logs:"
             docker logs --tail 50 paykey_backend_prod
 
+            # ── 6. Run migrations ─────────────────────────────────────────────
             echo "🔄 Running migrations..."
             if ! docker exec paykey_backend_prod npm run typeorm:migration:run:prod; then
               echo "❌ Migration failed — dumping container logs:"
@@ -151,13 +179,16 @@ jobs:
               exit 1
             fi
 
+            # ── 7. Ensure admin and website are still up ──────────────────────
             echo "🛡️  Ensuring admin and website are running..."
             docker compose --env-file .env -f deploy/docker-compose.admin.yml   up -d admin
             docker compose --env-file .env -f deploy/docker-compose.website.yml up -d website
 
+            # ── 8. Post-deploy cleanup and summary ────────────────────────────
+            docker image prune -f
             echo "📊 Running containers:"
             docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" \
               --filter name=paykey --filter name=paydome
-
-            docker image prune -f
+            echo "💾 Disk space after deploy:"
+            df -h /var/lib/docker 2>/dev/null || df -h /
             echo "✅ Backend deployment complete: $(date)"
