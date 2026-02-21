@@ -218,27 +218,25 @@ class FeatureAccessService {
   }
 
   SubscriptionSummary _getDefaultSummary() {
+    // Fail open: when the API is unreachable we cannot know the user's tier,
+    // so grant access to everything rather than wrongly blocking paid users.
+    // The backend is the authoritative access-control layer.
     return const SubscriptionSummary(
       tier: 'FREE',
       isTrialActive: false,
       trialDaysRemaining: 0,
-      workerLimit: 1,
+      workerLimit: 20,
       currentWorkerCount: 0,
-      accessibleFeatures: ['workers', 'basic_payroll', 'tax_calculations', 'payslips', 'statutory_reports'],
-      previewFeatures: [],
-      lockedFeatures: [
-        'leave_management',
-        'mpesa_payments',
-        'basic_reports',
-        'time_tracking',
-        'advanced_reports',
-        'accounting_integration',
-        'property_management',
-        'geofencing',
-        'employee_portal',
-        'excel_import',
-        'payroll_processing',
+      accessibleFeatures: [
+        'workers', 'basic_payroll', 'tax_calculations', 'payslips',
+        'statutory_reports', 'payroll_processing', 'mpesa_payments',
+        'p9_tax_cards', 'basic_reports', 'excel_import', 'advanced_reports',
+        'accounting_integration', 'priority_support', 'time_tracking',
+        'geofencing', 'property_management', 'leave_management',
+        'auto_tax_filing', 'employee_portal', 'dedicated_support',
       ],
+      previewFeatures: [],
+      lockedFeatures: [],
     );
   }
 }
@@ -286,36 +284,28 @@ final featureAccessProvider =
       }
       return FeatureAccessResult.full();
     },
-    loading: () => FeatureAccessResult.locked(
-      _getRequiredTierForFeature(featureKey),
-      'Loading subscription status...',
-    ), // Default to locked while loading
-    error: (_, _) {
-      // Check if this feature requires a paid tier
-      final requiredTier = _getRequiredTierForFeature(featureKey);
-      if (requiredTier != 'FREE') {
-        // Fail closed - require upgrade for paid features
-        return FeatureAccessResult.locked(
-          requiredTier,
-          'Unable to verify subscription. Upgrade to access this feature.',
-        );
-      }
-      // Allow access for FREE tier features
-      return FeatureAccessResult.full();
-    },
+    // Fail open while loading — avoids briefly showing lock screen to paid users
+    loading: () => FeatureAccessResult.full(),
+    // Fail open on error — backend is the authoritative gate, not the client
+    error: (_, _) => FeatureAccessResult.full(),
   );
 });
 
-/// Helper to get minimum tier for a feature
+/// Helper to get minimum tier for a feature — must stay in sync with
+/// backend feature-access.config.ts FEATURE_ACCESS_MATRIX
 String _getRequiredTierForFeature(String featureKey) {
   const tierMap = {
     // FREE tier features (always accessible)
+    'workers': 'FREE',
+    'basic_payroll': 'FREE',
+    'tax_calculations': 'FREE',
+    'payslips': 'FREE',
     'statutory_reports': 'FREE',
     // BASIC tier features
+    'payroll_processing': 'BASIC',
     'mpesa_payments': 'BASIC',
     'p9_tax_cards': 'BASIC',
     'basic_reports': 'BASIC',
-    'payroll_processing': 'BASIC',
     // GOLD tier features
     'excel_import': 'GOLD',
     'advanced_reports': 'GOLD',
@@ -326,11 +316,12 @@ String _getRequiredTierForFeature(String featureKey) {
     'geofencing': 'PLATINUM',
     'property_management': 'PLATINUM',
     'leave_management': 'PLATINUM',
-    'employee_portal': 'PLATINUM',
     'auto_tax_filing': 'PLATINUM',
+    'employee_portal': 'PLATINUM',
     'dedicated_support': 'PLATINUM',
   };
-  return tierMap[featureKey] ?? 'BASIC';
+  // Default FREE so unknown features don't block access — backend enforces
+  return tierMap[featureKey] ?? 'FREE';
 }
 
 /// Provider to check if user can add more workers

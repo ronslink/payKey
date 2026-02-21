@@ -15,6 +15,8 @@ function App() {
         <Route path="/help" element={<IOSHelp />} />
         <Route path="/deleteme" element={<DeleteMe />} />
         <Route path="/subscription/success" element={<PaymentSuccess />} />
+        {/* Stripe redirects here after checkout — matches backend success_url */}
+        <Route path="/payments/subscriptions/success" element={<PaymentSuccess />} />
       </Routes>
     </Router>
   );

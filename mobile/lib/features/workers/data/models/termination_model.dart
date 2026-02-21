@@ -185,7 +185,9 @@ class TerminationRequest {
       'noticePeriodDays': noticePeriodDays,
       'severancePay': severancePay,
       'outstandingPayments': outstandingPayments,
-      'notes': notes,
+      // Omit null-valued optional fields — class-validator @IsOptional()
+      // only skips validation when the field is absent, not when null is sent
+      if (notes != null) 'notes': notes,
     };
   }
 }

@@ -125,7 +125,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
         if (_bankAccountController.text.isNotEmpty)
           'bankAccount': _bankAccountController.text.trim(),
         if (_mpesaPhoneController.text.isNotEmpty)
-          'phoneNumber': _mpesaPhoneController.text.trim(),
+          'mpesaPhone': _mpesaPhoneController.text.trim(),
         if (_mpesaPaybillController.text.isNotEmpty)
           'mpesaPaybill': _mpesaPaybillController.text.trim(),
         if (_mpesaTillController.text.isNotEmpty)
