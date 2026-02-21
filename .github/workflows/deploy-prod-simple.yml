@@ -1,12 +1,9 @@
 name: Deploy PROD (Simple - No Tests)
 
 on:
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - 'admin/**'
-      - '.github/workflows/deploy-admin.yml'
+  # Disabled: superseded by backend-deploy.yml (scoped to backend/** changes)
+  # and deploy-admin.yml (scoped to admin/** changes).
+  # Kept as a manual fallback only.
   workflow_dispatch:
 
 jobs:
@@ -183,7 +180,11 @@ jobs:
             docker logs --tail 50 paykey_backend_prod
             
             echo "🔄 Running Database Migrations..."
-            docker exec paykey_backend_prod npm run typeorm:migration:run || echo "⚠️ Migrations failed (check logs)"
+            if ! docker exec paykey_backend_prod npm run typeorm:migration:run:prod; then
+              echo "❌ Migration failed — dumping container logs:"
+              docker logs --tail 100 paykey_backend_prod
+              exit 1
+            fi
             
             echo "🧹 Cleaning up old images..."
             docker image prune -f

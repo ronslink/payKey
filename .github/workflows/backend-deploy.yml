@@ -12,7 +12,6 @@ on:
       - 'backend/**'
       - 'deploy/docker-compose.backend.yml'
       - 'deploy/docker-compose.infra.yml'
-      - '.github/workflows/backend-deploy.yml'
 
 env:
   NODE_VERSION: '20'
