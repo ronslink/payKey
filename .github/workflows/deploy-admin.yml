@@ -68,7 +68,7 @@ jobs:
 
             echo "📦 Pulling and deploying admin dashboard..."
             docker compose --env-file .env -f deploy/docker-compose.admin.yml pull admin
-            docker compose --env-file .env -f deploy/docker-compose.admin.yml up -d admin
+            docker compose --env-file .env -f deploy/docker-compose.admin.yml up -d --force-recreate admin
 
             echo "🧹 Cleaning up old images..."
             docker image prune -f

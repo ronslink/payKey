@@ -307,8 +307,8 @@ jobs:
 
             # ── 7. Ensure admin and website are still up ──────────────────────
             # Ensure admin and website are still running after backend redeploy
-            docker compose --env-file .env -f deploy/docker-compose.admin.yml   up -d admin
-            docker compose --env-file .env -f deploy/docker-compose.website.yml up -d website
+            docker compose --env-file .env -f deploy/docker-compose.admin.yml   up -d --force-recreate admin
+            docker compose --env-file .env -f deploy/docker-compose.website.yml up -d --force-recreate website
 
             # ── 8. Post-deploy cleanup and summary ────────────────────────────
             docker image prune -f
