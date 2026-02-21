@@ -253,9 +253,6 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
 
-            sed -i "s|image:.*paykey-backend:.*|image: ${DOCKER_USERNAME}/paykey-backend:latest|g" \
-              deploy/docker-compose.backend.yml || true
-
             # Explicitly remove only the containers we are redeploying.
             # Do NOT use --remove-orphans — each service lives in its own
             # compose file and would be incorrectly flagged as an orphan.
@@ -271,8 +268,11 @@ jobs:
             sleep 15
             docker logs --tail 50 paykey_backend_prod
 
-            docker exec paykey_backend_prod npm run typeorm:migration:run || \
-              echo "Migrations failed — check logs"
+            if ! docker exec paykey_backend_prod npm run typeorm:migration:run:prod; then
+              echo "❌ Migration failed — dumping container logs:"
+              docker logs --tail 100 paykey_backend_prod
+              exit 1
+            fi
 
             # Ensure admin and website are still running after backend redeploy
             docker compose --env-file .env -f deploy/docker-compose.admin.yml   up -d admin

@@ -3,7 +3,7 @@
 
 services:
   backend:
-    image: ghcr.io/ronslink/paykey-backend:latest
+    image: ${DOCKER_USERNAME:-ronslink}/paykey-backend:latest
     container_name: paykey_backend_prod
     restart: always
     ports:
@@ -27,6 +27,7 @@ services:
       - APPLE_KEY_ID=${APPLE_KEY_ID}
       - APPLE_TEAM_ID=${APPLE_TEAM_ID}
       - APPLE_BUNDLE_ID=${APPLE_BUNDLE_ID}
+      - APPLE_PRIVATE_KEY=${APPLE_PRIVATE_KEY}
       - NODE_EXTRA_CA_CERTS=/app/ca-certificate.crt
     volumes:
       - /opt/paykey/ca-certificate.crt:/app/ca-certificate.crt:ro

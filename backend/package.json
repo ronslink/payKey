@@ -32,7 +32,9 @@
     "knip:fix": "knip --fix",
     "typeorm:migration:generate": "typeorm-ts-node-commonjs migration:generate -d ormconfig.ts",
     "typeorm:migration:run": "typeorm-ts-node-commonjs migration:run -d ormconfig.ts",
+    "typeorm:migration:run:prod": "NODE_ENV=production typeorm migration:run -d dist/ormconfig.js",
     "typeorm:migration:revert": "typeorm-ts-node-commonjs migration:revert -d ormconfig.ts",
+    "typeorm:migration:revert:prod": "NODE_ENV=production typeorm migration:revert -d dist/ormconfig.js",
     "typeorm:schema:sync": "typeorm-ts-node-commonjs schema:sync -d ormconfig.ts"
   },
   "dependencies": {
