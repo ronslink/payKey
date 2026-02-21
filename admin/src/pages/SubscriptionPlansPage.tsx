@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Table, Card, Typography, Tag, Button, Modal, Form, Input, InputNumber, Switch, Space, message, Divider, Tabs, Statistic, Row, Col, Select, DatePicker, Badge, Popconfirm } from 'antd';
-import { EditOutlined, PlusOutlined, DeleteOutlined, PlayCircleOutlined, PauseCircleOutlined } from '@ant-design/icons';
+import { Table, Card, Typography, Tag, Button, Modal, Form, Input, InputNumber, Switch, Space, message, Divider, Tabs, Row, Col, Select, DatePicker, Badge, Popconfirm, Progress, Tooltip, Statistic } from 'antd';
+import { EditOutlined, PlusOutlined, DeleteOutlined, PlayCircleOutlined, PauseCircleOutlined, RiseOutlined, TeamOutlined, CrownOutlined, TrophyOutlined, StarOutlined, PercentageOutlined, GiftOutlined, NotificationOutlined, EyeOutlined, BarChartOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import { adminPlans, adminPromotionalItems, adminCampaigns } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
@@ -10,6 +10,14 @@ const { Title, Text } = Typography;
 const { TextArea } = Input;
 
 const tierColors: Record<string, string> = { FREE: 'default', BASIC: 'blue', GOLD: 'gold', PLATINUM: 'purple' };
+const tierBg: Record<string, string> = { FREE: '#f8fafc', BASIC: '#eff6ff', GOLD: '#fffbeb', PLATINUM: '#faf5ff' };
+const tierFg: Record<string, string> = { FREE: '#64748b', BASIC: '#2563eb', GOLD: '#d97706', PLATINUM: '#7c3aed' };
+const tierIcon: Record<string, React.ReactNode> = {
+    FREE: <TeamOutlined />,
+    BASIC: <StarOutlined />,
+    GOLD: <TrophyOutlined />,
+    PLATINUM: <CrownOutlined />,
+};
 
 const promoTypeColors: Record<string, string> = {
     DISCOUNT: 'green',
@@ -155,69 +163,171 @@ export default function SubscriptionPlansPage() {
         onError: (e: any) => message.error(e?.response?.data?.message || 'Delete failed'),
     });
 
-    // Columns for Plans
+    const overview = dashboard?.overview || {};
+    const totalSubs = overview.totalSubscriptions || 0;
+    const activeSubs = overview.activeSubscriptions || 0;
+    const churnRate = overview.churnRate || 0;
+    const activePercent = totalSubs > 0 ? Math.round((activeSubs / totalSubs) * 100) : 0;
+
+    // Columns for Plans tab
     const planColumns = [
-        { title: 'Tier', dataIndex: 'tier', key: 'tier', render: (v: string) => <Tag color={tierColors[v]}>{v}</Tag> },
-        { title: 'Name', dataIndex: 'name', key: 'name' },
-        { title: 'Monthly (USD)', dataIndex: 'priceUSD', key: 'usd', render: (v: number) => `$${Number(v).toFixed(2)}` },
-        { title: 'Monthly (KES)', dataIndex: 'priceKES', key: 'kes', render: (v: number) => `KES ${Number(v).toLocaleString()}` },
-        { title: 'Yearly (USD)', dataIndex: 'priceUSDYearly', key: 'yusd', render: (v: number) => `$${Number(v).toFixed(2)}` },
-        { title: 'Yearly (KES)', dataIndex: 'priceKESYearly', key: 'ykes', render: (v: number) => `KES ${Number(v).toLocaleString()}` },
-        { title: 'Worker Limit', dataIndex: 'workerLimit', key: 'limit', align: 'center' as const },
-        { title: 'Popular', dataIndex: 'isPopular', key: 'popular', render: (v: boolean) => v ? <Tag color="orange">⭐ Popular</Tag> : '—' },
+        {
+            title: 'Tier',
+            dataIndex: 'tier',
+            key: 'tier',
+            width: 100,
+            render: (v: string) => (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ color: tierFg[v], fontSize: 16 }}>{tierIcon[v]}</span>
+                    <Tag color={tierColors[v]} style={{ borderRadius: 12 }}>{v}</Tag>
+                </div>
+            ),
+        },
+        {
+            title: 'Plan Name',
+            dataIndex: 'name',
+            key: 'name',
+            render: (v: string, r: any) => (
+                <div>
+                    <span style={{ fontWeight: 600 }}>{v}</span>
+                    {r.isPopular && <Tag color="orange" style={{ marginLeft: 8, borderRadius: 12 }}>⭐ Popular</Tag>}
+                </div>
+            ),
+        },
+        {
+            title: 'Monthly Price',
+            key: 'monthly',
+            render: (_: any, r: any) => (
+                <div>
+                    <div style={{ fontWeight: 600 }}>
+                        <span style={{ fontSize: 11, color: '#94a3b8', marginRight: 3 }}>USD</span>
+                        ${Number(r.priceUSD).toFixed(2)}
+                    </div>
+                    <div style={{ fontSize: 12, color: '#64748b' }}>
+                        <span style={{ fontSize: 10, color: '#94a3b8', marginRight: 3 }}>KES</span>
+                        {Number(r.priceKES).toLocaleString()}
+                    </div>
+                </div>
+            ),
+        },
+        {
+            title: 'Yearly Price',
+            key: 'yearly',
+            render: (_: any, r: any) => (
+                <div>
+                    <div style={{ fontWeight: 600 }}>
+                        <span style={{ fontSize: 11, color: '#94a3b8', marginRight: 3 }}>USD</span>
+                        ${Number(r.priceUSDYearly).toFixed(2)}
+                    </div>
+                    <div style={{ fontSize: 12, color: '#64748b' }}>
+                        <span style={{ fontSize: 10, color: '#94a3b8', marginRight: 3 }}>KES</span>
+                        {Number(r.priceKESYearly).toLocaleString()}
+                    </div>
+                </div>
+            ),
+        },
+        {
+            title: 'Worker Limit',
+            dataIndex: 'workerLimit',
+            key: 'limit',
+            align: 'center' as const,
+            width: 110,
+            render: (v: number) => (
+                <Tag icon={<TeamOutlined />} color="blue" style={{ borderRadius: 12 }}>{v} workers</Tag>
+            ),
+        },
         {
             title: '',
             key: 'edit',
+            width: 80,
             render: (_: any, r: any) => canEdit ? (
-                <Button icon={<EditOutlined />} size="small" onClick={() => {
-                    setEditModal({ open: true, plan: r });
-                    form.setFieldsValue(r);
-                }}>Edit</Button>
+                <Button
+                    icon={<EditOutlined />}
+                    size="small"
+                    type="primary"
+                    ghost
+                    onClick={() => {
+                        setEditModal({ open: true, plan: r });
+                        form.setFieldsValue(r);
+                    }}
+                >
+                    Edit
+                </Button>
             ) : null,
         },
     ];
 
     // Columns for Promotional Items
     const promoColumns = [
-        { title: 'Name', dataIndex: 'name', key: 'name' },
-        { title: 'Type', dataIndex: 'type', key: 'type', render: (v: string) => <Tag color={promoTypeColors[v]}>{v}</Tag> },
-        { title: 'Status', dataIndex: 'status', key: 'status', render: (v: string) => <Tag color={promoStatusColors[v]}>{v}</Tag> },
         {
-            title: 'Discount',
+            title: 'Promotion',
+            key: 'name',
+            render: (_: any, r: any) => (
+                <div>
+                    <div style={{ fontWeight: 600 }}>{r.name}</div>
+                    {r.description && <div style={{ fontSize: 12, color: '#94a3b8' }}>{r.description}</div>}
+                </div>
+            ),
+        },
+        { title: 'Type', dataIndex: 'type', key: 'type', width: 130, render: (v: string) => <Tag color={promoTypeColors[v]} style={{ borderRadius: 12 }}>{v.replace('_', ' ')}</Tag> },
+        { title: 'Status', dataIndex: 'status', key: 'status', width: 90, render: (v: string) => <Tag color={promoStatusColors[v]} style={{ borderRadius: 12 }}>{v}</Tag> },
+        {
+            title: 'Value',
             key: 'discount',
+            width: 120,
             render: (_: any, r: any) => {
-                if (r.discountPercentage) return `${r.discountPercentage}%`;
-                if (r.discountAmount) return `$${r.discountAmount}`;
-                if (r.freeTrialDays) return `${r.freeTrialDays} days trial`;
-                return '—';
+                if (r.discountPercentage) return <span style={{ fontWeight: 600, color: '#10b981' }}>{r.discountPercentage}% off</span>;
+                if (r.discountAmount) return <span style={{ fontWeight: 600, color: '#10b981' }}>${r.discountAmount} off</span>;
+                if (r.freeTrialDays) return <span style={{ fontWeight: 600, color: '#2563eb' }}>{r.freeTrialDays}d trial</span>;
+                return <span style={{ color: '#94a3b8' }}>—</span>;
             },
         },
         {
             title: 'Usage',
             key: 'usage',
-            render: (_: any, r: any) => `${r.currentUses}${r.maxUses ? ` / ${r.maxUses}` : ''}`,
+            width: 140,
+            render: (_: any, r: any) => {
+                if (!r.maxUses) return <span style={{ color: '#64748b' }}>{r.currentUses} used (unlimited)</span>;
+                const pct = Math.round((r.currentUses / r.maxUses) * 100);
+                return (
+                    <Tooltip title={`${r.currentUses} of ${r.maxUses} uses`}>
+                        <div>
+                            <div style={{ fontSize: 12, marginBottom: 2 }}>{r.currentUses} / {r.maxUses}</div>
+                            <Progress
+                                percent={pct}
+                                size="small"
+                                showInfo={false}
+                                strokeColor={pct >= 90 ? '#ef4444' : pct >= 70 ? '#f59e0b' : '#10b981'}
+                                style={{ marginBottom: 0 }}
+                            />
+                        </div>
+                    </Tooltip>
+                );
+            },
         },
         {
             title: 'Valid Period',
             key: 'validPeriod',
+            width: 160,
             render: (_: any, r: any) => {
-                if (!r.validFrom && !r.validUntil) return '—';
+                if (!r.validFrom && !r.validUntil) return <span style={{ color: '#94a3b8' }}>—</span>;
                 const from = r.validFrom ? dayjs(r.validFrom).format('MMM D') : '—';
-                const until = r.validUntil ? dayjs(r.validUntil).format('MMM D') : '—';
-                return `${from} - ${until}`;
+                const until = r.validUntil ? dayjs(r.validUntil).format('MMM D, YYYY') : '—';
+                return <span style={{ fontSize: 13 }}>{from} → {until}</span>;
             },
         },
         {
             title: '',
             key: 'actions',
+            width: 140,
             render: (_: any, r: any) => canEdit ? (
                 <Space>
                     <Button icon={<EditOutlined />} size="small" onClick={() => {
                         setPromoModal({ open: true, item: r });
                         promoForm.setFieldsValue({ ...r, validFrom: r.validFrom ? dayjs(r.validFrom) : null, validUntil: r.validUntil ? dayjs(r.validUntil) : null });
-                    }}>Edit</Button>
+                    }} />
                     <Popconfirm title="Delete this promotional item?" onConfirm={() => deletePromoMut.mutate(r.id)}>
-                        <Button icon={<DeleteOutlined />} size="small" danger>Delete</Button>
+                        <Button icon={<DeleteOutlined />} size="small" danger />
                     </Popconfirm>
                 </Space>
             ) : null,
@@ -226,36 +336,69 @@ export default function SubscriptionPlansPage() {
 
     // Columns for Campaigns
     const campaignColumns = [
-        { title: 'Name', dataIndex: 'name', key: 'name' },
-        { title: 'Type', dataIndex: 'type', key: 'type', render: (v: string) => <Tag color={campaignTypeColors[v]}>{v}</Tag> },
-        { title: 'Status', dataIndex: 'status', key: 'status', render: (v: string) => <Badge status={campaignStatusColors[v] as any} text={v} /> },
-        { title: 'Title', dataIndex: 'title', key: 'title', ellipsis: true },
+        {
+            title: 'Campaign',
+            key: 'name',
+            render: (_: any, r: any) => (
+                <div>
+                    <div style={{ fontWeight: 600 }}>{r.name}</div>
+                    {r.title && <div style={{ fontSize: 12, color: '#64748b' }}>{r.title}</div>}
+                </div>
+            ),
+        },
+        { title: 'Type', dataIndex: 'type', key: 'type', width: 150, render: (v: string) => <Tag color={campaignTypeColors[v]} style={{ borderRadius: 12 }}>{v.replace(/_/g, ' ')}</Tag> },
+        {
+            title: 'Status',
+            dataIndex: 'status',
+            key: 'status',
+            width: 110,
+            render: (v: string) => (
+                <Badge
+                    status={v === 'ACTIVE' ? 'success' : v === 'SCHEDULED' ? 'processing' : v === 'PAUSED' ? 'warning' : v === 'CANCELLED' ? 'error' : v === 'COMPLETED' ? 'default' : 'default'}
+                    text={<Tag color={campaignStatusColors[v]} style={{ borderRadius: 12 }}>{v}</Tag>}
+                />
+            ),
+        },
         {
             title: 'Schedule',
             key: 'schedule',
+            width: 180,
             render: (_: any, r: any) => {
-                if (!r.scheduledFrom && !r.scheduledUntil) return '—';
-                const from = r.scheduledFrom ? dayjs(r.scheduledFrom).format('MMM D, HH:mm') : '—';
-                const until = r.scheduledUntil ? dayjs(r.scheduledUntil).format('MMM D, HH:mm') : '—';
-                return `${from} - ${until}`;
+                if (!r.scheduledFrom && !r.scheduledUntil) return <span style={{ color: '#94a3b8' }}>—</span>;
+                const from = r.scheduledFrom ? dayjs(r.scheduledFrom).format('MMM D') : '—';
+                const until = r.scheduledUntil ? dayjs(r.scheduledUntil).format('MMM D, YYYY') : '—';
+                return <span style={{ fontSize: 13 }}>{from} → {until}</span>;
             },
         },
         {
             title: 'Performance',
             key: 'performance',
-            render: (_: any, r: any) => (
-                <Space size="small">
-                    <Text type="secondary">👁 {r.impressions}</Text>
-                    <Text type="secondary">👆 {r.clicks}</Text>
-                    <Text type="secondary">✓ {r.conversions}</Text>
-                </Space>
-            ),
+            render: (_: any, r: any) => {
+                const ctr = r.impressions > 0 ? ((r.clicks / r.impressions) * 100).toFixed(1) : '0';
+                const cvr = r.clicks > 0 ? ((r.conversions / r.clicks) * 100).toFixed(1) : '0';
+                return (
+                    <div style={{ fontSize: 12 }}>
+                        <Space size={12}>
+                            <Tooltip title="Impressions">
+                                <span><EyeOutlined style={{ color: '#94a3b8', marginRight: 3 }} />{r.impressions}</span>
+                            </Tooltip>
+                            <Tooltip title={`Click-through rate: ${ctr}%`}>
+                                <span style={{ color: '#6366f1' }}><BarChartOutlined style={{ marginRight: 3 }} />{r.clicks} <span style={{ color: '#94a3b8' }}>({ctr}%)</span></span>
+                            </Tooltip>
+                            <Tooltip title={`Conversion rate: ${cvr}%`}>
+                                <span style={{ color: '#10b981' }}>✓ {r.conversions} <span style={{ color: '#94a3b8' }}>({cvr}%)</span></span>
+                            </Tooltip>
+                        </Space>
+                    </div>
+                );
+            },
         },
         {
             title: '',
             key: 'actions',
+            width: 160,
             render: (_: any, r: any) => canEdit ? (
-                <Space>
+                <Space size={4}>
                     {r.status === 'DRAFT' && (
                         <Button icon={<PlayCircleOutlined />} size="small" type="primary" onClick={() => updateCampaignStatusMut.mutate({ id: r.id, status: 'ACTIVE' })}>Activate</Button>
                     )}
@@ -272,9 +415,9 @@ export default function SubscriptionPlansPage() {
                             scheduledFrom: r.scheduledFrom ? dayjs(r.scheduledFrom) : null,
                             scheduledUntil: r.scheduledUntil ? dayjs(r.scheduledUntil) : null,
                         });
-                    }}>Edit</Button>
+                    }} />
                     <Popconfirm title="Delete this campaign?" onConfirm={() => deleteCampaignMut.mutate(r.id)}>
-                        <Button icon={<DeleteOutlined />} size="small" danger>Delete</Button>
+                        <Button icon={<DeleteOutlined />} size="small" danger />
                     </Popconfirm>
                 </Space>
             ) : null,
@@ -283,50 +426,197 @@ export default function SubscriptionPlansPage() {
 
     return (
         <div>
-            <Title level={3}>Subscription Management</Title>
-            <Typography.Paragraph type="secondary">
-                Manage subscription plans, promotional items, and marketing campaigns.
-            </Typography.Paragraph>
+            {/* Page header */}
+            <div style={{ marginBottom: 20 }}>
+                <Title level={3} style={{ margin: 0 }}>Subscription Management</Title>
+                <span style={{ color: '#64748b', fontSize: 14 }}>Manage subscription plans, promotional items, and marketing campaigns</span>
+            </div>
 
-            {/* Dashboard Overview */}
-            <Card title="Subscription Dashboard" loading={dashboardLoading} style={{ marginBottom: 24 }}>
-                <Row gutter={16}>
-                    <Col span={6}>
-                        <Statistic title="Total Subscriptions" value={dashboard?.overview?.totalSubscriptions || 0} />
-                    </Col>
-                    <Col span={6}>
-                        <Statistic title="Active Subscriptions" value={dashboard?.overview?.activeSubscriptions || 0} valueStyle={{ color: '#3f8600' }} />
-                    </Col>
-                    <Col span={6}>
-                        <Statistic title="New (30 Days)" value={dashboard?.overview?.newSubscriptions30Days || 0} valueStyle={{ color: '#1890ff' }} />
-                    </Col>
-                    <Col span={6}>
-                        <Statistic title="New (7 Days)" value={dashboard?.overview?.newSubscriptions7Days || 0} valueStyle={{ color: '#722ed1' }} />
-                    </Col>
-                </Row>
-                <Divider />
-                <Row gutter={16}>
-                    <Col span={8}>
-                        <Statistic title="Churn Rate (30d)" value={dashboard?.overview?.churnRate || 0} suffix="%" valueStyle={{ color: dashboard?.overview?.churnRate > 5 ? '#cf1322' : '#3f8600' }} />
-                    </Col>
-                    <Col span={8}>
-                        <Statistic title="Monthly Billing" value={dashboard?.billingPeriodBreakdown?.find((b: any) => b.period === 'monthly')?.count || 0} />
-                    </Col>
-                    <Col span={8}>
-                        <Statistic title="Yearly Billing" value={dashboard?.billingPeriodBreakdown?.find((b: any) => b.period === 'yearly')?.count || 0} />
-                    </Col>
-                </Row>
-            </Card>
+            {/* Dashboard KPI Row */}
+            <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                {/* Total Subscriptions */}
+                <Col xs={24} sm={12} md={6}>
+                    <Card
+                        size="small"
+                        loading={dashboardLoading}
+                        style={{ borderRadius: 12, border: '1px solid #e8e8e8', height: '100%' }}
+                        bodyStyle={{ padding: '18px 20px' }}
+                    >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div>
+                                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>Total Subscriptions</div>
+                                <div style={{ fontSize: 30, fontWeight: 700, lineHeight: 1 }}>{totalSubs}</div>
+                            </div>
+                            <div style={{ width: 42, height: 42, borderRadius: 11, background: '#eef2ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: '#6366f1' }}>
+                                <TeamOutlined />
+                            </div>
+                        </div>
+                    </Card>
+                </Col>
 
+                {/* Active Subscriptions with progress */}
+                <Col xs={24} sm={12} md={6}>
+                    <Card
+                        size="small"
+                        loading={dashboardLoading}
+                        style={{ borderRadius: 12, border: '1px solid #e8e8e8', height: '100%' }}
+                        bodyStyle={{ padding: '18px 20px' }}
+                    >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                            <div>
+                                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>Active Subscriptions</div>
+                                <div style={{ fontSize: 30, fontWeight: 700, color: '#10b981', lineHeight: 1 }}>{activeSubs}</div>
+                            </div>
+                            <div style={{ width: 42, height: 42, borderRadius: 11, background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: '#10b981' }}>
+                                <RiseOutlined />
+                            </div>
+                        </div>
+                        <Progress percent={activePercent} size="small" strokeColor="#10b981" showInfo={false} style={{ marginBottom: 0 }} />
+                        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>{activePercent}% of total</div>
+                    </Card>
+                </Col>
+
+                {/* New this month */}
+                <Col xs={24} sm={12} md={6}>
+                    <Card
+                        size="small"
+                        loading={dashboardLoading}
+                        style={{ borderRadius: 12, border: '1px solid #e8e8e8', height: '100%' }}
+                        bodyStyle={{ padding: '18px 20px' }}
+                    >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div>
+                                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>New (30 Days)</div>
+                                <div style={{ fontSize: 30, fontWeight: 700, color: '#2563eb', lineHeight: 1 }}>{overview.newSubscriptions30Days || 0}</div>
+                                <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4 }}>
+                                    <span style={{ color: '#7c3aed' }}>{overview.newSubscriptions7Days || 0}</span> this week
+                                </div>
+                            </div>
+                            <div style={{ width: 42, height: 42, borderRadius: 11, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: '#2563eb' }}>
+                                <PlusOutlined />
+                            </div>
+                        </div>
+                    </Card>
+                </Col>
+
+                {/* Churn Rate */}
+                <Col xs={24} sm={12} md={6}>
+                    <Card
+                        size="small"
+                        loading={dashboardLoading}
+                        style={{ borderRadius: 12, border: '1px solid #e8e8e8', height: '100%' }}
+                        bodyStyle={{ padding: '18px 20px' }}
+                    >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                            <div>
+                                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>Churn Rate (30d)</div>
+                                <div style={{ fontSize: 30, fontWeight: 700, lineHeight: 1, color: churnRate > 5 ? '#ef4444' : '#10b981' }}>
+                                    {Number(churnRate).toFixed(1)}%
+                                </div>
+                            </div>
+                            <div style={{ width: 42, height: 42, borderRadius: 11, background: churnRate > 5 ? '#fef2f2' : '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: churnRate > 5 ? '#ef4444' : '#10b981' }}>
+                                <PercentageOutlined />
+                            </div>
+                        </div>
+                        <div style={{ fontSize: 11, color: '#94a3b8' }}>
+                            {churnRate > 5
+                                ? '⚠️ Above healthy threshold (5%)'
+                                : '✓ Within healthy range'}
+                        </div>
+                    </Card>
+                </Col>
+            </Row>
+
+            {/* Billing breakdown */}
+            <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                {/* Billing Period */}
+                <Col xs={24} md={12}>
+                    <Card
+                        size="small"
+                        title={<span style={{ fontWeight: 600 }}>Billing Period Split</span>}
+                        loading={dashboardLoading}
+                        style={{ borderRadius: 12, border: '1px solid #e8e8e8' }}
+                        bodyStyle={{ padding: '14px 20px' }}
+                    >
+                        <Row gutter={16}>
+                            {[
+                                { label: 'Monthly', key: 'monthly', color: '#6366f1', bg: '#eef2ff' },
+                                { label: 'Yearly', key: 'yearly', color: '#10b981', bg: '#ecfdf5' },
+                            ].map(({ label, key, color, bg }) => {
+                                const count = dashboard?.billingPeriodBreakdown?.find((b: any) => b.period === key)?.count || 0;
+                                const total = (dashboard?.billingPeriodBreakdown || []).reduce((s: number, b: any) => s + Number(b.count), 0);
+                                const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                                return (
+                                    <Col span={12} key={key}>
+                                        <div style={{ background: bg, borderRadius: 10, padding: '12px 14px', textAlign: 'center' }}>
+                                            <div style={{ fontSize: 22, fontWeight: 700, color }}>{count}</div>
+                                            <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{label} billing</div>
+                                            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>{pct}% of subscribers</div>
+                                        </div>
+                                    </Col>
+                                );
+                            })}
+                        </Row>
+                    </Card>
+                </Col>
+
+                {/* MRR by Tier */}
+                <Col xs={24} md={12}>
+                    <Card
+                        size="small"
+                        title={<span style={{ fontWeight: 600 }}>MRR by Tier</span>}
+                        loading={dashboardLoading}
+                        style={{ borderRadius: 12, border: '1px solid #e8e8e8' }}
+                        bodyStyle={{ padding: '14px 20px' }}
+                    >
+                        {(dashboard?.mrrByTier || []).length === 0 ? (
+                            <div style={{ color: '#94a3b8', textAlign: 'center', padding: '12px 0' }}>No MRR data yet</div>
+                        ) : (
+                            (dashboard?.mrrByTier || []).map((mrr: any) => (
+                                <div key={mrr.tier} style={{ display: 'flex', alignItems: 'center', marginBottom: 8, gap: 8 }}>
+                                    <span style={{ color: tierFg[mrr.tier], fontSize: 16, width: 20 }}>{tierIcon[mrr.tier]}</span>
+                                    <Tag color={tierColors[mrr.tier]} style={{ borderRadius: 10, minWidth: 72, textAlign: 'center' }}>{mrr.tier}</Tag>
+                                    <div style={{ flex: 1 }}>
+                                        <Progress
+                                            percent={dashboard.mrrByTier.reduce((max: number, t: any) => Math.max(max, t.mrr), 0) > 0
+                                                ? Math.round((mrr.mrr / Math.max(...dashboard.mrrByTier.map((t: any) => t.mrr))) * 100)
+                                                : 0}
+                                            size="small"
+                                            showInfo={false}
+                                            strokeColor={tierFg[mrr.tier]}
+                                            style={{ marginBottom: 0 }}
+                                        />
+                                    </div>
+                                    <div style={{ textAlign: 'right', minWidth: 100 }}>
+                                        <span style={{ fontWeight: 700 }}>${Number(mrr.mrr).toLocaleString()}</span>
+                                        <span style={{ fontSize: 11, color: '#94a3b8', marginLeft: 4 }}>{mrr.subscribers} subs</span>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </Card>
+                </Col>
+            </Row>
+
+            {/* Tabs */}
             <Tabs
                 defaultActiveKey="plans"
+                size="large"
                 items={[
                     {
                         key: 'plans',
-                        label: 'Subscription Plans',
+                        label: (
+                            <span>
+                                <CrownOutlined style={{ marginRight: 6 }} />
+                                Subscription Plans
+                            </span>
+                        ),
                         children: (
-                            <>
-                                <Title level={4}>Manage Subscription Pricing & Limits</Title>
+                            <div>
+                                <div style={{ marginBottom: 16 }}>
+                                    <div style={{ fontWeight: 600, fontSize: 15, color: '#1e293b' }}>Subscription Plans</div>
+                                    <div style={{ fontSize: 13, color: '#64748b' }}>Configure pricing and limits for each subscription tier</div>
+                                </div>
                                 <Table
                                     columns={planColumns}
                                     dataSource={plans || []}
@@ -335,60 +625,89 @@ export default function SubscriptionPlansPage() {
                                     pagination={false}
                                     style={{ background: '#fff', borderRadius: 12 }}
                                 />
-                            </>
+                            </div>
                         ),
                     },
                     {
                         key: 'stats',
-                        label: 'Statistics',
+                        label: (
+                            <span>
+                                <BarChartOutlined style={{ marginRight: 6 }} />
+                                Statistics
+                            </span>
+                        ),
                         children: (
-                            <>
-                                <Title level={4}>Subscription Statistics by Tier</Title>
-                                <Table
-                                    columns={[
-                                        { title: 'Tier', dataIndex: 'tier', key: 'tier', render: (v: string) => <Tag color={tierColors[v]}>{v}</Tag> },
-                                        { title: 'Active Subscribers', dataIndex: 'subscriber_count', key: 'subscriber_count', render: (v: number) => <strong>{v}</strong> },
-                                        { title: 'Avg Workers / Subscriber', dataIndex: 'avg_workers', key: 'avg_workers', render: (v: number) => Number(v).toFixed(1) },
-                                        { title: 'Total MRR', dataIndex: 'total_mrr', key: 'total_mrr', render: (v: number, r: any) => `${r.currency || 'USD'} ${Number(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` },
-                                    ]}
-                                    dataSource={stats || []}
-                                    rowKey="tier"
-                                    loading={statsLoading}
-                                    pagination={false}
-                                    style={{ background: '#fff', borderRadius: 12 }}
-                                />
-                                <Divider />
-                                <Title level={4}>MRR by Tier</Title>
-                                <Row gutter={16}>
-                                    {dashboard?.mrrByTier?.map((mrr: any) => (
-                                        <Col span={6} key={mrr.tier}>
-                                            <Card size="small">
-                                                <Tag color={tierColors[mrr.tier]}>{mrr.tier}</Tag>
-                                                <div style={{ fontSize: 20, fontWeight: 700, marginTop: 8 }}>
-                                                    ${mrr.mrr.toLocaleString()}
+                            <div>
+                                <div style={{ marginBottom: 16 }}>
+                                    <div style={{ fontWeight: 600, fontSize: 15, color: '#1e293b' }}>Subscription Statistics by Tier</div>
+                                    <div style={{ fontSize: 13, color: '#64748b' }}>Active subscribers, usage patterns, and revenue by plan tier</div>
+                                </div>
+
+                                {/* Tier stat cards */}
+                                <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                                    {(stats || []).map((s: any) => (
+                                        <Col xs={24} sm={12} md={6} key={s.tier}>
+                                            <Card
+                                                size="small"
+                                                loading={statsLoading}
+                                                style={{ borderRadius: 12, border: `1px solid ${tierFg[s.tier]}30`, background: tierBg[s.tier] }}
+                                                bodyStyle={{ padding: '16px 18px' }}
+                                            >
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                                                    <span style={{ fontSize: 18, color: tierFg[s.tier] }}>{tierIcon[s.tier]}</span>
+                                                    <Tag color={tierColors[s.tier]} style={{ borderRadius: 10 }}>{s.tier}</Tag>
                                                 </div>
-                                                <div style={{ fontSize: 12, color: '#94a3b8' }}>
-                                                    {mrr.subscribers} subscribers
+                                                <div style={{ fontSize: 26, fontWeight: 700, color: tierFg[s.tier], marginBottom: 4 }}>
+                                                    {s.subscriber_count}
+                                                    <span style={{ fontSize: 13, fontWeight: 400, color: '#94a3b8', marginLeft: 4 }}>subscribers</span>
+                                                </div>
+                                                <div style={{ fontSize: 13, color: '#64748b' }}>
+                                                    Avg {Number(s.avg_workers).toFixed(1)} workers/employer
+                                                </div>
+                                                <Divider style={{ margin: '10px 0' }} />
+                                                <div style={{ fontSize: 12, color: '#64748b' }}>
+                                                    MRR:{' '}
+                                                    <span style={{ fontWeight: 700, color: tierFg[s.tier] }}>
+                                                        {s.currency || 'USD'} {Number(s.total_mrr).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                                    </span>
                                                 </div>
                                             </Card>
                                         </Col>
                                     ))}
+                                    {(stats || []).length === 0 && !statsLoading && (
+                                        <Col span={24}>
+                                            <div style={{ textAlign: 'center', color: '#94a3b8', padding: 40 }}>No statistics available yet</div>
+                                        </Col>
+                                    )}
                                 </Row>
-                            </>
+                            </div>
                         ),
                     },
                     {
                         key: 'promos',
-                        label: 'Promotional Items',
+                        label: (
+                            <span>
+                                <GiftOutlined style={{ marginRight: 6 }} />
+                                Promotions
+                                {(promoItems || []).filter((p: any) => p.status === 'ACTIVE').length > 0 && (
+                                    <Badge count={(promoItems || []).filter((p: any) => p.status === 'ACTIVE').length} style={{ marginLeft: 8 }} />
+                                )}
+                            </span>
+                        ),
                         children: (
-                            <>
+                            <div>
                                 <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Title level={4} style={{ margin: 0 }}>Promotional Items</Title>
+                                    <div>
+                                        <div style={{ fontWeight: 600, fontSize: 15, color: '#1e293b' }}>Promotional Items</div>
+                                        <div style={{ fontSize: 13, color: '#64748b' }}>Create discounts, free trials, and feature unlocks</div>
+                                    </div>
                                     {canEdit && (
                                         <Button type="primary" icon={<PlusOutlined />} onClick={() => {
                                             setPromoModal({ open: true });
                                             promoForm.resetFields();
-                                        }}>Create Promo</Button>
+                                        }}>
+                                            Create Promo
+                                        </Button>
                                     )}
                                 </div>
                                 <Table
@@ -399,21 +718,34 @@ export default function SubscriptionPlansPage() {
                                     pagination={{ pageSize: 10 }}
                                     style={{ background: '#fff', borderRadius: 12 }}
                                 />
-                            </>
+                            </div>
                         ),
                     },
                     {
                         key: 'campaigns',
-                        label: 'Campaigns',
+                        label: (
+                            <span>
+                                <NotificationOutlined style={{ marginRight: 6 }} />
+                                Campaigns
+                                {(campaigns || []).filter((c: any) => c.status === 'ACTIVE').length > 0 && (
+                                    <Badge count={(campaigns || []).filter((c: any) => c.status === 'ACTIVE').length} color="green" style={{ marginLeft: 8 }} />
+                                )}
+                            </span>
+                        ),
                         children: (
-                            <>
+                            <div>
                                 <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Title level={4} style={{ margin: 0 }}>Marketing Campaigns</Title>
+                                    <div>
+                                        <div style={{ fontWeight: 600, fontSize: 15, color: '#1e293b' }}>Marketing Campaigns</div>
+                                        <div style={{ fontSize: 13, color: '#64748b' }}>Banners, popups, email, and in-app notification campaigns</div>
+                                    </div>
                                     {canEdit && (
                                         <Button type="primary" icon={<PlusOutlined />} onClick={() => {
                                             setCampaignModal({ open: true });
                                             campaignForm.resetFields();
-                                        }}>Create Campaign</Button>
+                                        }}>
+                                            Create Campaign
+                                        </Button>
                                     )}
                                 </div>
                                 <Table
@@ -424,7 +756,7 @@ export default function SubscriptionPlansPage() {
                                     pagination={{ pageSize: 10 }}
                                     style={{ background: '#fff', borderRadius: 12 }}
                                 />
-                            </>
+                            </div>
                         ),
                     },
                 ]}
@@ -432,44 +764,73 @@ export default function SubscriptionPlansPage() {
 
             {/* Edit Plan Modal */}
             <Modal
-                title={`Edit Plan: ${editModal.plan?.name}`}
+                title={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ color: tierFg[editModal.plan?.tier] }}>{tierIcon[editModal.plan?.tier]}</span>
+                        <span>Edit {editModal.plan?.name}</span>
+                        <Tag color={tierColors[editModal.plan?.tier]} style={{ borderRadius: 10 }}>{editModal.plan?.tier}</Tag>
+                    </div>
+                }
                 open={editModal.open}
                 onCancel={() => setEditModal({ open: false })}
                 onOk={() => form.submit()}
                 confirmLoading={updateMut.isPending}
+                width={520}
             >
                 <Form form={form} layout="vertical" onFinish={(v) => updateMut.mutate({ id: editModal.plan?.id, data: v })}>
-                    <Form.Item label="Name" name="name" rules={[{ required: true }]}>
+                    <Form.Item label="Plan Name" name="name" rules={[{ required: true }]}>
                         <Input />
                     </Form.Item>
-                    <Space style={{ width: '100%' }}>
-                        <Form.Item label="Monthly (USD)" name="priceUSD">
-                            <InputNumber min={0} prefix="$" style={{ width: 130 }} />
-                        </Form.Item>
-                        <Form.Item label="Monthly (KES)" name="priceKES">
-                            <InputNumber min={0} style={{ width: 130 }} />
-                        </Form.Item>
-                    </Space>
-                    <Space style={{ width: '100%' }}>
-                        <Form.Item label="Yearly (USD)" name="priceUSDYearly">
-                            <InputNumber min={0} prefix="$" style={{ width: 130 }} />
-                        </Form.Item>
-                        <Form.Item label="Yearly (KES)" name="priceKESYearly">
-                            <InputNumber min={0} style={{ width: 130 }} />
-                        </Form.Item>
-                    </Space>
-                    <Form.Item label="Worker Limit" name="workerLimit">
-                        <InputNumber min={1} />
-                    </Form.Item>
-                    <Form.Item label="Mark as Popular" name="isPopular" valuePropName="checked">
-                        <Switch />
-                    </Form.Item>
+                    <Divider orientation="left" style={{ fontSize: 13, color: '#64748b' }}>Monthly Pricing</Divider>
+                    <Row gutter={12}>
+                        <Col span={12}>
+                            <Form.Item label="Monthly (USD)" name="priceUSD">
+                                <InputNumber min={0} prefix="$" style={{ width: '100%' }} />
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item label="Monthly (KES)" name="priceKES">
+                                <InputNumber min={0} style={{ width: '100%' }} />
+                            </Form.Item>
+                        </Col>
+                    </Row>
+                    <Divider orientation="left" style={{ fontSize: 13, color: '#64748b' }}>Yearly Pricing</Divider>
+                    <Row gutter={12}>
+                        <Col span={12}>
+                            <Form.Item label="Yearly (USD)" name="priceUSDYearly">
+                                <InputNumber min={0} prefix="$" style={{ width: '100%' }} />
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item label="Yearly (KES)" name="priceKESYearly">
+                                <InputNumber min={0} style={{ width: '100%' }} />
+                            </Form.Item>
+                        </Col>
+                    </Row>
+                    <Divider style={{ margin: '4px 0 16px' }} />
+                    <Row gutter={12}>
+                        <Col span={12}>
+                            <Form.Item label="Worker Limit" name="workerLimit">
+                                <InputNumber min={1} style={{ width: '100%' }} addonAfter="workers" />
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item label="Mark as Popular" name="isPopular" valuePropName="checked">
+                                <Switch checkedChildren="⭐ Popular" unCheckedChildren="Normal" />
+                            </Form.Item>
+                        </Col>
+                    </Row>
                 </Form>
             </Modal>
 
             {/* Promotional Item Modal */}
             <Modal
-                title={promoModal.item ? 'Edit Promotional Item' : 'Create Promotional Item'}
+                title={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <GiftOutlined style={{ color: '#10b981' }} />
+                        <span>{promoModal.item ? 'Edit Promotional Item' : 'Create Promotional Item'}</span>
+                    </div>
+                }
                 open={promoModal.open}
                 onCancel={() => setPromoModal({ open: false })}
                 onOk={() => promoForm.submit()}
@@ -494,68 +855,87 @@ export default function SubscriptionPlansPage() {
                     <Form.Item label="Description" name="description">
                         <TextArea rows={2} placeholder="Describe the promotion" />
                     </Form.Item>
-                    <Form.Item label="Type" name="type" rules={[{ required: true }]}>
-                        <Select>
-                            <Select.Option value="DISCOUNT">Discount</Select.Option>
-                            <Select.Option value="FREE_TRIAL">Free Trial</Select.Option>
-                            <Select.Option value="FEATURE_UNLOCK">Feature Unlock</Select.Option>
-                            <Select.Option value="CREDIT">Account Credit</Select.Option>
-                        </Select>
-                    </Form.Item>
-                    <Form.Item label="Status" name="status" rules={[{ required: true }]}>
-                        <Select>
-                            <Select.Option value="DRAFT">Draft</Select.Option>
-                            <Select.Option value="ACTIVE">Active</Select.Option>
-                            <Select.Option value="PAUSED">Paused</Select.Option>
-                            <Select.Option value="EXPIRED">Expired</Select.Option>
-                        </Select>
-                    </Form.Item>
+                    <Row gutter={12}>
+                        <Col span={12}>
+                            <Form.Item label="Type" name="type" rules={[{ required: true }]}>
+                                <Select>
+                                    <Select.Option value="DISCOUNT">Discount</Select.Option>
+                                    <Select.Option value="FREE_TRIAL">Free Trial</Select.Option>
+                                    <Select.Option value="FEATURE_UNLOCK">Feature Unlock</Select.Option>
+                                    <Select.Option value="CREDIT">Account Credit</Select.Option>
+                                </Select>
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item label="Status" name="status" rules={[{ required: true }]}>
+                                <Select>
+                                    <Select.Option value="DRAFT">Draft</Select.Option>
+                                    <Select.Option value="ACTIVE">Active</Select.Option>
+                                    <Select.Option value="PAUSED">Paused</Select.Option>
+                                    <Select.Option value="EXPIRED">Expired</Select.Option>
+                                </Select>
+                            </Form.Item>
+                        </Col>
+                    </Row>
                     <Form.Item noStyle shouldUpdate={(prev, curr) => prev.type !== curr.type}>
                         {({ getFieldValue }) => {
                             const type = getFieldValue('type');
                             return (
                                 <>
                                     {type === 'DISCOUNT' && (
-                                        <Space style={{ width: '100%' }}>
-                                            <Form.Item label="Discount %" name="discountPercentage">
-                                                <InputNumber min={0} max={100} style={{ width: 150 }} />
-                                            </Form.Item>
-                                            <Form.Item label="or Fixed Amount ($)" name="discountAmount">
-                                                <InputNumber min={0} style={{ width: 150 }} />
-                                            </Form.Item>
-                                        </Space>
+                                        <Row gutter={12}>
+                                            <Col span={12}>
+                                                <Form.Item label="Discount %" name="discountPercentage">
+                                                    <InputNumber min={0} max={100} style={{ width: '100%' }} addonAfter="%" />
+                                                </Form.Item>
+                                            </Col>
+                                            <Col span={12}>
+                                                <Form.Item label="or Fixed Amount ($)" name="discountAmount">
+                                                    <InputNumber min={0} style={{ width: '100%' }} prefix="$" />
+                                                </Form.Item>
+                                            </Col>
+                                        </Row>
                                     )}
                                     {type === 'FREE_TRIAL' && (
                                         <Form.Item label="Trial Days" name="freeTrialDays">
-                                            <InputNumber min={1} style={{ width: 150 }} />
+                                            <InputNumber min={1} style={{ width: 150 }} addonAfter="days" />
                                         </Form.Item>
                                     )}
                                     {type === 'CREDIT' && (
                                         <Form.Item label="Credit Amount ($)" name="discountAmount">
-                                            <InputNumber min={0} style={{ width: 150 }} />
+                                            <InputNumber min={0} style={{ width: 150 }} prefix="$" />
                                         </Form.Item>
                                     )}
                                 </>
                             );
                         }}
                     </Form.Item>
-                    <Form.Item label="Max Uses (optional)" name="maxUses">
-                        <InputNumber min={1} style={{ width: 150 }} />
-                    </Form.Item>
-                    <Space style={{ width: '100%' }}>
-                        <Form.Item label="Valid From" name="validFrom">
-                            <DatePicker showTime style={{ width: 180 }} />
-                        </Form.Item>
-                        <Form.Item label="Valid Until" name="validUntil">
-                            <DatePicker showTime style={{ width: 180 }} />
-                        </Form.Item>
-                    </Space>
+                    <Row gutter={12}>
+                        <Col span={12}>
+                            <Form.Item label="Max Uses" name="maxUses">
+                                <InputNumber min={1} style={{ width: '100%' }} placeholder="Unlimited if empty" />
+                            </Form.Item>
+                        </Col>
+                    </Row>
+                    <Row gutter={12}>
+                        <Col span={12}>
+                            <Form.Item label="Valid From" name="validFrom">
+                                <DatePicker showTime style={{ width: '100%' }} />
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item label="Valid Until" name="validUntil">
+                                <DatePicker showTime style={{ width: '100%' }} />
+                            </Form.Item>
+                        </Col>
+                    </Row>
                     <Form.Item label="Applicable Tiers" name="applicableTiers">
-                        <Select mode="multiple" placeholder="Select tiers (leave empty for all)">
-                            <Select.Option value="FREE">FREE</Select.Option>
-                            <Select.Option value="BASIC">BASIC</Select.Option>
-                            <Select.Option value="GOLD">GOLD</Select.Option>
-                            <Select.Option value="PLATINUM">PLATINUM</Select.Option>
+                        <Select mode="multiple" placeholder="Leave empty for all tiers">
+                            {['FREE', 'BASIC', 'GOLD', 'PLATINUM'].map(t => (
+                                <Select.Option key={t} value={t}>
+                                    <Tag color={tierColors[t]} style={{ margin: 0 }}>{t}</Tag>
+                                </Select.Option>
+                            ))}
                         </Select>
                     </Form.Item>
                     <Form.Item label="Terms & Conditions" name="termsAndConditions">
@@ -566,7 +946,12 @@ export default function SubscriptionPlansPage() {
 
             {/* Campaign Modal */}
             <Modal
-                title={campaignModal.campaign ? 'Edit Campaign' : 'Create Campaign'}
+                title={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <NotificationOutlined style={{ color: '#6366f1' }} />
+                        <span>{campaignModal.campaign ? 'Edit Campaign' : 'Create Campaign'}</span>
+                    </div>
+                }
                 open={campaignModal.open}
                 onCancel={() => setCampaignModal({ open: false })}
                 onOk={() => campaignForm.submit()}
@@ -591,66 +976,90 @@ export default function SubscriptionPlansPage() {
                     <Form.Item label="Description" name="description">
                         <TextArea rows={2} placeholder="Campaign description" />
                     </Form.Item>
-                    <Space style={{ width: '100%' }}>
-                        <Form.Item label="Type" name="type" rules={[{ required: true }]}>
-                            <Select style={{ width: 180 }}>
-                                <Select.Option value="BANNER">Banner</Select.Option>
-                                <Select.Option value="POPUP">Popup</Select.Option>
-                                <Select.Option value="EMAIL">Email</Select.Option>
-                                <Select.Option value="IN_APP_NOTIFICATION">In-App Notification</Select.Option>
-                                <Select.Option value="SIDEBAR">Sidebar</Select.Option>
-                            </Select>
-                        </Form.Item>
-                        <Form.Item label="Status" name="status" rules={[{ required: true }]}>
-                            <Select style={{ width: 150 }}>
-                                <Select.Option value="DRAFT">Draft</Select.Option>
-                                <Select.Option value="SCHEDULED">Scheduled</Select.Option>
-                                <Select.Option value="ACTIVE">Active</Select.Option>
-                                <Select.Option value="PAUSED">Paused</Select.Option>
-                                <Select.Option value="COMPLETED">Completed</Select.Option>
-                            </Select>
-                        </Form.Item>
-                    </Space>
+                    <Row gutter={12}>
+                        <Col span={12}>
+                            <Form.Item label="Type" name="type" rules={[{ required: true }]}>
+                                <Select>
+                                    <Select.Option value="BANNER">Banner</Select.Option>
+                                    <Select.Option value="POPUP">Popup</Select.Option>
+                                    <Select.Option value="EMAIL">Email</Select.Option>
+                                    <Select.Option value="IN_APP_NOTIFICATION">In-App Notification</Select.Option>
+                                    <Select.Option value="SIDEBAR">Sidebar</Select.Option>
+                                </Select>
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item label="Status" name="status" rules={[{ required: true }]}>
+                                <Select>
+                                    <Select.Option value="DRAFT">Draft</Select.Option>
+                                    <Select.Option value="SCHEDULED">Scheduled</Select.Option>
+                                    <Select.Option value="ACTIVE">Active</Select.Option>
+                                    <Select.Option value="PAUSED">Paused</Select.Option>
+                                    <Select.Option value="COMPLETED">Completed</Select.Option>
+                                </Select>
+                            </Form.Item>
+                        </Col>
+                    </Row>
                     <Form.Item label="Title" name="title" rules={[{ required: true }]}>
                         <Input placeholder="Campaign headline" />
                     </Form.Item>
                     <Form.Item label="Message" name="message" rules={[{ required: true }]}>
                         <TextArea rows={3} placeholder="Campaign message content" />
                     </Form.Item>
-                    <Space style={{ width: '100%' }}>
-                        <Form.Item label="Call to Action" name="callToAction">
-                            <Input placeholder="e.g., Upgrade Now" />
-                        </Form.Item>
-                        <Form.Item label="CTA URL" name="callToActionUrl">
-                            <Input placeholder="https://..." />
-                        </Form.Item>
-                    </Space>
+                    <Row gutter={12}>
+                        <Col span={12}>
+                            <Form.Item label="Call to Action" name="callToAction">
+                                <Input placeholder="e.g., Upgrade Now" />
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item label="CTA URL" name="callToActionUrl">
+                                <Input placeholder="https://..." />
+                            </Form.Item>
+                        </Col>
+                    </Row>
                     <Form.Item label="Image URL" name="imageUrl">
                         <Input placeholder="https://..." />
                     </Form.Item>
-                    <Space style={{ width: '100%' }}>
-                        <Form.Item label="Scheduled From" name="scheduledFrom">
-                            <DatePicker showTime style={{ width: 200 }} />
-                        </Form.Item>
-                        <Form.Item label="Scheduled Until" name="scheduledUntil">
-                            <DatePicker showTime style={{ width: 200 }} />
-                        </Form.Item>
-                    </Space>
-                    <Form.Item label="Priority" name="priority">
-                        <InputNumber min={1} max={100} style={{ width: 150 }} />
-                    </Form.Item>
-                    <Form.Item label="Target Tiers" name={['targetAudience', 'tiers']}>
-                        <Select mode="multiple" placeholder="Select target tiers">
-                            <Select.Option value="FREE">FREE</Select.Option>
-                            <Select.Option value="BASIC">BASIC</Select.Option>
-                            <Select.Option value="GOLD">GOLD</Select.Option>
-                            <Select.Option value="PLATINUM">PLATINUM</Select.Option>
-                        </Select>
-                    </Form.Item>
+                    <Row gutter={12}>
+                        <Col span={12}>
+                            <Form.Item label="Scheduled From" name="scheduledFrom">
+                                <DatePicker showTime style={{ width: '100%' }} />
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item label="Scheduled Until" name="scheduledUntil">
+                                <DatePicker showTime style={{ width: '100%' }} />
+                            </Form.Item>
+                        </Col>
+                    </Row>
+                    <Row gutter={12}>
+                        <Col span={12}>
+                            <Form.Item label="Priority" name="priority">
+                                <InputNumber min={1} max={100} style={{ width: '100%' }} placeholder="1–100" />
+                            </Form.Item>
+                        </Col>
+                        <Col span={12}>
+                            <Form.Item label="Target Tiers" name={['targetAudience', 'tiers']}>
+                                <Select mode="multiple" placeholder="All tiers">
+                                    {['FREE', 'BASIC', 'GOLD', 'PLATINUM'].map(t => (
+                                        <Select.Option key={t} value={t}>
+                                            <Tag color={tierColors[t]} style={{ margin: 0 }}>{t}</Tag>
+                                        </Select.Option>
+                                    ))}
+                                </Select>
+                            </Form.Item>
+                        </Col>
+                    </Row>
                     <Form.Item label="Linked Promotional Item" name="promotionalItemId">
                         <Select allowClear placeholder="Select a promotional item (optional)">
                             {promoItems?.map((item: any) => (
-                                <Select.Option key={item.id} value={item.id}>{item.name}</Select.Option>
+                                <Select.Option key={item.id} value={item.id}>
+                                    <Space>
+                                        <Tag color={promoTypeColors[item.type]} style={{ borderRadius: 10 }}>{item.type}</Tag>
+                                        {item.name}
+                                    </Space>
+                                </Select.Option>
                             ))}
                         </Select>
                     </Form.Item>

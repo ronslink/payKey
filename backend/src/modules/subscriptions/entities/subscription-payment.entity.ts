@@ -96,6 +96,19 @@ export class SubscriptionPayment {
   @Column({ type: 'jsonb', nullable: true })
   metadata: any;
 
+  // Promo code audit fields
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  promoCodeUsed: string | null;
+
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    transformer: decimalTransformer,
+    nullable: true,
+  })
+  promoDiscountAmount: number | null;
+
   @Column({ type: 'text', nullable: true })
   notes: string;
 

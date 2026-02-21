@@ -71,6 +71,9 @@ export class PromotionalItem {
   @Column({ type: 'json', nullable: true })
   applicableTiers: string[] | null;
 
+  @Column({ type: 'varchar', length: 50, nullable: true, unique: true })
+  promoCode: string | null;
+
   @Column({ type: 'text', nullable: true })
   termsAndConditions: string | null;
 

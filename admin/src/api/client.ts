@@ -161,3 +161,28 @@ export const adminLogs = {
         api.get('/api/admin/containers/logs', { params }).then(r => r.data),
     containers: () => api.get('/api/admin/containers').then(r => r.data),
 };
+
+// ─── Operations (Deletion, Queues, Cron) ────────────────────────────────────
+export const adminOperations = {
+    // Deletion requests
+    listDeletions: (params?: { page?: number; limit?: number; status?: string }) =>
+        api.get('/api/admin/operations/deletion-requests', { params }).then(r => r.data),
+    triggerDeletion: (data: { email: string; reason?: string }) =>
+        api.post('/api/admin/operations/deletion-requests', data).then(r => r.data),
+    retryDeletion: (id: string) =>
+        api.post(`/api/admin/operations/deletion-requests/${id}/retry`).then(r => r.data),
+
+    // Queue management
+    listQueues: () =>
+        api.get('/api/admin/operations/queues').then(r => r.data),
+    pauseQueue: (name: string) =>
+        api.post(`/api/admin/operations/queues/${name}/pause`).then(r => r.data),
+    resumeQueue: (name: string) =>
+        api.post(`/api/admin/operations/queues/${name}/resume`).then(r => r.data),
+    drainQueue: (name: string) =>
+        api.post(`/api/admin/operations/queues/${name}/drain`).then(r => r.data),
+
+    // Cron jobs
+    listCronJobs: () =>
+        api.get('/api/admin/operations/cron-jobs').then(r => r.data),
+};

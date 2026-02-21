@@ -105,6 +105,21 @@ export class Campaign {
     showOnPages?: string[];
   } | null;
 
+  /**
+   * Timestamp of the last time this campaign was dispatched (EMAIL/PUSH sent).
+   * NULL means it has never been dispatched.
+   * Used by CampaignScheduler to prevent duplicate sends.
+   */
+  @Column({ type: 'timestamptz', nullable: true })
+  lastDispatchedAt: Date | null;
+
+  /**
+   * How many recipients were reached on the last dispatch run.
+   * Useful for reporting without querying notification records.
+   */
+  @Column({ type: 'int', default: 0 })
+  lastDispatchCount: number;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 

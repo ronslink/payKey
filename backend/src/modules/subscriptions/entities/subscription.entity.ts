@@ -131,6 +131,19 @@ export class Subscription {
   })
   renewalMethod: RenewalMethod;
 
+  // Promo code redemption tracking
+  @Column({ type: 'uuid', nullable: true })
+  appliedPromoId: string | null;
+
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    transformer: decimalTransformer,
+    nullable: true,
+  })
+  promoDiscountAmount: number | null;
+
   @Index()
   @CreateDateColumn()
   createdAt: Date;

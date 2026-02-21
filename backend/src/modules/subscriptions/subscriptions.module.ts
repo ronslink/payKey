@@ -21,6 +21,7 @@ import { SubscriptionCallbackController } from './subscription-callback.controll
 import { ImportFeatureGuard } from './import-feature.guard';
 import { SubscriptionProcessor } from './subscription.processor';
 import { SubscriptionScheduler } from './subscription.scheduler';
+import { CampaignScheduler } from './campaign.scheduler';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { SubscriptionScheduler } from './subscription.scheduler';
     ImportFeatureGuard,
     SubscriptionProcessor,
     SubscriptionScheduler,
+    CampaignScheduler,
   ],
   exports: [FeatureAccessService, MockDataService, ImportFeatureGuard],
 })

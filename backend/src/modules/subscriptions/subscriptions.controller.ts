@@ -7,9 +7,10 @@ import {
   Request,
   Param,
   Logger,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, IsNull, LessThanOrEqual, MoreThanOrEqual, Or } from 'typeorm';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import {
   Subscription,
@@ -21,6 +22,8 @@ import {
   PaymentStatus,
   PaymentMethod,
 } from './entities/subscription-payment.entity';
+import { Campaign, CampaignStatus, CampaignType } from './entities/campaign.entity';
+import { PromotionalItem, PromoStatus } from './entities/promotional-item.entity';
 import { SUBSCRIPTION_PLANS } from './subscription-plans.config';
 import { UsersService } from '../users/users.service';
 import { IntaSendService } from '../payments/intasend.service';
@@ -42,6 +45,10 @@ export class SubscriptionsController {
     private subscriptionRepository: Repository<Subscription>,
     @InjectRepository(SubscriptionPayment)
     private subscriptionPaymentRepository: Repository<SubscriptionPayment>,
+    @InjectRepository(Campaign)
+    private campaignRepository: Repository<Campaign>,
+    @InjectRepository(PromotionalItem)
+    private promoRepository: Repository<PromotionalItem>,
     private usersService: UsersService,
     private intaSendService: IntaSendService,
     private stripeService: StripeService,
@@ -49,6 +56,190 @@ export class SubscriptionsController {
     private transactionRepository: Repository<Transaction>,
     private workersService: WorkersService,
   ) { }
+
+  /**
+   * GET /subscriptions/campaigns/active
+   *
+   * Returns the active campaigns relevant to the calling user's subscription tier.
+   * Called by the mobile app on login / dashboard load.
+   *
+   * Filtering rules:
+   *  - status = ACTIVE
+   *  - scheduledFrom <= now  OR  scheduledFrom IS NULL
+   *  - scheduledUntil >= now  OR  scheduledUntil IS NULL
+   *  - targetAudience.tiers contains the user's tier  OR  no tiers set (broad campaign)
+   *  - Campaign type must be BANNER, POPUP, or SIDEBAR (push/email are server-dispatched)
+   *
+   * Results are ordered by priority DESC so the app always renders the most important one first.
+   */
+  @Get('campaigns/active')
+  async getActiveCampaigns(@Request() req: any) {
+    const now = new Date();
+
+    // Fetch the calling user's current tier
+    const user = await this.usersService.findOneById(req.user.userId);
+    const userTier = user?.tier || 'FREE';
+
+    // Pull all ACTIVE campaigns within the time window
+    const campaigns = await this.campaignRepository
+      .createQueryBuilder('c')
+      .leftJoinAndSelect('c.promotionalItem', 'promo')
+      .where('c.status = :status', { status: CampaignStatus.ACTIVE })
+      .andWhere('(c.scheduledFrom IS NULL OR c.scheduledFrom <= :now)', { now })
+      .andWhere('(c.scheduledUntil IS NULL OR c.scheduledUntil >= :now)', { now })
+      .andWhere('c.type IN (:...types)', {
+        types: [CampaignType.BANNER, CampaignType.POPUP, CampaignType.SIDEBAR],
+      })
+      .orderBy('c.priority', 'DESC', 'NULLS LAST')
+      .getMany();
+
+    // Filter by audience tier in application code (JSON column query is DB-specific)
+    const relevant = campaigns.filter((c) => {
+      const tiers = c.targetAudience?.tiers;
+      // No tier targeting = show to everyone
+      if (!tiers || tiers.length === 0) return true;
+      return tiers.includes(userTier);
+    });
+
+    return {
+      campaigns: relevant.map((c) => ({
+        id: c.id,
+        type: c.type,
+        title: c.title,
+        message: c.message,
+        imageUrl: c.imageUrl,
+        callToAction: c.callToAction,
+        callToActionUrl: c.callToActionUrl,
+        displaySettings: c.displaySettings,
+        priority: c.priority,
+        promotionalItem: c.promotionalItem
+          ? {
+              id: c.promotionalItem.id,
+              name: c.promotionalItem.name,
+              type: c.promotionalItem.type,
+              discountPercentage: c.promotionalItem.discountPercentage,
+              discountAmount: c.promotionalItem.discountAmount,
+              freeTrialDays: c.promotionalItem.freeTrialDays,
+              validUntil: c.promotionalItem.validUntil,
+              termsAndConditions: c.promotionalItem.termsAndConditions,
+            }
+          : null,
+      })),
+      userTier,
+      fetchedAt: now.toISOString(),
+    };
+  }
+
+  /**
+   * POST /subscriptions/validate-promo
+   *
+   * Validates a promo code and returns discount details without redeeming it.
+   * The Flutter app calls this to preview the discounted price before checkout.
+   *
+   * Body: { promoCode: string; planId: string; billingPeriod?: 'monthly' | 'yearly' }
+   * Returns: { valid, promoId, discountType, discountValue, originalAmount, discountedAmount, savings }
+   */
+  @Post('validate-promo')
+  async validatePromo(
+    @Request() req: any,
+    @Body() body: { promoCode: string; planId: string; billingPeriod?: 'monthly' | 'yearly' },
+  ) {
+    const { promoCode, planId } = body;
+    const billingPeriod = body.billingPeriod || 'monthly';
+
+    if (!promoCode || !planId) {
+      throw new BadRequestException('promoCode and planId are required');
+    }
+
+    const plan = SUBSCRIPTION_PLANS.find(
+      (p) => p.tier.toLowerCase() === planId.toLowerCase(),
+    );
+    if (!plan) {
+      throw new BadRequestException('Invalid plan ID');
+    }
+
+    const originalAmount = billingPeriod === 'yearly' ? plan.priceKESYearly : plan.priceKES;
+
+    // Fetch the user's current tier for tier eligibility check
+    const user = await this.usersService.findOneById(req.user.userId);
+    const userTier = user?.tier || 'FREE';
+
+    const { promo, error } = await this.resolvePromoCode(promoCode.trim().toUpperCase(), plan.tier, userTier);
+
+    if (error || !promo) {
+      return { valid: false, error: error || 'Invalid promo code' };
+    }
+
+    const { discountedAmount, savings } = this.applyPromoDiscount(originalAmount, promo);
+
+    return {
+      valid: true,
+      promoId: promo.id,
+      promoName: promo.name,
+      discountType: promo.discountPercentage ? 'PERCENTAGE' : 'FIXED',
+      discountValue: promo.discountPercentage ?? promo.discountAmount,
+      originalAmount,
+      discountedAmount,
+      savings,
+      currency: 'KES',
+      validUntil: promo.validUntil,
+      termsAndConditions: promo.termsAndConditions,
+    };
+  }
+
+  /**
+   * Looks up and validates a promo code against the given target tier and user tier.
+   * Does NOT redeem (increment currentUses). Returns the promo entity or an error string.
+   */
+  private async resolvePromoCode(
+    promoCode: string,
+    targetTier: string,
+    userTier: string,
+  ): Promise<{ promo?: PromotionalItem; error?: string }> {
+    const promo = await this.promoRepository.findOne({
+      where: { promoCode },
+    });
+
+    if (!promo) return { error: 'Promo code not found' };
+    if (promo.status !== PromoStatus.ACTIVE) return { error: 'Promo code is not active' };
+
+    const now = new Date();
+    if (promo.validFrom && promo.validFrom > now) return { error: 'Promo code is not yet valid' };
+    if (promo.validUntil && promo.validUntil < now) return { error: 'Promo code has expired' };
+
+    if (promo.maxUses !== null && promo.currentUses >= promo.maxUses) {
+      return { error: 'Promo code usage limit reached' };
+    }
+
+    // Tier eligibility: check both the plan being purchased and the user's current tier
+    if (promo.applicableTiers && promo.applicableTiers.length > 0) {
+      if (!promo.applicableTiers.includes(targetTier) && !promo.applicableTiers.includes(userTier)) {
+        return { error: 'Promo code is not applicable to your subscription tier' };
+      }
+    }
+
+    return { promo };
+  }
+
+  /**
+   * Applies a promo discount to an amount. Returns discounted amount and savings.
+   * Percentage takes priority; fixed amount is fallback.
+   */
+  private applyPromoDiscount(
+    originalAmount: number,
+    promo: PromotionalItem,
+  ): { discountedAmount: number; savings: number } {
+    let savings = 0;
+
+    if (promo.discountPercentage) {
+      savings = Math.round((originalAmount * Number(promo.discountPercentage)) / 100);
+    } else if (promo.discountAmount) {
+      savings = Math.min(Math.round(Number(promo.discountAmount)), originalAmount);
+    }
+
+    const discountedAmount = Math.max(0, originalAmount - savings);
+    return { discountedAmount, savings };
+  }
 
   @Get('plans')
   getPlans() {
@@ -324,6 +515,7 @@ export class SubscriptionsController {
       planId: string;
       paymentMethod?: string;
       billingPeriod?: 'monthly' | 'yearly';
+      promoCode?: string;
     },
   ) {
     const plan = SUBSCRIPTION_PLANS.find(
@@ -334,8 +526,29 @@ export class SubscriptionsController {
     }
 
     const billingPeriod = body.billingPeriod || 'monthly';
-    const amountToCharge =
+    let amountToCharge =
       billingPeriod === 'yearly' ? plan.priceKESYearly : plan.priceKES;
+
+    // --- Promo code resolution ---
+    let appliedPromo: PromotionalItem | null = null;
+    let promoSavings = 0;
+
+    if (body.promoCode) {
+      const user = await this.usersService.findOneById(req.user.userId);
+      const { promo, error } = await this.resolvePromoCode(
+        body.promoCode.trim().toUpperCase(),
+        plan.tier,
+        user?.tier || 'FREE',
+      );
+      if (error || !promo) {
+        throw new BadRequestException(error || 'Invalid promo code');
+      }
+      const result = this.applyPromoDiscount(amountToCharge, promo);
+      amountToCharge = result.discountedAmount;
+      promoSavings = result.savings;
+      appliedPromo = promo;
+      this.logger.log(`Promo "${promo.promoCode}" applied: -${promoSavings} KES → ${amountToCharge} KES`);
+    }
 
     // 1. Handle Stripe Payments
     if (body.paymentMethod === 'STRIPE' || body.paymentMethod === 'stripe') {
@@ -498,6 +711,8 @@ export class SubscriptionsController {
           nextBillingDate: periodEnd,
           billingPeriod: billingPeriod,
           lockedPrice: amountToCharge,
+          appliedPromoId: appliedPromo?.id ?? null,
+          promoDiscountAmount: promoSavings > 0 ? promoSavings : null,
         });
       } else {
         subscription.tier = plan.tier as SubscriptionTier;
@@ -507,6 +722,8 @@ export class SubscriptionsController {
         subscription.endDate = periodEnd;
         subscription.nextBillingDate = periodEnd;
         subscription.lockedPrice = amountToCharge;
+        subscription.appliedPromoId = appliedPromo?.id ?? null;
+        subscription.promoDiscountAmount = promoSavings > 0 ? promoSavings : null;
       }
       const savedSubscription =
         await this.subscriptionRepository.save(subscription);
@@ -514,8 +731,12 @@ export class SubscriptionsController {
         tier: plan.tier as any,
       });
 
-      // Record Payment
+      // Increment promo usage
+      if (appliedPromo) {
+        await this.promoRepository.increment({ id: appliedPromo.id }, 'currentUses', 1);
+      }
 
+      // Record Payment
       const payment = this.subscriptionPaymentRepository.create({
         subscriptionId: savedSubscription.id,
         userId: req.user.userId,
@@ -529,10 +750,13 @@ export class SubscriptionsController {
         dueDate: now,
         paidDate: now,
         paymentProvider: 'INTERNAL_WALLET',
+        promoCodeUsed: appliedPromo?.promoCode ?? null,
+        promoDiscountAmount: promoSavings > 0 ? promoSavings : null,
         metadata: {
           planId: plan.tier,
           billingPeriod: billingPeriod,
           description: `Subscription to ${plan.name} (${billingPeriod}) via Wallet`,
+          promoApplied: appliedPromo ? { code: appliedPromo.promoCode, savings: promoSavings } : null,
         },
       });
       await this.subscriptionPaymentRepository.save(payment);
@@ -541,6 +765,7 @@ export class SubscriptionsController {
         success: true,
         message: 'Subscription activated via Wallet',
         subscription: savedSubscription,
+        promoApplied: appliedPromo ? { code: appliedPromo.promoCode, savings: promoSavings } : null,
       };
     }
 
@@ -657,7 +882,7 @@ export class SubscriptionsController {
   @Post('mpesa-subscribe')
   async mpesaSubscribe(
     @Request() req: any,
-    @Body() body: { planId: string; phoneNumber: string; billingPeriod?: 'monthly' | 'yearly' },
+    @Body() body: { planId: string; phoneNumber: string; billingPeriod?: 'monthly' | 'yearly'; promoCode?: string },
   ) {
     const { planId, phoneNumber } = body;
     const billingPeriod = body.billingPeriod || 'monthly';
@@ -685,6 +910,28 @@ export class SubscriptionsController {
     let amountToCharge = billingPeriod === 'yearly' ? plan.priceKESYearly : plan.priceKES;
     let isProrated = false;
     let prorationDetails: any = null;
+
+    // --- Promo code resolution ---
+    let appliedPromo: PromotionalItem | null = null;
+    let promoSavings = 0;
+
+    if (body.promoCode) {
+      const user = await this.usersService.findOneById(req.user.userId);
+      const { promo, error } = await this.resolvePromoCode(
+        body.promoCode.trim().toUpperCase(),
+        plan.tier,
+        user?.tier || 'FREE',
+      );
+      if (error || !promo) {
+        throw new BadRequestException(error || 'Invalid promo code');
+      }
+      const result = this.applyPromoDiscount(amountToCharge, promo);
+      promoSavings = result.savings;
+      appliedPromo = promo;
+      // Apply promo BEFORE proration so any proration is calculated on the discounted base
+      amountToCharge = result.discountedAmount;
+      this.logger.log(`Promo "${promo.promoCode}" applied to M-Pesa: -${promoSavings} KES → ${amountToCharge} KES`);
+    }
 
     // Calculate proration if upgrading from an existing paid plan
     if (existingSubscription && existingSubscription.tier !== 'FREE') {
@@ -728,7 +975,14 @@ export class SubscriptionsController {
           existingSubscription.startDate || new Date(),
         );
 
-        amountToCharge = proration.proratedAmount;
+        // Apply promo discount on top of prorated amount (if promo was provided)
+        if (appliedPromo) {
+          const promoResult = this.applyPromoDiscount(proration.proratedAmount, appliedPromo);
+          promoSavings = promoResult.savings;
+          amountToCharge = promoResult.discountedAmount;
+        } else {
+          amountToCharge = proration.proratedAmount;
+        }
         isProrated = true;
         prorationDetails = {
           daysRemaining: proration.daysRemaining,
@@ -773,11 +1027,15 @@ export class SubscriptionsController {
         tier: plan.tier as SubscriptionTier,
         status: SubscriptionStatus.PENDING,
         startDate: new Date(),
+        appliedPromoId: appliedPromo?.id ?? null,
+        promoDiscountAmount: promoSavings > 0 ? promoSavings : null,
       });
     } else {
       // Store old tier in metadata to restore if payment fails
       subscription.tier = plan.tier as SubscriptionTier;
       subscription.status = SubscriptionStatus.PENDING;
+      subscription.appliedPromoId = appliedPromo?.id ?? null;
+      subscription.promoDiscountAmount = promoSavings > 0 ? promoSavings : null;
     }
     const savedSubscription =
       await this.subscriptionRepository.save(subscription);
@@ -799,6 +1057,8 @@ export class SubscriptionsController {
       periodEnd: periodEnd,
       dueDate: now,
       paymentProvider: 'MPESA',
+      promoCodeUsed: appliedPromo?.promoCode ?? null,
+      promoDiscountAmount: promoSavings > 0 ? promoSavings : null,
       metadata: {
         phoneNumber: formattedPhone,
         planId,
@@ -856,12 +1116,18 @@ export class SubscriptionsController {
       );
       await this.transactionRepository.save(transaction);
 
+      // Increment promo usage when STK push is initiated (code is reserved)
+      if (appliedPromo) {
+        await this.promoRepository.increment({ id: appliedPromo.id }, 'currentUses', 1);
+      }
+
       return {
         success: true,
         message: 'Info: Please check your phone to enter M-Pesa PIN.',
         paymentId: savedPayment.id,
         checkoutRequestId: invoiceId,
         subscriptionId: savedSubscription.id,
+        promoApplied: appliedPromo ? { code: appliedPromo.promoCode, savings: promoSavings } : null,
       };
     } catch (error) {
       this.logger.error('IntaSend STK Push failed:', error);

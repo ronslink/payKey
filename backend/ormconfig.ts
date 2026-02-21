@@ -28,6 +28,7 @@ export default new DataSource({
   database: dbConfig?.database || process.env.DB_NAME || 'paykey_test',
   entities: ['src/**/*.entity.ts'],
   migrations: ['src/migrations/*.ts'],
+  migrationsTableName: 'migrations', // Must match the table used by the app at runtime
   synchronize: false,
   // Enable SSL for production (cloud databases like Aiven require it)
   ssl: dbUrl ? { rejectUnauthorized: false } : false,

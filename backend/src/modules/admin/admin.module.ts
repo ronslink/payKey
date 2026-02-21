@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { BullModule } from '@nestjs/bullmq';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
 import { AdminSubscriptionsController } from './admin-subscriptions.controller';
@@ -23,8 +24,12 @@ import { SystemConfig } from '../system-config/entities/system-config.entity';
 import { AdminSystemConfigController } from './admin-system-config.controller';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { Notification } from '../notifications/entities/notification.entity';
+import { DeviceToken } from '../notifications/entities/device-token.entity';
 import { AdminNotificationsController } from './admin-notifications.controller';
 import { AdminAuditController } from './admin-audit.controller';
+import { AdminOperationsController } from './admin-operations.controller';
+import { DeletionRequest } from '../data-deletion/entities/deletion-request.entity';
+import { DataDeletionModule } from '../data-deletion/data-deletion.module';
 
 @Module({
     imports: [
@@ -43,10 +48,18 @@ import { AdminAuditController } from './admin-audit.controller';
             SystemConfig,
             AdminAuditLog,
             Notification,
+            DeviceToken,
+            DeletionRequest,
         ]),
+        BullModule.registerQueue(
+            { name: 'wallets' },
+            { name: 'subscriptions' },
+            { name: 'payroll-processing' },
+        ),
         PaymentsModule, // for IntaSendService + StripeService injection in AdminRefundsController
         SystemConfigModule,
         NotificationsModule,
+        DataDeletionModule,
     ],
     controllers: [
         AdminController,
@@ -56,6 +69,7 @@ import { AdminAuditController } from './admin-audit.controller';
         AdminSystemConfigController,
         AdminAuditController,
         AdminNotificationsController,
+        AdminOperationsController,
     ],
     providers: [AdminService],
     exports: [AdminService],

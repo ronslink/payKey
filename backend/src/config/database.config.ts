@@ -1,5 +1,6 @@
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
+import * as path from 'path';
 
 // Entity Imports
 import { User } from '../modules/users/entities/user.entity';
@@ -100,7 +101,12 @@ export const getDatabaseConfig = (
       ],
       synchronize: false, // Use migrations in production!
       logging: ['query', 'error'],
-      migrationsRun: true, // Auto-run migrations on startup
+      // Resolve migrations relative to this file so the path works whether we
+      // are running ts-node (src/) or the compiled dist (dist/src/).
+      // __dirname here is e.g. /app/dist/src/config in prod or /app/src/config in dev.
+      migrations: [path.join(__dirname, '../migrations/*{.ts,.js}')],
+      migrationsRun: true,         // Auto-run pending migrations on every startup
+      migrationsTableName: 'migrations', // Matches the table already in use
     };
   }
 

@@ -33,7 +33,17 @@ export class CreateSupportAndSubscriptionPlans1740055200000 implements Migration
         ('BASIC','Basic',9.99,1300,99.99,13000,5,'["Up to 5 workers","Automatic tax calculations","M-Pesa payments","P9 Tax Cards"]',false,true,true),
         ('GOLD','Gold',29.99,3900,299.99,39000,10,'["Up to 10 workers","Automatic tax calculations","M-Pesa payments","P9 Tax Cards","Advanced reporting","Accounting exports","Priority support","Excel worker import"]',true,false,true),
         ('PLATINUM','Platinum',49.99,6500,499.99,65000,20,'["Up to 20 workers","Automatic tax calculations","M-Pesa payments","Leave tracking","Time tracking (clock in/out)","Geofencing","Advanced reporting","Accounting exports","Priority support","Automatic tax payments to KRA","Multi-property management","Excel worker import"]',true,false,true)
-      ON CONFLICT ("tier") DO NOTHING
+      ON CONFLICT ("tier") DO UPDATE SET
+        "name" = EXCLUDED."name",
+        "priceUSD" = EXCLUDED."priceUSD",
+        "priceKES" = EXCLUDED."priceKES",
+        "priceUSDYearly" = EXCLUDED."priceUSDYearly",
+        "priceKESYearly" = EXCLUDED."priceKESYearly",
+        "workerLimit" = EXCLUDED."workerLimit",
+        "features" = EXCLUDED."features",
+        "importAccess" = EXCLUDED."importAccess",
+        "isPopular" = EXCLUDED."isPopular",
+        "isActive" = EXCLUDED."isActive"
     `);
 
     // ─── support_tickets table ────────────────────────────────────────────────
