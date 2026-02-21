@@ -296,7 +296,8 @@ export class AdminService {
             // Use raw Redis connection from datasource config
             const host = this.configService.get('REDIS_HOST', 'localhost');
             const port = parseInt(this.configService.get('REDIS_PORT', '6379'));
-            const tempClient = new Redis({ host, port, lazyConnect: true });
+            const password = this.configService.get('REDIS_PASSWORD');
+            const tempClient = new Redis({ host, port, password, lazyConnect: true });
             await tempClient.connect();
             const info = await tempClient.info('all');
             await tempClient.quit();
