@@ -6,11 +6,18 @@ services:
     image: redis:7-alpine
     container_name: paykey_redis_prod
     restart: always
+    stop_grace_period: 10s
     command: redis-server --appendonly yes --requirepass "PayKeyRedisSecure2025!"
     volumes:
       - redis_data_prod:/data
     networks:
       - paykey-network-prod
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "PayKeyRedisSecure2025!", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 volumes:
   redis_data_prod:

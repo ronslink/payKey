@@ -257,13 +257,16 @@ jobs:
               deploy/docker-compose.backend.yml || true
 
             docker rm -f paykey_backend_prod 2>/dev/null || true
-            docker compose -f deploy/docker-compose.backend.yml down 2>/dev/null || true
+            docker rm -f paykey_redis_prod   2>/dev/null || true
+            docker compose -f deploy/docker-compose.infra.yml   down --remove-orphans 2>/dev/null || true
+            docker compose -f deploy/docker-compose.backend.yml down --remove-orphans 2>/dev/null || true
             docker network create paykey-network-prod 2>/dev/null || true
 
-            docker compose --env-file .env -f deploy/docker-compose.infra.yml up -d
+            docker compose --env-file .env -f deploy/docker-compose.infra.yml up -d \
+              --remove-orphans
             docker compose --env-file .env -f deploy/docker-compose.backend.yml pull backend
             docker compose --env-file .env -f deploy/docker-compose.backend.yml up -d \
-              --force-recreate backend
+              --force-recreate --remove-orphans backend
 
             sleep 15
             docker logs --tail 50 paykey_backend_prod
