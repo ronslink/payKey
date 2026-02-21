@@ -11,31 +11,61 @@ jobs:
     environment: PROD
 
     steps:
-      - name: Deploy to DigitalOcean
-        uses: appleboy/ssh-action@v1.0.0
+      - name: Create .env Configuration
         env:
-          DO_HOST: ${{ secrets.DO_HOST }}
-          DO_USERNAME: ${{ secrets.DO_USERNAME }}
-          DO_SSH_KEY: ${{ secrets.DO_SSH_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           INTASEND_PUBLISHABLE_KEY: ${{ secrets.INTASEND_PUB_KEY_PROD }}
-          INTASEND_SECRET: ${{ secrets.INTASEND_SECRET_KEY_PROD }}
+          INTASEND_SECRET_KEY: ${{ secrets.INTASEND_SECRET_KEY_PROD }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
           INTASEND_WEBHOOK_SECRET: ${{ secrets.INTASEND_WEBHOOK_SECRET }}
-          CR_PAT: ${{ secrets.CR_PAT }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           APPLE_KEY_ID: ${{ secrets.APPLE_KEY_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_BUNDLE_ID: ${{ secrets.APPLE_BUNDLE_ID }}
           APPLE_PRIVATE_KEY: ${{ secrets.APPLE_PRIVATE_KEY }}
+        run: |
+          touch .env
+          echo "NODE_ENV=production" >> .env
+          echo "DATABASE_URL=$DATABASE_URL" >> .env
+          echo "REDIS_HOST=paykey_redis_prod" >> .env
+          echo "REDIS_PORT=6379" >> .env
+          echo "JWT_SECRET=$JWT_SECRET" >> .env
+          echo "JWT_EXPIRES_IN=7d" >> .env
+          echo "INTASEND_PUBLISHABLE_KEY=$INTASEND_PUBLISHABLE_KEY" >> .env
+          echo "INTASEND_SECRET_KEY=$INTASEND_SECRET_KEY" >> .env
+          echo "INTASEND_IS_LIVE=true" >> .env
+          echo "STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY" >> .env
+          echo "STRIPE_WEBHOOK_SECRET=$STRIPE_WEBHOOK_SECRET" >> .env
+          echo "INTASEND_WEBHOOK_SECRET=$INTASEND_WEBHOOK_SECRET" >> .env
+          echo "GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID" >> .env
+          echo "APPLE_KEY_ID=$APPLE_KEY_ID" >> .env
+          echo "APPLE_TEAM_ID=$APPLE_TEAM_ID" >> .env
+          echo "APPLE_BUNDLE_ID=$APPLE_BUNDLE_ID" >> .env
+          # Wrap the private key in quotes to ensure multiline structure is preserved in .env
+          echo "APPLE_PRIVATE_KEY=\"$APPLE_PRIVATE_KEY\"" >> .env
+          echo "NODE_EXTRA_CA_CERTS=/app/ca-certificate.crt" >> .env
+
+      - name: Copy .env to DigitalOcean
+        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DO_HOST }}
           username: ${{ secrets.DO_USERNAME }}
           key: ${{ secrets.DO_SSH_KEY }}
-          envs: DO_HOST, DO_USERNAME, DO_SSH_KEY, DATABASE_URL, JWT_SECRET, INTASEND_PUBLISHABLE_KEY, INTASEND_SECRET, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, INTASEND_WEBHOOK_SECRET, GITHUB_TOKEN, APPLE_KEY_ID, APPLE_TEAM_ID, APPLE_BUNDLE_ID, APPLE_PRIVATE_KEY, GOOGLE_CLIENT_ID
+          source: ".env"
+          target: "/opt/paykey"
+
+      - name: Deploy to DigitalOcean
+        uses: appleboy/ssh-action@v1.0.0
+        env:
+          CR_PAT: ${{ secrets.CR_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USERNAME }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          envs: CR_PAT, GITHUB_TOKEN
           script: |
             cd /opt/paykey
             
@@ -67,28 +97,7 @@ jobs:
             echo "📥 Pulling latest code..."
             git pull origin main
 
-            # 2. Generate .env file from Secrets (Using Managed Database)
-            echo "🔐 Generating secure .env file..."
-            cat <<EOF | sed 's/^[ \t]*//' | tr -d '\r' > .env
-            NODE_ENV=production
-            DATABASE_URL=$DATABASE_URL
-            REDIS_HOST=paykey_redis_prod
-            REDIS_PORT=6379
-            JWT_SECRET=$JWT_SECRET
-            JWT_EXPIRES_IN=7d
-            INTASEND_PUBLISHABLE_KEY=$INTASEND_PUBLISHABLE_KEY
-            INTASEND_SECRET_KEY=$INTASEND_SECRET
-            INTASEND_IS_LIVE=true
-            STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY
-            STRIPE_WEBHOOK_SECRET=$STRIPE_WEBHOOK_SECRET
-            INTASEND_WEBHOOK_SECRET=$INTASEND_WEBHOOK_SECRET
-            GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID
-            APPLE_KEY_ID=$APPLE_KEY_ID
-            APPLE_TEAM_ID=$APPLE_TEAM_ID
-            APPLE_BUNDLE_ID=$APPLE_BUNDLE_ID
-            APPLE_PRIVATE_KEY="$APPLE_PRIVATE_KEY"
-            NODE_EXTRA_CA_CERTS=/app/ca-certificate.crt
-            EOF
+            echo "✅ Setup .env automatically via SCP artifact"
             
             # 3. Load Environment Variables for Docker Compose Substitution
             set -a
