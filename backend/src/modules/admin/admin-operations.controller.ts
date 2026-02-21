@@ -185,7 +185,7 @@ export class AdminOperationsController {
     }
 
     request.status = DeletionStatus.PENDING;
-    request.errorMessage = null;
+    request.errorMessage = '';
     await this.deletionRepo.save(request);
 
     this.adminService.logAction({
