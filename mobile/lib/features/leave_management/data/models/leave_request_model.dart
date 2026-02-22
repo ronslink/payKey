@@ -49,6 +49,29 @@ abstract class LeaveRequestModel with _$LeaveRequestModel {
     // Handle null fields that are required strings
     final reason = json['reason']?.toString() ?? '';
     
+    // Handle status - could be enum or string from API
+    String status = 'PENDING';
+    if (json['status'] != null) {
+      if (json['status'] is String) {
+        status = json['status'] as String;
+      } else {
+        // Handle enum serialization
+        status = json['status'].toString();
+      }
+    }
+    
+    // Handle paidLeave - could be string "true"/"false" or bool
+    bool paidLeave = false;
+    if (json['paidLeave'] != null) {
+      if (json['paidLeave'] is bool) {
+        paidLeave = json['paidLeave'] as bool;
+      } else if (json['paidLeave'] is String) {
+        paidLeave = json['paidLeave'].toString().toLowerCase() == 'true';
+      } else if (json['paidLeave'] is num) {
+        paidLeave = (json['paidLeave'] as num) != 0;
+      }
+    }
+    
     return LeaveRequestModel(
       id: json['id'] as String,
       workerId: json['workerId'] as String,
@@ -59,14 +82,14 @@ abstract class LeaveRequestModel with _$LeaveRequestModel {
       endDate: json['endDate'] as String,
       totalDays: totalDays,
       reason: reason,
-      status: json['status'] as String,
+      status: status,
       createdAt: json['createdAt'] as String,
       updatedAt: json['updatedAt'] as String,
       approvedById: json['approvedById'] as String?,
       approvedAt: json['approvedAt'] as String?,
       rejectionReason: json['rejectionReason'] as String?,
       dailyPayRate: (json['dailyPayRate'] as num?)?.toDouble(),
-      paidLeave: json['paidLeave'] as bool? ?? false,
+      paidLeave: paidLeave,
       emergencyContact: json['emergencyContact'] as String?,
       emergencyPhone: json['emergencyPhone'] as String?,
     );
