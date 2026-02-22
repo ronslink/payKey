@@ -1,73 +1,72 @@
 #!/bin/sh
 
-#  ci_post_clone.sh
-#  PayKey
+# ci_post_clone.sh — Xcode Cloud post-clone script for PayKey (Flutter/iOS)
 #
-#  Created by Agent on 2025/01/10.
+# Xcode Cloud does NOT ship with Flutter. This script:
+#   1. Installs Flutter via git clone (stable channel)
+#   2. Runs flutter pub get to fetch Dart dependencies
+#   3. Runs pod install to fetch iOS CocoaPods dependencies
 #
+# Xcode Cloud environment notes:
+#   - macOS agent, Homebrew is available
+#   - The repo is cloned to $CI_PRIMARY_REPOSITORY_PATH (the repo root)
+#   - Working directory when this script runs is the repo root
+#   - ci_scripts/ must be executable (chmod +x) and start with #!/bin/sh
 
-# Checks if the build should proceed based on changed files.
-# If only unrelated files (e.g., backend, docs) are changed, cancel the build.
+set -e  # Exit immediately on any error
 
-echo "🔍 Checking for relevant changes..."
+echo "================================================"
+echo " PayKey iOS — Xcode Cloud post-clone setup"
+echo "================================================"
 
-# Define the relevant paths (relative to the repo root)
-# Note: Xcode Cloud clones the repo into a subdirectory, but we usually start at root or check properly.
-# We are looking for changes in 'mobile/ios', 'mobile/lib', 'mobile/pubspec.*'
+# ── 1. Resolve paths ──────────────────────────────────────────────────────────
+# Xcode Cloud sets CI_PRIMARY_REPOSITORY_PATH to the repo root.
+# Fall back to deriving it from this script's location if not set.
+REPO_ROOT="${CI_PRIMARY_REPOSITORY_PATH:-$(cd "$(dirname "$0")/../../.." && pwd)}"
+MOBILE_DIR="$REPO_ROOT/mobile"
+FLUTTER_DIR="$HOME/flutter"
 
-# If this is a PR, we can compare against the target branch.
-# If not, we might check the last commit.
+echo "Repo root : $REPO_ROOT"
+echo "Mobile dir: $MOBILE_DIR"
+echo "Flutter   : $FLUTTER_DIR"
 
-# For simplicity, we'll check the diff of the current HEAD against the previous commit or base.
-# In Xcode Cloud, typically we are in a detached HEAD state or on a specific commit.
+# ── 2. Install Flutter (stable) ───────────────────────────────────────────────
+if [ ! -d "$FLUTTER_DIR" ]; then
+  echo ""
+  echo "📦 Installing Flutter (stable)..."
+  git clone https://github.com/flutter/flutter.git \
+    --branch stable \
+    --depth 1 \
+    "$FLUTTER_DIR"
+else
+  echo "✅ Flutter already installed at $FLUTTER_DIR"
+fi
 
-# Function to check changes
-check_changes() {
-    # git diff --name-only HEAD^ HEAD  <- This checks only the last commit.
-    # Ideally we want to check the range of the PR, but that's harder to determine dynamically without env vars.
-    # Xcode Cloud sets CI_PULL_REQUEST_TARGET_BRANCH for PRs.
-    
-    local changed_files
-    
-    if [ -n "$CI_PULL_REQUEST_TARGET_BRANCH" ]; then
-        echo "Build triggered by PR targeting $CI_PULL_REQUEST_TARGET_BRANCH"
-        # Fetch the target branch to compare
-        git fetch origin "$CI_PULL_REQUEST_TARGET_BRANCH" --depth=1
-        changed_files=$(git diff --name-only "origin/$CI_PULL_REQUEST_TARGET_BRANCH")
-    else
-        echo "Build triggered by push or manual action. Checking last commit."
-        changed_files=$(git diff --name-only HEAD^ HEAD)
-    fi
+# Add flutter to PATH for the rest of this script
+export PATH="$FLUTTER_DIR/bin:$PATH"
 
-    echo "📂 Changed files:"
-    echo "$changed_files"
+echo ""
+echo "🔍 Flutter version:"
+flutter --version
 
-    # Check if any changed file matches our criteria
-    # We look for 'mobile/ios', 'mobile/lib', or 'mobile/pubspec'
-    
-    if echo "$changed_files" | grep -qE "^mobile/ios/|^mobile/lib/|^mobile/pubspec"; then
-        echo "✅ Relevant files changed. Proceeding with build."
-        return 0
-    else
-        echo "🛑 No relevant mobile changes found."
-        echo "Skipping build to save resources."
-        
-        # There is no official "skip" command, but we can exit with success (0) and stop, 
-        # or fail (1) to indicate "failure".
-        # However, to stop Xcode Cloud from continuing to 'build', usually we have to fail or just exit.
-        # But failing marks it as red. 
-        # A common workaround is to throw an error message that we intend to stop.
-        # Or simply let it run but maybe fail fast?
-        # Actually, Apple Docs say custom scripts can't 'cancel' a workflow gracefully yet.
-        # BUT, we can make the script fail, which stops the build. 
-        # It will show as 'Build Failed', which is annoying but effective.
-        
-        # ALTERNATIVE: Just exit 0 and let it build? No, user wants to stop it.
-        # Let's fail with a clear message.
-        
-        echo "❌ CANCELING BUILD: No changes in mobile directory."
-        exit 1
-    fi
-}
+# Disable analytics and crash reporting in CI
+flutter config --no-analytics 2>/dev/null || true
 
-check_changes
+# ── 3. flutter pub get ────────────────────────────────────────────────────────
+echo ""
+echo "📦 Running flutter pub get..."
+cd "$MOBILE_DIR"
+flutter pub get
+
+# ── 4. pod install ────────────────────────────────────────────────────────────
+echo ""
+echo "📦 Running pod install..."
+cd "$MOBILE_DIR/ios"
+
+# Ensure CocoaPods is up to date (Xcode Cloud agents ship with it)
+pod install --repo-update
+
+echo ""
+echo "================================================"
+echo " ✅ post-clone setup complete"
+echo "================================================"
