@@ -36,7 +36,7 @@ export const adminAuth = {
 
 // ─── Analytics ─────────────────────────────────────────────────────────────
 export const adminAnalytics = {
-    dashboard: () => api.get('/api/admin/analytics/dashboard').then(r => r.data),
+    dashboard: (currency?: string) => api.get('/api/admin/analytics/dashboard', { params: { currency } }).then(r => r.data),
     infra: () => api.get('/api/admin/analytics/infra').then(r => r.data),
 };
 

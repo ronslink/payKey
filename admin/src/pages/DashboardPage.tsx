@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Row, Col, Card, Statistic, Typography, Spin, Alert, Table, Tag, Button, Tooltip } from 'antd';
+import { Row, Col, Card, Statistic, Typography, Spin, Alert, Table, Tag, Button, Tooltip, Select } from 'antd';
 import {
     TeamOutlined, UserOutlined, DollarOutlined, CustomerServiceOutlined, ReloadOutlined,
     UserAddOutlined,
@@ -37,9 +38,10 @@ function StatCard({ title, value, prefix, suffix, color, onClick }: any) {
 }
 
 export default function DashboardPage() {
+    const [currency, setCurrency] = useState('USD');
     const { data, isLoading, error, refetch, dataUpdatedAt } = useQuery({
-        queryKey: ['admin-dashboard'],
-        queryFn: adminAnalytics.dashboard,
+        queryKey: ['admin-dashboard', currency],
+        queryFn: () => adminAnalytics.dashboard(currency),
         refetchInterval: 60000,
     });
     const { data: tierStats, isLoading: tierStatsLoading, refetch: refetchTier } = useQuery({
@@ -82,9 +84,20 @@ export default function DashboardPage() {
                         Auto-refreshes every 60s · Last updated: {lastUpdated}
                     </Text>
                 </div>
-                <Tooltip title="Refresh now">
-                    <Button
-                        icon={<ReloadOutlined />}
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                    <Select
+                        value={currency}
+                        onChange={setCurrency}
+                        style={{ width: 100 }}
+                        options={[
+                            { value: 'USD', label: 'USD' },
+                            { value: 'KES', label: 'KES' },
+                            { value: 'EUR', label: 'EUR' },
+                        ]}
+                    />
+                    <Tooltip title="Refresh now">
+                        <Button
+                            icon={<ReloadOutlined />}
                         onClick={() => { refetch(); refetchTier(); }}
                         loading={isLoading}
                     >
@@ -117,7 +130,7 @@ export default function DashboardPage() {
                     <StatCard title="Portal Connections" value={summary.totalPortalLinks || 0} color="#10b981" />
                 </Col>
                 <Col xs={24} sm={12} lg={8} xl={4}>
-                    <StatCard title="Monthly Revenue" value={(summary.monthlyRevenue || 0).toFixed(0)} prefix={<DollarOutlined />} suffix="KES" color="#10b981" />
+                    <StatCard title="Monthly Revenue" value={(summary.monthlyRevenue || 0).toFixed(0)} prefix={<DollarOutlined />} suffix={data.displayCurrency} color="#10b981" />
                 </Col>
                 <Col xs={24} sm={12} lg={8} xl={4}>
                     <StatCard
@@ -132,7 +145,7 @@ export default function DashboardPage() {
             {/* Secondary stats */}
             <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
                 <Col xs={24} sm={12} lg={6}>
-                    <StatCard title="All-Time Revenue" value={(summary.totalRevenue || 0).toFixed(0)} suffix="KES" color="#374151" />
+                    <StatCard title="All-Time Revenue" value={(summary.totalRevenue || 0).toFixed(0)} suffix={data.displayCurrency} color="#374151" />
                 </Col>
                 <Col xs={24} sm={12} lg={6}>
                     <StatCard title="Payrolls Run" value={summary.payrollsProcessed} color="#374151" />
@@ -154,7 +167,7 @@ export default function DashboardPage() {
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                                 <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                                 <YAxis tick={{ fontSize: 11 }} />
-                                <RechartTooltip formatter={(v: any) => [`KES ${Number(v).toLocaleString()}`, 'Revenue']} />
+                                <RechartTooltip formatter={(v: any) => [`${data.displayCurrency} ${Number(v).toLocaleString()}`, 'Revenue']} />
                                 <Line type="monotone" dataKey="revenue" stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} />
                             </LineChart>
                         </ResponsiveContainer>
