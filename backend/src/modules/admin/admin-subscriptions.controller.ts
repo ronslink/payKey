@@ -32,6 +32,7 @@ import {
 } from '../subscriptions/entities/campaign.entity';
 import { DataSource } from 'typeorm';
 import { AdminService } from './admin.service';
+import { ExchangeRateService } from '../payments/exchange-rate.service';
 
 @Controller('api/admin/subscription-plans')
 @UseGuards(JwtAuthGuard, AdminGuard, RolesGuard)
@@ -47,6 +48,7 @@ export class AdminSubscriptionsController {
     private readonly campaignRepo: Repository<Campaign>,
     private readonly dataSource: DataSource,
     private readonly adminService: AdminService,
+    private readonly exchangeRateService: ExchangeRateService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
@@ -93,11 +95,26 @@ export class AdminSubscriptionsController {
   }
 
   @Get('dashboard')
-  async getSubscriptionDashboard() {
-    const cacheKey = 'admin_subscription_dashboard';
+  async getSubscriptionDashboard(
+    @Query('currency') currency?: string,
+  ) {
+    const displayCurrency = currency || 'USD';
+    const cacheKey = `admin_subscription_dashboard_${displayCurrency}`;
     const cached = await this.cacheManager.get(cacheKey);
     if (cached) {
-      return cached;
+      return { ...cached, displayCurrency };
+    }
+
+    // Get exchange rate for conversions
+    let exchangeRate = 1;
+    try {
+      if (displayCurrency === 'KES') {
+        exchangeRate = await this.exchangeRateService.getLatestRate('USD', 'KES');
+      } else if (displayCurrency === 'EUR') {
+        exchangeRate = await this.exchangeRateService.getLatestRate('USD', 'EUR');
+      }
+    } catch (e) {
+      // Use 1:1 if rate not available
     }
 
     const now = new Date();
@@ -188,14 +205,15 @@ export class AdminSubscriptionsController {
       })),
       mrrByTier: mrrData.map((m: any) => ({
         tier: m.tier,
-        mrr: parseFloat(m.total_mrr) || 0,
+        mrr: (parseFloat(m.total_mrr) || 0) * exchangeRate,
+        mrrOriginal: parseFloat(m.total_mrr) || 0,
         subscribers: parseInt(m.subscribers) || 0,
       })),
     };
 
     // Cache for 15 minutes (900000 milliseconds)
     await this.cacheManager.set(cacheKey, result, 900000);
-    return result;
+    return { ...result, displayCurrency, exchangeRate };
   }
 
   @Get('subscribers')
@@ -224,8 +242,24 @@ export class AdminSubscriptionsController {
   }
 
   @Get('upgrades')
-  async getTierUpgrades(@Query('days') days?: string) {
+  async getTierUpgrades(
+    @Query('days') days?: string,
+    @Query('currency') currency?: string,
+  ) {
     const lookbackDays = parseInt(days || '30', 10);
+    const displayCurrency = currency || 'USD';
+
+    // Get exchange rate for conversions
+    let exchangeRate = 1;
+    try {
+      if (displayCurrency === 'KES') {
+        exchangeRate = await this.exchangeRateService.getLatestRate('USD', 'KES');
+      } else if (displayCurrency === 'EUR') {
+        exchangeRate = await this.exchangeRateService.getLatestRate('USD', 'EUR');
+      }
+    } catch (e) {
+      // Use 1:1 if rate not available
+    }
 
     // Identify users who upgraded: their subscription was modified (updatedAt > createdAt)
     // after initial creation and their current tier is above FREE.
@@ -292,10 +326,13 @@ export class AdminSubscriptionsController {
 
     return {
       lookbackDays,
+      displayCurrency,
+      exchangeRate,
       summary: summary.map((r: any) => ({
         tier: r.tier,
         upgradeCount: parseInt(r.upgrade_count),
-        tierRevenue: parseFloat(r.tier_revenue) || 0,
+        tierRevenue: (parseFloat(r.tier_revenue) || 0) * exchangeRate,
+        tierRevenueOriginal: parseFloat(r.tier_revenue) || 0,
       })),
       upgrades: upgrades.map((r: any) => ({
         subscriptionId: r.subscription_id,
@@ -309,7 +346,8 @@ export class AdminSubscriptionsController {
         billingPeriod: r.billing_period,
         amount: parseFloat(r.amount) || 0,
         currency: r.currency,
-        totalSubscriptionRevenue: parseFloat(r.total_subscription_revenue) || 0,
+        totalSubscriptionRevenue: (parseFloat(r.total_subscription_revenue) || 0) * exchangeRate,
+        totalSubscriptionRevenueOriginal: parseFloat(r.total_subscription_revenue) || 0,
         workerCount: parseInt(r.worker_count) || 0,
       })),
     };
