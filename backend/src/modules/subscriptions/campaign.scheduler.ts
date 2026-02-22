@@ -24,7 +24,7 @@ import {
 /**
  * CampaignScheduler
  *
- * Runs every 15 minutes and dispatches campaigns that:
+ * Runs once a day at 9 AM and dispatches campaigns that:
  *  - Have status = ACTIVE
  *  - Have a scheduledFrom <= NOW (or no scheduledFrom set)
  *  - Have a scheduledUntil >= NOW (or no scheduledUntil set)
@@ -53,10 +53,10 @@ export class CampaignScheduler {
   ) {}
 
   /**
-   * Main cron tick — every 15 minutes.
+   * Main cron tick — once a day at 9 AM.
    * Finds campaigns due for dispatch and routes each one to the correct sender.
    */
-  @Cron('0 */15 * * * *')
+  @Cron('0 9 * * *')
   async handleCampaignDispatch(): Promise<void> {
     this.logger.log(
       '[CampaignScheduler] tick — checking for campaigns to dispatch',
