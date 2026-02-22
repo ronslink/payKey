@@ -1,24 +1,28 @@
-Release Notes - Version 1.1.1 (Build 11)
+Release Notes - Version 1.1.2 (Build 12)
 
-Focus Areas for Testing:
+## Bug Fixes
 
-1. Finance Page & Profile Sync (Critical)
-- Goal: Verify that Bank and M-Pesa details are identical between your Profile and the Finance page.
-- Steps:
-  1. Go to Settings > Edit Profile.
-  2. Update your Bank Account or M-Pesa number.
-  3. Save the profile.
-  4. Navigate to the Finance tab (bottom bar).
-  5. Verify: The "Funding Sources" section should immediately show the new details you just entered.
+### Leave Management
+- Fixed crash on the Requests tab: "String is not a subtype of num" error when loading leave requests
+- Leave requests with a daily pay rate now display correctly
+- Approve and Reject buttons now appear correctly for pending requests
+- Rejection reason is now properly saved when rejecting a leave request
 
-2. App Icons
-- Goal: Ensure the app icon looks correct and consistent.
-- Verify: The app icon on your home screen and in Settings is the updated PayDome logo.
+### Worker Invite & Login
+- Fixed invite code not working: worker phone numbers stored in different formats
+  (e.g. 0712345678 vs +254712345678) are now matched correctly
+- Employee login via phone number is more reliable across all Kenyan number formats
 
-3. Backend & Stability
-- Context: The app is now connected to the Production Environment.
-- Verify:
-  - Login works smoothly.
-  - Home page loads correct data (Worker count, etc.).
+### Terminations
+- Fixed "Unable to calculate final payment" error on termination
+- Final payment is now always zero or positive (no more negative values)
 
-Please report any "Connection Errors" or mismatches in data immediately.
+### Subscriptions
+- Stripe subscription payments are no longer duplicated in payment history
+- Subscription tier, amount, and next billing date now populate correctly after checkout
+
+## Previous Build (1.1.1 / Build 11)
+
+- Finance page and profile bank/M-Pesa sync
+- Updated app icon (PayDome logo)
+- Connected to Production environment
