@@ -23,8 +23,10 @@ export class AdminController {
   // ─── Analytics ──────────────────────────────────────────────────────────────
 
   @Get('analytics/dashboard')
-  async getDashboard() {
-    return this.adminService.getDashboardMetrics();
+  async getDashboard(
+    @Query('currency') currency: string = 'USD',
+  ) {
+    return this.adminService.getDashboardMetrics(currency);
   }
 
   @Get('analytics/infra')

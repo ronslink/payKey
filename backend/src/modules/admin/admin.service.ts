@@ -22,6 +22,7 @@ import { PayPeriod } from '../payroll/entities/pay-period.entity';
 import { PayrollRecord } from '../payroll/entities/payroll-record.entity';
 import { SupportTicket } from '../support/entities/support-ticket.entity';
 import { AdminAuditLog } from './entities/audit-log.entity';
+import { ExchangeRateService } from '../payments/exchange-rate.service';
 
 const execAsync = promisify(exec);
 
@@ -51,16 +52,34 @@ export class AdminService {
     private readonly auditLogRepo: Repository<AdminAuditLog>,
     private readonly dataSource: DataSource,
     private readonly configService: ConfigService,
+    private readonly exchangeRateService: ExchangeRateService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   // ─── Analytics Dashboard ───────────────────────────────────────────────────
 
-  async getDashboardMetrics() {
-    const cacheKey = 'admin_dashboard_metrics';
+  async getDashboardMetrics(displayCurrency: string = 'USD') {
+    const cacheKey = `admin_dashboard_metrics_${displayCurrency}`;
     const cached = await this.cacheManager.get(cacheKey);
     if (cached) {
-      return cached;
+      return { ...cached, displayCurrency };
+    }
+
+    // Get exchange rate for conversions
+    let exchangeRate = 1;
+    let rateSource = 'USD';
+    try {
+      if (displayCurrency === 'KES') {
+        // Convert USD to KES
+        exchangeRate = await this.exchangeRateService.getLatestRate('USD', 'KES');
+        rateSource = 'USD';
+      } else if (displayCurrency === 'EUR') {
+        // Convert KES to EUR for display (KES is stored in DB)
+        exchangeRate = await this.exchangeRateService.getLatestRate('KES', 'EUR');
+        rateSource = 'KES';
+      }
+    } catch (e) {
+      this.logger.warn(`Could not get exchange rate for ${displayCurrency}, using 1:1`);
     }
 
     const [
@@ -216,23 +235,31 @@ export class AdminService {
         newUsers7d,
         totalWorkers,
         activeWorkers,
-        totalRevenue,
-        monthlyRevenue,
+        totalRevenue: totalRevenue * exchangeRate,
+        monthlyRevenue: monthlyRevenue * exchangeRate,
         payrollsProcessed,
-        totalPayrollVolume,
+        totalPayrollVolume: totalPayrollVolume * exchangeRate,
         openSupportTickets,
         totalPortalLinks,
         pendingPortalInvites,
+        // Original values before conversion
+        totalRevenueOriginal: totalRevenue,
+        monthlyRevenueOriginal: monthlyRevenue,
+        totalPayrollVolumeOriginal: totalPayrollVolume,
       },
+      displayCurrency,
+      exchangeRate: { rate: exchangeRate, source: rateSource },
       charts: {
         revenueByMonth: revenueChart.map((r: any) => ({
           month: r.month,
-          revenue: parseFloat(r.revenue),
+          revenue: parseFloat(r.revenue) * exchangeRate,
+          revenueOriginal: parseFloat(r.revenue),
         })),
         payrollByMonth: payrollChart.map((r: any) => ({
           month: r.month,
           payrolls: parseInt(r.payrolls),
-          volume: parseFloat(r.volume),
+          volume: parseFloat(r.volume) * exchangeRate,
+          volumeOriginal: parseFloat(r.volume),
         })),
         subscriptionBreakdown: subscriptionBreakdown.map((r: any) => ({
           tier: r.tier,
