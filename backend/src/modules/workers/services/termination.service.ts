@@ -52,24 +52,38 @@ export class TerminationService {
 
     const grossSalary = Number(worker.salaryGross);
 
-    // Calculate prorated salary based on days worked in the month
-    const termDate = new Date(terminationDate);
+    if (!grossSalary || grossSalary <= 0) {
+      throw new BadRequestException(
+        'Worker has no gross salary configured. Please set the salary before terminating.',
+      );
+    }
+
+    // Normalise to a real Date regardless of whether caller passed a string
+    // (TypeORM 'date' columns return strings like "2026-02-15") or a Date.
+    const termDate = terminationDate instanceof Date
+      ? terminationDate
+      : new Date(terminationDate as unknown as string);
+
+    if (isNaN(termDate.getTime())) {
+      throw new BadRequestException('Invalid termination date provided');
+    }
+
     const year = termDate.getFullYear();
     const month = termDate.getMonth();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const daysWorked = termDate.getDate(); // 1-indexed, so if terminated on 15th, worked 15 days
+    const daysWorked = termDate.getDate(); // 1-indexed: terminated on 15th → 15 days worked
     const dailyRate = grossSalary / daysInMonth;
     const proratedSalary = dailyRate * daysWorked;
 
     // Calculate unused leave payout
-    const unusedLeaveDays = worker.leaveBalance || 0;
+    const unusedLeaveDays = Math.max(0, worker.leaveBalance || 0);
     const leavePayoutRate = dailyRate;
     const unusedLeavePayout = unusedLeaveDays * leavePayoutRate;
 
-    // Severance pay - will be entered manually
+    // Severance pay - entered manually by employer
     const severancePay = 0;
 
-    // Calculate total gross
+    // Total gross for preview (severance is 0 here; terminateWorker adds the real value)
     const totalGross = proratedSalary + unusedLeavePayout + severancePay;
 
     // Calculate tax deductions on final payment
@@ -78,6 +92,9 @@ export class TerminationService {
       worker.name,
       totalGross,
     );
+
+    // Net pay must not go below 0 (deductions can't exceed gross)
+    const totalNet = Math.max(0, taxCalculation.netPay);
 
     return {
       proratedSalary: Math.round(proratedSalary * 100) / 100,
@@ -91,7 +108,7 @@ export class TerminationService {
         paye: taxCalculation.taxBreakdown.paye,
         total: taxCalculation.taxBreakdown.totalDeductions,
       },
-      totalNet: taxCalculation.netPay,
+      totalNet,
       breakdown: {
         daysWorked,
         totalDaysInMonth: daysInMonth,
@@ -122,8 +139,12 @@ export class TerminationService {
       throw new BadRequestException('Worker is already terminated');
     }
 
-    // Calculate final payment
+    // Normalise date — dto.terminationDate is an ISO string from the DTO
     const terminationDate = new Date(dto.terminationDate);
+    if (isNaN(terminationDate.getTime())) {
+      throw new BadRequestException('Invalid termination date provided');
+    }
+
     const finalPayment = await this.calculateFinalPayment(
       workerId,
       userId,
@@ -172,7 +193,7 @@ export class TerminationService {
 
       // Update record with final payment details
       payrollRecord.grossSalary = totalGross;
-      payrollRecord.netSalary = taxCalculation.netPay;
+      payrollRecord.netSalary = Math.max(0, taxCalculation.netPay);
       payrollRecord.taxAmount = taxCalculation.taxBreakdown.paye;
       payrollRecord.taxBreakdown = {
         nssf: taxCalculation.taxBreakdown.nssf,
@@ -216,7 +237,7 @@ export class TerminationService {
       proratedSalary: finalPayment.proratedSalary,
       unusedLeavePayout: finalPayment.unusedLeavePayout,
       severancePay,
-      totalFinalPayment: taxCalculation.netPay,
+      totalFinalPayment: Math.max(0, taxCalculation.netPay),
       paymentBreakdown: {
         ...finalPayment.breakdown,
         severancePay,

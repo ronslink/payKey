@@ -67,34 +67,63 @@ export class EmployeePortalService {
     inviteCode: string,
     pin: string,
   ): Promise<{ accessToken: string; user: Partial<User> }> {
-    // Normalize phone number
-    const normalizedPhone = this.normalizePhoneNumber(phoneNumber);
-
-    // Find worker by phone and invite code
-    const worker = await this.workersRepository.findOne({
-      where: {
-        phoneNumber: normalizedPhone,
-        inviteCode: inviteCode,
-      },
-    });
+    const worker = await this.findWorkerByPhone(phoneNumber, inviteCode);
 
     if (!worker) {
-      // Try with original phone number
-      const workerOriginal = await this.workersRepository.findOne({
-        where: {
-          phoneNumber: phoneNumber,
-          inviteCode: inviteCode,
-        },
-      });
-
-      if (!workerOriginal) {
-        throw new BadRequestException('Invalid phone number or invite code');
-      }
-
-      return this.processClaimAccount(workerOriginal, pin);
+      throw new BadRequestException('Invalid phone number or invite code');
     }
 
     return this.processClaimAccount(worker, pin);
+  }
+
+  /**
+   * Find a worker by phone number trying all storage format variants
+   * (workers may be stored as 07XX, +254XX, 254XX, or 7XX).
+   * Optionally also matches on inviteCode.
+   */
+  private async findWorkerByPhone(
+    phoneNumber: string,
+    inviteCode?: string,
+  ): Promise<Worker | null> {
+    const variants = this.phoneVariants(phoneNumber);
+
+    for (const phone of variants) {
+      const where: any = { phoneNumber: phone };
+      if (inviteCode !== undefined) where.inviteCode = inviteCode;
+
+      const worker = await this.workersRepository.findOne({ where });
+      if (worker) return worker;
+    }
+    return null;
+  }
+
+  /**
+   * Returns all plausible storage forms of a phone number so a lookup
+   * succeeds regardless of how the employer originally entered it.
+   */
+  private phoneVariants(phone: string): string[] {
+    const digits = phone.replace(/\D/g, '');
+    const variants = new Set<string>();
+
+    // Always include the input as-is
+    variants.add(phone);
+    variants.add(digits);
+
+    if (digits.startsWith('254') && digits.length === 12) {
+      variants.add('+' + digits);           // +254XXXXXXXXX
+      variants.add('0' + digits.slice(3));  // 07XXXXXXXX
+      variants.add(digits.slice(3));        // 7XXXXXXXX
+    } else if (digits.startsWith('0') && digits.length === 10) {
+      variants.add('+254' + digits.slice(1)); // +254XXXXXXXXX
+      variants.add('254' + digits.slice(1));  // 254XXXXXXXXX
+      variants.add(digits.slice(1));          // 7XXXXXXXX
+    } else if ((digits.startsWith('7') || digits.startsWith('1')) && digits.length === 9) {
+      variants.add('+254' + digits); // +254XXXXXXXXX
+      variants.add('254' + digits);  // 254XXXXXXXXX
+      variants.add('0' + digits);    // 07XXXXXXXX
+    }
+
+    return Array.from(variants);
   }
 
   private async processClaimAccount(
@@ -176,18 +205,16 @@ export class EmployeePortalService {
     phoneNumber: string,
     pin: string,
   ): Promise<{ accessToken: string; user: Partial<User> }> {
-    const normalizedPhone = this.normalizePhoneNumber(phoneNumber);
+    // Try all phone number variants so login works regardless of how the
+    // number was stored when the employer created the worker record.
+    const variants = this.phoneVariants(phoneNumber);
+    let user: User | null = null;
 
-    // Find user by phone
-    let user = await this.usersRepository.findOne({
-      where: { phoneNumber: normalizedPhone, role: UserRole.WORKER },
-    });
-
-    if (!user) {
-      // Try with original phone number
+    for (const phone of variants) {
       user = await this.usersRepository.findOne({
-        where: { phoneNumber: phoneNumber, role: UserRole.WORKER },
+        where: { phoneNumber: phone, role: UserRole.WORKER },
       });
+      if (user) break;
     }
 
     if (!user) {
