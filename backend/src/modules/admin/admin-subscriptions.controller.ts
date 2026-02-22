@@ -147,10 +147,20 @@ export class AdminSubscriptionsController {
         [thirtyDaysAgo],
       ),
       this.dataSource.query(`
-                SELECT tier, SUM(amount) as total_mrr, COUNT(*) as subscribers
-                FROM subscriptions
-                WHERE status = 'ACTIVE' AND currency = 'USD'
-                GROUP BY tier
+                SELECT
+                  s.tier,
+                  COUNT(*) as subscribers,
+                  COALESCE(SUM(
+                    CASE s."billingPeriod"
+                      WHEN 'yearly' THEN sp."priceUSDYearly" / 12
+                      ELSE sp."priceUSD"
+                    END
+                  ), 0) as total_mrr
+                FROM subscriptions s
+                JOIN subscription_plans sp ON sp.tier::text = s.tier::text
+                WHERE s.status = 'ACTIVE'
+                GROUP BY s.tier
+                ORDER BY total_mrr DESC
             `),
     ]);
 
@@ -235,11 +245,10 @@ export class AdminSubscriptionsController {
         u.id as user_id,
         u.tier as user_tier,
         COALESCE(
-          (SELECT SUM(t.amount)
-           FROM transactions t
-           WHERE t."userId" = u.id
-             AND t.type = 'SUBSCRIPTION'
-             AND t.status = 'SUCCESS'),
+          (SELECT SUM(sp.amount)
+           FROM subscription_payments sp
+           WHERE sp."userId" = u.id
+             AND sp.status = 'COMPLETED'),
           0
         ) as total_subscription_revenue,
         COUNT(DISTINCT w.id) as worker_count
@@ -266,11 +275,10 @@ export class AdminSubscriptionsController {
       FROM subscriptions s
       JOIN users u ON u.id = s."userId"
       LEFT JOIN LATERAL (
-        SELECT COALESCE(SUM(t.amount), 0) as total
-        FROM transactions t
-        WHERE t."userId" = u.id
-          AND t.type = 'SUBSCRIPTION'
-          AND t.status = 'SUCCESS'
+        SELECT COALESCE(SUM(sp.amount), 0) as total
+        FROM subscription_payments sp
+        WHERE sp."userId" = u.id
+          AND sp.status = 'COMPLETED'
       ) t_rev ON true
       WHERE s.status = 'ACTIVE'
         AND s.tier != 'FREE'

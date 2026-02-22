@@ -447,6 +447,36 @@ export class StripeService {
       { tier: planTier },
     );
 
+    // Create payment record for this checkout (amount_total is in cents)
+    const amountPaid = (session.amount_total || 0) / 100;
+    if (amountPaid > 0) {
+      const now = new Date();
+      const periodEnd = new Date(now);
+      periodEnd.setMonth(periodEnd.getMonth() + 1);
+      const payment = this.paymentRepository.create({
+        subscriptionId: subscription.id,
+        userId,
+        amount: amountPaid,
+        currency: (session.currency || 'usd').toUpperCase(),
+        status: PaymentStatus.COMPLETED,
+        paymentMethod: PaymentMethod.STRIPE,
+        billingPeriod: metadata.billingPeriod || 'monthly',
+        periodStart: now,
+        periodEnd,
+        dueDate: now,
+        paidDate: now,
+        invoiceNumber: `stripe_checkout_${session.id}`,
+        paymentProvider: 'stripe',
+        transactionId: session.payment_intent as string || session.id,
+        metadata: {
+          stripeSessionId: session.id,
+          stripeSubscriptionId: session.subscription,
+          planTier,
+        },
+      });
+      await this.paymentRepository.save(payment);
+    }
+
     this.logger.log(
       `Subscription activated for user ${userId} with plan ${planTier}`,
     );

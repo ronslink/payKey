@@ -115,9 +115,9 @@ export class AdminService {
       this.dataSource
         .query(
           `
-        SELECT COALESCE(SUM(t.amount), 0) as total
-        FROM transactions t
-        WHERE t.type = 'SUBSCRIPTION' AND t.status = 'SUCCESS'
+        SELECT COALESCE(SUM(sp.amount), 0) as total
+        FROM subscription_payments sp
+        WHERE sp.status = 'COMPLETED'
       `,
         )
         .then((r) => parseFloat(r[0]?.total || '0')),
@@ -126,10 +126,10 @@ export class AdminService {
       this.dataSource
         .query(
           `
-        SELECT COALESCE(SUM(t.amount), 0) as total
-        FROM transactions t
-        WHERE t.type = 'SUBSCRIPTION' AND t.status = 'SUCCESS'
-          AND t."createdAt" >= DATE_TRUNC('month', NOW())
+        SELECT COALESCE(SUM(sp.amount), 0) as total
+        FROM subscription_payments sp
+        WHERE sp.status = 'COMPLETED'
+          AND sp."createdAt" >= DATE_TRUNC('month', NOW())
       `,
         )
         .then((r) => parseFloat(r[0]?.total || '0')),
@@ -184,13 +184,13 @@ export class AdminService {
     // Revenue chart — last 12 months
     const revenueChart = await this.dataSource.query(`
       SELECT
-        TO_CHAR(DATE_TRUNC('month', t."createdAt"), 'Mon YYYY') as month,
-        DATE_TRUNC('month', t."createdAt") as month_date,
-        COALESCE(SUM(t.amount), 0) as revenue
-      FROM transactions t
-      WHERE t.type = 'SUBSCRIPTION' AND t.status = 'SUCCESS'
-        AND t."createdAt" >= NOW() - INTERVAL '12 months'
-      GROUP BY DATE_TRUNC('month', t."createdAt")
+        TO_CHAR(DATE_TRUNC('month', sp."createdAt"), 'Mon YYYY') as month,
+        DATE_TRUNC('month', sp."createdAt") as month_date,
+        COALESCE(SUM(sp.amount), 0) as revenue
+      FROM subscription_payments sp
+      WHERE sp.status = 'COMPLETED'
+        AND sp."createdAt" >= NOW() - INTERVAL '12 months'
+      GROUP BY DATE_TRUNC('month', sp."createdAt")
       ORDER BY month_date ASC
     `);
 
