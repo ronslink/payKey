@@ -422,18 +422,36 @@ export class StripeService {
       where: { userId },
     });
 
+    const billingPeriod = metadata.billingPeriod || 'monthly';
+    const amountUSD = (session.amount_total || 0) / 100;
+    const now = new Date();
+    const nextBilling = new Date(now);
+    if (billingPeriod === 'yearly') {
+      nextBilling.setFullYear(nextBilling.getFullYear() + 1);
+    } else {
+      nextBilling.setMonth(nextBilling.getMonth() + 1);
+    }
+
     if (!subscription) {
       subscription = this.subscriptionRepository.create({
         userId,
         tier: planTier as SubscriptionTier,
         status: SubscriptionStatus.ACTIVE,
-        startDate: new Date(),
+        startDate: now,
+        billingPeriod,
+        amount: amountUSD,
+        currency: (session.currency || 'usd').toUpperCase(),
+        nextBillingDate: nextBilling,
         stripeSubscriptionId: session.subscription as string,
       });
     } else {
       subscription.tier = planTier as SubscriptionTier;
       subscription.status = SubscriptionStatus.ACTIVE;
-      subscription.startDate = new Date();
+      subscription.startDate = now;
+      subscription.billingPeriod = billingPeriod;
+      subscription.amount = amountUSD;
+      subscription.currency = (session.currency || 'usd').toUpperCase();
+      subscription.nextBillingDate = nextBilling;
       subscription.stripeSubscriptionId = session.subscription as string;
     }
 
@@ -447,27 +465,23 @@ export class StripeService {
       { tier: planTier },
     );
 
-    // Create payment record for this checkout (amount_total is in cents)
-    const amountPaid = (session.amount_total || 0) / 100;
-    if (amountPaid > 0) {
-      const now = new Date();
-      const periodEnd = new Date(now);
-      periodEnd.setMonth(periodEnd.getMonth() + 1);
+    // Create payment record for this checkout
+    if (amountUSD > 0) {
       const payment = this.paymentRepository.create({
         subscriptionId: subscription.id,
         userId,
-        amount: amountPaid,
+        amount: amountUSD,
         currency: (session.currency || 'usd').toUpperCase(),
         status: PaymentStatus.COMPLETED,
         paymentMethod: PaymentMethod.STRIPE,
-        billingPeriod: metadata.billingPeriod || 'monthly',
+        billingPeriod,
         periodStart: now,
-        periodEnd,
+        periodEnd: nextBilling,
         dueDate: now,
         paidDate: now,
         invoiceNumber: `stripe_checkout_${session.id}`,
         paymentProvider: 'stripe',
-        transactionId: session.payment_intent as string || session.id,
+        transactionId: (session.payment_intent as string) || session.id,
         metadata: {
           stripeSessionId: session.id,
           stripeSubscriptionId: session.subscription,
@@ -483,10 +497,15 @@ export class StripeService {
   }
 
   /**
-   * Handle successful payment
+   * Handle successful payment (invoice.payment_succeeded)
+   * Fires for every renewal AND for the initial checkout invoice.
+   * We skip if a record already exists for the same payment_intent to avoid
+   * duplicating the initial payment that handleCheckoutCompleted already recorded.
    */
   private async handlePaymentSucceeded(invoice: Stripe.Invoice): Promise<void> {
     if (!invoice.subscription) return;
+
+    const paymentIntentId = invoice.payment_intent as string;
 
     // Find subscription by Stripe ID
     const subscription = await this.subscriptionRepository.findOne({
@@ -500,6 +519,20 @@ export class StripeService {
       return;
     }
 
+    // Deduplicate: skip if we already recorded a payment for this payment_intent
+    // (happens when checkout.session.completed already created the first-month record)
+    if (paymentIntentId) {
+      const existing = await this.paymentRepository.findOne({
+        where: { transactionId: paymentIntentId },
+      });
+      if (existing) {
+        this.logger.log(
+          `Payment for intent ${paymentIntentId} already recorded (id: ${existing.id}), skipping duplicate`,
+        );
+        return;
+      }
+    }
+
     // Create payment record
     const payment = this.paymentRepository.create({
       subscriptionId: subscription.id,
@@ -508,14 +541,14 @@ export class StripeService {
       currency: invoice.currency.toUpperCase(),
       status: PaymentStatus.COMPLETED,
       paymentMethod: PaymentMethod.STRIPE,
-      billingPeriod: 'monthly',
+      billingPeriod: subscription.billingPeriod || 'monthly',
       periodStart: new Date(invoice.period_start * 1000),
       periodEnd: new Date(invoice.period_end * 1000),
       dueDate: new Date((invoice.due_date || Date.now()) * 1000),
       paidDate: new Date(),
       invoiceNumber: invoice.number || `inv_${invoice.id}`,
       paymentProvider: 'stripe',
-      transactionId: invoice.payment_intent as string,
+      transactionId: paymentIntentId,
       metadata: {
         stripeInvoiceId: invoice.id,
         stripeSubscriptionId: invoice.subscription,
@@ -523,6 +556,11 @@ export class StripeService {
     });
 
     await this.paymentRepository.save(payment);
+
+    // Update nextBillingDate on the subscription from the invoice period end
+    subscription.nextBillingDate = new Date(invoice.period_end * 1000);
+    await this.subscriptionRepository.save(subscription);
+
     this.logger.log(`Payment recorded for subscription ${subscription.id}`);
   }
 
