@@ -238,14 +238,13 @@ export class AdminService {
         totalRevenue: totalRevenue * exchangeRate,
         monthlyRevenue: monthlyRevenue * exchangeRate,
         payrollsProcessed,
-        totalPayrollVolume: totalPayrollVolume * exchangeRate,
+        totalPayrollVolume,
         openSupportTickets,
         totalPortalLinks,
         pendingPortalInvites,
         // Original values before conversion
         totalRevenueOriginal: totalRevenue,
         monthlyRevenueOriginal: monthlyRevenue,
-        totalPayrollVolumeOriginal: totalPayrollVolume,
       },
       displayCurrency,
       exchangeRate: { rate: exchangeRate, source: rateSource },
@@ -258,8 +257,7 @@ export class AdminService {
         payrollByMonth: payrollChart.map((r: any) => ({
           month: r.month,
           payrolls: parseInt(r.payrolls),
-          volume: parseFloat(r.volume) * exchangeRate,
-          volumeOriginal: parseFloat(r.volume),
+          volume: parseFloat(r.volume),
         })),
         subscriptionBreakdown: subscriptionBreakdown.map((r: any) => ({
           tier: r.tier,
