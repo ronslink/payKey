@@ -78,13 +78,13 @@ export class WorkersController {
   // --- Leave Management Static Routes ---
 
   @Get('leave-requests')
-  @UseGuards(SubscriptionGuard, PlatinumGuard)
+  @UseGuards(SubscriptionGuard)
   getLeaveRequests(@Request() req: AuthenticatedRequest) {
     return this.leaveManagementService.getLeaveRequestsForUser(req.user.userId);
   }
 
   @Patch('leave-requests/:requestId/approve')
-  @UseGuards(SubscriptionGuard, PlatinumGuard)
+  @UseGuards(SubscriptionGuard)
   approveLeaveRequest(
     @Request() req: AuthenticatedRequest,
     @Param('requestId', new ParseUUIDPipe()) requestId: string,
@@ -98,7 +98,7 @@ export class WorkersController {
   }
 
   @Patch('leave-requests/:requestId')
-  @UseGuards(SubscriptionGuard, PlatinumGuard)
+  @UseGuards(SubscriptionGuard)
   updateLeaveRequest(
     @Request() req: AuthenticatedRequest,
     @Param('requestId', new ParseUUIDPipe()) requestId: string,
@@ -112,7 +112,7 @@ export class WorkersController {
   }
 
   @Delete('leave-requests/:requestId')
-  @UseGuards(SubscriptionGuard, PlatinumGuard)
+  @UseGuards(SubscriptionGuard)
   deleteLeaveRequest(
     @Request() req: AuthenticatedRequest,
     @Param('requestId', new ParseUUIDPipe()) requestId: string,
@@ -194,7 +194,7 @@ export class WorkersController {
   }
 
   @Post(':id/leave-requests')
-  @UseGuards(SubscriptionGuard, PlatinumGuard)
+  @UseGuards(SubscriptionGuard)
   createLeaveRequest(
     @Request() req: AuthenticatedRequest,
     @Param('id') workerId: string,
@@ -208,7 +208,7 @@ export class WorkersController {
   }
 
   @Get(':id/leave-requests')
-  @UseGuards(SubscriptionGuard, PlatinumGuard)
+  @UseGuards(SubscriptionGuard)
   getWorkerLeaveRequests(
     @Request() req: AuthenticatedRequest,
     @Param('id', new ParseUUIDPipe()) workerId: string,
