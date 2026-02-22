@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Table, Card, Typography, Tag, Button, Modal, Form, Input, InputNumber, Switch, Space, message, Divider, Tabs, Row, Col, Select, DatePicker, Badge, Popconfirm, Progress, Tooltip } from 'antd';
-import { EditOutlined, PlusOutlined, DeleteOutlined, PlayCircleOutlined, PauseCircleOutlined, RiseOutlined, TeamOutlined, CrownOutlined, TrophyOutlined, StarOutlined, PercentageOutlined, GiftOutlined, NotificationOutlined, EyeOutlined, BarChartOutlined } from '@ant-design/icons';
+import { Table, Card, Typography, Tag, Button, Modal, Form, Input, InputNumber, Switch, Space, message, Divider, Tabs, Row, Col, Select, DatePicker, Badge, Popconfirm, Progress, Tooltip, Segmented, Spin } from 'antd';
+import { EditOutlined, PlusOutlined, DeleteOutlined, PlayCircleOutlined, PauseCircleOutlined, RiseOutlined, TeamOutlined, CrownOutlined, TrophyOutlined, StarOutlined, PercentageOutlined, GiftOutlined, NotificationOutlined, EyeOutlined, BarChartOutlined, ArrowUpOutlined, UserOutlined } from '@ant-design/icons';
 import { useState } from 'react';
 import { adminPlans, adminPromotionalItems, adminCampaigns } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
@@ -60,6 +60,7 @@ export default function SubscriptionPlansPage() {
     const [editModal, setEditModal] = useState<{ open: boolean; plan?: any }>({ open: false });
     const [promoModal, setPromoModal] = useState<{ open: boolean; item?: any }>({ open: false });
     const [campaignModal, setCampaignModal] = useState<{ open: boolean; campaign?: any }>({ open: false });
+    const [upgradesDays, setUpgradesDays] = useState<number>(30);
 
     // Queries
     const { data: dashboard, isLoading: dashboardLoading } = useQuery({
@@ -69,6 +70,10 @@ export default function SubscriptionPlansPage() {
     const { data: stats, isLoading: statsLoading } = useQuery({
         queryKey: ['admin-plan-stats'],
         queryFn: adminPlans.stats,
+    });
+    const { data: upgradesData, isLoading: upgradesLoading } = useQuery({
+        queryKey: ['admin-tier-upgrades', upgradesDays],
+        queryFn: () => adminPlans.upgrades(upgradesDays),
     });
     const { data: plans, isLoading: plansLoading } = useQuery({
         queryKey: ['admin-plans'],
@@ -680,6 +685,129 @@ export default function SubscriptionPlansPage() {
                                         </Col>
                                     )}
                                 </Row>
+
+                                {/* ── Tier Upgrades ──────────────────────────────── */}
+                                <Divider style={{ margin: '4px 0 20px' }} />
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                                    <div>
+                                        <div style={{ fontWeight: 600, fontSize: 15, color: '#1e293b', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            <ArrowUpOutlined style={{ color: '#7c3aed' }} /> Tier Upgrades
+                                        </div>
+                                        <div style={{ fontSize: 13, color: '#64748b' }}>
+                                            Users who upgraded their plan in the selected period
+                                        </div>
+                                    </div>
+                                    <Segmented
+                                        value={upgradesDays}
+                                        onChange={(v) => setUpgradesDays(v as number)}
+                                        options={[
+                                            { label: '7 days', value: 7 },
+                                            { label: '30 days', value: 30 },
+                                            { label: '90 days', value: 90 },
+                                        ]}
+                                    />
+                                </div>
+
+                                {/* Upgrade summary cards */}
+                                <Spin spinning={upgradesLoading}>
+                                    <Row gutter={[12, 12]} style={{ marginBottom: 20 }}>
+                                        {/* Total upgrades summary */}
+                                        <Col xs={24} sm={8}>
+                                            <Card size="small" style={{ borderRadius: 10, border: '1px solid #e9d5ff', background: '#faf5ff' }} bodyStyle={{ padding: '14px 16px' }}>
+                                                <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>Total Upgrades</div>
+                                                <div style={{ fontSize: 28, fontWeight: 700, color: '#7c3aed' }}>
+                                                    {upgradesData?.upgrades?.length ?? 0}
+                                                </div>
+                                                <div style={{ fontSize: 12, color: '#94a3b8' }}>in last {upgradesDays} days</div>
+                                            </Card>
+                                        </Col>
+                                        {/* Per-tier upgrade breakdown */}
+                                        {(upgradesData?.summary || []).map((s: any) => (
+                                            <Col xs={24} sm={8} key={s.tier}>
+                                                <Card
+                                                    size="small"
+                                                    style={{ borderRadius: 10, border: `1px solid ${tierFg[s.tier] || '#6366f1'}30`, background: tierBg[s.tier] || '#f8fafc' }}
+                                                    bodyStyle={{ padding: '14px 16px' }}
+                                                >
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                                                        <Tag color={tierColors[s.tier] || 'default'} style={{ borderRadius: 8 }}>{s.tier}</Tag>
+                                                    </div>
+                                                    <div style={{ fontSize: 24, fontWeight: 700, color: tierFg[s.tier] || '#6366f1' }}>
+                                                        {s.upgradeCount}
+                                                        <span style={{ fontSize: 12, fontWeight: 400, color: '#94a3b8', marginLeft: 4 }}>upgrades</span>
+                                                    </div>
+                                                    <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
+                                                        Revenue:{' '}
+                                                        <span style={{ fontWeight: 600 }}>
+                                                            {s.tierRevenue > 0 ? `USD ${Number(s.tierRevenue).toLocaleString()}` : '—'}
+                                                        </span>
+                                                    </div>
+                                                </Card>
+                                            </Col>
+                                        ))}
+                                        {(upgradesData?.upgrades?.length ?? 0) === 0 && !upgradesLoading && (
+                                            <Col span={24}>
+                                                <div style={{ textAlign: 'center', color: '#94a3b8', padding: 24, fontSize: 13 }}>
+                                                    No tier upgrades found in the last {upgradesDays} days
+                                                </div>
+                                            </Col>
+                                        )}
+                                    </Row>
+
+                                    {/* Drilldown table */}
+                                    {(upgradesData?.upgrades?.length ?? 0) > 0 && (
+                                        <Table
+                                            size="small"
+                                            rowKey="subscriptionId"
+                                            pagination={{ pageSize: 10, showSizeChanger: false }}
+                                            style={{ borderRadius: 10 }}
+                                            columns={[
+                                                {
+                                                    title: 'Employer',
+                                                    dataIndex: 'employerName',
+                                                    key: 'employer',
+                                                    render: (name: string, r: any) => (
+                                                        <div>
+                                                            <div style={{ fontWeight: 500 }}>{name}</div>
+                                                            <div style={{ fontSize: 11, color: '#94a3b8' }}>{r.email}</div>
+                                                        </div>
+                                                    ),
+                                                },
+                                                {
+                                                    title: 'Tier',
+                                                    dataIndex: 'currentTier',
+                                                    key: 'tier',
+                                                    render: (tier: string) => <Tag color={tierColors[tier] || 'default'}>{tier}</Tag>,
+                                                },
+                                                {
+                                                    title: 'Workers',
+                                                    dataIndex: 'workerCount',
+                                                    key: 'workers',
+                                                    align: 'center' as const,
+                                                    render: (v: number) => (
+                                                        <span><UserOutlined style={{ marginRight: 4, color: '#94a3b8' }} />{v}</span>
+                                                    ),
+                                                },
+                                                {
+                                                    title: 'Upgraded On',
+                                                    dataIndex: 'upgradedAt',
+                                                    key: 'upgradedAt',
+                                                    render: (v: string) => new Date(v).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+                                                },
+                                                {
+                                                    title: 'Sub Revenue',
+                                                    dataIndex: 'totalSubscriptionRevenue',
+                                                    key: 'revenue',
+                                                    align: 'right' as const,
+                                                    render: (v: number, r: any) => v > 0
+                                                        ? <strong style={{ color: '#10b981' }}>{r.currency || 'USD'} {Number(v).toLocaleString()}</strong>
+                                                        : <span style={{ color: '#94a3b8' }}>—</span>,
+                                                },
+                                            ]}
+                                            dataSource={upgradesData?.upgrades || []}
+                                        />
+                                    )}
+                                </Spin>
                             </div>
                         ),
                     },

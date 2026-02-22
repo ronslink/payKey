@@ -170,25 +170,33 @@ export class AuthService {
   }
 
   private async verifyGoogleToken(idToken: string) {
-    // We assume GOOGLE_CLIENT_ID is in env
-    const googleClientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
-    const client = new OAuth2Client(googleClientId);
+    // Build the list of accepted audience values.
+    // GOOGLE_CLIENT_ID      = iOS OAuth client (104336380998-...)
+    // GOOGLE_WEB_CLIENT_ID  = Android / Web OAuth client (126777889122-...) — canonical going forward
+    // Both are kept so tokens from either platform are accepted.
+    const iosClientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
+    const webClientId = this.configService.get<string>('GOOGLE_WEB_CLIENT_ID');
+
+    const allowedAudiences = [iosClientId, webClientId].filter(Boolean) as string[];
+
+    if (allowedAudiences.length === 0) {
+      console.warn('No GOOGLE_CLIENT_ID or GOOGLE_WEB_CLIENT_ID configured — skipping Google token verification (dev fallback)');
+      return { sub: idToken, email: undefined };
+    }
+
+    // Use a client with no audience restriction — we'll validate the audience ourselves
+    // so we can accept tokens issued against either OAuth client ID.
+    const client = new OAuth2Client();
 
     try {
       const ticket = await client.verifyIdToken({
         idToken,
-        audience: googleClientId,
+        audience: allowedAudiences,
       });
-      return ticket.getPayload()!;
+      const payload = ticket.getPayload()!;
+      console.debug(`Google token verified. Audience: ${payload.aud}, Platform client matched.`);
+      return payload;
     } catch (error) {
-      // If GOOGLE_CLIENT_ID is missing, we might still want to allow development
-      // but for production this is critical.
-      if (!googleClientId) {
-        console.warn(
-          'GOOGLE_CLIENT_ID missing, skipping Google token verification',
-        );
-        return { sub: idToken, email: undefined }; // Fallback for dev
-      }
       throw new Error(`Google token verification failed: ${error.message}`);
     }
   }

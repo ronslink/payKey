@@ -213,6 +213,100 @@ export class AdminSubscriptionsController {
     `);
   }
 
+  @Get('upgrades')
+  async getTierUpgrades(@Query('days') days?: string) {
+    const lookbackDays = parseInt(days || '30', 10);
+
+    // Identify users who upgraded: their subscription was modified (updatedAt > createdAt)
+    // after initial creation and their current tier is above FREE.
+    // We join with SUBSCRIPTION transactions to capture any upgrade revenue.
+    const upgrades = await this.dataSource.query(
+      `
+      SELECT
+        s.id as subscription_id,
+        s.tier as current_tier,
+        s."createdAt" as subscribed_at,
+        s."updatedAt" as upgraded_at,
+        s.amount,
+        s.currency,
+        s."billingPeriod",
+        COALESCE(u."businessName", CONCAT(u."firstName", ' ', u."lastName"), u.email) as employer_name,
+        u.email,
+        u.id as user_id,
+        u.tier as user_tier,
+        COALESCE(
+          (SELECT SUM(t.amount)
+           FROM transactions t
+           WHERE t."userId" = u.id
+             AND t.type = 'SUBSCRIPTION'
+             AND t.status = 'SUCCESS'),
+          0
+        ) as total_subscription_revenue,
+        COUNT(DISTINCT w.id) as worker_count
+      FROM subscriptions s
+      JOIN users u ON u.id = s."userId"
+      LEFT JOIN workers w ON w."userId" = u.id AND w."isActive" = true
+      WHERE s.status = 'ACTIVE'
+        AND s.tier != 'FREE'
+        AND EXTRACT(EPOCH FROM (s."updatedAt" - s."createdAt")) > 60
+        AND s."updatedAt" >= NOW() - ($1 * INTERVAL '1 day')
+      GROUP BY s.id, u.id
+      ORDER BY s."updatedAt" DESC
+      `,
+      [lookbackDays],
+    );
+
+    // Tier upgrade revenue summary
+    const summary = await this.dataSource.query(
+      `
+      SELECT
+        s.tier,
+        COUNT(*) as upgrade_count,
+        COALESCE(SUM(t_rev.total), 0) as tier_revenue
+      FROM subscriptions s
+      JOIN users u ON u.id = s."userId"
+      LEFT JOIN LATERAL (
+        SELECT COALESCE(SUM(t.amount), 0) as total
+        FROM transactions t
+        WHERE t."userId" = u.id
+          AND t.type = 'SUBSCRIPTION'
+          AND t.status = 'SUCCESS'
+      ) t_rev ON true
+      WHERE s.status = 'ACTIVE'
+        AND s.tier != 'FREE'
+        AND EXTRACT(EPOCH FROM (s."updatedAt" - s."createdAt")) > 60
+        AND s."updatedAt" >= NOW() - ($1 * INTERVAL '1 day')
+      GROUP BY s.tier
+      ORDER BY upgrade_count DESC
+      `,
+      [lookbackDays],
+    );
+
+    return {
+      lookbackDays,
+      summary: summary.map((r: any) => ({
+        tier: r.tier,
+        upgradeCount: parseInt(r.upgrade_count),
+        tierRevenue: parseFloat(r.tier_revenue) || 0,
+      })),
+      upgrades: upgrades.map((r: any) => ({
+        subscriptionId: r.subscription_id,
+        userId: r.user_id,
+        employerName: r.employer_name,
+        email: r.email,
+        currentTier: r.current_tier,
+        userTier: r.user_tier,
+        subscribedAt: r.subscribed_at,
+        upgradedAt: r.upgraded_at,
+        billingPeriod: r.billing_period,
+        amount: parseFloat(r.amount) || 0,
+        currency: r.currency,
+        totalSubscriptionRevenue: parseFloat(r.total_subscription_revenue) || 0,
+        workerCount: parseInt(r.worker_count) || 0,
+      })),
+    };
+  }
+
   // ─── Promotional Items ─────────────────────────────────────────────────────
 
   @Get('promotional-items')

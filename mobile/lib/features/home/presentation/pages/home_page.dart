@@ -88,6 +88,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         description: 'Fast access to common tasks like Leave Management and Reports.',
         icon: Icons.bolt,
         position: TourStepPosition.above,
+        isLast: true,
       ),
     ];
 
@@ -240,6 +241,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     final workerCount = activeWorkers.length;
 
     return Container(
+      key: _payrollKey,
       margin: const EdgeInsets.all(20),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(

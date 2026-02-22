@@ -52,6 +52,8 @@ async function bootstrap() {
         ? [
             'https://paydome.co',
             'https://www.paydome.co',
+            'https://admin.paydome.co',
+            'https://api.paydome.co',
             'http://localhost:8080',
             'http://0.0.0.0:8080',
             'http://127.0.0.1:8080',

@@ -104,12 +104,13 @@ class AuthNotifier extends AsyncNotifier<void> {
       if (!_googleSignInInitialized) {
         debugPrint('🔵 [Google Sign-In] Initializing (Singleton Pattern)...');
         await googleSignIn.initialize(
-          clientId: kIsWeb ? AppEnvironment.googleClientId : null,
-          serverClientId: kIsWeb ? null : AppEnvironment.googleClientId, 
-          // Passing serverClientId on mobile might be needed for valid ID Token for backend?
-          // Using googleClientId as serverClientId for now if mobile, or null if using google-services.json defaults.
-          // Correct pattern: usually serverClientId matches the Web Client ID credential.
-          // For now, mirroring previous logic but respecting the singleton API.
+          // Web: pass the web client ID as clientId.
+          // Android: pass the web client ID as serverClientId — this forces the SDK
+          //   to issue an ID token with audience = 126777889122-... which the backend accepts.
+          // iOS: clientId/serverClientId are ignored; GoogleService-Info.plist drives the
+          //   token audience (104336380998-...), which the backend also accepts.
+          clientId: kIsWeb ? AppEnvironment.googleWebClientId : null,
+          serverClientId: kIsWeb ? null : AppEnvironment.googleWebClientId,
         );
         _googleSignInInitialized = true;
       }

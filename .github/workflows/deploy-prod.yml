@@ -15,12 +15,14 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           INTASEND_PUBLISHABLE_KEY: ${{ secrets.INTASEND_PUB_KEY_PROD }}
           INTASEND_SECRET_KEY: ${{ secrets.INTASEND_SECRET_KEY_PROD }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
           INTASEND_WEBHOOK_SECRET: ${{ secrets.INTASEND_WEBHOOK_SECRET }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
           APPLE_KEY_ID: ${{ secrets.APPLE_KEY_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_BUNDLE_ID: ${{ secrets.APPLE_BUNDLE_ID }}
@@ -29,6 +31,7 @@ jobs:
           touch .env
           echo "NODE_ENV=production" >> .env
           echo "DATABASE_URL=$DATABASE_URL" >> .env
+          echo "DOCKER_USERNAME=$DOCKER_USERNAME" >> .env
           echo "REDIS_HOST=paykey_redis_prod" >> .env
           echo "REDIS_PORT=6379" >> .env
           echo "JWT_SECRET=$JWT_SECRET" >> .env
@@ -39,7 +42,8 @@ jobs:
           echo "STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY" >> .env
           echo "STRIPE_WEBHOOK_SECRET=$STRIPE_WEBHOOK_SECRET" >> .env
           echo "INTASEND_WEBHOOK_SECRET=$INTASEND_WEBHOOK_SECRET" >> .env
-          echo "GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID" >> .env
+          echo "GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID"         >> .env
+          echo "GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID" >> .env
           echo "APPLE_KEY_ID=$APPLE_KEY_ID" >> .env
           echo "APPLE_TEAM_ID=$APPLE_TEAM_ID" >> .env
           echo "APPLE_BUNDLE_ID=$APPLE_BUNDLE_ID" >> .env

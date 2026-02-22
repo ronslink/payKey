@@ -66,6 +66,7 @@ export class AdminService {
     const [
       totalUsers,
       activeUsers30d,
+      newUsers7d,
       totalWorkers,
       activeWorkers,
       totalRevenue,
@@ -88,6 +89,18 @@ export class AdminService {
         FROM users u
         WHERE u.role IN ('EMPLOYER', 'USER')
           AND u."updatedAt" > NOW() - INTERVAL '30 days'
+      `,
+        )
+        .then((r) => parseInt(r[0]?.count || '0')),
+
+      // New accounts registered in the last 7 days
+      this.dataSource
+        .query(
+          `
+        SELECT COUNT(*) as count
+        FROM users u
+        WHERE u.role IN ('EMPLOYER', 'USER')
+          AND u."createdAt" >= NOW() - INTERVAL '7 days'
       `,
         )
         .then((r) => parseInt(r[0]?.count || '0')),
@@ -200,6 +213,7 @@ export class AdminService {
       summary: {
         totalUsers,
         activeUsers30d,
+        newUsers7d,
         totalWorkers,
         activeWorkers,
         totalRevenue,

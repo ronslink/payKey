@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Row, Col, Card, Statistic, Typography, Spin, Alert, Table, Tag, Button, Tooltip } from 'antd';
 import {
     TeamOutlined, UserOutlined, DollarOutlined, CustomerServiceOutlined, ReloadOutlined,
+    UserAddOutlined,
 } from '@ant-design/icons';
 import {
     LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
@@ -98,13 +99,22 @@ export default function DashboardPage() {
                     <StatCard title="Total Employers" value={summary.totalUsers} prefix={<UserOutlined />} color="#6366f1" />
                 </Col>
                 <Col xs={24} sm={12} lg={8} xl={4}>
+                    <Card
+                        style={{ borderRadius: 12, border: '1.5px solid #d1fae5', boxShadow: '0 1px 3px rgba(0,0,0,.08)', background: '#f0fdf4' }}
+                    >
+                        <Statistic
+                            title={<span style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>New Accounts (7d)</span>}
+                            value={summary.newUsers7d ?? 0}
+                            prefix={<UserAddOutlined style={{ color: '#10b981' }} />}
+                            valueStyle={{ color: '#10b981', fontSize: 28, fontWeight: 700 }}
+                        />
+                    </Card>
+                </Col>
+                <Col xs={24} sm={12} lg={8} xl={4}>
                     <StatCard title="Active Workers" value={summary.activeWorkers} prefix={<TeamOutlined />} color="#06b6d4" />
                 </Col>
                 <Col xs={24} sm={12} lg={8} xl={4}>
                     <StatCard title="Portal Connections" value={summary.totalPortalLinks || 0} color="#10b981" />
-                </Col>
-                <Col xs={24} sm={12} lg={8} xl={4}>
-                    <StatCard title="Pending Invites" value={summary.pendingPortalInvites || 0} color="#f59e0b" />
                 </Col>
                 <Col xs={24} sm={12} lg={8} xl={4}>
                     <StatCard title="Monthly Revenue" value={(summary.monthlyRevenue || 0).toFixed(0)} prefix={<DollarOutlined />} suffix="KES" color="#10b981" />

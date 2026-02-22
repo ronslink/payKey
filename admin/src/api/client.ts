@@ -81,6 +81,8 @@ export const adminPlans = {
         api.get('/api/admin/subscription-plans/stats').then(r => r.data),
     dashboard: () =>
         api.get('/api/admin/subscription-plans/dashboard').then(r => r.data),
+    upgrades: (days?: number) =>
+        api.get('/api/admin/subscription-plans/upgrades', { params: days ? { days } : {} }).then(r => r.data),
 };
 
 // ─── Promotional Items ─────────────────────────────────────────────────────
