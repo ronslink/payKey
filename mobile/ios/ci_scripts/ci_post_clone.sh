@@ -7,9 +7,14 @@
 #
 # Steps:
 #   1. Source Homebrew environment (correct Ruby/pod load path)
-#   2. Install Flutter (stable) — not pre-installed on Xcode Cloud agents
-#   3. flutter pub get — fetches Dart packages, generates Generated.xcconfig
-#   4. pod install — fetches iOS CocoaPods using Homebrew's Ruby
+#   2. Write GoogleService-Info.plist from secret env var
+#   3. Install Flutter (stable) — not pre-installed on Xcode Cloud agents
+#   4. flutter pub get — fetches Dart packages, generates Generated.xcconfig
+#   5. pod install — fetches iOS CocoaPods using Homebrew's Ruby
+#
+# Secrets required in Xcode Cloud workflow environment variables:
+#   GOOGLE_SERVICE_INFO_PLIST  — base64-encoded GoogleService-Info.plist
+#   To generate: base64 -i GoogleService-Info.plist | pbcopy
 #
 # Requirements:
 #   - git mode must be 100755 (executable)
@@ -52,7 +57,26 @@ fi
 echo "Ruby : $(ruby --version 2>/dev/null || echo 'not found')"
 echo "Pod  : $(pod --version 2>/dev/null || echo 'not found')"
 
-# ── 2. Install Flutter (stable) ───────────────────────────────────────────────
+# ── 2. Write GoogleService-Info.plist ─────────────────────────────────────────
+# Gitignored for security — must be provided as a base64 env var secret.
+# In Xcode Cloud: Workflow → Environment → Environment Variables →
+#   Name: GOOGLE_SERVICE_INFO_PLIST  Secret: true
+#   Value: output of: base64 -i GoogleService-Info.plist
+echo ""
+PLIST_DEST="$REPO_ROOT/mobile/ios/Runner/GoogleService-Info.plist"
+if [ -n "$GOOGLE_SERVICE_INFO_PLIST" ]; then
+  echo "🔑 Writing GoogleService-Info.plist from secret..."
+  echo "$GOOGLE_SERVICE_INFO_PLIST" | base64 --decode > "$PLIST_DEST"
+  echo "✅ GoogleService-Info.plist written"
+elif [ -f "$PLIST_DEST" ]; then
+  echo "✅ GoogleService-Info.plist already present (local build)"
+else
+  echo "❌ ERROR: GOOGLE_SERVICE_INFO_PLIST secret is not set and the file is missing."
+  echo "   Add it in Xcode Cloud: Workflow → Environment → Environment Variables"
+  exit 1
+fi
+
+# ── 3. Install Flutter (stable) ───────────────────────────────────────────────
 # Clone to a temp location first — if the clone fails partway the temp dir
 # is removed, so the next run doesn't skip the clone and fail on a partial SDK.
 echo ""
