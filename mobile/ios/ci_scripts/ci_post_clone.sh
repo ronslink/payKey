@@ -2,16 +2,13 @@
 
 # ci_post_clone.sh — Xcode Cloud post-clone script for PayKey (Flutter/iOS)
 #
-# This script runs after the repo is cloned on the Xcode Cloud agent.
-# Build triggering is handled at the workflow level via the sentinel file
-# mobile/.build-trigger (set "Files Changed" to that file in App Store Connect:
-#   Workflow → Start Conditions → Branch Changes → Files Changed).
+# Build triggering is controlled by mobile/.build-trigger — set
+# "Files Changed" to that file in the Xcode Cloud workflow Start Conditions.
 #
 # Steps:
-#   1. Install Flutter (stable) — Xcode Cloud agents do not ship with Flutter
-#   2. flutter pub get — fetches Dart packages, generates Flutter/Generated.xcconfig
-#   3. gem install cocoapods — avoids Homebrew Ruby load-path conflicts
-#   4. pod install — fetches iOS CocoaPods using Flutter's pod helpers
+#   1. Install Flutter (stable) — not pre-installed on Xcode Cloud agents
+#   2. flutter pub get — fetches Dart packages, generates Generated.xcconfig
+#   3. pod install — fetches iOS CocoaPods via Homebrew's Ruby environment
 #
 # Requirements:
 #   - git mode must be 100755 (executable)
@@ -31,6 +28,20 @@ FLUTTER_DIR="$HOME/flutter"
 echo "Repo root : $REPO_ROOT"
 echo "Mobile dir: $MOBILE_DIR"
 echo "Flutter   : $FLUTTER_DIR"
+
+# ── Homebrew environment ──────────────────────────────────────────────────────
+# Prepend Homebrew paths so 'pod' uses Homebrew's Ruby, not the write-protected
+# system Ruby at /Library/Ruby/Gems/2.6.0.
+# On Apple Silicon agents: /opt/homebrew; on Intel agents: /usr/local
+if [ -x "/opt/homebrew/bin/brew" ]; then
+  eval "$(/opt/homebrew/bin/brew shellenv)"
+elif [ -x "/usr/local/bin/brew" ]; then
+  eval "$(/usr/local/bin/brew shellenv)"
+fi
+
+echo ""
+echo "Ruby : $(ruby --version)"
+echo "Pod  : $(pod --version 2>/dev/null || echo 'not found')"
 
 # ── 1. Install Flutter (stable) ───────────────────────────────────────────────
 echo ""
@@ -57,14 +68,7 @@ echo "📦 Running flutter pub get..."
 cd "$MOBILE_DIR"
 flutter pub get
 
-# ── 3. Install CocoaPods via gem ──────────────────────────────────────────────
-# Xcode Cloud's Homebrew-installed pod runs against a different Ruby load path
-# than the system Ruby the Podfile uses — installing via gem avoids this.
-echo ""
-echo "📦 Installing CocoaPods via gem..."
-gem install cocoapods --no-document
-
-# ── 4. pod install ────────────────────────────────────────────────────────────
+# ── 3. pod install ────────────────────────────────────────────────────────────
 echo ""
 echo "📦 Running pod install..."
 cd "$MOBILE_DIR/ios"
