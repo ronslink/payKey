@@ -1121,7 +1121,8 @@ class LeaveEndpoints extends BaseEndpoints {
   Future<Response> approve(String leaveRequestId, bool approved, {String? comments}) {
     return _api.patch('/workers/leave-requests/$leaveRequestId/approve', data: {
       'approved': approved,
-      if (comments != null) 'comments': comments,
+      // Backend DTO field is 'rejectionReason', not 'comments'
+      if (comments != null && comments.isNotEmpty) 'rejectionReason': comments,
     });
   }
   }
