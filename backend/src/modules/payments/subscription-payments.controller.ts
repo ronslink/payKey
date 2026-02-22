@@ -7,8 +7,11 @@ import {
   Param,
   Query,
   Request,
+  Headers,
   UseGuards,
   Res,
+  UnauthorizedException,
+  Logger,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -21,6 +24,8 @@ import { SUBSCRIPTION_PLANS } from '../subscriptions/subscription-plans.config';
 
 @Controller('payments/subscriptions')
 export class SubscriptionPaymentsController {
+  private readonly logger = new Logger(SubscriptionPaymentsController.name);
+
   constructor(
     private stripeService: StripeService,
     @InjectRepository(Subscription)
@@ -194,14 +199,31 @@ export class SubscriptionPaymentsController {
     return accountInfo;
   }
 
+  /**
+   * Stripe webhook — this route is registered in the Stripe Dashboard as:
+   *   https://api.paydome.co/payments/subscriptions/webhook
+   * Requires a valid stripe-signature header; delegates to the same
+   * verified handler used by POST /payments/stripe/webhook.
+   */
   @Post('webhook')
-  async handleWebhook(@Body() body: any) {
+  async handleWebhook(
+    @Headers('stripe-signature') signature: string,
+    @Request() req: any,
+  ) {
+    this.logger.log('🔵 Stripe Webhook received at /payments/subscriptions/webhook');
+
+    if (!signature) {
+      this.logger.warn('Missing stripe-signature header');
+      throw new UnauthorizedException('Missing Stripe signature');
+    }
+
     try {
-      const event = body;
+      const event = this.stripeService.constructEvent(req.rawBody, signature);
       await this.stripeService.handleWebhook(event);
       return { received: true };
     } catch (error) {
-      return { error: error.message };
+      this.logger.error('Stripe Webhook Error:', error.message);
+      throw new UnauthorizedException(`Webhook Error: ${error.message}`);
     }
   }
 
@@ -210,28 +232,69 @@ export class SubscriptionPaymentsController {
     @Query('session_id') sessionId: string,
     @Res() res: Response,
   ) {
-    // Return simple HTML success page that deep links back to app or tells user to close browser
+    // Deep-link back into the Flutter app via custom URI scheme.
+    // The app registers paykey://subscription/success and handles
+    // the session_id to confirm activation on the client side.
+    const deepLink = `paykey://subscription/success?session_id=${sessionId || ''}`;
+
     const html = `
       <!DOCTYPE html>
-      <html>
+      <html lang="en">
         <head>
-          <title>Payment Successful</title>
+          <title>Payment Successful — PayKey</title>
           <meta name="viewport" content="width=device-width, initial-scale=1">
+          <meta http-equiv="refresh" content="3;url=${deepLink}">
           <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; text-align: center; padding: 40px 20px; background-color: #f7f9fc; }
-            .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 500px; margin: 0 auto; }
-            .icon { color: #4CAF50; font-size: 64px; margin-bottom: 20px; }
-            h1 { margin: 0 0 16px; color: #333; }
-            p { color: #666; line-height: 1.5; margin-bottom: 24px; }
-            .button { display: inline-block; background: #635BFF; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 500; }
+            *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+              display: flex; justify-content: center; align-items: center;
+              min-height: 100vh; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+              padding: 20px;
+            }
+            .card {
+              background: white; border-radius: 20px; padding: 48px 40px;
+              box-shadow: 0 20px 60px rgba(0,0,0,0.08); max-width: 420px; width: 100%;
+              text-align: center; animation: slideUp 0.4s ease;
+            }
+            @keyframes slideUp {
+              from { opacity: 0; transform: translateY(20px); }
+              to   { opacity: 1; transform: translateY(0); }
+            }
+            .icon-circle {
+              width: 80px; height: 80px; border-radius: 50%;
+              background: #dcfce7; display: flex; align-items: center;
+              justify-content: center; margin: 0 auto 24px; font-size: 40px;
+            }
+            h1 { font-size: 24px; font-weight: 700; color: #111827; margin-bottom: 12px; }
+            .sub { font-size: 15px; color: #6b7280; line-height: 1.6; margin-bottom: 32px; }
+            .btn {
+              display: inline-block; background: #16a34a; color: white;
+              padding: 14px 32px; border-radius: 10px; text-decoration: none;
+              font-size: 15px; font-weight: 600; transition: background 0.2s;
+            }
+            .btn:hover { background: #15803d; }
+            .hint { font-size: 13px; color: #9ca3af; margin-top: 20px; }
+            .brand { font-size: 13px; color: #9ca3af; margin-top: 32px; letter-spacing: 0.05em; font-weight: 600; }
           </style>
+          <script>
+            // Auto-attempt deep link on load; page will auto-close if the app handles it
+            window.onload = function() {
+              window.location.href = '${deepLink}';
+            };
+          </script>
         </head>
         <body>
-          <div class="container">
-            <div class="icon">✅</div>
+          <div class="card">
+            <div class="icon-circle">✅</div>
             <h1>Payment Successful!</h1>
-            <p>Your subscription has been activated successfully. You can now return to the PayKey app.</p>
-            <p><small>Close using the 'X' or 'Done' button in the browser.</small></p>
+            <p class="sub">
+              Your subscription has been activated. You'll be redirected back
+              to the PayKey app automatically.
+            </p>
+            <a href="${deepLink}" class="btn">Return to PayKey App</a>
+            <p class="hint">If the app doesn't open, tap the button above.</p>
+            <p class="brand">PAYKEY</p>
           </div>
         </body>
       </html>
@@ -241,27 +304,64 @@ export class SubscriptionPaymentsController {
 
   @Get('cancel')
   async handleCancel(@Res() res: Response) {
+    const deepLink = `paykey://subscription/cancel`;
+
     const html = `
       <!DOCTYPE html>
-      <html>
+      <html lang="en">
         <head>
-          <title>Payment Cancelled</title>
+          <title>Payment Cancelled — PayKey</title>
           <meta name="viewport" content="width=device-width, initial-scale=1">
+          <meta http-equiv="refresh" content="3;url=${deepLink}">
           <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; text-align: center; padding: 40px 20px; background-color: #f7f9fc; }
-            .container { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 500px; margin: 0 auto; }
-            .icon { color: #757575; font-size: 64px; margin-bottom: 20px; }
-            h1 { margin: 0 0 16px; color: #333; }
-            p { color: #666; line-height: 1.5; margin-bottom: 24px; }
-            .button { display: inline-block; background: #333; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 500; }
+            *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+              display: flex; justify-content: center; align-items: center;
+              min-height: 100vh; background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+              padding: 20px;
+            }
+            .card {
+              background: white; border-radius: 20px; padding: 48px 40px;
+              box-shadow: 0 20px 60px rgba(0,0,0,0.08); max-width: 420px; width: 100%;
+              text-align: center; animation: slideUp 0.4s ease;
+            }
+            @keyframes slideUp {
+              from { opacity: 0; transform: translateY(20px); }
+              to   { opacity: 1; transform: translateY(0); }
+            }
+            .icon-circle {
+              width: 80px; height: 80px; border-radius: 50%;
+              background: #fee2e2; display: flex; align-items: center;
+              justify-content: center; margin: 0 auto 24px; font-size: 40px;
+            }
+            h1 { font-size: 24px; font-weight: 700; color: #111827; margin-bottom: 12px; }
+            .sub { font-size: 15px; color: #6b7280; line-height: 1.6; margin-bottom: 32px; }
+            .btn {
+              display: inline-block; background: #374151; color: white;
+              padding: 14px 32px; border-radius: 10px; text-decoration: none;
+              font-size: 15px; font-weight: 600;
+            }
+            .hint { font-size: 13px; color: #9ca3af; margin-top: 20px; }
+            .brand { font-size: 13px; color: #9ca3af; margin-top: 32px; letter-spacing: 0.05em; font-weight: 600; }
           </style>
+          <script>
+            window.onload = function() {
+              window.location.href = '${deepLink}';
+            };
+          </script>
         </head>
         <body>
-          <div class="container">
-            <div class="icon">❌</div>
+          <div class="card">
+            <div class="icon-circle">❌</div>
             <h1>Payment Cancelled</h1>
-            <p>You have cancelled the payment process. No charges were made.</p>
-            <p><small>You can return to the PayKey app now.</small></p>
+            <p class="sub">
+              No charges were made. You can return to PayKey and
+              try again whenever you're ready.
+            </p>
+            <a href="${deepLink}" class="btn">Return to PayKey App</a>
+            <p class="hint">If the app doesn't open, tap the button above.</p>
+            <p class="brand">PAYKEY</p>
           </div>
         </body>
       </html>

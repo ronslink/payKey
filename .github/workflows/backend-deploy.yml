@@ -63,6 +63,7 @@ jobs:
           INTASEND_PUBLISHABLE_KEY: ${{ secrets.INTASEND_PUB_KEY_PROD }}
           INTASEND_SECRET_KEY: ${{ secrets.INTASEND_SECRET_KEY_PROD }}
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
           INTASEND_WEBHOOK_SECRET: ${{ secrets.INTASEND_WEBHOOK_SECRET }}
           INTASEND_CHALLENGE: ${{ secrets.INTASEND_CHALLENGE }}
@@ -85,7 +86,9 @@ jobs:
           echo "INTASEND_SECRET_KEY=$INTASEND_SECRET_KEY"           >> .env
           echo "INTASEND_IS_LIVE=true"              >> .env
           echo "STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY"               >> .env
+          echo "STRIPE_PUBLISHABLE_KEY=$STRIPE_PUBLISHABLE_KEY"     >> .env
           echo "STRIPE_WEBHOOK_SECRET=$STRIPE_WEBHOOK_SECRET"       >> .env
+          echo "FRONTEND_URL=https://api.paydome.co"                >> .env
           echo "INTASEND_WEBHOOK_SECRET=$INTASEND_WEBHOOK_SECRET"   >> .env
           echo "INTASEND_CHALLENGE=$INTASEND_CHALLENGE"             >> .env
           echo "GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID"         >> .env
