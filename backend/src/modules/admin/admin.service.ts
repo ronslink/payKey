@@ -556,11 +556,24 @@ export class AdminService {
             // Plain text log - try to detect level
             const upperLine = line.toUpperCase();
             let level = 'LOG';
-            if (upperLine.includes('ERROR') || upperLine.includes('ERR'))
+            
+            // TypeORM query logs should be INFO, not ERROR
+            if (upperLine.startsWith('QUERY:')) {
+              level = 'INFO';
+            } else if (
+              upperLine.includes('[ERROR]') ||
+              upperLine.includes(' ERROR ') ||
+              upperLine.match(/^(ERROR|ERR)\s/)
+            ) {
+              // Only mark as ERROR if it looks like an actual error log
               level = 'ERROR';
-            else if (upperLine.includes('WARN')) level = 'WARN';
-            else if (upperLine.includes('DEBUG')) level = 'DEBUG';
-            else if (upperLine.includes('INFO')) level = 'INFO';
+            } else if (upperLine.includes('[WARN]') || upperLine.includes(' WARN ')) {
+              level = 'WARN';
+            } else if (upperLine.includes('[DEBUG]') || upperLine.includes(' DEBUG ')) {
+              level = 'DEBUG';
+            } else if (upperLine.includes('[INFO]') || upperLine.includes(' INFO ')) {
+              level = 'INFO';
+            }
 
             // Try to extract timestamp
             const timestampMatch = line.match(
