@@ -58,26 +58,59 @@ export class ExchangeRateService {
   async fetchAndStoreRates() {
     this.logger.log('Fetching latest exchange rates...');
     try {
-      const response = await lastValueFrom(
+      // Fetch EUR-based rates
+      const eurResponse = await lastValueFrom(
         this.httpService.get('https://api.exchangerate-api.com/v4/latest/EUR'),
       );
 
-      const rates = response.data.rates;
-      const kesRate = rates['KES'];
+      const eurRates = eurResponse.data.rates;
+      const eurToKes = eurRates['KES'];
+      const eurToUsd = eurRates['USD'];
 
-      if (kesRate) {
-        // Save to DB
+      if (eurToKes) {
+        // Save EUR -> KES
         await this.rateRepository.save({
           sourceCurrency: 'EUR',
           targetCurrency: 'KES',
-          rate: kesRate,
+          rate: eurToKes,
         });
-
-        // Update Cache
-        this.rateCache.set('EUR_KES', kesRate);
-
-        this.logger.log(`Updated EUR->KES rate: ${kesRate}`);
+        this.rateCache.set('EUR_KES', eurToKes);
+        this.logger.log(`Updated EUR->KES rate: ${eurToKes}`);
       }
+
+      // Calculate and save USD -> KES (since Stripe uses USD)
+      if (eurToKes && eurToUsd) {
+        const usdToKes = eurToKes / eurToUsd;
+        await this.rateRepository.save({
+          sourceCurrency: 'USD',
+          targetCurrency: 'KES',
+          rate: usdToKes,
+        });
+        this.rateCache.set('USD_KES', usdToKes);
+        this.logger.log(`Updated USD->KES rate: ${usdToKes}`);
+      }
+
+      // Also fetch direct USD rates for accuracy
+      try {
+        const usdResponse = await lastValueFrom(
+          this.httpService.get('https://api.exchangerate-api.com/v4/latest/USD'),
+        );
+        const usdRates = usdResponse.data.rates;
+        const usdToKesDirect = usdRates['KES'];
+        
+        if (usdToKesDirect) {
+          await this.rateRepository.save({
+            sourceCurrency: 'USD',
+            targetCurrency: 'KES',
+            rate: usdToKesDirect,
+          });
+          this.rateCache.set('USD_KES', usdToKesDirect);
+          this.logger.log(`Updated USD->KES rate (direct): ${usdToKesDirect}`);
+        }
+      } catch (usdError) {
+        this.logger.warn('Could not fetch direct USD rates, using calculated rate');
+      }
+
     } catch (e) {
       this.logger.error(
         'Failed to update rates. Using last successful rate.',
