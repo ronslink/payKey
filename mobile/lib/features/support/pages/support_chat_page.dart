@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../models/support_message.dart';
 import '../models/support_ticket.dart';
 import '../presentation/providers/support_provider.dart';
+import '../../../../core/services/notification_service.dart';
 
 class SupportChatPage extends ConsumerStatefulWidget {
   final String ticketId;
@@ -16,9 +19,23 @@ class SupportChatPage extends ConsumerStatefulWidget {
 class _SupportChatPageState extends ConsumerState<SupportChatPage> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  StreamSubscription<RemoteMessage>? _notifSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    // When a SUPPORT_REPLY push arrives while this chat is open, refresh silently
+    _notifSubscription = NotificationService().onMessage.listen((message) {
+      if (message.data['type'] == 'SUPPORT_REPLY' &&
+          message.data['ticketId'] == widget.ticketId) {
+        ref.invalidate(currentTicketProvider(widget.ticketId));
+      }
+    });
+  }
 
   @override
   void dispose() {
+    _notifSubscription?.cancel();
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -52,14 +69,18 @@ class _SupportChatPageState extends ConsumerState<SupportChatPage> {
             children: [
               _buildTicketInfo(ticket),
               Expanded(
-                child: ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.all(16),
-                  itemCount: ticket.messages.length,
-                  itemBuilder: (context, index) {
-                    final msg = ticket.messages[index];
-                    return _buildMessageBubble(msg);
-                  },
+                child: RefreshIndicator(
+                  onRefresh: () async =>
+                      ref.invalidate(currentTicketProvider(widget.ticketId)),
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(16),
+                    itemCount: ticket.messages.length,
+                    itemBuilder: (context, index) {
+                      final msg = ticket.messages[index];
+                      return _buildMessageBubble(msg);
+                    },
+                  ),
                 ),
               ),
               if (ticket.status != TicketStatus.CLOSED && ticket.status != TicketStatus.RESOLVED) 
@@ -114,7 +135,7 @@ class _SupportChatPageState extends ConsumerState<SupportChatPage> {
       ),
       child: Text(
         status.name.replaceAll('_', ' '),
-        style: TextStyle(fontSize: 10, color: color, fontWeight: 'bold'),
+        style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold),
       ),
     );
   }

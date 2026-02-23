@@ -103,11 +103,33 @@ void main() async {
 // APP
 // =============================================================================
 
-class PaydomeApp extends ConsumerWidget {
+class PaydomeApp extends ConsumerStatefulWidget {
   const PaydomeApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PaydomeApp> createState() => _PaydomeAppState();
+}
+
+class _PaydomeAppState extends ConsumerState<PaydomeApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Handle notification taps (background → foreground, terminated → open)
+    NotificationService().onMessageOpenedApp.listen(_handleNotificationTap);
+  }
+
+  void _handleNotificationTap(RemoteMessage message) {
+    final data = message.data;
+    if (data['type'] == 'SUPPORT_REPLY') {
+      final ticketId = data['ticketId'] as String?;
+      if (ticketId != null && mounted) {
+        ref.read(routerProvider).push(AppRoutes.supportChat(ticketId));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
 
