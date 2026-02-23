@@ -109,7 +109,7 @@ export class AdminRefundsController {
       metadata: {
         originalTransactionId: transactionId,
         reason,
-        initiatedBy: req.user.id,
+        initiatedBy: req.user.userId,
         providerResponse,
       },
     });
