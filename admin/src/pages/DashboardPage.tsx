@@ -104,6 +104,7 @@ export default function DashboardPage() {
                         Refresh
                     </Button>
                 </Tooltip>
+                </div>
             </div>
 
             {/* Primary stats */}
