@@ -71,6 +71,6 @@ export class AdminSupportController {
     @Param('id') id: string,
     @Body() body: { message: string },
   ) {
-    return this.supportService.addAdminReply(id, req.user.id, body.message);
+    return this.supportService.addAdminReply(id, req.user.userId, body.message);
   }
 }
