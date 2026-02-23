@@ -266,46 +266,101 @@ export class TaxesService {
   /**
    * Calculate the Gross Salary required to achieve a specific Target Net Pay.
    * Uses a binary search algorithm to find the exact gross amount.
+   *
+   * Tax configs are fetched once upfront and passed through to avoid
+   * repeated DB round-trips on every binary-search iteration.
    */
   async calculateGrossFromNet(targetNet: number, date: Date = new Date()): Promise<number> {
-    // Edge case: if they want 0 net pay, gross is 0
     if (targetNet <= 0) return 0;
 
-    // The Gross Pay will always be at least the Net Pay
-    let lowGross = targetNet;
+    // ── Fetch all tax configs once, upfront ──────────────────────────────────
+    const [tier1Config, tier2Config, shifConfig, housingConfig, payeConfig] =
+      await Promise.all([
+        this.taxConfigService.getActiveTaxConfig(TaxType.NSSF_TIER1, date),
+        this.taxConfigService.getActiveTaxConfig(TaxType.NSSF_TIER2, date),
+        this.taxConfigService.getActiveTaxConfig(TaxType.SHIF, date),
+        this.taxConfigService.getActiveTaxConfig(TaxType.HOUSING_LEVY, date),
+        this.taxConfigService.getActiveTaxConfig(TaxType.PAYE, date),
+      ]);
 
-    // Make an initial high guess (e.g., double the net pay)
+    // ── Pure synchronous tax calculation using pre-fetched configs ───────────
+    const calcTaxesSync = (grossSalary: number): number => {
+      // NSSF
+      let nssf = 0;
+      if (tier1Config?.configuration?.tiers) {
+        const t1 = tier1Config.configuration.tiers[0];
+        const t1Limit = t1.salaryTo || 8000;
+        nssf += Math.min(grossSalary, t1Limit) * t1.rate;
+      }
+      if (tier2Config?.configuration?.tiers && grossSalary > 8000) {
+        const t2 = tier2Config.configuration.tiers[0];
+        const t2Limit = t2.salaryTo || 72000;
+        const t2From = t2.salaryFrom || 8001;
+        nssf += Math.min(grossSalary - 8000, t2Limit - t2From) * t2.rate;
+      }
+      nssf = Math.round(nssf * 100) / 100;
+
+      // PAYE
+      let paye = 0;
+      if (payeConfig?.configuration?.brackets) {
+        const taxableIncome = grossSalary - nssf;
+        let tax = 0;
+        let remaining = taxableIncome;
+        let prevLimit = 0;
+        for (const bracket of payeConfig.configuration.brackets) {
+          if (remaining <= 0) break;
+          const taxable = bracket.to === null
+            ? remaining
+            : Math.min(remaining, bracket.to - prevLimit);
+          tax += taxable * bracket.rate;
+          remaining -= taxable;
+          prevLimit = bracket.to || prevLimit;
+        }
+        const relief = payeConfig.configuration.personalRelief || 2400;
+        paye = Math.round(Math.max(0, tax - relief) * 100) / 100;
+      }
+
+      // SHIF
+      let shif = 0;
+      if (shifConfig?.configuration?.percentage !== undefined) {
+        const shifAmount = grossSalary * (shifConfig.configuration.percentage / 100);
+        const minAmount = shifConfig.configuration.minAmount || 0;
+        shif = Math.round(Math.max(shifAmount, minAmount) * 100) / 100;
+      }
+
+      // Housing Levy
+      let housingLevy = 0;
+      if (housingConfig?.configuration?.percentage !== undefined) {
+        housingLevy = Math.round(
+          grossSalary * (housingConfig.configuration.percentage / 100) * 100,
+        ) / 100;
+      }
+
+      return Math.round((nssf + paye + shif + housingLevy) * 100) / 100;
+    };
+
+    // ── Binary search using synchronous calculator ───────────────────────────
+    let lowGross = targetNet;
     let highGross = targetNet * 2;
 
-    // 1. Ensure our highGross guess actually produces a net pay higher than target
-    // In rare high-tax scenarios, double might not be enough
-    while (true) {
-      const taxes = await this.calculateTaxes(highGross, date);
-      const net = highGross - taxes.totalDeductions;
-      if (net >= targetNet) break;
+    // Ensure upper bound is high enough
+    while (highGross - calcTaxesSync(highGross) < targetNet) {
       highGross *= 2;
     }
 
-    // 2. Perform Binary Search
-    const epsilon = 0.01; // Precision to within 1 cent (KES 0.01)
+    const epsilon = 0.01;
     let guessedGross = (lowGross + highGross) / 2;
 
-    // Max 50 iterations is more than enough for 0.01 precision across billions of shilings
     for (let i = 0; i < 50; i++) {
       guessedGross = (lowGross + highGross) / 2;
+      const currentNet = guessedGross - calcTaxesSync(guessedGross);
 
-      const taxes = await this.calculateTaxes(guessedGross, date);
-      const currentNet = guessedGross - taxes.totalDeductions;
-
-      // If we are within 1 cent of the target, we found our gross pay
-      if (Math.abs(currentNet - targetNet) <= epsilon) {
-        break;
-      }
+      if (Math.abs(currentNet - targetNet) <= epsilon) break;
 
       if (currentNet < targetNet) {
-        lowGross = guessedGross; // Guess was too low
+        lowGross = guessedGross;
       } else {
-        highGross = guessedGross; // Guess was too high
+        highGross = guessedGross;
       }
     }
 

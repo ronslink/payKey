@@ -7,6 +7,7 @@ import {
   Param,
   UseGuards,
   Request,
+  BadRequestException,
 } from '@nestjs/common';
 import { TaxesService } from './taxes.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -35,13 +36,17 @@ export class TaxesController {
 
   @Post('gross-up')
   async calculateGrossFromNet(@Body() dto: CalculateGrossUpDto) {
-    const grossSalary = await this.taxesService.calculateGrossFromNet(dto.targetNet);
+    const targetNet = Number(dto.targetNet);
+    if (!isFinite(targetNet) || targetNet <= 0) {
+      throw new BadRequestException('targetNet must be a positive number');
+    }
+    const grossSalary = await this.taxesService.calculateGrossFromNet(targetNet);
     const taxBreakdown = await this.taxesService.calculateTaxes(grossSalary);
 
     return {
-      targetNet: dto.targetNet,
+      targetNet,
       grossSalary,
-      taxBreakdown
+      taxBreakdown,
     };
   }
 
