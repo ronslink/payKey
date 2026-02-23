@@ -160,10 +160,10 @@ export default function InfraPage() {
         );
     }
 
-    const { database, disk, memory, redis, docker, timestamp } = data!;
+    const { database, disk, memory, redis, docker } = data!;
 
     // Prepare chart data
-    const memoryChartData = [
+    const _memoryChartData = [
         { name: 'Used', value: memory?.usedMB || 0 },
         { name: 'Free', value: memory?.freeMB || 0 },
     ];
@@ -440,7 +440,7 @@ export default function InfraPage() {
                                                             paddingAngle={5}
                                                             dataKey="value"
                                                         >
-                                                            {containerStatusData.map((entry: any, index: number) => (
+                                                            {containerStatusData.map((_entry: any, index: number) => (
                                                                 <Cell key={`cell-${index}`} fill={index === 0 ? '#10b981' : '#ef4444'} />
                                                             ))}
                                                         </Pie>
@@ -479,7 +479,7 @@ export default function InfraPage() {
                                                     </Space>
                                                 }
                                                 extra={
-                                                    <Tag color={c.healthy ? 'green' : 'red'} size="small">
+                                                    <Tag color={c.healthy ? 'green' : 'red'}>
                                                         {c.status}
                                                     </Tag>
                                                 }
