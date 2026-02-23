@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
-    Row, Col, Card, Statistic, Typography, Spin, Alert, Table, Tag, Button, Tooltip, Select,
+    Row, Col, Card, Typography, Spin, Alert, Table, Tag, Button, Tooltip, Select,
     Badge, Avatar, Space
 } from 'antd';
 import {
@@ -229,7 +229,7 @@ export default function DashboardPage() {
                         color="#10b981"
                         trend="up"
                         trendValue={8}
-                        icon={<TrendingUpOutlined />}
+                        icon={<DollarOutlined />}
                     />
                 </Col>
                 <Col xs={24} sm={12} lg={6}>
