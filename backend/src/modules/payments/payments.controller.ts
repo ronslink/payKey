@@ -506,13 +506,16 @@ export class PaymentsController {
     let newStatus = TransactionStatus.PENDING;
     const { clearing_status } = body;
 
-    if (state === 'COMPLETE' || state === 'COMPLETED') {
+    // Normalize state to uppercase — IntaSend sends 'Completed' for B2C payouts
+    // but 'COMPLETE' for STK deposits. Handle all variants case-insensitively.
+    const stateUpper = (state || '').toUpperCase();
+    if (stateUpper === 'COMPLETE' || stateUpper === 'COMPLETED') {
       if (clearing_status === 'CLEARING') {
         newStatus = TransactionStatus.CLEARING;
       } else {
         newStatus = TransactionStatus.SUCCESS;
       }
-    } else if (state === 'FAILED') {
+    } else if (stateUpper === 'FAILED' || stateUpper === 'CANCELLED') {
       newStatus = TransactionStatus.FAILED;
     }
 

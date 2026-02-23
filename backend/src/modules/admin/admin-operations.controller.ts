@@ -9,9 +9,10 @@ import {
   Req,
   BadRequestException,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In, IsNull, Not } from 'typeorm';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -25,6 +26,13 @@ import {
 } from '../data-deletion/entities/deletion-request.entity';
 import { DataDeletionService } from '../data-deletion/data-deletion.service';
 import { AdminService } from './admin.service';
+import {
+  Transaction,
+  TransactionStatus,
+  TransactionType,
+} from '../payments/entities/transaction.entity';
+import { PayrollRecord } from '../payroll/entities/payroll-record.entity';
+import { IntaSendService } from '../payments/intasend.service';
 
 // ─── Cron job metadata (static — NestJS doesn't expose runtime state) ─────────
 
@@ -73,11 +81,18 @@ const CRON_JOBS = [
 @Controller('api/admin/operations')
 @UseGuards(JwtAuthGuard, AdminGuard, RolesGuard)
 export class AdminOperationsController {
+  private readonly logger = new Logger(AdminOperationsController.name);
+
   constructor(
     @InjectRepository(DeletionRequest)
     private readonly deletionRepo: Repository<DeletionRequest>,
+    @InjectRepository(Transaction)
+    private readonly transactionRepo: Repository<Transaction>,
+    @InjectRepository(PayrollRecord)
+    private readonly payrollRecordRepo: Repository<PayrollRecord>,
     private readonly dataDeletionService: DataDeletionService,
     private readonly adminService: AdminService,
+    private readonly intaSendService: IntaSendService,
     @InjectQueue('wallets') private readonly walletsQueue: Queue,
     @InjectQueue('subscriptions') private readonly subscriptionsQueue: Queue,
     @InjectQueue('payroll-processing') private readonly payrollQueue: Queue,
@@ -284,6 +299,264 @@ export class AdminOperationsController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   getCronJobs() {
     return CRON_JOBS;
+  }
+
+  // ─── Transaction Sync ──────────────────────────────────────────────────────
+
+  /**
+   * GET /api/admin/operations/transactions/pending
+   * Returns all transactions stuck in PENDING state for admin review.
+   */
+  @Get('transactions/pending')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  async getPendingTransactions() {
+    const pending = await this.transactionRepo.find({
+      where: { status: TransactionStatus.PENDING },
+      order: { createdAt: 'DESC' },
+    });
+
+    const summary = {
+      total: pending.length,
+      salaryPayouts: pending.filter((t) => t.type === TransactionType.SALARY_PAYOUT).length,
+      deposits: pending.filter((t) => t.type === TransactionType.DEPOSIT).length,
+      withProviderRef: pending.filter((t) => !!t.providerRef).length,
+      simulationOrTest: pending.filter(
+        (t) =>
+          t.providerRef?.startsWith('MR_SIM_') ||
+          t.providerRef?.startsWith('TRK_SIM_') ||
+          t.providerRef?.startsWith('TEST_'),
+      ).length,
+    };
+
+    return { summary, transactions: pending };
+  }
+
+  /**
+   * POST /api/admin/operations/transactions/sync
+   * Syncs all PENDING SALARY_PAYOUT transactions with IntaSend API.
+   * For each unique trackingId, queries IntaSend and updates status.
+   * Also marks simulation/test deposits as FAILED (they will never resolve).
+   */
+  @Post('transactions/sync')
+  @Roles(UserRole.SUPER_ADMIN)
+  async syncPendingTransactions(@Req() req: any) {
+    const results = {
+      synced: [] as any[],
+      cleaned: [] as any[],
+      errors: [] as any[],
+      skipped: [] as any[],
+    };
+
+    // 1. Find all PENDING transactions
+    const pendingTransactions = await this.transactionRepo.find({
+      where: { status: TransactionStatus.PENDING },
+    });
+
+    this.logger.log(`Found ${pendingTransactions.length} PENDING transactions to process`);
+
+    // 2. Clean up simulation/test deposits (will never resolve via webhook)
+    const staleTestTxns = pendingTransactions.filter(
+      (t) =>
+        t.providerRef?.startsWith('MR_SIM_') ||
+        t.providerRef?.startsWith('TRK_SIM_') ||
+        t.providerRef?.startsWith('INV_SIM_') ||
+        t.providerRef?.startsWith('TEST_') ||
+        (!t.providerRef && t.type === TransactionType.DEPOSIT),
+    );
+
+    if (staleTestTxns.length > 0) {
+      await this.transactionRepo.update(
+        { id: In(staleTestTxns.map((t) => t.id)) },
+        { status: TransactionStatus.FAILED, metadata: () => `metadata || '{"cleanedBy":"admin-sync","reason":"stale_test_or_no_ref"}'::jsonb` },
+      );
+      results.cleaned = staleTestTxns.map((t) => ({
+        id: t.id,
+        type: t.type,
+        amount: t.amount,
+        providerRef: t.providerRef,
+        reason: 'stale_test_or_no_ref',
+      }));
+      this.logger.log(`Cleaned ${staleTestTxns.length} stale test/simulation transactions`);
+    }
+
+    // 3. Sync real SALARY_PAYOUT transactions via IntaSend API
+    const realPayoutTxns = pendingTransactions.filter(
+      (t) =>
+        t.type === TransactionType.SALARY_PAYOUT &&
+        t.providerRef &&
+        !t.providerRef.startsWith('TRK_SIM_'),
+    );
+
+    // Group by providerRef (trackingId) to avoid duplicate API calls
+    const byTrackingId = new Map<string, Transaction[]>();
+    for (const tx of realPayoutTxns) {
+      const existing = byTrackingId.get(tx.providerRef) || [];
+      existing.push(tx);
+      byTrackingId.set(tx.providerRef, existing);
+    }
+
+    for (const [trackingId, txns] of byTrackingId.entries()) {
+      try {
+        const intaSendStatus = await this.intaSendService.checkPayoutStatus(trackingId);
+        const batchStatus = (
+          intaSendStatus?.file_status ||
+          intaSendStatus?.status ||
+          'unknown'
+        ).toLowerCase();
+
+        this.logger.log(`IntaSend status for ${trackingId}: ${batchStatus}`);
+
+        let newStatus: TransactionStatus | null = null;
+        let newPaymentStatus: string | null = null;
+
+        if (batchStatus === 'completed' || batchStatus === 'successful') {
+          newStatus = TransactionStatus.SUCCESS;
+          newPaymentStatus = 'paid';
+        } else if (batchStatus === 'failed' || batchStatus === 'cancelled') {
+          newStatus = TransactionStatus.FAILED;
+          newPaymentStatus = 'failed';
+        } else {
+          // Still processing — check individual transactions within the batch
+          const transactions = intaSendStatus?.transactions || [];
+          const allDone = transactions.length > 0 &&
+            transactions.every((t: any) =>
+              ['successful', 'completed'].includes((t.status || '').toLowerCase()),
+            );
+          if (allDone) {
+            newStatus = TransactionStatus.SUCCESS;
+            newPaymentStatus = 'paid';
+          }
+        }
+
+        if (newStatus) {
+          // Update transactions
+          await this.transactionRepo.update(
+            { id: In(txns.map((t) => t.id)) },
+            {
+              status: newStatus,
+              metadata: () => `metadata || '{"syncedBy":"admin-sync","intaSendStatus":"${batchStatus}"}'::jsonb`,
+            },
+          );
+
+          // Update associated payroll records
+          const payrollRecordIds = txns
+            .map((t) => t.metadata?.payrollRecordId)
+            .filter(Boolean);
+
+          if (payrollRecordIds.length > 0 && newPaymentStatus) {
+            await this.payrollRecordRepo.update(
+              { id: In(payrollRecordIds) },
+              {
+                paymentStatus: newPaymentStatus,
+                ...(newPaymentStatus === 'paid' ? { paymentDate: new Date() } : {}),
+              },
+            );
+          }
+
+          results.synced.push({
+            trackingId,
+            transactionCount: txns.length,
+            newStatus,
+            newPaymentStatus,
+            intaSendStatus: batchStatus,
+          });
+        } else {
+          results.skipped.push({
+            trackingId,
+            transactionCount: txns.length,
+            reason: `Still processing (status: ${batchStatus})`,
+            intaSendStatus: batchStatus,
+          });
+        }
+      } catch (error) {
+        this.logger.error(`Failed to sync ${trackingId}: ${error.message}`);
+        results.errors.push({
+          trackingId,
+          transactionCount: txns.length,
+          error: error.message,
+        });
+      }
+    }
+
+    // 4. Sync real DEPOSIT transactions with a providerRef (non-simulation)
+    const realDepositTxns = pendingTransactions.filter(
+      (t) =>
+        t.type === TransactionType.DEPOSIT &&
+        t.providerRef &&
+        !t.providerRef.startsWith('MR_SIM_') &&
+        !t.providerRef.startsWith('TRK_SIM_') &&
+        !t.providerRef.startsWith('TEST_'),
+    );
+
+    for (const tx of realDepositTxns) {
+      try {
+        // For deposits, check STK push status via the invoice/tracking ID
+        const intaSendStatus = await this.intaSendService.checkPayoutStatus(tx.providerRef);
+        const rawStatus = (intaSendStatus?.status || intaSendStatus?.invoice?.state || 'unknown').toLowerCase();
+
+        if (['completed', 'successful', 'complete'].includes(rawStatus)) {
+          await this.transactionRepo.update(
+            { id: tx.id },
+            { status: TransactionStatus.SUCCESS },
+          );
+          results.synced.push({
+            trackingId: tx.providerRef,
+            type: 'DEPOSIT',
+            newStatus: TransactionStatus.SUCCESS,
+            intaSendStatus: rawStatus,
+          });
+        } else if (['failed', 'cancelled'].includes(rawStatus)) {
+          await this.transactionRepo.update(
+            { id: tx.id },
+            { status: TransactionStatus.FAILED },
+          );
+          results.synced.push({
+            trackingId: tx.providerRef,
+            type: 'DEPOSIT',
+            newStatus: TransactionStatus.FAILED,
+            intaSendStatus: rawStatus,
+          });
+        } else {
+          results.skipped.push({
+            trackingId: tx.providerRef,
+            type: 'DEPOSIT',
+            reason: `Status: ${rawStatus}`,
+          });
+        }
+      } catch (error) {
+        results.errors.push({
+          trackingId: tx.providerRef,
+          type: 'DEPOSIT',
+          error: error.message,
+        });
+      }
+    }
+
+    this.adminService.logAction({
+      adminUserId: req.user.userId,
+      action: 'UPDATE',
+      entityType: 'TRANSACTION',
+      entityId: 'bulk-sync',
+      oldValues: null,
+      newValues: {
+        synced: results.synced.length,
+        cleaned: results.cleaned.length,
+        errors: results.errors.length,
+        skipped: results.skipped.length,
+      },
+      ipAddress: req.ip,
+    });
+
+    return {
+      success: true,
+      summary: {
+        synced: results.synced.length,
+        cleaned: results.cleaned.length,
+        errors: results.errors.length,
+        skipped: results.skipped.length,
+      },
+      details: results,
+    };
   }
 
   // ─── Private Helpers ───────────────────────────────────────────────────────
