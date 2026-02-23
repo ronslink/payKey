@@ -344,8 +344,11 @@ export class IntaSendService {
         ? t.account
         : INTASEND_SANDBOX_TEST_PHONE;
 
+      // Use the worker's real name; fall back to 'Worker' only if truly missing
+      const effectiveName = t.name && t.name.trim() ? t.name.trim() : 'Worker';
+
       return {
-        name: t.name || 'Worker',
+        name: effectiveName,
         account: effectivePhone,
         amount: t.amount,
         narrative: t.narrative || 'Salary Payment',

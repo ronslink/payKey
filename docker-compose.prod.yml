@@ -1,36 +1,23 @@
 # Production Docker Compose Configuration for PayKey
 # Usage: docker-compose -f docker-compose.prod.yml up -d
+# NOTE: DB is a DigitalOcean managed PostgreSQL instance (external, via DATABASE_URL).
+#       Redis runs in Docker with password auth.
 
 services:
-  db:
-    image: postgres:17-alpine
-    container_name: paykey_db_prod
-    restart: always
-    environment:
-      POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME:-paykey}
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data_prod:/var/lib/postgresql/data
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - paykey-network-prod
-
   redis:
     image: redis:7-alpine
     container_name: paykey_redis_prod
     restart: always
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
     volumes:
       - redis_data_prod:/data
     networks:
       - paykey-network-prod
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
     build:
@@ -40,25 +27,13 @@ services:
     restart: always
     ports:
       - "3000:3000"
+    env_file:
+      - .env
     environment:
       - NODE_ENV=production
-      - DB_HOST=db
-      - DB_PORT=5432
-      - DB_USER=${DB_USER:-postgres}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=${DB_NAME:-paykey}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - JWT_SECRET=${JWT_SECRET}
-      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-7d}
-      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
-      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
-      - FRONTEND_URL=${FRONTEND_URL:-https://paydome.co}
     depends_on:
-      db:
-        condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
     working_dir: /app
     # No volumes - code is baked into the image
     # No command - use Dockerfile CMD ["node", "dist/src/main"]
@@ -88,7 +63,6 @@ services:
       retries: 3
 
 volumes:
-  postgres_data_prod:
   redis_data_prod:
 
 

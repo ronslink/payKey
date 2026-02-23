@@ -175,7 +175,7 @@ export class PayrollPaymentService {
             account: record.worker.phoneNumber,
             amount: currentAmount,
             narrative: `Salary Payment${Number(record.netSalary) > this.MPESA_LIMIT ? ' (Part)' : ''}`,
-            name: 'Worker',
+            name: record.worker.name || 'Worker',
             recordId: record.id,
           });
 
