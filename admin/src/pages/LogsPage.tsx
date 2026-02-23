@@ -1,13 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import {
     Table, Typography, Select, Tag, Button, Space, Input, Card, Statistic, Row, Col, Badge,
-    Drawer, Tooltip, Switch, DatePicker, Divider, Alert, Popconfirm, message, Empty
+    Drawer, Tooltip, Switch, DatePicker, Divider, Alert, message, Empty
 } from 'antd';
 import {
-    FileTextOutlined, ReloadOutlined, SearchOutlined, BugOutlined, InfoCircleOutlined,
+    FileTextOutlined, ReloadOutlined, BugOutlined, InfoCircleOutlined,
     WarningOutlined, ContainerOutlined, CopyOutlined, DownloadOutlined, ClockCircleOutlined,
-    EyeOutlined, PauseCircleOutlined, PlayCircleOutlined, HistoryOutlined,
-    FilterOutlined, ClearOutlined, CloseOutlined, ExpandOutlined, CompressOutlined
+    EyeOutlined, PauseCircleOutlined, PlayCircleOutlined,
+    FilterOutlined, ClearOutlined, CloseOutlined
 } from '@ant-design/icons';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { adminLogs } from '../api/client';
@@ -34,12 +34,12 @@ interface LogsResponse {
 const PAGE_SIZE = 50;
 
 // Date range presets
-const RANGE_PRESETS = [
-    { label: 'Last 15 min', value: [dayjs().subtract(15, 'minute'), dayjs()] },
-    { label: 'Last 1 hour', value: [dayjs().subtract(1, 'hour'), dayjs()] },
-    { label: 'Last 6 hours', value: [dayjs().subtract(6, 'hour'), dayjs()] },
-    { label: 'Last 24 hours', value: [dayjs().subtract(24, 'hour'), dayjs()] },
-    { label: 'Last 7 days', value: [dayjs().subtract(7, 'day'), dayjs()] },
+const RANGE_PRESETS: { label: string; value: [dayjs.Dayjs, dayjs.Dayjs][] }[] = [
+    { label: 'Last 15 min', value: [[dayjs().subtract(15, 'minute'), dayjs()]] },
+    { label: 'Last 1 hour', value: [[dayjs().subtract(1, 'hour'), dayjs()]] },
+    { label: 'Last 6 hours', value: [[dayjs().subtract(6, 'hour'), dayjs()]] },
+    { label: 'Last 24 hours', value: [[dayjs().subtract(24, 'hour'), dayjs()]] },
+    { label: 'Last 7 days', value: [[dayjs().subtract(7, 'day'), dayjs()]] },
 ];
 
 // Highlight search terms in text
@@ -94,7 +94,7 @@ export default function LogsPage() {
 
     // Live mode
     const [liveMode, setLiveMode] = useState(false);
-    const liveIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const liveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     // Detail drawer
     const [selectedLog, setSelectedLog] = useState<LogEntry | null>(null);
@@ -237,7 +237,7 @@ export default function LogsPage() {
             key: 'container',
             width: 130,
             render: (v: string) => (
-                <Tag size="small" style={{ fontSize: 10 }}>{v || 'unknown'}</Tag>
+                <Tag style={{ fontSize: 10 }}>{v || 'unknown'}</Tag>
             ),
         },
         {
@@ -254,7 +254,7 @@ export default function LogsPage() {
             dataIndex: 'message',
             key: 'message',
             render: (v: string) => (
-                <Text style={{ fontFamily: 'monospace', fontSize: 12, display: 'block', wordBreak: 'break-word' }} ellipsis={{ rows: 2 }}>
+                <Text style={{ fontFamily: 'monospace', fontSize: 12, display: 'block', wordBreak: 'break-word' }} ellipsis>
                     {search ? highlightText(v, search) : v}
                 </Text>
             ),
@@ -505,14 +505,14 @@ export default function LogsPage() {
                             </Row>
                         </Card>
 
-                        <Divider orientation="left">Message</Divider>
+                        <Divider>Message</Divider>
                         <Card size="small" style={{ background: '#fafafa' }}>
                             <div style={{ fontFamily: 'monospace', fontSize: 13, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                                 {formatStackTrace(selectedLog.message)}
                             </div>
                         </Card>
 
-                        <Divider orientation="left">Raw Log</Divider>
+                        <Divider>Raw Log</Divider>
                         <Card size="small" style={{ background: '#1e1e1e' }}>
                             <pre style={{ color: '#d4d4d4', fontSize: 12, margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                                 {selectedLog.raw}
