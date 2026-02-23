@@ -45,7 +45,7 @@ export class SubscriptionPayment {
   @Column()
   subscriptionId: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   userId: string;
 
   @Column({
