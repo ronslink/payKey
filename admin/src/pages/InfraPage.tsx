@@ -1,31 +1,26 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-    Row, Col, Card, Tag, Typography, Spin, Alert, Progress, List, Button, Statistic,
-    Badge, Space, Tooltip, Divider, Timeline, Empty, Popconfirm, message, Avatar,
-    Tabs, Descriptions, Collapse, Skeleton
+    Row, Col, Card, Tag, Typography, Alert, Progress, List, Button, Statistic,
+    Badge, Space, Tooltip, Divider, Empty, Popconfirm, message, Avatar,
+    Tabs, Descriptions, Skeleton
 } from 'antd';
 import {
     DatabaseOutlined, HddOutlined, CloudServerOutlined, ThunderboltOutlined,
     ReloadOutlined, SyncOutlined, CheckCircleOutlined, ExclamationCircleOutlined,
-    ClockCircleOutlined, PieChartOutlined, LineChartOutlined, DashboardOutlined,
-    ToolOutlined, WarningOutlined, ContainerOutlined, MemoryOutlined, StorageOutlined,
-    NetworkOutlined, SafetyOutlined, ArrowUpOutlined, ArrowDownOutlined,
-    DeleteOutlined, PlayCircleOutlined, PauseCircleOutlined, RedoOutlined
+    ClockCircleOutlined, DashboardOutlined, ToolOutlined, WarningOutlined,
+    ContainerOutlined, ArrowUpOutlined, ArrowDownOutlined, DeleteOutlined,
+    RedoOutlined, LineChartOutlined
 } from '@ant-design/icons';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { adminAnalytics, adminOperations } from '../api/client';
 import dayjs from 'dayjs';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartTooltip,
-    ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area
+    ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 const { TabPane } = Tabs;
-const { Panel } = Collapse;
-
-// Colors for charts
-const COLORS = ['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#84cc16'];
 
 interface InfraData {
     database: any;
