@@ -492,6 +492,30 @@ export class AdminService {
     }
   }
 
+  async restartContainer(name: string) {
+    try {
+      const container = docker.getContainer(name);
+      await container.restart();
+      this.logger.log(`Container ${name} restarted by admin`);
+      return { success: true, message: `Container ${name} restarted` };
+    } catch (error: any) {
+      this.logger.error(`Failed to restart container ${name}`, error);
+      throw new Error(`Failed to restart container: ${error.message}`);
+    }
+  }
+
+  async stopContainer(name: string) {
+    try {
+      const container = docker.getContainer(name);
+      await container.stop();
+      this.logger.log(`Container ${name} stopped by admin`);
+      return { success: true, message: `Container ${name} stopped` };
+    } catch (error: any) {
+      this.logger.error(`Failed to stop container ${name}`, error);
+      throw new Error(`Failed to stop container: ${error.message}`);
+    }
+  }
+
   async getContainerLogs(container?: string, lines = 100) {
     try {
       const safeLines = Math.min(lines, 1000);

@@ -187,4 +187,10 @@ export const adminOperations = {
     // Cron jobs
     listCronJobs: () =>
         api.get('/api/admin/operations/cron-jobs').then(r => r.data),
+
+    // Container operations
+    restartContainer: (name: string) =>
+        api.post(`/api/admin/containers/${name}/restart`).then(r => r.data),
+    stopContainer: (name: string) =>
+        api.post(`/api/admin/containers/${name}/stop`).then(r => r.data),
 };

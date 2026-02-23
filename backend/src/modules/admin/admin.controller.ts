@@ -123,4 +123,16 @@ export class AdminController {
   async getContainers() {
     return this.adminService.getContainers();
   }
+
+  @Post('containers/:name/restart')
+  @Roles('ADMIN', 'SUPER_ADMIN')
+  async restartContainer(@Param('name') name: string) {
+    return this.adminService.restartContainer(name);
+  }
+
+  @Post('containers/:name/stop')
+  @Roles('ADMIN', 'SUPER_ADMIN')
+  async stopContainer(@Param('name') name: string) {
+    return this.adminService.stopContainer(name);
+  }
 }
