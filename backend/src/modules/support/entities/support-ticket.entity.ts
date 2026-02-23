@@ -41,7 +41,7 @@ export class SupportTicket {
   @JoinColumn({ name: 'userId' })
   user: User;
 
-  @Column()
+  @Column({ type: 'uuid' })
   userId: string;
 
   @Column()

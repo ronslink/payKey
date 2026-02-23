@@ -24,10 +24,10 @@ export class SupportMessage {
   @JoinColumn({ name: 'ticketId' })
   ticket: SupportTicket;
 
-  @Column()
+  @Column({ type: 'uuid' })
   ticketId: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   senderId: string;
 
   @Column({
