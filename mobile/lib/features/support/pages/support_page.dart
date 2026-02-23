@@ -241,7 +241,7 @@ class SupportPage extends ConsumerWidget {
   void _showCreateTicketSheet(BuildContext context, WidgetRef ref) {
     final subjectController = TextEditingController();
     final descController = TextEditingController();
-    TicketCategory selectedCategory = TicketCategory.OTHER;
+    TicketCategory selectedCategory = TicketCategory.GENERAL;
 
     showModalBottomSheet(
       context: context,
