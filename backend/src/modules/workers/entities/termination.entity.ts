@@ -29,14 +29,14 @@ export class Termination {
   @JoinColumn({ name: 'workerId' })
   worker: Worker;
 
-  @Column()
+  @Column({ type: 'uuid' })
   workerId: string;
 
   @ManyToOne(() => User)
   @JoinColumn({ name: 'userId' })
   user: User;
 
-  @Column()
+  @Column({ type: 'uuid' })
   userId: string;
 
   @Column({

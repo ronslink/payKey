@@ -42,7 +42,7 @@ export class SubscriptionPayment {
   @JoinColumn({ name: 'subscriptionId' })
   subscription: Subscription;
 
-  @Column()
+  @Column({ type: 'uuid' })
   subscriptionId: string;
 
   @Column({ type: 'uuid', nullable: true })

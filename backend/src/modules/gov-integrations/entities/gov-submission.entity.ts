@@ -27,14 +27,14 @@ export class GovSubmission {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({ type: 'uuid' })
   userId: string;
 
   @ManyToOne(() => PayPeriod)
   @JoinColumn({ name: 'payPeriodId' })
   payPeriod: PayPeriod;
 
-  @Column()
+  @Column({ type: 'uuid' })
   payPeriodId: string;
 
   @Column({

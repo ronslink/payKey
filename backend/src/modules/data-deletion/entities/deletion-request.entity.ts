@@ -39,6 +39,6 @@ export class DeletionRequest {
   @Column({ nullable: true })
   errorMessage: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   userId: string; // Linked user ID if found
 }

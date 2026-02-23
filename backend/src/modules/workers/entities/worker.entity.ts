@@ -69,7 +69,7 @@ export class Worker {
   @ManyToOne(() => User, (user) => user.id)
   user: User;
 
-  @Column()
+  @Column({ type: 'uuid' })
   userId: string;
 
   @Column()

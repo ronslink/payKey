@@ -27,7 +27,7 @@ export class WorkerDocument {
   @JoinColumn({ name: 'workerId' })
   worker: Worker;
 
-  @Column()
+  @Column({ type: 'uuid' })
   workerId: string;
 
   @Column({

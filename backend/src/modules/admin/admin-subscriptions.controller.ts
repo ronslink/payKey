@@ -281,7 +281,7 @@ export class AdminSubscriptionsController {
         COALESCE(
           (SELECT SUM(sp.amount)
            FROM subscription_payments sp
-           WHERE sp."userId" = u.id
+           WHERE sp."userId"::uuid = u.id
              AND sp.status = 'COMPLETED'),
           0
         ) as total_subscription_revenue,
@@ -311,7 +311,7 @@ export class AdminSubscriptionsController {
       LEFT JOIN LATERAL (
         SELECT COALESCE(SUM(sp.amount), 0) as total
         FROM subscription_payments sp
-        WHERE sp."userId" = u.id
+        WHERE sp."userId"::uuid = u.id
           AND sp.status = 'COMPLETED'
       ) t_rev ON true
       WHERE s.status = 'ACTIVE'

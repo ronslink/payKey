@@ -19,14 +19,14 @@ export class TaxSubmission {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   userId: string;
 
   @ManyToOne(() => PayPeriod, (payPeriod) => payPeriod.taxSubmissions)
   @JoinColumn({ name: 'payPeriodId' })
   payPeriod: PayPeriod;
 
-  @Column()
+  @Column({ type: 'uuid' })
   payPeriodId: string;
 
   @Column('decimal', { precision: 12, scale: 2, default: 0 })

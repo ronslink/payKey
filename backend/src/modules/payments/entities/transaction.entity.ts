@@ -43,13 +43,13 @@ export class Transaction {
   @ManyToOne(() => User, (user) => user.id)
   user: User;
 
-  @Column()
+  @Column({ type: 'uuid' })
   userId: string;
 
   @ManyToOne(() => Worker, { nullable: true })
   worker: Worker;
 
-  @Column({ nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   workerId: string;
 
   @Column({ nullable: true })
@@ -107,7 +107,7 @@ export class Transaction {
   })
   payPeriod: PayPeriod;
 
-  @Column({ nullable: true })
+  @Column({ type: 'uuid', nullable: true })
   payPeriodId: string;
 
   @Index()
