@@ -146,7 +146,7 @@ class SupportPage extends ConsumerWidget {
       ),
       child: Text(
         status.name.replaceAll('_', ' '),
-        style: TextStyle(fontSize: 10, color: color, fontWeight: 'bold'),
+        style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold),
       ),
     );
   }

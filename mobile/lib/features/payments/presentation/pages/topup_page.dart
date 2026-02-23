@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/payments_provider.dart';
-import '../../settings/providers/settings_provider.dart';
+import '../../../settings/providers/settings_provider.dart';
 
 class TopupPage extends ConsumerStatefulWidget {
   const TopupPage({super.key});
@@ -23,7 +23,7 @@ class _TopupPageState extends ConsumerState<TopupPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final settings = ref.read(settingsProvider).valueOrNull;
+      final settings = ref.read(settingsProvider).value;
       if (settings?.mpesaPhone != null && settings!.mpesaPhone!.isNotEmpty) {
         setState(() {
           _phoneController.text = settings.mpesaPhone!;

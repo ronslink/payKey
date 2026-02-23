@@ -148,7 +148,7 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
     
     // Attempt to get phone number from settings
     final settingsAsync = ref.read(settingsProvider);
-    final defaultPhone = settingsAsync.valueOrNull?.mpesaPhone;
+    final defaultPhone = settingsAsync.value?.mpesaPhone;
 
     TopupSelectionSheet.show(
       context: context,

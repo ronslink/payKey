@@ -24,7 +24,7 @@ class _MpesaTopUpPageState extends ConsumerState<MpesaTopUpPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final settings = ref.read(settingsProvider).valueOrNull;
+      final settings = ref.read(settingsProvider).value;
       if (settings?.mpesaPhone != null && settings!.mpesaPhone!.isNotEmpty) {
         setState(() {
           _phoneController.text = settings.mpesaPhone!;
