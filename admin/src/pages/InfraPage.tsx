@@ -163,11 +163,6 @@ export default function InfraPage() {
     const { database, disk, memory, redis, docker } = data!;
 
     // Prepare chart data
-    const _memoryChartData = [
-        { name: 'Used', value: memory?.usedMB || 0 },
-        { name: 'Free', value: memory?.freeMB || 0 },
-    ];
-
     const tableSizeData = database?.topTables?.slice(0, 5).map((t: any) => ({
         name: t.table,
         rows: t.rows,
