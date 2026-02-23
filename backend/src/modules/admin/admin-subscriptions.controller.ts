@@ -74,7 +74,7 @@ export class AdminSubscriptionsController {
     const newPlan = await this.planRepo.findOne({ where: { id } });
 
     this.adminService.logAction({
-      adminUserId: req.user.id,
+      adminUserId: req.user.userId,
       action: 'UPDATE',
       entityType: 'SUBSCRIPTION_PLAN',
       entityId: id,
@@ -377,7 +377,7 @@ export class AdminSubscriptionsController {
     const saved = await this.promoItemRepo.save(item);
 
     this.adminService.logAction({
-      adminUserId: req.user.id,
+      adminUserId: req.user.userId,
       action: 'CREATE',
       entityType: 'PROMOTIONAL_ITEM',
       entityId: saved.id,
@@ -401,7 +401,7 @@ export class AdminSubscriptionsController {
     const newItem = await this.promoItemRepo.findOne({ where: { id } });
 
     this.adminService.logAction({
-      adminUserId: req.user.id,
+      adminUserId: req.user.userId,
       action: 'UPDATE',
       entityType: 'PROMOTIONAL_ITEM',
       entityId: id,
@@ -420,7 +420,7 @@ export class AdminSubscriptionsController {
     await this.promoItemRepo.delete(id);
 
     this.adminService.logAction({
-      adminUserId: req.user.id,
+      adminUserId: req.user.userId,
       action: 'DELETE',
       entityType: 'PROMOTIONAL_ITEM',
       entityId: id,
@@ -471,7 +471,7 @@ export class AdminSubscriptionsController {
     const saved = await this.campaignRepo.save(campaign);
 
     this.adminService.logAction({
-      adminUserId: req.user.id,
+      adminUserId: req.user.userId,
       action: 'CREATE',
       entityType: 'CAMPAIGN',
       entityId: saved.id,
@@ -498,7 +498,7 @@ export class AdminSubscriptionsController {
     });
 
     this.adminService.logAction({
-      adminUserId: req.user.id,
+      adminUserId: req.user.userId,
       action: 'UPDATE',
       entityType: 'CAMPAIGN',
       entityId: id,
@@ -525,7 +525,7 @@ export class AdminSubscriptionsController {
     });
 
     this.adminService.logAction({
-      adminUserId: req.user.id,
+      adminUserId: req.user.userId,
       action: 'UPDATE_STATUS',
       entityType: 'CAMPAIGN',
       entityId: id,
@@ -544,7 +544,7 @@ export class AdminSubscriptionsController {
     await this.campaignRepo.delete(id);
 
     this.adminService.logAction({
-      adminUserId: req.user.id,
+      adminUserId: req.user.userId,
       action: 'DELETE',
       entityType: 'CAMPAIGN',
       entityId: id,

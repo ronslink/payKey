@@ -41,7 +41,7 @@ export class AdminTaxConfigController {
     const saved = await this.taxConfigRepo.save(config);
 
     this.adminService.logAction({
-      adminUserId: req.user.id,
+      adminUserId: req.user.userId,
       action: 'CREATE',
       entityType: 'TAX_CONFIG',
       entityId: saved.id,
@@ -64,7 +64,7 @@ export class AdminTaxConfigController {
     const newConfig = await this.taxConfigRepo.findOne({ where: { id } });
 
     this.adminService.logAction({
-      adminUserId: req.user.id,
+      adminUserId: req.user.userId,
       action: 'UPDATE',
       entityType: 'TAX_CONFIG',
       entityId: id,
@@ -87,7 +87,7 @@ export class AdminTaxConfigController {
     const newConfig = await this.taxConfigRepo.findOne({ where: { id } });
 
     this.adminService.logAction({
-      adminUserId: req.user.id,
+      adminUserId: req.user.userId,
       action: 'DEACTIVATE',
       entityType: 'TAX_CONFIG',
       entityId: id,

@@ -295,7 +295,7 @@ export class AdminNotificationsController {
     await Promise.allSettled(promises);
 
     this.adminService.logAction({
-      adminUserId: req.user.id,
+      adminUserId: req.user.userId,
       action: 'SEND_NOTIFICATION',
       entityType: 'NOTIFICATION',
       oldValues: null,

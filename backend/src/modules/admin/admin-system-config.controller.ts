@@ -50,7 +50,7 @@ export class AdminSystemConfigController {
     const newConfig = await this.configRepo.findOne({ where: { key } });
 
     this.adminService.logAction({
-      adminUserId: req.user.id,
+      adminUserId: req.user.userId,
       action: oldConfig ? 'UPDATE' : 'CREATE',
       entityType: 'SYSTEM_CONFIG',
       entityId: key,

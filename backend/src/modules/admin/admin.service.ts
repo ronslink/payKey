@@ -1084,10 +1084,11 @@ export class AdminService {
       });
     }
 
-    query.orderBy('log."createdAt"', 'DESC').offset(offset).limit(limit);
-
-    const logs = await query.getRawMany();
+    // Get total count before applying pagination
     const total = await query.getCount();
+
+    query.orderBy('log."createdAt"', 'DESC').offset(offset).limit(limit);
+    const logs = await query.getRawMany();
 
     return {
       data: logs,

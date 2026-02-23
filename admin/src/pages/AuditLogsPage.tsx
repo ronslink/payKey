@@ -122,7 +122,7 @@ export default function AuditLogsPage() {
                         }}
                     />
                     <Select placeholder="Action" allowClear style={{ width: 140 }} onChange={(v) => { setAction(v); setPage(1); }}>
-                        {['CREATE', 'UPDATE', 'DEACTIVATE', 'DELETE'].map(a =>
+                        {['CREATE', 'UPDATE', 'DEACTIVATE', 'DELETE', 'LOGIN'].map(a =>
                             <Select.Option key={a} value={a}>
                                 <Tag color={actionColors[a]} style={{ margin: 0 }}>{a}</Tag>
                             </Select.Option>
@@ -169,9 +169,10 @@ export default function AuditLogsPage() {
                 {detailModal.log && (
                     <>
                         <div style={{ marginBottom: 12, padding: '8px 12px', background: '#f8fafc', borderRadius: 8, fontSize: 13, color: '#64748b' }}>
-                            <strong>Admin:</strong> {detailModal.log.adminEmail} &nbsp;·&nbsp;
+                            <strong>Admin:</strong> {detailModal.log.adminEmail || '—'} &nbsp;·&nbsp;
                             <strong>Time:</strong> {new Date(detailModal.log.createdAt).toLocaleString()} &nbsp;·&nbsp;
-                            <strong>IP:</strong> {detailModal.log.ipAddress || '—'}
+                            <strong>IP:</strong> {detailModal.log.ipAddress || '—'} &nbsp;·&nbsp;
+                            <strong>Entity ID:</strong> <span style={{ fontFamily: 'monospace' }}>{detailModal.log.entityId || '—'}</span>
                         </div>
                         <div style={{ display: 'flex', gap: 16 }}>
                             <JsonDiff label="Before" data={detailModal.log.oldValues} color="#ef4444" />

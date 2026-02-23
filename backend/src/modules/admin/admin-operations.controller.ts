@@ -159,7 +159,7 @@ export class AdminOperationsController {
     });
 
     this.adminService.logAction({
-      adminUserId: req.user.id,
+      adminUserId: req.user.userId,
       action: 'CREATE',
       entityType: 'DELETION_REQUEST',
       entityId: request.id,
@@ -189,7 +189,7 @@ export class AdminOperationsController {
     await this.deletionRepo.save(request);
 
     this.adminService.logAction({
-      adminUserId: req.user.id,
+      adminUserId: req.user.userId,
       action: 'UPDATE',
       entityType: 'DELETION_REQUEST',
       entityId: request.id,
@@ -225,7 +225,7 @@ export class AdminOperationsController {
     await queue.pause();
 
     this.adminService.logAction({
-      adminUserId: req.user.id,
+      adminUserId: req.user.userId,
       action: 'UPDATE',
       entityType: 'QUEUE',
       entityId: name,
@@ -244,7 +244,7 @@ export class AdminOperationsController {
     await queue.resume();
 
     this.adminService.logAction({
-      adminUserId: req.user.id,
+      adminUserId: req.user.userId,
       action: 'UPDATE',
       entityType: 'QUEUE',
       entityId: name,
@@ -263,7 +263,7 @@ export class AdminOperationsController {
     await queue.drain();
 
     this.adminService.logAction({
-      adminUserId: req.user.id,
+      adminUserId: req.user.userId,
       action: 'UPDATE',
       entityType: 'QUEUE',
       entityId: name,
