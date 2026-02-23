@@ -12,6 +12,8 @@ import {
   TicketPriority,
 } from './entities/support-ticket.entity';
 import { SupportMessage, SenderRole } from './entities/support-message.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+import { DeviceToken } from '../notifications/entities/device-token.entity';
 
 @Injectable()
 export class SupportService {
@@ -20,6 +22,9 @@ export class SupportService {
     private readonly ticketRepo: Repository<SupportTicket>,
     @InjectRepository(SupportMessage)
     private readonly messageRepo: Repository<SupportMessage>,
+    @InjectRepository(DeviceToken)
+    private readonly deviceTokenRepo: Repository<DeviceToken>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   // ─── User-facing ─────────────────────────────────────────────────────────
@@ -172,7 +177,7 @@ export class SupportService {
       });
     }
 
-    return this.messageRepo.save(
+    const saved = await this.messageRepo.save(
       this.messageRepo.create({
         ticketId,
         senderId: adminId,
@@ -180,5 +185,26 @@ export class SupportService {
         message,
       }),
     );
+
+    // Send push notification to the ticket owner
+    const deviceToken = await this.deviceTokenRepo.findOne({
+      where: { userId: ticket.userId, isActive: true },
+      order: { lastUsedAt: 'DESC' },
+    });
+
+    if (deviceToken) {
+      await this.notificationsService.sendPushToDevice({
+        token: deviceToken.token,
+        title: '💬 Support Reply',
+        body: message.length > 80 ? `${message.substring(0, 77)}...` : message,
+        data: {
+          type: 'SUPPORT_REPLY',
+          ticketId,
+          screen: 'SupportChat',
+        },
+      });
+    }
+
+    return saved;
   }
 }
