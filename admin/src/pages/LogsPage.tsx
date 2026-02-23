@@ -33,13 +33,13 @@ interface LogsResponse {
 
 const PAGE_SIZE = 50;
 
-// Date range presets
-const RANGE_PRESETS: { label: string; value: [dayjs.Dayjs, dayjs.Dayjs][] }[] = [
-    { label: 'Last 15 min', value: [[dayjs().subtract(15, 'minute'), dayjs()]] },
-    { label: 'Last 1 hour', value: [[dayjs().subtract(1, 'hour'), dayjs()]] },
-    { label: 'Last 6 hours', value: [[dayjs().subtract(6, 'hour'), dayjs()]] },
-    { label: 'Last 24 hours', value: [[dayjs().subtract(24, 'hour'), dayjs()]] },
-    { label: 'Last 7 days', value: [[dayjs().subtract(7, 'day'), dayjs()]] },
+// Date range presets - simplified for Ant Design 5.x
+const RANGE_PRESETS: any[] = [
+    { label: 'Last 15 min', value: [dayjs().subtract(15, 'minute'), dayjs()] },
+    { label: 'Last 1 hour', value: [dayjs().subtract(1, 'hour'), dayjs()] },
+    { label: 'Last 6 hours', value: [dayjs().subtract(6, 'hour'), dayjs()] },
+    { label: 'Last 24 hours', value: [dayjs().subtract(24, 'hour'), dayjs()] },
+    { label: 'Last 7 days', value: [dayjs().subtract(7, 'day'), dayjs()] },
 ];
 
 // Highlight search terms in text
