@@ -2,16 +2,16 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     Table, Select, Input, Typography, Tag, Button, Drawer, message,
-    List, Avatar, Space, Spin, Popconfirm, Tooltip, Badge, Card, Statistic, Row, Col,
-    Progress, Divider, Empty, Timeline, Alert
+    Avatar, Space, Spin, Card, Statistic, Row, Col,
+    Progress, Empty, Timeline, Alert
 } from 'antd';
 import {
-    SearchOutlined, UserOutlined, RobotOutlined, SendOutlined,
+    SearchOutlined, UserOutlined, SendOutlined,
     CheckCircleOutlined, ClockCircleOutlined, SyncOutlined,
-    ExclamationCircleOutlined, InboxOutlined, MessageOutlined,
+    ExclamationCircleOutlined, InboxOutlined,
     DashboardOutlined, ThunderboltOutlined, AlertOutlined,
-    FileTextOutlined, CustomerServiceOutlined, ArrowUpOutlined,
-    CheckOutlined, MailOutlined, InfoCircleOutlined
+    FileTextOutlined, ArrowUpOutlined,
+    CheckOutlined, MessageOutlined, InfoCircleOutlined
 } from '@ant-design/icons';
 import { adminSupport } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
@@ -283,7 +283,6 @@ export default function SupportPage() {
             title: 'Actions',
             key: 'actions',
             width: 100,
-            fixed: 'right',
             render: (_: any, r: TicketRow) => (
                 <Button
                     type="primary"
@@ -450,7 +449,7 @@ export default function SupportPage() {
                     pagination={{
                         current: page,
                         pageSize: 10,
-                        total,
+                        total: totalCount,
                         onChange: setPage,
                         showSizeChanger: false,
                         showTotal: (t) => `Total ${t} tickets`,

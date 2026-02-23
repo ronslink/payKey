@@ -2,17 +2,17 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
     Row, Col, Card, Statistic, Typography, Spin, Alert, Table, Tag, Button, Tooltip, Select,
-    Badge, Progress, Avatar, Divider, Space
+    Badge, Avatar, Space
 } from 'antd';
 import {
     TeamOutlined, UserOutlined, DollarOutlined, CustomerServiceOutlined, ReloadOutlined,
-    UserAddOutlined, ArrowUpOutlined, ArrowDownOutlined, TrendingUpOutlined,
+    UserAddOutlined, ArrowUpOutlined, ArrowDownOutlined,
     WalletOutlined, CreditCardOutlined, CalendarOutlined, ShopOutlined,
-    CheckCircleOutlined, ClockCircleOutlined, ExclamationCircleOutlined,
+    ExclamationCircleOutlined,
     BarChartOutlined, PieChartOutlined, LineChartOutlined
 } from '@ant-design/icons';
 import {
-    LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, Area, AreaChart,
+    BarChart, Bar, PieChart, Pie, Cell, Area, AreaChart,
     XAxis, YAxis, CartesianGrid, Tooltip as RechartTooltip, Legend, ResponsiveContainer,
 } from 'recharts';
 import { adminAnalytics, adminPlans, adminSupport } from '../api/client';
@@ -20,7 +20,6 @@ import { adminAnalytics, adminPlans, adminSupport } from '../api/client';
 const { Title, Text } = Typography;
 
 const PIE_COLORS = ['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ef4444'];
-const AREA_COLORS = ['#6366f1', '#8b5cf6', '#10b981'];
 
 const tierColor: Record<string, string> = {
     FREE: '#6b7280', BASIC: '#3b82f6', GOLD: '#f59e0b', PLATINUM: '#8b5cf6', ENTERPRISE: '#ec4899'
@@ -90,31 +89,6 @@ function StatCard({ title, value, prefix, suffix, color, trend, trendValue, icon
                 </div>
             </div>
         </Card>
-    );
-}
-
-// Mini chart component
-function MiniChart({ data, dataKey, color }: { data: any[], dataKey: string, color: string }) {
-    return (
-        <div style={{ height: 50, marginTop: 12 }}>
-            <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data}>
-                    <defs>
-                        <linearGradient id={`gradient-${dataKey}`} x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor={color} stopOpacity={0.3} />
-                            <stop offset="100%" stopColor={color} stopOpacity={0} />
-                        </linearGradient>
-                    </defs>
-                    <Area
-                        type="monotone"
-                        dataKey={dataKey}
-                        stroke={color}
-                        strokeWidth={2}
-                        fill={`url(#gradient-${dataKey})`}
-                    />
-                </AreaChart>
-            </ResponsiveContainer>
-        </div>
     );
 }
 
@@ -421,7 +395,7 @@ export default function DashboardPage() {
                                     innerRadius={50}
                                     paddingAngle={3}
                                 >
-                                    {tierDistributionData.map((entry: any, index: number) => (
+                                    {tierDistributionData.map((_entry: any, index: number) => (
                                         <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                                     ))}
                                 </Pie>
