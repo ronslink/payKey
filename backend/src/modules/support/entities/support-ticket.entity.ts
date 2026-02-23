@@ -28,7 +28,7 @@ export enum TicketCategory {
   BILLING = 'BILLING',
   PAYROLL = 'PAYROLL',
   TECHNICAL = 'TECHNICAL',
-  TAX = 'TAX',
+  ACCOUNT = 'ACCOUNT',
   GENERAL = 'GENERAL',
 }
 

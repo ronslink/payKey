@@ -6,27 +6,27 @@ import '../presentation/providers/support_provider.dart';
 
 // ── Category helpers ────────────────────────────────────────────────────────
 const _categoryIcons = {
+  TicketCategory.BILLING: Icons.receipt_outlined,
   TicketCategory.PAYROLL: Icons.payments_outlined,
-  TicketCategory.TAXES: Icons.receipt_long_outlined,
-  TicketCategory.WALLET: Icons.account_balance_wallet_outlined,
+  TicketCategory.TECHNICAL: Icons.build_outlined,
   TicketCategory.ACCOUNT: Icons.manage_accounts_outlined,
-  TicketCategory.OTHER: Icons.help_outline,
+  TicketCategory.GENERAL: Icons.help_outline,
 };
 
 const _categoryColors = {
+  TicketCategory.BILLING: Color(0xFFF59E0B),
   TicketCategory.PAYROLL: Color(0xFF6366F1),
-  TicketCategory.TAXES: Color(0xFFF59E0B),
-  TicketCategory.WALLET: Color(0xFF10B981),
+  TicketCategory.TECHNICAL: Color(0xFFEF4444),
   TicketCategory.ACCOUNT: Color(0xFF06B6D4),
-  TicketCategory.OTHER: Color(0xFF8B5CF6),
+  TicketCategory.GENERAL: Color(0xFF8B5CF6),
 };
 
 const _categoryLabels = {
+  TicketCategory.BILLING: 'Billing',
   TicketCategory.PAYROLL: 'Payroll',
-  TicketCategory.TAXES: 'Taxes',
-  TicketCategory.WALLET: 'Wallet',
+  TicketCategory.TECHNICAL: 'Technical',
   TicketCategory.ACCOUNT: 'Account',
-  TicketCategory.OTHER: 'Other',
+  TicketCategory.GENERAL: 'General',
 };
 
 // ── Status helpers ──────────────────────────────────────────────────────────

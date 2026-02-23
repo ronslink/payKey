@@ -15,11 +15,11 @@ enum TicketPriority {
 }
 
 enum TicketCategory {
+  BILLING,
   PAYROLL,
-  TAXES,
-  WALLET,
+  TECHNICAL,
   ACCOUNT,
-  OTHER,
+  GENERAL,
 }
 
 class SupportTicket {
@@ -95,17 +95,17 @@ class SupportTicket {
 
   static TicketCategory _parseCategory(String? category) {
     switch (category) {
+      case 'BILLING':
+        return TicketCategory.BILLING;
       case 'PAYROLL':
         return TicketCategory.PAYROLL;
-      case 'TAXES':
-        return TicketCategory.TAXES;
-      case 'WALLET':
-        return TicketCategory.WALLET;
+      case 'TECHNICAL':
+        return TicketCategory.TECHNICAL;
       case 'ACCOUNT':
         return TicketCategory.ACCOUNT;
-      case 'OTHER':
+      case 'GENERAL':
       default:
-        return TicketCategory.OTHER;
+        return TicketCategory.GENERAL;
     }
   }
 }
