@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Post,
   Query,
   Param,
   UseGuards,
@@ -125,13 +126,13 @@ export class AdminController {
   }
 
   @Post('containers/:name/restart')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   async restartContainer(@Param('name') name: string) {
     return this.adminService.restartContainer(name);
   }
 
   @Post('containers/:name/stop')
-  @Roles('ADMIN', 'SUPER_ADMIN')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   async stopContainer(@Param('name') name: string) {
     return this.adminService.stopContainer(name);
   }
