@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import {
@@ -15,6 +15,7 @@ import { LeaveRequest } from '../workers/entities/leave-request.entity';
 import { Property } from '../properties/entities/property.entity';
 import { Transaction } from '../payments/entities/transaction.entity';
 import { Subscription } from '../subscriptions/entities/subscription.entity';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class DataDeletionService {
@@ -42,7 +43,7 @@ export class DataDeletionService {
     @InjectRepository(Subscription)
     private subscriptionRepository: Repository<Subscription>,
     private dataSource: DataSource,
-  ) {}
+  ) { }
 
   /**
    * Create a new deletion request
@@ -53,11 +54,25 @@ export class DataDeletionService {
       where: { email: dto.email.toLowerCase() },
     });
 
+    if (!user) {
+      throw new UnauthorizedException('Invalid email or password.');
+    }
+
+    if (user.passwordHash) {
+      if (!dto.password) {
+        throw new BadRequestException('Password is required to confirm deletion.');
+      }
+      const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash);
+      if (!isPasswordValid) {
+        throw new UnauthorizedException('Invalid email or password.');
+      }
+    }
+
     const request = this.deletionRequestRepository.create({
       email: dto.email.toLowerCase(),
       reason: dto.reason,
       status: DeletionStatus.PENDING,
-      userId: user?.id,
+      userId: user.id,
     });
 
     await this.deletionRequestRepository.save(request);

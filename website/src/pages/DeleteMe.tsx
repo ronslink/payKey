@@ -4,6 +4,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://api.paydome.co';
 
 export default function DeleteMe() {
     const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [reason, setReason] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
@@ -21,7 +22,7 @@ export default function DeleteMe() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ email, reason }),
+                body: JSON.stringify({ email, password, reason }),
             });
 
             if (!response.ok) {
@@ -95,6 +96,20 @@ export default function DeleteMe() {
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="Enter your account email"
                             required
+                            style={styles.input}
+                        />
+                    </div>
+
+                    <div style={styles.formGroup}>
+                        <label htmlFor="password" style={styles.label}>
+                            Password
+                        </label>
+                        <input
+                            type="password"
+                            id="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="Enter your account password (if not Google/Apple)"
                             style={styles.input}
                         />
                     </div>

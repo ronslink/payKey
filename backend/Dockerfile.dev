@@ -10,8 +10,7 @@ COPY package*.json ./
 
 # Install dependencies
 RUN npm ci
-
-# Copy source code ONLY (bypass bind mount issues)
+RUN npm install @types/pg
 COPY . .
 
 # Run dev server

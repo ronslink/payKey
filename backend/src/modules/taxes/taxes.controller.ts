@@ -19,14 +19,30 @@ class CalculateTaxDto {
   grossSalary: number;
 }
 
+class CalculateGrossUpDto {
+  targetNet: number;
+}
+
 @Controller('taxes')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class TaxesController {
-  constructor(private readonly taxesService: TaxesService) {}
+  constructor(private readonly taxesService: TaxesService) { }
 
   @Post('calculate')
   calculateTaxes(@Body() dto: CalculateTaxDto) {
     return this.taxesService.calculateTaxes(dto.grossSalary);
+  }
+
+  @Post('gross-up')
+  async calculateGrossFromNet(@Body() dto: CalculateGrossUpDto) {
+    const grossSalary = await this.taxesService.calculateGrossFromNet(dto.targetNet);
+    const taxBreakdown = await this.taxesService.calculateTaxes(grossSalary);
+
+    return {
+      targetNet: dto.targetNet,
+      grossSalary,
+      taxBreakdown
+    };
   }
 
   @Post('tables')

@@ -8,6 +8,12 @@ extension TaxService on ApiService {
     });
   }
 
+  Future<Response> calculateGrossFromNet(double targetNet) async {
+    return dio.post('/taxes/gross-up', data: {
+      'targetNet': targetNet,
+    });
+  }
+
   Future<Response> getTaxSubmissions() async {
     return dio.get('/taxes/submissions');
   }

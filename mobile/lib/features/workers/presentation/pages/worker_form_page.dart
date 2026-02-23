@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/models/worker_model.dart';
+import '../../../../core/network/api_service.dart';
 
 import '../../../settings/providers/settings_provider.dart';
 import '../providers/workers_provider.dart';
@@ -83,6 +85,11 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
   String? _selectedPropertyId;
   bool _isSaving = false;
 
+  bool _isNetPayTarget = false;
+  Timer? _debounce;
+  double? _calculatedGross;
+  bool _isCalculatingGross = false;
+
   // ---------------------------------------------------------------------------
   // Lifecycle
   // ---------------------------------------------------------------------------
@@ -91,11 +98,14 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
   void initState() {
     super.initState();
     _controllers = _WorkerFormControllers();
+    _controllers.salary.addListener(_onSalaryChanged);
     _initializeFormData();
   }
 
   @override
   void dispose() {
+    _debounce?.cancel();
+    _controllers.salary.removeListener(_onSalaryChanged);
     _controllers.dispose();
     super.dispose();
   }
@@ -121,6 +131,53 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
       // We can load it here if we want the dropdown to show it initially.
       // For now, let's leave it null and let the user select or system default.
     }
+  }
+
+  void _onSalaryChanged() {
+    if (!_isNetPayTarget || _employmentType != 'FIXED') return;
+
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    
+    final text = _controllers.salary.text.trim();
+    if (text.isEmpty) {
+      setState(() {
+        _calculatedGross = null;
+        _isCalculatingGross = false;
+      });
+      return;
+    }
+
+    final targetNet = double.tryParse(text);
+    if (targetNet == null || targetNet <= 0) {
+      setState(() {
+        _calculatedGross = null;
+        _isCalculatingGross = false;
+      });
+      return;
+    }
+
+    setState(() => _isCalculatingGross = true);
+    
+    _debounce = Timer(const Duration(milliseconds: 600), () async {
+      try {
+        final api = ref.read(apiServiceProvider);
+        final response = await api.taxes.calculateGrossFromNet(targetNet);
+        
+        if (mounted) {
+          setState(() {
+            _calculatedGross = (response.data['grossSalary'] as num).toDouble();
+            _isCalculatingGross = false;
+          });
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _calculatedGross = null;
+            _isCalculatingGross = false;
+          });
+        }
+      }
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -174,7 +231,9 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
     return CreateWorkerRequest(
       name: _controllers.name.trimmedText,
       phoneNumber: _controllers.phone.trimmedText,
-      salaryGross: _controllers.salary.doubleValue,
+      salaryGross: _employmentType == 'FIXED' && _isNetPayTarget && _calculatedGross != null 
+          ? _calculatedGross! 
+          : _controllers.salary.doubleValue,
       startDate: _startDate,
       email: _controllers.email.nullableText,
       idNumber: _controllers.idNumber.nullableText,
@@ -205,7 +264,9 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
     return UpdateWorkerRequest(
       name: _controllers.name.trimmedText,
       phoneNumber: _controllers.phone.trimmedText,
-      salaryGross: _controllers.salary.doubleValue,
+      salaryGross: _employmentType == 'FIXED' && _isNetPayTarget && _calculatedGross != null 
+          ? _calculatedGross! 
+          : _controllers.salary.doubleValue,
       startDate: _startDate,
       email: _controllers.email.nullableText,
       idNumber: _controllers.idNumber.nullableText,
@@ -298,6 +359,21 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
                 onPropertyIdChanged: (id) => setState(() => _selectedPropertyId = id),
                 properties: properties,
                 showPropertySelector: isPlatinum,
+                isNetPayTarget: _isNetPayTarget,
+                onNetPayTargetChanged: (val) {
+                  setState(() {
+                    _isNetPayTarget = val;
+                    if (!val) {
+                      _calculatedGross = null;
+                      _isCalculatingGross = false;
+                      _debounce?.cancel();
+                    } else {
+                      _onSalaryChanged();
+                    }
+                  });
+                },
+                isCalculatingGross: _isCalculatingGross,
+                calculatedGross: _calculatedGross,
               ),
               const SizedBox(height: 24),
               _PaymentDetailsSection(
@@ -641,6 +717,11 @@ class _EmploymentDetailsSection extends StatelessWidget {
   final ValueChanged<String?> onPropertyIdChanged;
   final List<dynamic> properties; // Using dynamic or PropertyModel if available
   final bool showPropertySelector;
+  
+  final bool isNetPayTarget;
+  final ValueChanged<bool> onNetPayTargetChanged;
+  final bool isCalculatingGross;
+  final double? calculatedGross;
 
   const _EmploymentDetailsSection({
     required this.controllers,
@@ -652,6 +733,10 @@ class _EmploymentDetailsSection extends StatelessWidget {
     required this.onPropertyIdChanged,
     required this.properties,
     required this.showPropertySelector,
+    required this.isNetPayTarget,
+    required this.onNetPayTargetChanged,
+    required this.isCalculatingGross,
+    required this.calculatedGross,
   });
 
   @override
@@ -737,13 +822,62 @@ class _EmploymentDetailsSection extends StatelessWidget {
           ),
         ),
 
+        if (employmentType == 'FIXED') ...[
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Specify Target Net Pay', style: TextStyle(fontWeight: FontWeight.w500)),
+              Switch(
+                value: isNetPayTarget,
+                onChanged: onNetPayTargetChanged,
+                activeTrackColor: _AppColors.primary,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+        ],
+
         _FormTextField(
           controller: controllers.salary,
-          label: 'Basic Salary (KES)',
+          label: (employmentType == 'FIXED' && isNetPayTarget) ? 'Target Net Pay (KES)' : 'Basic Salary (KES)',
           hint: '0.00',
           keyboardType: TextInputType.number,
           isRequired: true,
         ),
+        
+        if (employmentType == 'FIXED' && isNetPayTarget) ...[
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
+            child: Row(
+              children: [
+                if (isCalculatingGross)
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else
+                  const Icon(Icons.info_outline, size: 16, color: Colors.grey),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    isCalculatingGross 
+                        ? 'Calculating required gross salary...'
+                        : calculatedGross != null 
+                            ? 'Calculated Required Gross: ${calculatedGross!.toStringAsFixed(2)} KES'
+                            : 'Enter target net pay to calculate gross salary',
+                    style: TextStyle(
+                      color: calculatedGross != null ? _AppColors.success : Colors.grey[700],
+                      fontSize: 13,
+                      fontWeight: calculatedGross != null ? FontWeight.w500 : FontWeight.normal,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ] else const SizedBox(height: 8),
         Row(
           children: [
             Expanded(

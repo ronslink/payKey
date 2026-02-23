@@ -785,6 +785,10 @@ class TaxEndpoints extends BaseEndpoints {
     return _api.post('/taxes/calculate', data: {'grossSalary': grossSalary});
   }
 
+  Future<Response> calculateGrossFromNet(double targetNet) {
+    return _api.post('/taxes/gross-up', data: {'targetNet': targetNet});
+  }
+
   Future<Response> getCurrentTable() => _api.get('/taxes/current');
 
   Future<Response> getComplianceStatus() => _api.get('/taxes/compliance');

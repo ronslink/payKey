@@ -26,7 +26,7 @@ export class TaxesService {
     private taxConfigService: TaxConfigService,
     private usersService: UsersService,
     private activitiesService: ActivitiesService,
-  ) {}
+  ) { }
 
   async createTaxTable(data: Partial<TaxTable>): Promise<TaxTable> {
     const taxTable = this.taxTableRepository.create(data);
@@ -261,6 +261,55 @@ export class TaxesService {
   async calculateNetPay(grossSalary: number): Promise<number> {
     const taxes = await this.calculateTaxes(grossSalary);
     return Math.round((grossSalary - taxes.totalDeductions) * 100) / 100;
+  }
+
+  /**
+   * Calculate the Gross Salary required to achieve a specific Target Net Pay.
+   * Uses a binary search algorithm to find the exact gross amount.
+   */
+  async calculateGrossFromNet(targetNet: number, date: Date = new Date()): Promise<number> {
+    // Edge case: if they want 0 net pay, gross is 0
+    if (targetNet <= 0) return 0;
+
+    // The Gross Pay will always be at least the Net Pay
+    let lowGross = targetNet;
+
+    // Make an initial high guess (e.g., double the net pay)
+    let highGross = targetNet * 2;
+
+    // 1. Ensure our highGross guess actually produces a net pay higher than target
+    // In rare high-tax scenarios, double might not be enough
+    while (true) {
+      const taxes = await this.calculateTaxes(highGross, date);
+      const net = highGross - taxes.totalDeductions;
+      if (net >= targetNet) break;
+      highGross *= 2;
+    }
+
+    // 2. Perform Binary Search
+    const epsilon = 0.01; // Precision to within 1 cent (KES 0.01)
+    let guessedGross = (lowGross + highGross) / 2;
+
+    // Max 50 iterations is more than enough for 0.01 precision across billions of shilings
+    for (let i = 0; i < 50; i++) {
+      guessedGross = (lowGross + highGross) / 2;
+
+      const taxes = await this.calculateTaxes(guessedGross, date);
+      const currentNet = guessedGross - taxes.totalDeductions;
+
+      // If we are within 1 cent of the target, we found our gross pay
+      if (Math.abs(currentNet - targetNet) <= epsilon) {
+        break;
+      }
+
+      if (currentNet < targetNet) {
+        lowGross = guessedGross; // Guess was too low
+      } else {
+        highGross = guessedGross; // Guess was too high
+      }
+    }
+
+    return Math.round(guessedGross * 100) / 100;
   }
 
   /**
