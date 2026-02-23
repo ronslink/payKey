@@ -13,10 +13,10 @@ export class AdminAuditLog {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({ type: 'uuid', nullable: true })
   adminUserId: string;
 
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'adminUserId' })
   adminUser: User;
 
