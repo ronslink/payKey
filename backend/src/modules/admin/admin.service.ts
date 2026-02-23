@@ -54,7 +54,7 @@ export class AdminService {
     private readonly configService: ConfigService,
     private readonly exchangeRateService: ExchangeRateService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
-  ) {}
+  ) { }
 
   // ─── Analytics Dashboard ───────────────────────────────────────────────────
 
@@ -64,6 +64,22 @@ export class AdminService {
     if (cached) {
       return { ...cached, displayCurrency };
     }
+
+    const rates: Record<string, number> = {};
+    const getRate = async (from: string, to: string) => {
+      if (!from || from === to) return 1;
+      const key = `${from}_${to}`;
+      if (rates[key] !== undefined) return rates[key];
+      try {
+        const rate = await this.exchangeRateService.getLatestRate(from, to);
+        rates[key] = rate;
+        return rate;
+      } catch (e) {
+        this.logger.warn(`Could not get exchange rate for ${from} -> ${to}, using 1:1`);
+        rates[key] = 1;
+        return 1;
+      }
+    };
 
     // Get exchange rate for conversions
     let exchangeRate = 1;
@@ -88,8 +104,8 @@ export class AdminService {
       newUsers7d,
       totalWorkers,
       activeWorkers,
-      totalRevenue,
-      monthlyRevenue,
+      totalRevenueData,
+      monthlyRevenueData,
       subscriptionBreakdown,
       payrollsProcessed,
       totalPayrollVolume,
@@ -134,24 +150,46 @@ export class AdminService {
       this.dataSource
         .query(
           `
-        SELECT COALESCE(SUM(sp.amount), 0) as total
-        FROM subscription_payments sp
-        WHERE sp.status = 'COMPLETED'
+        SELECT currency, COALESCE(SUM(amount), 0) as total
+        FROM subscription_payments
+        WHERE status = 'COMPLETED'
+        GROUP BY currency
       `,
         )
-        .then((r) => parseFloat(r[0]?.total || '0')),
+        .then(async (rows) => {
+          let sum = 0;
+          let originalSum = 0;
+          for (const row of rows) {
+            const amount = parseFloat(row.total);
+            originalSum += amount;
+            const rate = await getRate(row.currency || 'USD', displayCurrency);
+            sum += amount * rate;
+          }
+          return { sum, originalSum };
+        }),
 
       // Revenue this month
       this.dataSource
         .query(
           `
-        SELECT COALESCE(SUM(sp.amount), 0) as total
-        FROM subscription_payments sp
-        WHERE sp.status = 'COMPLETED'
-          AND sp."createdAt" >= DATE_TRUNC('month', NOW())
+        SELECT currency, COALESCE(SUM(amount), 0) as total
+        FROM subscription_payments
+        WHERE status = 'COMPLETED'
+          AND "createdAt" >= DATE_TRUNC('month', NOW())
+        GROUP BY currency
       `,
         )
-        .then((r) => parseFloat(r[0]?.total || '0')),
+        .then(async (rows) => {
+          let sum = 0;
+          let originalSum = 0;
+          for (const row of rows) {
+            const amount = parseFloat(row.total);
+            originalSum += amount;
+            const rate = await getRate(row.currency || 'USD', displayCurrency);
+            sum += amount * rate;
+          }
+          return { sum, originalSum };
+        }),
 
       // Subscription tier distribution
       this.dataSource.query(`
@@ -201,17 +239,38 @@ export class AdminService {
     ]);
 
     // Revenue chart — last 12 months
-    const revenueChart = await this.dataSource.query(`
+    const revenueChartRaw = await this.dataSource.query(`
       SELECT
         TO_CHAR(DATE_TRUNC('month', sp."createdAt"), 'Mon YYYY') as month,
         DATE_TRUNC('month', sp."createdAt") as month_date,
+        sp.currency,
         COALESCE(SUM(sp.amount), 0) as revenue
       FROM subscription_payments sp
       WHERE sp.status = 'COMPLETED'
         AND sp."createdAt" >= NOW() - INTERVAL '12 months'
-      GROUP BY DATE_TRUNC('month', sp."createdAt")
+      GROUP BY DATE_TRUNC('month', sp."createdAt"), TO_CHAR(DATE_TRUNC('month', sp."createdAt"), 'Mon YYYY'), sp.currency
       ORDER BY month_date ASC
     `);
+
+    const revenueByMonthMap = new Map();
+    for (const row of revenueChartRaw) {
+      const rate = await getRate(row.currency || 'USD', displayCurrency);
+      const amount = parseFloat(row.revenue);
+      const convertedAmount = amount * rate;
+
+      if (!revenueByMonthMap.has(row.month)) {
+        revenueByMonthMap.set(row.month, {
+          month: row.month,
+          revenue: convertedAmount,
+          revenueOriginal: amount,
+        });
+      } else {
+        const existing = revenueByMonthMap.get(row.month);
+        existing.revenue += convertedAmount;
+        existing.revenueOriginal += amount;
+      }
+    }
+    const revenueChart = Array.from(revenueByMonthMap.values());
 
     // Payroll volume chart — last 12 months
     const payrollChart = await this.dataSource.query(`
@@ -235,25 +294,21 @@ export class AdminService {
         newUsers7d,
         totalWorkers,
         activeWorkers,
-        totalRevenue: totalRevenue * exchangeRate,
-        monthlyRevenue: monthlyRevenue * exchangeRate,
+        totalRevenue: totalRevenueData.sum,
+        monthlyRevenue: monthlyRevenueData.sum,
         payrollsProcessed,
         totalPayrollVolume,
         openSupportTickets,
         totalPortalLinks,
         pendingPortalInvites,
         // Original values before conversion
-        totalRevenueOriginal: totalRevenue,
-        monthlyRevenueOriginal: monthlyRevenue,
+        totalRevenueOriginal: totalRevenueData.originalSum,
+        monthlyRevenueOriginal: monthlyRevenueData.originalSum,
       },
       displayCurrency,
       exchangeRate: { rate: exchangeRate, source: rateSource },
       charts: {
-        revenueByMonth: revenueChart.map((r: any) => ({
-          month: r.month,
-          revenue: parseFloat(r.revenue) * exchangeRate,
-          revenueOriginal: parseFloat(r.revenue),
-        })),
+        revenueByMonth: revenueChart,
         payrollByMonth: payrollChart.map((r: any) => ({
           month: r.month,
           payrolls: parseInt(r.payrolls),
