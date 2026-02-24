@@ -2,16 +2,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     Row, Col, Card, Tag, Typography, Alert, Progress, List, Button, Statistic,
     Badge, Space, Tooltip, Divider, Empty, Popconfirm, message, Avatar,
-    Tabs, Descriptions, Skeleton, Timeline, Spin, Table
+    Descriptions, Skeleton, Timeline, Spin, Table
 } from 'antd';
 import {
     DatabaseOutlined, HddOutlined, CloudServerOutlined, ThunderboltOutlined,
-    ReloadOutlined, SyncOutlined, CheckCircleOutlined, ExclamationCircleOutlined,
-    ClockCircleOutlined, DashboardOutlined, ToolOutlined, WarningOutlined,
-    ContainerOutlined, ArrowUpOutlined, ArrowDownOutlined, DeleteOutlined,
-    RedoOutlined, LineChartOutlined, GlobalOutlined, SafetyCertificateOutlined,
-    BackwardOutlined, ClusterOutlined, RiseOutlined, FallOutlined, ApiOutlined,
-    SecurityScanOutlined, CloudOutlined
+    ReloadOutlined, CheckCircleOutlined, ExclamationCircleOutlined,
+    ClockCircleOutlined, DashboardOutlined, WarningOutlined,
+    ContainerOutlined, ArrowUpOutlined, ArrowDownOutlined,
+    RedoOutlined, ClusterOutlined
 } from '@ant-design/icons';
 import { useState, useCallback } from 'react';
 import { adminAnalytics, adminOperations } from '../api/client';
@@ -19,13 +17,12 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartTooltip,
-    ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area
+    ResponsiveContainer
 } from 'recharts';
 
 dayjs.extend(relativeTime);
 
-const { Title, Text, Paragraph } = Typography;
-const { TabPane } = Tabs;
+const { Title, Text } = Typography;
 
 interface InfraData {
     database: any;
@@ -247,7 +244,6 @@ function ContainerCard({ container, onRestart }: { container: any; onRestart: (n
 }
 
 export default function InfraPage() {
-    const [activeTab, setActiveTab] = useState('overview');
     const [refreshing, setRefreshing] = useState(false);
     const queryClient = useQueryClient();
 
@@ -321,11 +317,6 @@ export default function InfraPage() {
         name: t.table.length > 20 ? t.table.substring(0, 20) + '...' : t.table,
         rows: t.rows,
     })) || [];
-
-    const containerStatusData = docker?.containers ? [
-        { name: 'Running', value: docker.containers.filter((c: any) => c.status === 'running').length, color: '#10b981' },
-        { name: 'Stopped', value: docker.containers.filter((c: any) => c.status !== 'running').length, color: '#ef4444' },
-    ] : [];
 
     return (
         <div style={{ background: '#f8fafc', minHeight: '100vh', padding: 24 }}>
