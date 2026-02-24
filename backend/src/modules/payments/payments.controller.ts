@@ -432,6 +432,12 @@ export class PaymentsController {
     let { invoice_id, tracking_id, state, api_ref, value, from_data, to_data } =
       body;
 
+    // B2C batch webhooks use `status` at the top level (not `state`).
+    // STK deposit webhooks use `state`. Normalise so both paths use `state`.
+    if (!state && body.status) {
+      state = body.status;
+    }
+
     // HANDLE INTRA-WALLET TRANSFER EVENTS
     // These events don't have top-level invoice_id/tracking_id but have nested data
     if (to_data && to_data.transaction) {

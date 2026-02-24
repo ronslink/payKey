@@ -480,10 +480,22 @@ export class PayrollService {
       query.workerId = In(workerIds);
     }
 
-    const records = await this.payrollRepository.find({
+    const allRecords = await this.payrollRepository.find({
       where: query,
       relations: ['worker', 'payPeriod'],
     });
+
+    // Filter out records for terminated/inactive workers — they should not be paid
+    // even if a stale draft record exists from before the termination
+    const records = allRecords.filter((r) => r.worker.isActive);
+    if (allRecords.length !== records.length) {
+      const skipped = allRecords
+        .filter((r) => !r.worker.isActive)
+        .map((r) => r.worker.name);
+      this.logger.warn(
+        `Skipping ${skipped.length} payroll record(s) for inactive/terminated workers: ${skipped.join(', ')}`,
+      );
+    }
 
     if (records.length === 0) {
       // Check if there are already finalized records (might be a retry)
