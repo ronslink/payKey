@@ -1,16 +1,16 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import {
     Row, Col, Card, Tag, Typography, Alert, Progress, Button, Statistic,
-    Badge, Space, Empty, message, Descriptions, Skeleton
+    Badge, Space, Empty, Descriptions, Skeleton
 } from 'antd';
 import {
     DatabaseOutlined, HddOutlined, CloudServerOutlined, ThunderboltOutlined,
-    ReloadOutlined, CheckCircleOutlined, ExclamationCircleOutlined,
+    CheckCircleOutlined, ExclamationCircleOutlined,
     ClockCircleOutlined, DashboardOutlined,
     ContainerOutlined, ClusterOutlined
 } from '@ant-design/icons';
-import { useState, useCallback } from 'react';
-import { adminAnalytics, adminOperations } from '../api/client';
+import { useState } from 'react';
+import { adminAnalytics } from '../api/client';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import {
@@ -176,7 +176,6 @@ function ContainerCard({ container }: { container: any }) {
 
 export default function InfraPage() {
     const [refreshing, setRefreshing] = useState(false);
-    const queryClient = useQueryClient();
 
     const { data, isLoading, error, refetch, dataUpdatedAt } = useQuery<InfraData>({
         queryKey: ['admin-infra'],
@@ -184,11 +183,11 @@ export default function InfraPage() {
         refetchInterval: 30_000,
     });
 
-    const handleRefresh = useCallback(async () => {
+    const handleRefresh = async () => {
         setRefreshing(true);
         await refetch();
         setRefreshing(false);
-    }, [refetch]);
+    };
 
     const lastUpdated = dataUpdatedAt ? dayjs(dataUpdatedAt).fromNow() : '—';
 
