@@ -8,6 +8,7 @@ import {
   Transaction,
   TransactionType,
   TransactionStatus,
+  PaymentMethodType,
 } from './entities/transaction.entity';
 import { IntaSendService } from './intasend.service';
 import {
@@ -652,7 +653,7 @@ export class PayrollPaymentService {
           currency: 'KES',
           type: TransactionType.SALARY_PAYOUT,
           status: TransactionStatus.SUCCESS,
-          paymentMethod: 'CASH',
+          paymentMethod: PaymentMethodType.CASH,
           metadata: {
             payrollRecordId: record.id,
             workerName: record.worker.name,

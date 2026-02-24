@@ -32,6 +32,7 @@ export enum PaymentMethodType {
   CARD = 'CARD',
   WALLET = 'WALLET',
   STRIPE = 'STRIPE',
+  CASH = 'CASH',
   UNKNOWN = 'UNKNOWN',
 }
 
