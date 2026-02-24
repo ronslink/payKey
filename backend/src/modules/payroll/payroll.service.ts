@@ -530,11 +530,22 @@ export class PayrollService {
         `Payroll finalization halted due to ${payoutResults.failureCount} payment failures.`,
       );
 
-      // Revert records to DRAFT to allow retry
-      await this.payrollRepository.update(
-        { payPeriodId, userId },
-        { status: PayrollStatus.DRAFT },
-      );
+      // Revert only the records processed in this run back to DRAFT (not already-paid records)
+      const revertIds = updatedRecords
+        .filter((r) => {
+          const result = payoutResults.results.find(
+            (res: any) => res.workerId === r.workerId,
+          );
+          return !result?.success;
+        })
+        .map((r) => r.id);
+
+      if (revertIds.length > 0) {
+        await this.payrollRepository.update(
+          { id: In(revertIds) },
+          { status: PayrollStatus.DRAFT },
+        );
+      }
 
       throw new BadRequestException({
         message: 'Payroll finalization failed due to payment errors.',

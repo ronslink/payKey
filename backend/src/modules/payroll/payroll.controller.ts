@@ -323,12 +323,13 @@ export class PayrollController {
   async finalizePayroll(
     @Request() req: AuthenticatedRequest,
     @Param('payPeriodId') payPeriodId: string,
-    @Body() body: { skipPayout?: boolean } = {},
+    @Body() body: { skipPayout?: boolean; workerIds?: string[] } = {},
   ) {
     return this.payrollService.finalizePayroll(
       req.user.userId,
       payPeriodId,
       body.skipPayout ?? false,
+      body.workerIds,
     );
   }
 
