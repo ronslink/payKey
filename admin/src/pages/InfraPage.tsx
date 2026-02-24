@@ -1,14 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     Row, Col, Card, Tag, Typography, Alert, Progress, Button, Statistic,
-    Badge, Space, Divider, Empty, message, Descriptions, Skeleton
+    Badge, Space, Empty, message, Descriptions, Skeleton
 } from 'antd';
 import {
     DatabaseOutlined, HddOutlined, CloudServerOutlined, ThunderboltOutlined,
     ReloadOutlined, CheckCircleOutlined, ExclamationCircleOutlined,
-    ClockCircleOutlined, DashboardOutlined, WarningOutlined,
-    ContainerOutlined, ArrowUpOutlined, ArrowDownOutlined,
-    RedoOutlined, ClusterOutlined
+    ClockCircleOutlined, DashboardOutlined,
+    ContainerOutlined, ClusterOutlined
 } from '@ant-design/icons';
 import { useState, useCallback } from 'react';
 import { adminAnalytics, adminOperations } from '../api/client';
@@ -130,7 +129,7 @@ function ResourceGauge({ percent, title, color }: { percent: number; title: stri
 }
 
 // Compact container card
-function ContainerCard({ container, onRestart }: { container: any; onRestart: (name: string) => void }) {
+function ContainerCard({ container }: { container: any }) {
     const isHealthy = container.status === 'running' || container.healthy;
     
     return (
@@ -180,65 +179,6 @@ export default function InfraPage() {
     const queryClient = useQueryClient();
 
     const { data, isLoading, error, refetch, dataUpdatedAt } = useQuery<InfraData>({
-        queryKey: ['admin-infra'],
-        queryFn: adminAnalytics.infra,
-        refetchInterval: 30_000,
-    });
-
-    const containerAction = useMutation({
-        mutationFn: ({ action, container }: { action: string; container: string }) => {
-            if (action === 'restart') return adminOperations.restartContainer(container);
-            return Promise.resolve();
-        },
-        onSuccess: () => {
-            message.success('Container restarted');
-            queryClient.invalidateQueries({ queryKey: ['admin-infra'] });
-        },
-        onError: (error: any) => {
-            message.error(error.message || 'Action failed');
-        },
-    });
-
-    const handleRefresh = useCallback(async () => {
-        setRefreshing(true);
-        await refetch();
-        setRefreshing(false);
-    }, [refetch]);
-
-    const handleRestart = useCallback((containerName: string) => {
-        containerAction.mutate({ action: 'restart', container: containerName });
-    }, [containerAction]);
-
-    const lastUpdated = dataUpdatedAt ? dayjs(dataUpdatedAt).fromNow() : '—';
-
-    if (isLoading && !data) {
-        return (
-            <div style={{ padding: 16 }}>
-                <Skeleton active paragraph={{ rows: 4 }} />
-            </div>
-        );
-    }
-
-    if (error && !data) {
-        return (
-            <Alert
-                type="error"
-                message="Failed to load infrastructure data"
-                description={error instanceof Error ? error.message : 'Unknown error'}
-                showIcon
-                action={<Button icon={<ReloadOutlined />} onClick={() => refetch()}>Retry</Button>}
-            />
-        );
-    }
-
-    const { database, disk, memory, redis, docker } = data!;
-
-    const tableSizeData = database?.topTables?.slice(0, 6).map((t: any) => ({
-        name: t.table.length > 15 ? t.table.substring(0, 15) + '...' : t.table,
-        rows: t.rows,
-    })) || [];
-
-    return (
         <div style={{ background: '#f8fafc', minHeight: '100vh', padding: 16 }}>
             <style>{`
                 .infra-card { transition: all 0.2s ease; border-radius: 12px; }
@@ -392,7 +332,7 @@ export default function InfraPage() {
                             <Row gutter={[8, 8]}>
                                 {docker?.containers?.slice(0, 4).map((c: any) => (
                                     <Col xs={24} sm={12} key={c.name}>
-                                        <ContainerCard container={c} onRestart={handleRestart} />
+                                        <ContainerCard container={c} />
                                     </Col>
                                 ))}
                             </Row>
