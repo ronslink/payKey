@@ -265,7 +265,7 @@ export default function InfraPage() {
                 <Space>
                     <Tag color="blue"><ClusterOutlined /> {docker?.containers?.length || 0} Services</Tag>
                     <Tag color={database?.status === 'healthy' ? 'green' : 'red'}>{database?.status}</Tag>
-                    <Button icon={<ReloadOutlined spin={refreshing />} onClick={handleRefresh} size="small">Refresh</Button>
+                    <Button onClick={handleRefresh} loading={refreshing} size="small">Refresh</Button>
                 </Space>
             </div>
 
