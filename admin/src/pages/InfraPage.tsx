@@ -38,7 +38,7 @@ interface InfraData {
 }
 
 // Enhanced health badge with detailed status
-function HealthBadge({ status, showPulse = false, size = 'default' }: { status: string; showPulse?: boolean; size?: 'small' | 'default' }) {
+function HealthBadge({ status, showPulse = false }: { status: string; showPulse?: boolean }) {
     const normalized = status?.toLowerCase();
     const healthy = ['healthy', 'ok', 'running', 'up'].includes(normalized);
     const unavailable = normalized === 'unavailable' || normalized === 'down';
@@ -135,8 +135,8 @@ function StatCard({ title, value, suffix, prefix, icon, color, trend, subtitle, 
 }
 
 // Enhanced circular gauge
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function ResourceGauge({ percent, title, color, size = 140, showLabel = true }: { percent: number; title?: string; color?: string; size?: number; showLabel?: boolean }) {
-    const _size = size || 140; // Use underscore prefix to avoid TS warning
     const getColor = () => {
         if (percent > 90) return '#ef4444';
         if (percent > 75) return '#f59e0b';
@@ -148,12 +148,12 @@ function ResourceGauge({ percent, title, color, size = 140, showLabel = true }: 
 
     return (
         <div style={{ textAlign: 'center', padding: 16 }}>
-            <div style={{ position: 'relative', width: _size, height: _size, margin: '0 auto' }}>
+            <div style={{ position: 'relative', width: size, height: size, margin: '0 auto' }}>
                 <Progress
                     type="circle"
                     percent={percent}
                     strokeColor={gaugeColor}
-                    width={_size}
+                    width={size}
                     strokeWidth={10}
                     trailColor="#e5e7eb"
                     format={(pct) => (
