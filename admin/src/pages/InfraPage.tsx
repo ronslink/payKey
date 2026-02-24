@@ -1,8 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-    Row, Col, Card, Tag, Typography, Alert, Progress, List, Button, Statistic,
-    Badge, Space, Tooltip, Divider, Empty, Popconfirm, message, Avatar,
-    Descriptions, Skeleton, Timeline, Spin, Table
+    Row, Col, Card, Tag, Typography, Alert, Progress, Button, Statistic,
+    Badge, Space, Divider, Empty, message, Descriptions, Skeleton
 } from 'antd';
 import {
     DatabaseOutlined, HddOutlined, CloudServerOutlined, ThunderboltOutlined,
@@ -136,7 +135,8 @@ function StatCard({ title, value, suffix, prefix, icon, color, trend, subtitle, 
 }
 
 // Enhanced circular gauge
-function ResourceGauge({ percent, title, color, size = 140, showLabel = true }: any) {
+function ResourceGauge({ percent, title, color, size = 140, showLabel = true }: { percent: number; title?: string; color?: string; size?: number; showLabel?: boolean }) {
+    const _size = size || 140; // Use underscore prefix to avoid TS warning
     const getColor = () => {
         if (percent > 90) return '#ef4444';
         if (percent > 75) return '#f59e0b';
@@ -148,12 +148,12 @@ function ResourceGauge({ percent, title, color, size = 140, showLabel = true }: 
 
     return (
         <div style={{ textAlign: 'center', padding: 16 }}>
-            <div style={{ position: 'relative', width: size, height: size, margin: '0 auto' }}>
+            <div style={{ position: 'relative', width: _size, height: _size, margin: '0 auto' }}>
                 <Progress
                     type="circle"
                     percent={percent}
                     strokeColor={gaugeColor}
-                    width={size}
+                    width={_size}
                     strokeWidth={10}
                     trailColor="#e5e7eb"
                     format={(pct) => (
