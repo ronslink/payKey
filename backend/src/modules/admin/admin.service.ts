@@ -337,6 +337,7 @@ export class AdminService {
 
     const redisInfo = await this.getRedisInfo();
     const dockerInfo = await this.getDockerInfo();
+    const serverInfo = this.getServerInfo();
 
     return {
       database: dbHealth,
@@ -344,6 +345,7 @@ export class AdminService {
       memory: memInfo,
       redis: redisInfo,
       docker: dockerInfo,
+      server: serverInfo,
       timestamp: new Date().toISOString(),
     };
   }
@@ -459,18 +461,56 @@ export class AdminService {
     try {
       const containers = await docker.listContainers({ all: true });
 
-      const containerList = containers.map((c) => ({
-        name: c.Names[0]?.replace(/^\//, ''),
-        status: c.Status,
-        image: c.Image,
-        healthy: c.State === 'running',
-      }));
+      // Get detailed stats for each container
+      const containerList = await Promise.all(
+        containers.map(async (c) => {
+          let cpu = 0;
+          let memory = 0;
+          
+          if (c.State === 'running') {
+            try {
+              const stats = await docker.getContainer(c.Id).stats({ stream: false });
+              const cpuDelta = stats.cpu_stats.cpu_usage.total_usage - stats.precpu_stats.cpu_usage.total_usage;
+              const systemDelta = stats.cpu_stats.system_cpu_usage - stats.precpu_stats.system_cpu_usage;
+              const cpuCount = stats.cpu_stats.online_cpus || 1;
+              cpu = systemDelta > 0 ? Math.round((cpuDelta / systemDelta) * cpuCount * 100) : 0;
+              
+              const memUsage = stats.memory_stats.usage || 0;
+              const memLimit = stats.memory_stats.limit || 1;
+              memory = Math.round((memUsage / memLimit) * 100);
+            } catch (e) {
+              // Ignore stats errors
+            }
+          }
+          
+          return {
+            name: c.Names[0]?.replace(/^\//, ''),
+            status: c.Status,
+            image: c.Image,
+            healthy: c.State === 'running',
+            cpu,
+            memory,
+          };
+        })
+      );
 
       return { status: 'ok', containers: containerList };
     } catch (error: any) {
       this.logger.warn(`Failed to access Docker daemon: ${error.message}`);
       return { status: 'unavailable', containers: [] };
     }
+  }
+
+  private getServerInfo() {
+    const uptime = os.uptime();
+    const loadAvg = os.loadavg();
+    
+    return {
+      uptime: Math.round(uptime),
+      uptimeFormatted: `${Math.floor(uptime / 86400)}d ${Math.floor((uptime % 86400) / 3600)}h`,
+      loadAvg: loadAvg.map(l => Math.round(l * 100) / 100),
+      cpuCount: os.cpus().length,
+    };
   }
 
   // ─── Container Logs ─────────────────────────────────────────────────
