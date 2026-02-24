@@ -340,12 +340,14 @@ export class IntaSendService {
 
     // Sandbox override logic
     const formattedTransactions = transactions.map((t) => {
-      const effectivePhone = this.isLive
-        ? t.account
-        : INTASEND_SANDBOX_TEST_PHONE;
+      // Sanitize phone: strip +, spaces, non-digits — IntaSend requires digits only
+      const rawPhone = this.isLive ? t.account : INTASEND_SANDBOX_TEST_PHONE;
+      const effectivePhone = rawPhone.replace(/[^\d]/g, '');
 
-      // Use the worker's real name; fall back to 'Worker' only if truly missing
-      const effectiveName = t.name && t.name.trim() ? t.name.trim() : 'Worker';
+      // Sanitize name: IntaSend allows letters, numbers, underscores, dashes, spaces only
+      // Strip commas, dots, and any other disallowed characters
+      const rawName = t.name && t.name.trim() ? t.name.trim() : 'Worker';
+      const effectiveName = rawName.replace(/[^a-zA-Z0-9 _-]/g, ' ').replace(/\s+/g, ' ').trim();
 
       return {
         name: effectiveName,
