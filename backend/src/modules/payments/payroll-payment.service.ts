@@ -55,7 +55,7 @@ export class PayrollPaymentService {
     let successCount = 0;
     let failureCount = 0;
 
-    // Separate Bank vs Mobile records
+    // Separate Bank vs Mobile vs Cash records
     const mobileRecords = payrollRecords.filter(
       (r) =>
         !r.worker.paymentMethod ||
@@ -65,6 +65,9 @@ export class PayrollPaymentService {
       ...payrollRecords.filter(
         (r) => r.worker.paymentMethod === PaymentMethod.BANK,
       ),
+    );
+    const cashRecords = payrollRecords.filter(
+      (r) => r.worker.paymentMethod === PaymentMethod.CASH,
     );
 
     // Process Mobile Payments (Batched)
@@ -80,6 +83,12 @@ export class PayrollPaymentService {
       const batch = bankRecords.slice(i, i + BATCH_SIZE);
       const batchResults = await this.processBankBatch(batch);
       allResults.push(...batchResults);
+    }
+
+    // Process Cash Payments — mark as paid (manual cash disbursement)
+    if (cashRecords.length > 0) {
+      const cashResults = await this.processCashBatch(cashRecords);
+      allResults.push(...cashResults);
     }
 
     // Tally results
@@ -601,6 +610,88 @@ export class PayrollPaymentService {
         });
       }
       await this.transactionRepository.save(savedTransactions);
+    }
+
+    return results;
+  }
+
+  /**
+   * Process Cash payments — mark as paid immediately since cash is disbursed manually.
+   * Creates a transaction record for audit purposes and marks the payroll record as paid.
+   */
+  private async processCashBatch(records: PayrollRecord[]) {
+    const results: any[] = [];
+
+    for (const record of records) {
+      if (record.status !== PayrollStatus.FINALIZED) {
+        results.push({
+          workerId: record.workerId,
+          workerName: record.worker.name,
+          success: false,
+          error: `Record ${record.id} is not finalized`,
+        });
+        continue;
+      }
+
+      if (['paid', 'processing'].includes(record.paymentStatus)) {
+        results.push({
+          workerId: record.workerId,
+          workerName: record.worker.name,
+          success: true,
+          message: `Already ${record.paymentStatus}`,
+        });
+        continue;
+      }
+
+      try {
+        // Create an audit transaction for cash payment
+        const transaction = this.transactionRepository.create({
+          userId: record.userId,
+          workerId: record.workerId,
+          amount: Number(record.netSalary),
+          currency: 'KES',
+          type: TransactionType.SALARY_PAYOUT,
+          status: TransactionStatus.SUCCESS,
+          paymentMethod: 'CASH',
+          metadata: {
+            payrollRecordId: record.id,
+            workerName: record.worker.name,
+            provider: 'CASH',
+            cashDisbursement: true,
+            grossSalary: record.grossSalary,
+            netPay: record.netSalary,
+            taxBreakdown: record.taxBreakdown,
+          },
+        });
+        await this.transactionRepository.save(transaction);
+
+        // Mark payroll record as paid
+        record.paymentStatus = 'paid';
+        record.paymentDate = new Date();
+        await this.payrollRecordRepository.save(record);
+
+        this.logger.log(
+          `Cash payment recorded for ${record.worker.name}: KES ${record.netSalary}`,
+        );
+
+        results.push({
+          workerId: record.workerId,
+          workerName: record.worker.name,
+          success: true,
+          message: 'Cash payment recorded — disburse manually',
+        });
+      } catch (err) {
+        this.logger.error(
+          `Failed to record cash payment for ${record.worker.name}:`,
+          err,
+        );
+        results.push({
+          workerId: record.workerId,
+          workerName: record.worker.name,
+          success: false,
+          error: `Cash record failed: ${err.message}`,
+        });
+      }
     }
 
     return results;
