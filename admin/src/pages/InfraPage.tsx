@@ -192,7 +192,39 @@ export default function InfraPage() {
 
     const lastUpdated = dataUpdatedAt ? dayjs(dataUpdatedAt).fromNow() : '—';
 
+    if (isLoading && !data) {
+        return (
+            <div style={{ padding: 16 }}>
+                <Skeleton active paragraph={{ rows: 4 }} />
+            </div>
+        );
+    }
+
+    if (error && !data) {
+        return (
+            <Alert
+                type="error"
+                message="Failed to load infrastructure data"
+                description={error instanceof Error ? error.message : 'Unknown error'}
+                showIcon
+                action={<Button onClick={() => refetch()}>Retry</Button>}
+            />
+        );
+    }
+
+    const { database, disk, memory, redis, docker } = data!;
+
+    const tableSizeData = database?.topTables?.slice(0, 6).map((t: any) => ({
+        name: t.table.length > 15 ? t.table.substring(0, 15) + '...' : t.table,
+        rows: t.rows,
+    })) || [];
+
     return (
+        <div style={{ background: '#f8fafc', minHeight: '100vh', padding: 16 }}>
+            <style>{`
+                .infra-card { transition: all 0.2s ease; border-radius: 12px; }
+                .infra-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+            `}</style>
 
             {/* Header */}
             <div style={{ 
