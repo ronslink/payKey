@@ -179,11 +179,20 @@ export default function InfraPage() {
     const queryClient = useQueryClient();
 
     const { data, isLoading, error, refetch, dataUpdatedAt } = useQuery<InfraData>({
-        <div style={{ background: '#f8fafc', minHeight: '100vh', padding: 16 }}>
-            <style>{`
-                .infra-card { transition: all 0.2s ease; border-radius: 12px; }
-                .infra-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-            `}</style>
+        queryKey: ['admin-infra'],
+        queryFn: adminAnalytics.infra,
+        refetchInterval: 30_000,
+    });
+
+    const handleRefresh = useCallback(async () => {
+        setRefreshing(true);
+        await refetch();
+        setRefreshing(false);
+    }, [refetch]);
+
+    const lastUpdated = dataUpdatedAt ? dayjs(dataUpdatedAt).fromNow() : '—';
+
+    return (
 
             {/* Header */}
             <div style={{ 
