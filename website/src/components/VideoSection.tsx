@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Play } from 'lucide-react';
+import { Play, Video, Target, Lightbulb, Zap } from 'lucide-react';
 
 export function VideoSection() {
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -17,16 +17,17 @@ export function VideoSection() {
     };
 
     return (
-        <section className="section" style={{ background: '#020617' }}>
+        <section className="section" style={{ background: 'var(--dark-bg)' }}>
             <div className="container">
                 <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-                    <div style={{ display: 'inline-block', padding: '0.5rem 1rem', borderRadius: '999px', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', marginBottom: '1rem', fontSize: '0.875rem', fontWeight: 600 }}>
-                        📹 See It In Action
+                    <div className="badge">
+                        <Video className="w-4 h-4" style={{ marginRight: '0.5rem' }} />
+                        See It In Action
                     </div>
                     <h2 style={{ fontSize: '2.5rem', fontWeight: 700, marginBottom: '1rem' }}>
                         Watch Paydome <span className="text-gradient">Simplify Payroll</span>
                     </h2>
-                    <p style={{ fontSize: '1.1rem', color: '#94a3b8', maxWidth: '700px', margin: '0 auto' }}>
+                    <p style={{ fontSize: '1.1rem', color: 'var(--dark-muted)', maxWidth: '700px', margin: '0 auto' }}>
                         Discover how Paydome makes managing domestic workers effortless—from M-Pesa payments to tax compliance.
                     </p>
                 </div>
@@ -35,11 +36,11 @@ export function VideoSection() {
                     {/* Video Container */}
                     <div style={{
                         position: 'relative',
-                        paddingBottom: '56.25%', /* 16:9 aspect ratio */
+                        paddingBottom: '56.25%',
                         borderRadius: '16px',
                         overflow: 'hidden',
-                        boxShadow: '0 20px 60px rgba(59, 130, 246, 0.3)',
-                        background: '#0f172a'
+                        boxShadow: '0 20px 60px oklch(0.55 0.2 265 / 0.2)',
+                        background: 'var(--dark-surface)'
                     }}>
                         <video
                             ref={videoRef}
@@ -56,7 +57,6 @@ export function VideoSection() {
                             onPlay={() => setIsPlaying(true)}
                             onPause={() => setIsPlaying(false)}
                         >
-                            {/* Placeholder video - replace with actual Paydome explainer video */}
                             <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4" />
                             Your browser does not support the video tag.
                         </video>
@@ -73,22 +73,20 @@ export function VideoSection() {
                                     width: '80px',
                                     height: '80px',
                                     borderRadius: '50%',
-                                    background: 'rgba(59, 130, 246, 0.9)',
+                                    background: 'oklch(0.55 0.2 265)',
                                     border: 'none',
                                     cursor: 'pointer',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    transition: 'all 0.3s ease',
-                                    boxShadow: '0 8px 24px rgba(59, 130, 246, 0.4)'
+                                    transition: 'all 150ms ease',
+                                    boxShadow: '0 8px 24px oklch(0.55 0.2 265 / 0.4)'
                                 }}
                                 onMouseEnter={(e) => {
                                     e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1.1)';
-                                    e.currentTarget.style.background = 'rgba(59, 130, 246, 1)';
                                 }}
                                 onMouseLeave={(e) => {
                                     e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1)';
-                                    e.currentTarget.style.background = 'rgba(59, 130, 246, 0.9)';
                                 }}
                             >
                                 <Play size={32} color="white" fill="white" style={{ marginLeft: '4px' }} />
@@ -104,17 +102,17 @@ export function VideoSection() {
                         marginTop: '2rem'
                     }}>
                         <VideoFeature
-                            icon="⚡"
+                            icon={<Zap size={24} />}
                             title="60 Seconds"
                             description="Quick overview of all features"
                         />
                         <VideoFeature
-                            icon="🎯"
+                            icon={<Target size={24} />}
                             title="Real Demo"
                             description="See the actual app in action"
                         />
                         <VideoFeature
-                            icon="💡"
+                            icon={<Lightbulb size={24} />}
                             title="Easy to Follow"
                             description="Clear, step-by-step walkthrough"
                         />
@@ -125,18 +123,12 @@ export function VideoSection() {
     );
 }
 
-function VideoFeature({ icon, title, description }: { icon: string; title: string; description: string }) {
+function VideoFeature({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
     return (
-        <div style={{
-            textAlign: 'center',
-            padding: '1.5rem',
-            background: '#0f172a',
-            borderRadius: '12px',
-            border: '1px solid #1e293b'
-        }}>
-            <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{icon}</div>
-            <h4 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.25rem', color: 'white' }}>{title}</h4>
-            <p style={{ fontSize: '0.875rem', color: '#94a3b8', margin: 0 }}>{description}</p>
+        <div className="card-feature" style={{ textAlign: 'center', padding: '1.5rem' }}>
+            <div style={{ fontSize: '1.5rem', marginBottom: '0.75rem', color: 'var(--dark-primary)' }}>{icon}</div>
+            <h4 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.25rem' }}>{title}</h4>
+            <p style={{ fontSize: '0.875rem', color: 'var(--dark-muted)', margin: 0 }}>{description}</p>
         </div>
     );
 }
