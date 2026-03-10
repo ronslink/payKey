@@ -2,6 +2,7 @@ import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { BullModule } from '@nestjs/bullmq';
 import { WorkersService } from './workers.service';
 import { WorkersController } from './workers.controller';
 import { Worker } from './entities/worker.entity';
@@ -49,6 +50,7 @@ import { UploadsModule } from '../uploads/uploads.module';
     ActivitiesModule,
     forwardRef(() => SubscriptionsModule),
     UploadsModule,
+    BullModule.registerQueue({ name: 'payroll-processing' }),
   ],
   controllers: [
     WorkersController,

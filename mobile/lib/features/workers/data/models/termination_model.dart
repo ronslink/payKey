@@ -77,6 +77,47 @@ enum TerminationReason {
   }
 }
 
+/// How the employer wants to handle the final paycheck.
+/// Must match backend FinalPayMode enum exactly.
+enum FinalPayMode {
+  immediateOffcycle,
+  includeInRegular,
+  defer;
+
+  String get backendValue {
+    switch (this) {
+      case FinalPayMode.immediateOffcycle:
+        return 'immediate_offcycle';
+      case FinalPayMode.includeInRegular:
+        return 'include_in_regular';
+      case FinalPayMode.defer:
+        return 'defer';
+    }
+  }
+
+  String get displayName {
+    switch (this) {
+      case FinalPayMode.immediateOffcycle:
+        return 'Process Now (Off-Cycle)';
+      case FinalPayMode.includeInRegular:
+        return 'Include in Next Payroll Run';
+      case FinalPayMode.defer:
+        return 'Handle Manually Later';
+    }
+  }
+
+  String get description {
+    switch (this) {
+      case FinalPayMode.immediateOffcycle:
+        return 'Creates an off-cycle payment immediately via the worker\'s configured payment method.';
+      case FinalPayMode.includeInRegular:
+        return 'Adds the final pay to the next regular payroll run.';
+      case FinalPayMode.defer:
+        return 'No automatic payment. Useful if paying cash directly.';
+    }
+  }
+}
+
 /// Safely converts a dynamic value to double
 double _toDouble(dynamic value) {
   if (value == null) return 0.0;
@@ -168,6 +209,7 @@ class TerminationRequest {
   final double severancePay;
   final double outstandingPayments;
   final String? notes;
+  final FinalPayMode finalPayMode;
 
   TerminationRequest({
     required this.terminationDate,
@@ -176,6 +218,7 @@ class TerminationRequest {
     this.severancePay = 0,
     this.outstandingPayments = 0,
     this.notes,
+    this.finalPayMode = FinalPayMode.immediateOffcycle,
   });
 
   Map<String, dynamic> toJson() {
@@ -185,6 +228,7 @@ class TerminationRequest {
       'noticePeriodDays': noticePeriodDays,
       'severancePay': severancePay,
       'outstandingPayments': outstandingPayments,
+      'finalPayMode': finalPayMode.backendValue,
       // Omit null-valued optional fields — class-validator @IsOptional()
       // only skips validation when the field is absent, not when null is sent
       if (notes != null) 'notes': notes,

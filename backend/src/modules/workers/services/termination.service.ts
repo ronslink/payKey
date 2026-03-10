@@ -2,21 +2,27 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { Worker } from '../entities/worker.entity';
 import { Termination } from '../entities/termination.entity';
-import { PayrollRecord } from '../../payroll/entities/payroll-record.entity';
-import { PayPeriod } from '../../payroll/entities/pay-period.entity';
+import { PayrollRecord, PayrollStatus } from '../../payroll/entities/payroll-record.entity';
+import { PayPeriod, PayPeriodStatus, PayPeriodFrequency } from '../../payroll/entities/pay-period.entity';
 import { TaxesService } from '../../taxes/taxes.service';
 import {
   CreateTerminationDto,
   FinalPaymentCalculationDto,
+  FinalPayMode,
 } from '../dto/termination.dto';
 
 @Injectable()
 export class TerminationService {
+  private readonly logger = new Logger(TerminationService.name);
+
   constructor(
     @InjectRepository(Worker)
     private workerRepository: Repository<Worker>,
@@ -27,6 +33,8 @@ export class TerminationService {
     @InjectRepository(PayPeriod)
     private payPeriodRepository: Repository<PayPeriod>,
     private taxesService: TaxesService,
+    @InjectQueue('payroll-processing')
+    private readonly payrollQueue: Queue,
   ) {}
 
   /**
@@ -58,8 +66,6 @@ export class TerminationService {
       );
     }
 
-    // Normalise to a real Date regardless of whether caller passed a string
-    // (TypeORM 'date' columns return strings like "2026-02-15") or a Date.
     const termDate = terminationDate instanceof Date
       ? terminationDate
       : new Date(terminationDate as unknown as string);
@@ -71,29 +77,23 @@ export class TerminationService {
     const year = termDate.getFullYear();
     const month = termDate.getMonth();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const daysWorked = termDate.getDate(); // 1-indexed: terminated on 15th → 15 days worked
+    const daysWorked = termDate.getDate();
     const dailyRate = grossSalary / daysInMonth;
     const proratedSalary = dailyRate * daysWorked;
 
-    // Calculate unused leave payout
     const unusedLeaveDays = Math.max(0, worker.leaveBalance || 0);
     const leavePayoutRate = dailyRate;
     const unusedLeavePayout = unusedLeaveDays * leavePayoutRate;
 
-    // Severance pay - entered manually by employer
     const severancePay = 0;
-
-    // Total gross for preview (severance is 0 here; terminateWorker adds the real value)
     const totalGross = proratedSalary + unusedLeavePayout + severancePay;
 
-    // Calculate tax deductions on final payment
     const taxCalculation = await this.taxesService.calculatePayroll(
       worker.id,
       worker.name,
       totalGross,
     );
 
-    // Net pay must not go below 0 (deductions can't exceed gross)
     const totalNet = Math.max(0, taxCalculation.netPay);
 
     return {
@@ -120,7 +120,11 @@ export class TerminationService {
   }
 
   /**
-   * Terminate a worker and create termination record
+   * Terminate a worker and create termination record.
+   * final pay is handled according to dto.finalPayMode:
+   *   - immediate_offcycle (default): create off-cycle PayPeriod + enqueue finalize job
+   *   - include_in_regular: write DRAFT PayrollRecord into current active period
+   *   - defer: skip PayrollRecord creation entirely
    */
   async terminateWorker(
     workerId: string,
@@ -139,19 +143,13 @@ export class TerminationService {
       throw new BadRequestException('Worker is already terminated');
     }
 
-    // Normalise date — dto.terminationDate is an ISO string from the DTO
     const terminationDate = new Date(dto.terminationDate);
     if (isNaN(terminationDate.getTime())) {
       throw new BadRequestException('Invalid termination date provided');
     }
 
-    const finalPayment = await this.calculateFinalPayment(
-      workerId,
-      userId,
-      terminationDate,
-    );
+    const finalPayment = await this.calculateFinalPayment(workerId, userId, terminationDate);
 
-    // Use manual severance and outstanding payments if provided
     const severancePay = dto.severancePay ?? 0;
     const outstandingPayments = dto.outstandingPayments ?? 0;
     const totalGross =
@@ -160,38 +158,56 @@ export class TerminationService {
       severancePay +
       outstandingPayments;
 
-    // Recalculate taxes on total amount
     const taxCalculation = await this.taxesService.calculatePayroll(
       worker.id,
       worker.name,
       totalGross,
     );
 
-    // Find the Pay Period covering this termination date
-    const payPeriod = await this.payPeriodRepository
-      .createQueryBuilder('period')
-      .where('period.userId = :userId', { userId })
-      .andWhere('period.startDate <= :date', { date: terminationDate })
-      .andWhere('period.endDate >= :date', { date: terminationDate })
-      .getOne();
+    const finalPayMode = dto.finalPayMode ?? FinalPayMode.IMMEDIATE_OFFCYCLE;
 
-    if (payPeriod) {
-      // Check if a record already exists
+    // -------------------------------------------------------------------------
+    // Handle final pay record based on employer's chosen mode
+    // -------------------------------------------------------------------------
+    if (finalPayMode === FinalPayMode.DEFER) {
+      // Employer will handle payment manually — no payroll record created
+      this.logger.log(
+        `Termination deferred pay for worker ${workerId}. No PayrollRecord created.`,
+      );
+    } else if (finalPayMode === FinalPayMode.INCLUDE_IN_REGULAR) {
+      // Write a DRAFT record into the current/next active regular period.
+      // The normal payroll run will pick it up.
+      const activePeriod = await this.payPeriodRepository
+        .createQueryBuilder('period')
+        .where('period.userId = :userId', { userId })
+        .andWhere('period.isOffCycle = :isOffCycle', { isOffCycle: false })
+        .andWhere('period.status IN (:...statuses)', {
+          statuses: [PayPeriodStatus.DRAFT, PayPeriodStatus.ACTIVE],
+        })
+        .orderBy('period.startDate', 'ASC')
+        .getOne();
+
+      if (!activePeriod) {
+        throw new BadRequestException(
+          'No active or draft pay period found. Cannot include final pay in regular payroll. ' +
+          'Please create a pay period first or choose a different final pay mode.',
+        );
+      }
+
       let payrollRecord = await this.payrollRecordRepository.findOne({
-        where: { payPeriodId: payPeriod.id, workerId, userId },
+        where: { payPeriodId: activePeriod.id, workerId, userId },
       });
 
       if (!payrollRecord) {
         payrollRecord = this.payrollRecordRepository.create({
-          payPeriodId: payPeriod.id,
+          payPeriodId: activePeriod.id,
           workerId,
           userId,
-          periodStart: payPeriod.startDate,
-          periodEnd: payPeriod.endDate,
+          periodStart: activePeriod.startDate,
+          periodEnd: activePeriod.endDate,
         });
       }
 
-      // Update record with final payment details
       payrollRecord.grossSalary = totalGross;
       payrollRecord.netSalary = Math.max(0, taxCalculation.netPay);
       payrollRecord.taxAmount = taxCalculation.taxBreakdown.paye;
@@ -202,28 +218,90 @@ export class TerminationService {
         paye: taxCalculation.taxBreakdown.paye,
         totalDeductions: taxCalculation.taxBreakdown.totalDeductions,
       };
-
-      // Mark as finalized termination pay
-      payrollRecord.status = 'finalized' as any; // Import Enum if possible, otherwise cast
-      payrollRecord.finalizedAt = new Date();
-      payrollRecord.otherEarnings = severancePay + outstandingPayments; // Track this separately?
+      payrollRecord.otherEarnings = severancePay + outstandingPayments;
       payrollRecord.deductions = {};
+      // Leave as DRAFT so it's processed by the next payroll run
+      payrollRecord.status = PayrollStatus.DRAFT;
+
+      await this.payrollRecordRepository.save(payrollRecord);
+      this.logger.log(
+        `Final pay for worker ${workerId} added as DRAFT to period ${activePeriod.id} (include_in_regular)`,
+      );
+    } else {
+      // IMMEDIATE_OFFCYCLE (default): create an off-cycle PayPeriod and enqueue finalization
+      const termEndOfMonth = new Date(
+        terminationDate.getFullYear(),
+        terminationDate.getMonth() + 1,
+        0,
+      );
+      const terminationDateStr = this.formatDate(terminationDate);
+      const endOfMonthStr = this.formatDate(termEndOfMonth);
+
+      const offCyclePeriod = this.payPeriodRepository.create({
+        name: `Final Pay — ${worker.name} (${terminationDateStr})`,
+        startDate: terminationDateStr as unknown as Date,
+        endDate: endOfMonthStr as unknown as Date,
+        payDate: terminationDateStr as unknown as Date,
+        frequency: PayPeriodFrequency.MONTHLY,
+        status: PayPeriodStatus.ACTIVE,
+        isOffCycle: true,
+        userId,
+        createdBy: userId,
+        notes: { comments: `Auto-created for final pay of terminated worker ${worker.name}` },
+      });
+
+      const savedPeriod = (await this.payPeriodRepository.save(
+        offCyclePeriod,
+      )) as PayPeriod;
+
+      // Write the PayrollRecord into the new off-cycle period as DRAFT
+      const payrollRecord = this.payrollRecordRepository.create({
+        payPeriodId: savedPeriod.id,
+        workerId,
+        userId,
+        periodStart: savedPeriod.startDate,
+        periodEnd: savedPeriod.endDate,
+        grossSalary: totalGross,
+        netSalary: Math.max(0, taxCalculation.netPay),
+        taxAmount: taxCalculation.taxBreakdown.paye,
+        taxBreakdown: {
+          nssf: taxCalculation.taxBreakdown.nssf,
+          nhif: taxCalculation.taxBreakdown.nhif,
+          housingLevy: taxCalculation.taxBreakdown.housingLevy,
+          paye: taxCalculation.taxBreakdown.paye,
+          totalDeductions: taxCalculation.taxBreakdown.totalDeductions,
+        },
+        otherEarnings: severancePay + outstandingPayments,
+        deductions: {},
+        status: PayrollStatus.DRAFT,
+      });
 
       await this.payrollRecordRepository.save(payrollRecord);
 
-      // Trigger Tax Submission Generation/Update
-      try {
-        await this.taxesService.generateTaxSubmission(payPeriod.id, userId);
-      } catch (e) {
-        console.warn('Failed to update tax submission after termination:', e);
-      }
-    } else {
-      console.warn(
-        `No pay period found for termination date ${terminationDate}. Tax liability may not be recorded.`,
+      // Enqueue the finalization job for this worker only (skipPayout: false)
+      await this.payrollQueue.add(
+        'finalize-payroll',
+        {
+          userId,
+          payPeriodId: savedPeriod.id,
+          skipPayout: false,
+          workerIds: [workerId],
+        },
+        {
+          attempts: 1,
+          removeOnComplete: false,
+          removeOnFail: false,
+        },
+      );
+
+      this.logger.log(
+        `Off-cycle period ${savedPeriod.id} created and finalize-payroll job enqueued for worker ${workerId}`,
       );
     }
 
-    // Create termination record
+    // -------------------------------------------------------------------------
+    // Create termination record and deactivate the worker
+    // -------------------------------------------------------------------------
     const termination = this.terminationRepository.create({
       workerId,
       userId,
@@ -245,13 +323,34 @@ export class TerminationService {
       },
     });
 
-    const savedTermination = await this.terminationRepository.save(termination);
+    const savedTermination = (await this.terminationRepository.save(
+      termination,
+    )) as Termination;
 
-    // Update worker status (soft delete)
     worker.isActive = false;
     worker.terminatedAt = terminationDate;
     worker.terminationId = savedTermination.id;
     await this.workerRepository.save(worker);
+
+    // Generate tax submission if we created a regular payroll record
+    if (finalPayMode === FinalPayMode.INCLUDE_IN_REGULAR) {
+      try {
+        const activePeriod = await this.payPeriodRepository
+          .createQueryBuilder('period')
+          .where('period.userId = :userId', { userId })
+          .andWhere('period.isOffCycle = :isOffCycle', { isOffCycle: false })
+          .andWhere('period.status IN (:...statuses)', {
+            statuses: [PayPeriodStatus.DRAFT, PayPeriodStatus.ACTIVE],
+          })
+          .orderBy('period.startDate', 'ASC')
+          .getOne();
+        if (activePeriod) {
+          await this.taxesService.generateTaxSubmission(activePeriod.id, userId);
+        }
+      } catch (e) {
+        this.logger.warn('Failed to update tax submission after termination:', e);
+      }
+    }
 
     return savedTermination;
   }
@@ -281,5 +380,12 @@ export class TerminationService {
     }
 
     return termination;
+  }
+
+  private formatDate(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   }
 }

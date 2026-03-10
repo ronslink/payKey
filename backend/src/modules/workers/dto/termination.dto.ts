@@ -10,6 +10,19 @@ import {
 import { Transform } from 'class-transformer';
 import { TerminationReason } from '../entities/termination.entity';
 
+/**
+ * How the employer wants to handle the final paycheck.
+ * - immediate_offcycle: Create an off-cycle PayPeriod and process payment immediately (default).
+ * - include_in_regular: Write a DRAFT PayrollRecord into the current active period so it is
+ *   picked up in the next normal payroll run.
+ * - defer: Record the termination only; employer will handle the final pay manually.
+ */
+export enum FinalPayMode {
+  IMMEDIATE_OFFCYCLE = 'immediate_offcycle',
+  INCLUDE_IN_REGULAR = 'include_in_regular',
+  DEFER = 'defer',
+}
+
 export class CreateTerminationDto {
   @IsEnum(TerminationReason)
   reason: TerminationReason;
@@ -47,6 +60,11 @@ export class CreateTerminationDto {
   @Min(0)
   @Transform(({ value }) => (value != null ? Number(value) : undefined))
   outstandingPayments?: number;
+
+  @IsEnum(FinalPayMode)
+  @IsOptional()
+  @Transform(({ value }) => value ?? undefined)
+  finalPayMode?: FinalPayMode;
 }
 
 export class FinalPaymentCalculationDto {

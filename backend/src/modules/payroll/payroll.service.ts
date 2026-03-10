@@ -25,7 +25,7 @@ import {
   LeaveStatus,
   LeaveType,
 } from '../workers/entities/leave-request.entity';
-import { Worker, EmploymentType } from '../workers/entities/worker.entity';
+import { Worker, EmploymentType, PaymentMethod } from '../workers/entities/worker.entity';
 import { PayPeriod, PayPeriodStatus } from './entities/pay-period.entity';
 import {
   TimeEntry,
@@ -835,7 +835,13 @@ export class PayrollService {
 
     const records = await this.payrollRepository.find({
       where: query,
+      relations: ['worker'], // needed for paymentMethod
     });
+
+    // Cash workers bypass the payment gateway entirely — no fees apply to them.
+    const nonCashRecords = records.filter(
+      (r) => r.worker?.paymentMethod !== PaymentMethod.CASH,
+    );
 
     // Calculate minimum required balance
     const totalNetPay = records.reduce(
@@ -843,9 +849,9 @@ export class PayrollService {
       0,
     );
 
-    // Estimate IntaSend B2C payout fees per worker
+    // Estimate IntaSend B2C payout fees per NON-CASH worker only
     // Fee tiers: <200 = KES 10, 200-1000 = KES 20, >1000 = KES 100
-    const estimatedFees = records.reduce((sum, r) => {
+    const estimatedFees = nonCashRecords.reduce((sum, r) => {
       const net = parseFloat(r.netSalary as any) || 0;
       if (net < 200) return sum + 10;
       if (net <= 1000) return sum + 20;

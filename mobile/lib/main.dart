@@ -19,6 +19,7 @@ import 'features/payroll/presentation/pages/run_payroll_page_new.dart';
 import 'features/payroll/presentation/pages/payroll_review_page.dart';
 import 'features/payroll/presentation/pages/payslip_page.dart';
 import 'features/payroll/presentation/pages/payroll_confirm_page.dart';
+import 'features/payroll/presentation/pages/off_cycle_payroll_page.dart';
 import 'features/payroll/data/models/payroll_model.dart';
 
 import 'features/onboarding/presentation/pages/onboarding_page.dart';
@@ -363,6 +364,17 @@ final _mainTabRoutes = <RouteBase>[
     builder: (_, _) => const RunPayrollPageNew(),
   ),
   GoRoute(
+    path: '/payroll/off-cycle',
+    name: 'offCyclePayroll',
+    builder: (context, state) {
+      final extra = state.extra as Map<String, dynamic>?;
+      return OffCyclePayrollPage(
+        preSelectedWorkerId: extra?['workerId'] as String?,
+        preSelectedWorkerName: extra?['workerName'] as String?,
+      );
+    },
+  ),
+  GoRoute(
     path: AppRoutes.finance,
     name: 'finance',
     builder: (_, _) => const MainLayoutNew(
@@ -474,10 +486,20 @@ final _payrollRoutes = <RouteBase>[
     name: 'payrollConfirm',
     builder: (_, state) {
       final id = state.pathParameters['id']!;
-      final extraData = state.extra;
-      final workerIds = extraData is List 
-          ? extraData.map((e) => e.toString()).toList()
-          : <String>[];
+      final extra = state.extra;
+      List<String> workerIds;
+      if (extra is List) {
+        // Legacy: extra is directly a List<String>
+        workerIds = extra.map((e) => e.toString()).toList();
+      } else if (extra is Map) {
+        // New: extra is Map with 'workerIds' key (from off-cycle page)
+        final raw = extra['workerIds'];
+        workerIds = raw is List
+            ? raw.map((e) => e.toString()).toList()
+            : <String>[];
+      } else {
+        workerIds = <String>[];
+      }
       return PayrollConfirmPage(payPeriodId: id, workerIds: workerIds);
     },
   ),

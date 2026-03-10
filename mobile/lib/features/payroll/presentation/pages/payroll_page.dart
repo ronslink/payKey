@@ -360,19 +360,30 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
             child: _buildActionCard(
               icon: Icons.play_circle_fill_rounded,
               title: 'Run Payroll',
-              subtitle: 'Process new cycle',
+              subtitle: 'Regular cycle',
               gradient: const [Color(0xFF10B981), Color(0xFF059669)],
               onTap: () => context.push('/payroll/run'),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _buildActionCard(
+              icon: Icons.bolt_rounded,
+              title: 'Off-Cycle',
+              subtitle: 'On-demand run',
+              gradient: const [Color(0xFFF59E0B), Color(0xFFD97706)],
+              onTap: () => context.push('/payroll/off-cycle'),
+            ),
+          ),
+          const SizedBox(width: 10),
           Expanded(
             child: _buildActionCard(
               icon: Icons.history_rounded,
-              title: 'View History',
+              title: 'History',
               subtitle: 'Past payrolls',
               gradient: const [Color(0xFF3B82F6), Color(0xFF2563EB)],
-              onTap: () => setState(() => _selectedStatus = PayPeriodStatus.completed),
+              onTap: () => setState(
+                  () => _selectedStatus = PayPeriodStatus.completed),
             ),
           ),
         ],
