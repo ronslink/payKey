@@ -249,17 +249,31 @@ export class PayrollPaymentService {
     const firstUserId = records[0].userId;
     const totalDeduction = totalBatchAmount + totalBatchFees;
 
-    // FIX 3: Pre-check wallet balance before deducting
-    const userWithBalance = await this.usersRepository.findOne({
-      where: { id: firstUserId },
-      select: ['id', 'walletBalance'],
-    });
-    const currentBalance = Number(userWithBalance?.walletBalance ?? 0);
-    if (!userWithBalance || currentBalance < totalDeduction) {
+    // C1 FIX: Atomic conditional decrement — eliminates TOCTOU race condition.
+    // A separate check+decrement allows two concurrent jobs to both pass the
+    // balance check before either decrements (double-spend risk).
+    // This single UPDATE only succeeds if balance is sufficient at the DB level.
+    const deductResult = await this.usersRepository
+      .createQueryBuilder()
+      .update()
+      .set({ walletBalance: () => `"walletBalance" - ${totalDeduction}` })
+      .where('id = :id AND "walletBalance" >= :amount', {
+        id: firstUserId,
+        amount: totalDeduction,
+      })
+      .execute();
+
+    if (deductResult.affected === 0) {
+      // Balance was insufficient at the moment of the atomic update
+      const user = await this.usersRepository.findOne({
+        where: { id: firstUserId },
+        select: ['walletBalance'],
+      });
+      const currentBalance = Number(user?.walletBalance ?? 0);
       this.logger.error(
-        `Insufficient wallet balance: have ${currentBalance}, need ${totalDeduction}`,
+        `Insufficient wallet balance (mobile): have ${currentBalance}, need ${totalDeduction}`,
       );
-      records.forEach((r) => {
+      for (const r of records) {
         if (!results.find((res) => res.workerId === r.workerId)) {
           results.push({
             workerId: r.workerId,
@@ -268,27 +282,7 @@ export class PayrollPaymentService {
             error: `Insufficient wallet balance (KES ${currentBalance.toFixed(2)} available, KES ${totalDeduction.toFixed(2)} required)`,
           });
         }
-      });
-      return results;
-    }
-
-    // 2. Deduct Bundle Amount + Fees
-    try {
-      await this.usersRepository.decrement(
-        { id: firstUserId },
-        'walletBalance',
-        totalDeduction,
-      );
-    } catch (e) {
-      this.logger.error(`Failed to deduct batch amount ${totalDeduction}`, e);
-      records.forEach((r) => {
-        results.push({
-          workerId: r.workerId,
-          workerName: r.worker.name,
-          success: false,
-          error: 'Wallet deduction failed — please try again',
-        });
-      });
+      }
       return results;
     }
 
@@ -575,26 +569,36 @@ export class PayrollPaymentService {
       return results;
     }
 
-    // 2. Deduct Amount + Fees
-    try {
-      await this.usersRepository.decrement(
-        { id: firstUserId },
-        'walletBalance',
-        totalDeduction,
-      );
-    } catch (e) {
-      this.logger.error(
-        `Failed to deduct bank batch amount ${totalDeduction}`,
-        e,
-      );
-      records.forEach((r) => {
-        results.push({
-          workerId: r.workerId,
-          workerName: r.worker.name,
-          success: false,
-          error: 'Wallet deduction failed — please try again',
-        });
+    // C1 FIX: Atomic conditional decrement — same pattern as mobile batch.
+    const bankDeductResult = await this.usersRepository
+      .createQueryBuilder()
+      .update()
+      .set({ walletBalance: () => `"walletBalance" - ${totalDeduction}` })
+      .where('id = :id AND "walletBalance" >= :amount', {
+        id: firstUserId,
+        amount: totalDeduction,
+      })
+      .execute();
+
+    if (bankDeductResult.affected === 0) {
+      const user = await this.usersRepository.findOne({
+        where: { id: firstUserId },
+        select: ['walletBalance'],
       });
+      const currentBalance = Number(user?.walletBalance ?? 0);
+      this.logger.error(
+        `Insufficient wallet balance (bank): have ${currentBalance}, need ${totalDeduction}`,
+      );
+      for (const r of records) {
+        if (!results.find((res) => res.workerId === r.workerId)) {
+          results.push({
+            workerId: r.workerId,
+            workerName: r.worker.name,
+            success: false,
+            error: `Insufficient wallet balance (KES ${currentBalance.toFixed(2)} available, KES ${totalDeduction.toFixed(2)} required)`,
+          });
+        }
+      }
       return results;
     }
 
@@ -660,7 +664,8 @@ export class PayrollPaymentService {
           tx.metadata = { ...tx.metadata, error: e.message };
         }
 
-        records.forEach(async (r) => {
+        // C2 FIX: was forEach(async) — awaits were silently dropped (fire-and-forget)
+        for (const r of records) {
           r.paymentStatus = 'failed';
           await this.payrollRecordRepository.save(r);
           results.push({
@@ -669,7 +674,7 @@ export class PayrollPaymentService {
             success: false,
             error: e.message,
           });
-        });
+        }
       } else {
         // Unsafe
         this.logger.warn(
@@ -685,7 +690,8 @@ export class PayrollPaymentService {
           };
         }
 
-        records.forEach(async (r) => {
+        // C2 FIX: was forEach(async) — awaits were silently dropped (fire-and-forget)
+        for (const r of records) {
           r.paymentStatus = 'manual_check';
           await this.payrollRecordRepository.save(r);
           results.push({
@@ -694,7 +700,7 @@ export class PayrollPaymentService {
             success: false,
             error: 'Partial Failure: Manual Check Required',
           });
-        });
+        }
       }
       await this.transactionRepository.save(savedTransactions);
     }
