@@ -296,7 +296,7 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
 
       // If we have a jobId, show the progress dialog
       if (response.isAsync && response.jobId != null && mounted) {
-        final success = await showPayrollProcessingDialog(
+        final finalStatus = await showPayrollProcessingDialog(
           context: context,
           jobId: response.jobId!,
           workerCount: _preparedPayouts!.length,
@@ -304,23 +304,41 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
 
         if (!mounted) return;
 
-        if (success) {
+        if (finalStatus != null && finalStatus.isCompleted) {
           ref.invalidate(transactionHistoryProvider);
           ref.invalidate(payPeriodsProvider);
 
-          // Create a success result for UI display
-          final batchResult = PayrollBatchResult(
-            successCount: _preparedPayouts!.length,
-            failureCount: 0,
-            totalProcessed: _preparedPayouts!.length,
-            failedWorkerIds: [],
-            results: _preparedPayouts!.map((p) => PayrollWorkerResult(
-              success: true,
-              workerName: p.name,
-              netPay: p.amount,
-              error: null,
-            )).toList(),
-          );
+          PayrollBatchResult batchResult;
+          if (finalStatus.result != null) {
+            final payoutData = finalStatus.result!['payoutResults'] as Map<String, dynamic>? ?? finalStatus.result!;
+            final processResult = PayrollProcessingResult.fromJson(payoutData);
+            batchResult = PayrollBatchResult(
+              successCount: processResult.successCount,
+              failureCount: processResult.failureCount,
+              totalProcessed: processResult.totalCount,
+              failedWorkerIds: processResult.failedWorkerIds,
+              results: processResult.results.map((r) => PayrollWorkerResult(
+                success: r.success,
+                workerName: r.workerName,
+                netPay: r.netPay ?? 0,
+                error: r.error,
+              )).toList(),
+            );
+          } else {
+            // Fallback if result is missing
+            batchResult = PayrollBatchResult(
+              successCount: _preparedPayouts!.length,
+              failureCount: 0,
+              totalProcessed: _preparedPayouts!.length,
+              failedWorkerIds: [],
+              results: _preparedPayouts!.map((p) => PayrollWorkerResult(
+                success: true,
+                workerName: p.name,
+                netPay: p.amount,
+                error: null,
+              )).toList(),
+            );
+          }
 
           setState(() {
             _state = _state.copyWith(
@@ -363,7 +381,9 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
           });
         }
       }
-    } catch (e) {
+    } catch (e, stacktrace) {
+      debugPrint('PAYROLL CONFIRM ERROR: $e');
+      debugPrint('STACKTRACE: $stacktrace');
       if (mounted) {
         setState(() {
           _state = _state.copyWith(

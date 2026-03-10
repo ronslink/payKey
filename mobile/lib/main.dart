@@ -115,7 +115,9 @@ class _PaydomeAppState extends ConsumerState<PaydomeApp> {
   void initState() {
     super.initState();
     // Handle notification taps (background → foreground, terminated → open)
-    NotificationService().onMessageOpenedApp.listen(_handleNotificationTap);
+    if (!kIsWeb) {
+      NotificationService().onMessageOpenedApp.listen(_handleNotificationTap);
+    }
   }
 
   void _handleNotificationTap(RemoteMessage message) {

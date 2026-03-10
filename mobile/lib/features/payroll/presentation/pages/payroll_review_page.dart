@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:async';
 import '../../../workers/data/models/worker_model.dart';
 import 'package:mobile/features/payroll/data/models/payroll_model.dart';
 
@@ -40,10 +41,54 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
   // Track if this is a closed/finalized period (read-only view)
   bool _isPeriodClosed = false;
 
+  Map<String, String> _paymentStatuses = {};
+  Timer? _pollingTimer;
+  bool _isPolling = false;
+
   @override
   void initState() {
     super.initState();
     _loadPayrollData();
+  }
+
+  @override
+  void dispose() {
+    _stopPolling();
+    super.dispose();
+  }
+
+  void _startPolling() {
+    _isPolling = true;
+    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      _fetchPaymentStatuses();
+    });
+  }
+
+  void _stopPolling() {
+    _isPolling = false;
+    _pollingTimer?.cancel();
+    _pollingTimer = null;
+  }
+
+  Future<void> _fetchPaymentStatuses() async {
+    if (!mounted) return;
+    try {
+      final repo = ref.read(payrollRepositoryProvider);
+      final statuses = await repo.getPaymentStatus(widget.payPeriodId);
+      
+      if (mounted) {
+        setState(() {
+          _paymentStatuses = {for (var s in statuses) s.workerId: s.paymentStatus};
+        });
+        
+        // Stop polling if nothing is processing anymore
+        if (!statuses.any((s) => s.isProcessing)) {
+          _stopPolling();
+        }
+      }
+    } catch (e) {
+      // Ignore errors during polling
+    }
   }
 
   Future<void> _loadPayrollData() async {
@@ -86,6 +131,15 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
           
           _isLoading = false;
         });
+
+        // Fetch initial payment statuses
+        await _fetchPaymentStatuses();
+        
+        // Check if we should start polling (if any payments are processing)
+        if (mounted && _paymentStatuses.values.any((status) => 
+            status.toLowerCase() == 'processing' || status.toLowerCase() == 'clearing')) {
+          if (!_isPolling) _startPolling();
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -233,6 +287,7 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
                       jobTitle: worker.jobTitle,
                       breakdown: _breakdowns[index],
                       isExpanded: _expandedIndex == index,
+                      paymentStatus: _paymentStatuses[worker.id],
                       onTap: () {
                         setState(() {
                           _expandedIndex = _expandedIndex == index ? null : index;
@@ -254,6 +309,9 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
                       jobTitle: 'Employee',
                       breakdown: breakdown,
                       isExpanded: _expandedIndex == index,
+                      paymentStatus: index < _rawCalculations.length 
+                          ? _paymentStatuses[_rawCalculations[index].workerId]
+                          : null,
                       onTap: () {
                         setState(() {
                           _expandedIndex = _expandedIndex == index ? null : index;

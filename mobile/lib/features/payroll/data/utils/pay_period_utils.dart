@@ -21,26 +21,10 @@ class PayPeriodUtils {
     
     if (openPeriods.isEmpty) return null;
 
-    final now = DateTime.now();
-    
-    // 1. Try to find CURRENT period (today is within start/end)
-    try {
-      final current = openPeriods.firstWhere((p) => 
-        p.startDate.isBefore(now) && p.endDate.add(const Duration(days: 1)).isAfter(now)
-      );
-      return current;
-    } catch (_) {
-      // 2. Try to find FUTURE periods (Upcoming)
-      final futurePeriods = openPeriods.where((p) => p.startDate.isAfter(now)).toList();
-      if (futurePeriods.isNotEmpty) {
-        futurePeriods.sort((a, b) => a.startDate.compareTo(b.startDate));
-        return futurePeriods.first;
-      }
-
-      // 3. Fallback to earliest open period (Overdue)
-      openPeriods.sort((a, b) => a.startDate.compareTo(b.startDate));
-      return openPeriods.firstOrNull;
-    }
+    // The most urgent payroll is always the earliest chronological open period.
+    // If January is overdue and February is active, the employer must run January first.
+    openPeriods.sort((a, b) => a.endDate.compareTo(b.endDate));
+    return openPeriods.first;
   }
 
   /// Determines if the "Initialize Pay Periods" card should be shown.

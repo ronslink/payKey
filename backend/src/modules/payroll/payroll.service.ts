@@ -68,6 +68,23 @@ export interface PayrollSummary {
   workerCount: number;
 }
 
+export interface PayoutResultItem {
+  workerId: string;
+  workerName: string;
+  success: boolean;
+  netPay?: number;
+  message?: string;
+  error?: string;
+}
+
+export interface PayoutBatchResult {
+  successCount: number;
+  failureCount: number;
+  results: PayoutResultItem[];
+  error?: string | null;
+  bankFile?: string;
+}
+
 export interface PayrollCalculationResult {
   payrollItems: PayrollItem[];
   summary: PayrollSummary;
@@ -431,6 +448,24 @@ export class PayrollService {
   ) {
     this.logger.log(`Queueing payroll finalization for period ${payPeriodId}`);
 
+    // Fetch payPeriod to validate status before queuing
+    const payPeriod = await this.getPayPeriodOrThrow(payPeriodId);
+
+    if (payPeriod.status === PayPeriodStatus.PROCESSING) {
+      throw new BadRequestException(
+        'Payroll is already being processed for this period. Please wait for it to complete.',
+      );
+    }
+
+    if (
+      payPeriod.status === PayPeriodStatus.COMPLETED ||
+      payPeriod.status === PayPeriodStatus.CLOSED
+    ) {
+      throw new BadRequestException(
+        'This pay period has already been completed and cannot be processed again.',
+      );
+    }
+
     // Updates PayPeriod status to PROCESSING to prevent double clicks
     await this.payPeriodRepository.update(payPeriodId, {
       status: PayPeriodStatus.PROCESSING,
@@ -440,11 +475,7 @@ export class PayrollService {
       'finalize-payroll',
       { userId, payPeriodId, skipPayout, workerIds },
       {
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 1000,
-        },
+        attempts: 1, // NO auto-retry: risk of double wallet deduction on retry
       },
     );
 
@@ -454,6 +485,27 @@ export class PayrollService {
       jobId: job.id,
       payPeriodId,
     };
+  }
+
+  /**
+   * Revert a PayPeriod from PROCESSING back to ACTIVE.
+   * Called by the queue processor if the finalization job crashes unexpectedly,
+   * so the employer is not left with a stuck PROCESSING period.
+   */
+  async revertPayPeriodToActive(payPeriodId: string): Promise<void> {
+    try {
+      await this.payPeriodRepository.update(payPeriodId, {
+        status: PayPeriodStatus.ACTIVE,
+      });
+      this.logger.warn(
+        `PayPeriod ${payPeriodId} reverted to ACTIVE after job crash`,
+      );
+    } catch (e) {
+      this.logger.error(
+        `Failed to revert PayPeriod ${payPeriodId} to ACTIVE:`,
+        e,
+      );
+    }
   }
 
   /**
@@ -517,7 +569,7 @@ export class PayrollService {
     const updatedRecords = await this.markRecordsAsFinalized(records);
 
     // 2. Process Payouts FIRST (Critical Step)
-    let payoutResults;
+    let payoutResults: PayoutBatchResult;
     if (skipPayout) {
       this.logger.log('Skipping payout processing (handled by client)');
       payoutResults = {
@@ -546,7 +598,7 @@ export class PayrollService {
       const revertIds = updatedRecords
         .filter((r) => {
           const result = payoutResults.results.find(
-            (res: any) => res.workerId === r.workerId,
+            (res) => res.workerId === r.workerId,
           );
           return !result?.success;
         })
@@ -558,6 +610,11 @@ export class PayrollService {
           { status: PayrollStatus.DRAFT },
         );
       }
+
+      // Revert PayPeriod status back to ACTIVE so the user can retry
+      await this.payPeriodRepository.update(payPeriodId, {
+        status: PayPeriodStatus.ACTIVE,
+      });
 
       throw new BadRequestException({
         message: 'Payroll finalization failed due to payment errors.',

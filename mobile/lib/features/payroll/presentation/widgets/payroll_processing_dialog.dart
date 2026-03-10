@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/repositories/payroll_repository.dart';
+import '../../data/models/payroll_model.dart';
 
 /// A dialog that shows real-time payroll processing progress.
 /// 
@@ -13,8 +14,8 @@ import '../../data/repositories/payroll_repository.dart';
 class PayrollProcessingDialog extends ConsumerStatefulWidget {
   final String jobId;
   final int workerCount;
-  final VoidCallback onComplete;
-  final VoidCallback onError;
+  final void Function(JobStatusResult) onComplete;
+  final void Function(String? failedReason) onError;
 
   const PayrollProcessingDialog({
     super.key,
@@ -28,8 +29,8 @@ class PayrollProcessingDialog extends ConsumerStatefulWidget {
     required BuildContext context,
     required String jobId,
     required int workerCount,
-    required VoidCallback onComplete,
-    required VoidCallback onError,
+    required void Function(JobStatusResult) onComplete,
+    required void Function(String? failedReason) onError,
   }) {
     return showDialog(
       context: context,
@@ -37,13 +38,13 @@ class PayrollProcessingDialog extends ConsumerStatefulWidget {
       builder: (dialogContext) => PayrollProcessingDialog(
         jobId: jobId,
         workerCount: workerCount,
-        onComplete: () {
+        onComplete: (status) {
           Navigator.of(dialogContext).pop();
-          onComplete();
+          onComplete(status);
         },
-        onError: () {
+        onError: (reason) {
           Navigator.of(dialogContext).pop();
-          onError();
+          onError(reason);
         },
       ),
     );
@@ -62,9 +63,11 @@ class _PayrollProcessingDialogState
   int _progress = 0;
   bool _isComplete = false;
   bool _hasError = false;
+  JobStatusResult? _finalStatus;
 
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+  String? _failedReason;
 
   // Design constants matching app theme
   static const _successColor = Color(0xFF10B981);
@@ -121,19 +124,24 @@ class _PayrollProcessingDialogState
           _isComplete = true;
           _statusMessage = 'Payroll completed successfully!';
           _progress = 100;
+          _finalStatus = status;
         });
         // Wait a moment to show completion, then close
         await Future.delayed(const Duration(milliseconds: 1500));
-        if (mounted) {
-          widget.onComplete();
+        if (mounted && _finalStatus != null) {
+          widget.onComplete(_finalStatus!);
         }
       } else if (status.isFailed) {
         _pollingTimer?.cancel();
         _pulseController.stop();
+        final reason = status.failedReason ?? 'Processing failed';
         setState(() {
           _hasError = true;
-          _statusMessage = status.failedReason ?? 'Processing failed';
+          _statusMessage = reason;
         });
+        // Do NOT auto-close on failure — user must press Close button
+        // Store reason so the Close button can pass it to onError
+        _failedReason = reason;
       }
     } catch (e) {
       // Don't stop polling on transient errors
@@ -257,26 +265,17 @@ class _PayrollProcessingDialogState
         ),
         actions: _hasError
             ? [
-                TextButton(
-                  onPressed: widget.onError,
-                  child: const Text('Close'),
-                ),
                 FilledButton(
                   onPressed: () {
-                    setState(() {
-                      _hasError = false;
-                      _statusMessage = 'Retrying...';
-                      _progress = 0;
-                    });
-                    _startPolling();
+                    widget.onError(_failedReason);
                   },
-                  child: const Text('Retry'),
+                  child: const Text('Close'),
                 ),
               ]
-            : _isComplete
+            : _isComplete && _finalStatus != null
                 ? [
                     FilledButton(
-                      onPressed: widget.onComplete,
+                      onPressed: () => widget.onComplete(_finalStatus!),
                       child: const Text('Done'),
                     ),
                   ]
@@ -358,20 +357,20 @@ class _PayrollProcessingDialogState
 
 /// Shows the payroll processing dialog and returns when complete or failed.
 /// 
-/// Returns true if processing completed successfully, false otherwise.
-Future<bool> showPayrollProcessingDialog({
+/// Returns `JobStatusResult` if processing completed successfully, `null` otherwise.
+Future<JobStatusResult?> showPayrollProcessingDialog({
   required BuildContext context,
   required String jobId,
   required int workerCount,
 }) async {
-  final completer = Completer<bool>();
+  final completer = Completer<JobStatusResult?>();
 
   await PayrollProcessingDialog.show(
     context: context,
     jobId: jobId,
     workerCount: workerCount,
-    onComplete: () => completer.complete(true),
-    onError: () => completer.complete(false),
+    onComplete: (status) => completer.complete(status),
+    onError: (reason) => completer.complete(null),
   );
 
   return completer.future;

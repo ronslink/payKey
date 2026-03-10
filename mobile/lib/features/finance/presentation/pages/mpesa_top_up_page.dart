@@ -46,7 +46,13 @@ class _MpesaTopUpPageState extends ConsumerState<MpesaTopUpPage> {
     // Dismiss keyboard
     FocusScope.of(context).unfocus();
 
-    final phoneNumber = _phoneController.text.trim();
+    var phoneNumber = _phoneController.text.trim();
+    if (phoneNumber.startsWith('0')) {
+      phoneNumber = '254${phoneNumber.substring(1)}';
+    } else if (phoneNumber.startsWith('+254')) {
+      phoneNumber = phoneNumber.substring(1); // remove the +
+    }
+    
     final amount = double.parse(_amountController.text.trim());
 
     try {

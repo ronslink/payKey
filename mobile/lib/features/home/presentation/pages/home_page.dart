@@ -15,6 +15,7 @@ import '../../../onboarding/presentation/widgets/guided_tour.dart';
 import '../../../onboarding/presentation/providers/tour_progress_provider.dart';
 import '../../../onboarding/presentation/models/tour_models.dart';
 import '../providers/statutory_deadlines_provider.dart';
+import '../../../../integrations/intasend/providers/intasend_providers.dart';
 
 /// New Home page with the redesigned dashboard UI
 class HomePage extends ConsumerStatefulWidget {
@@ -28,6 +29,10 @@ class _HomePageState extends ConsumerState<HomePage> {
   final _payrollKey = GlobalKey();
   final _workersKey = GlobalKey();
   final _quickActionsKey = GlobalKey();
+  final _settingsKey = GlobalKey();
+  final _supportKey = GlobalKey();
+  final _deadlinesKey = GlobalKey();
+  final _walletKey = GlobalKey();
 
 
   @override
@@ -46,6 +51,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                   _buildHeader(context),
                   _buildHeroSection(context, payPeriodsAsync, workersAsync),
                   _buildStatsRow(context, workersAsync, payPeriodsAsync),
+                  const SizedBox(height: 16),
+                  _buildWalletCard(context),
                   _buildQuickActionsSection(context),
                   _buildDeadlinesSection(context),
                   const SizedBox(height: 100),
@@ -83,11 +90,39 @@ class _HomePageState extends ConsumerState<HomePage> {
         position: TourStepPosition.below,
       ),
       TourStep(
+        targetKey: _walletKey,
+        title: 'Payment Processing',
+        description: 'Top up your wallet here. Payments process automatically if funded, or switch to manual in Settings.',
+        icon: Icons.account_balance_wallet_outlined,
+        position: TourStepPosition.above,
+      ),
+      TourStep(
         targetKey: _quickActionsKey,
         title: 'Quick Actions',
-        description: 'Fast access to common tasks like Leave Management and Reports.',
+        description: 'Fast access to common tasks like Leave Management.',
         icon: Icons.bolt,
         position: TourStepPosition.above,
+      ),
+      TourStep(
+        targetKey: _supportKey,
+        title: 'Support Tickets',
+        description: 'Need help? Create a support ticket here and our team will assist you.',
+        icon: Icons.support_agent_rounded,
+        position: TourStepPosition.above,
+      ),
+      TourStep(
+        targetKey: _deadlinesKey,
+        title: 'Tax Filing & Deadlines',
+        description: 'Track statutory deadlines here. We help you stay compliant with KRA, NSSF, and SHIF.',
+        icon: Icons.event_note_outlined,
+        position: TourStepPosition.above,
+      ),
+      TourStep(
+        targetKey: _settingsKey,
+        title: 'Profile & Settings',
+        description: 'Update your bank details, M-Pesa phone, and preferences here. Let\'s get started!',
+        icon: Icons.settings_outlined,
+        position: TourStepPosition.below,
         isLast: true,
       ),
     ];
@@ -138,6 +173,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             ),
           ),
           GestureDetector(
+            key: _settingsKey,
             onTap: () {
               showModalBottomSheet(
                 context: context,
@@ -230,7 +266,15 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
 
     final periodName = activePeriod?.name ?? 'No Active Payroll';
-    final daysUntilDue = activePeriod?.payDate?.difference(DateTime.now()).inDays ?? 5;
+    
+    int daysUntilDue = 0;
+    if (activePeriod != null) {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final targetDate = activePeriod.payDate ?? activePeriod.endDate;
+      final target = DateTime(targetDate.year, targetDate.month, targetDate.day);
+      daysUntilDue = target.difference(today).inDays;
+    }
 
     // Get active workers count
     final activeWorkers = workersAsync.when(
@@ -302,7 +346,11 @@ class _HomePageState extends ConsumerState<HomePage> {
           ),
           const SizedBox(height: 20),
           Text(
-            daysUntilDue <= 0 ? 'Due Today!' : 'Due in $daysUntilDue days',
+            daysUntilDue < 0 
+                ? 'Overdue by ${-daysUntilDue} days'
+                : daysUntilDue == 0 
+                    ? 'Due Today!' 
+                    : 'Due in $daysUntilDue days',
             style: const TextStyle(
               color: Colors.white,
               fontSize: 28,
@@ -510,6 +558,97 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
+  Widget _buildWalletCard(BuildContext context) {
+    final walletAsync = ref.watch(walletBalanceProvider);
+
+    return Padding(
+      key: _walletKey,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6366F1).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.account_balance_wallet, color: Color(0xFF6366F1), size: 24),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Wallet Balance',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    walletAsync.when(
+                      data: (wallet) => Text(
+                        wallet.formattedBalance,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF1E293B),
+                        ),
+                      ),
+                      loading: () => const SizedBox(
+                        height: 24,
+                        width: 100,
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                      error: (_, __) => Text(
+                        'Error loading',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.red,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () => context.push('/finance/top-up'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1E293B),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  minimumSize: Size.zero,
+                  elevation: 0,
+                ),
+                child: const Text('Top Up', style: TextStyle(fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildQuickActionsSection(BuildContext context) {
     return Column(
       key: _quickActionsKey,
@@ -558,11 +697,12 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
               const SizedBox(width: 12),
               Expanded(
+                key: _supportKey,
                 child: _buildGradientActionCard(
-                  icon: Icons.description_outlined,
-                  label: 'Reports',
+                  icon: Icons.support_agent_rounded,
+                  label: 'Support',
                   gradient: const [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
-                  onTap: () => context.push('/reports'),
+                  onTap: () => context.push('/support'),
                 ),
               ),
             ],
@@ -631,6 +771,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     final deadlinesAsync = ref.watch(statutoryDeadlinesProvider);
 
     return Column(
+      key: _deadlinesKey,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(

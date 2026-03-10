@@ -175,6 +175,21 @@ export class PayrollPaymentService {
         continue;
       }
 
+      // FIX 5: Validate phone number before adding to batch
+      const phone = record.worker.phoneNumber?.trim();
+      if (!phone) {
+        this.logger.warn(
+          `Worker ${record.workerId} (${record.worker.name}) has no phone number — skipping payout`,
+        );
+        results.push({
+          workerId: record.workerId,
+          workerName: record.worker.name,
+          success: false,
+          error: 'Missing phone number — please update worker profile',
+        });
+        continue;
+      }
+
       let remainingAmount = Number(record.netSalary);
       try {
         while (remainingAmount > 0) {
@@ -182,7 +197,7 @@ export class PayrollPaymentService {
 
           // Store info for IntaSend
           intaSendPayload.push({
-            account: record.worker.phoneNumber,
+            account: phone,
             amount: currentAmount,
             narrative: `Salary Payment${Number(record.netSalary) > this.MPESA_LIMIT ? ' (Part)' : ''}`,
             name: record.worker.name || 'Worker',
@@ -197,7 +212,7 @@ export class PayrollPaymentService {
           const transaction = this.transactionRepository.create({
             userId: record.userId,
             workerId: record.workerId,
-            walletId: walletId, // Track source wallet
+            walletId: walletId,
             amount: currentAmount,
             currency: 'KES',
             type: TransactionType.SALARY_PAYOUT,
@@ -211,7 +226,7 @@ export class PayrollPaymentService {
               taxBreakdown: record.taxBreakdown,
               grossSalary: record.grossSalary,
               netPay: record.netSalary,
-              estimatedFee: fee, // Track fee in metadata
+              estimatedFee: fee,
             },
           });
 
@@ -224,7 +239,7 @@ export class PayrollPaymentService {
           workerId: record.workerId,
           workerName: record.worker.name,
           success: false,
-          error: `Preparation Failed: ${err.message}`,
+          error: `Preparation Failed: ${(err as Error).message}`,
         });
       }
     }
@@ -233,6 +248,29 @@ export class PayrollPaymentService {
 
     const firstUserId = records[0].userId;
     const totalDeduction = totalBatchAmount + totalBatchFees;
+
+    // FIX 3: Pre-check wallet balance before deducting
+    const userWithBalance = await this.usersRepository.findOne({
+      where: { id: firstUserId },
+      select: ['id', 'walletBalance'],
+    });
+    const currentBalance = Number(userWithBalance?.walletBalance ?? 0);
+    if (!userWithBalance || currentBalance < totalDeduction) {
+      this.logger.error(
+        `Insufficient wallet balance: have ${currentBalance}, need ${totalDeduction}`,
+      );
+      records.forEach((r) => {
+        if (!results.find((res) => res.workerId === r.workerId)) {
+          results.push({
+            workerId: r.workerId,
+            workerName: r.worker.name,
+            success: false,
+            error: `Insufficient wallet balance (KES ${currentBalance.toFixed(2)} available, KES ${totalDeduction.toFixed(2)} required)`,
+          });
+        }
+      });
+      return results;
+    }
 
     // 2. Deduct Bundle Amount + Fees
     try {
@@ -248,7 +286,7 @@ export class PayrollPaymentService {
           workerId: r.workerId,
           workerName: r.worker.name,
           success: false,
-          error: 'Insufficient Funds or Wallet Error',
+          error: 'Wallet deduction failed — please try again',
         });
       });
       return results;
@@ -392,6 +430,31 @@ export class PayrollPaymentService {
     if (records.length === 0) return [];
 
     const results: any[] = [];
+
+    // FIX 4: Simulate bank batch in sandbox/dev mode (same as mobile batch)
+    const simulateVar = this.configService.get('INTASEND_SIMULATE');
+    const isLive =
+      this.configService.get('INTASEND_IS_LIVE') === 'true' ||
+      this.configService.get('NODE_ENV') === 'production';
+
+    if (simulateVar === 'true' && !isLive) {
+      this.logger.log(
+        `⚠️ SIMULATION: Bank batch payout for ${records.length} workers`,
+      );
+      for (const record of records) {
+        record.paymentStatus = 'paid';
+        record.paymentDate = new Date();
+        await this.payrollRecordRepository.save(record);
+        results.push({
+          workerId: record.workerId,
+          workerName: record.worker.name,
+          success: true,
+          message: 'Simulated bank payment',
+        });
+      }
+      return results;
+    }
+
     const allTransactions: Transaction[] = [];
     const intaSendPayload: {
       name: string;
@@ -489,6 +552,29 @@ export class PayrollPaymentService {
     const firstUserId = records[0].userId;
     const totalDeduction = totalBatchAmount + totalBatchFees;
 
+    // FIX B: Pre-check wallet balance before deducting (same as mobile batch)
+    const userWithBalance = await this.usersRepository.findOne({
+      where: { id: firstUserId },
+      select: ['id', 'walletBalance'],
+    });
+    const currentBalance = Number(userWithBalance?.walletBalance ?? 0);
+    if (!userWithBalance || currentBalance < totalDeduction) {
+      this.logger.error(
+        `Insufficient wallet balance for bank batch: have ${currentBalance}, need ${totalDeduction}`,
+      );
+      records.forEach((r) => {
+        if (!results.find((res) => res.workerId === r.workerId)) {
+          results.push({
+            workerId: r.workerId,
+            workerName: r.worker.name,
+            success: false,
+            error: `Insufficient wallet balance (KES ${currentBalance.toFixed(2)} available, KES ${totalDeduction.toFixed(2)} required)`,
+          });
+        }
+      });
+      return results;
+    }
+
     // 2. Deduct Amount + Fees
     try {
       await this.usersRepository.decrement(
@@ -506,7 +592,7 @@ export class PayrollPaymentService {
           workerId: r.workerId,
           workerName: r.worker.name,
           success: false,
-          error: 'Insufficient Funds',
+          error: 'Wallet deduction failed — please try again',
         });
       });
       return results;

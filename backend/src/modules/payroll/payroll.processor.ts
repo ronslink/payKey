@@ -76,17 +76,26 @@ export class PayrollProcessor extends WorkerHost {
   private async handlePayrollFinalization(job: Job<PayrollJobData>) {
     await job.updateProgress(10);
 
-    const result = await this.payrollService.executePayrollFinalization(
-      job.data.userId,
-      job.data.payPeriodId,
-      job.data.skipPayout,
-      job.data.workerIds,
-    );
+    try {
+      const result = await this.payrollService.executePayrollFinalization(
+        job.data.userId,
+        job.data.payPeriodId,
+        job.data.skipPayout,
+        job.data.workerIds,
+      );
 
-    await job.updateProgress(100);
-    this.logger.log(`Payroll job ${job.id} completed successfully`);
-
-    return result;
+      await job.updateProgress(100);
+      this.logger.log(`Payroll job ${job.id} completed successfully`);
+      return result;
+    } catch (error) {
+      this.logger.error(
+        `Payroll job ${job.id} crashed — reverting PayPeriod ${job.data.payPeriodId} to ACTIVE`,
+        error.message,
+      );
+      // Revert PayPeriod so employer is not stuck with a PROCESSING status
+      await this.payrollService.revertPayPeriodToActive(job.data.payPeriodId);
+      throw error; // Re-throw so BullMQ marks the job as failed
+    }
   }
 
   /**
