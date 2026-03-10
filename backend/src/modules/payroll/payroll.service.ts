@@ -198,6 +198,7 @@ export class PayrollService {
   async calculatePayrollBatch(
     userId: string,
     workerIds: string[],
+    payPeriodId?: string,
   ): Promise<PayrollCalculationResult> {
     const startTime = Date.now();
     this.logger.log(
@@ -217,11 +218,18 @@ export class PayrollService {
       throw new NotFoundException('No workers found');
     }
 
-    const { year, month } = this.getCurrentPeriod();
-    const payrollItems = await this.processWorkersInChunks(selectedWorkers, {
-      year,
-      month,
-    });
+    // H4 FIX: Use the actual PayPeriod dates when provided, not hardcoded current month.
+    // calculateAdjustedSalary accepts { payPeriodId } so leave and hourly calcs
+    // use the correct date range instead of the current calendar month.
+    const period: { year: number; month: number } | { payPeriodId: string } =
+      payPeriodId
+        ? { payPeriodId }
+        : this.getCurrentPeriod();
+
+    const payrollItems = await this.processWorkersInChunks(
+      selectedWorkers,
+      period as { year: number; month: number },
+    );
 
     this.logBatchDuration(
       'Batch payroll calculation',
@@ -255,15 +263,25 @@ export class PayrollService {
       );
     }
 
-    const taxBreakdown = await this.taxesService.calculateTaxes(grossSalary);
+    // C3 FIX: Apply leave adjustments before tax calculation.
+    // The old code used raw salaryGross, ignoring any unpaid leave deductions.
+    // calculateWorkerPayroll (batch path) already did this correctly.
+    const { adjustedGross, deduction, leaveDays } =
+      await this.calculateAdjustedSalary(worker, this.getCurrentPeriod());
+
+    const effectiveGross = adjustedGross > 0 ? adjustedGross : grossSalary;
+    const taxBreakdown = await this.taxesService.calculateTaxes(effectiveGross);
     const netPay = this.roundCurrency(
-      grossSalary - taxBreakdown.totalDeductions,
+      effectiveGross - taxBreakdown.totalDeductions,
     );
 
     return {
       worker,
       payrollCalculation: {
-        grossSalary,
+        grossSalary: effectiveGross,
+        originalGross: grossSalary,
+        leaveDeduction: deduction,
+        unpaidLeaveDays: leaveDays,
         taxBreakdown,
         netPay,
       },

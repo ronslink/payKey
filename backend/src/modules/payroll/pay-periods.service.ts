@@ -325,15 +325,21 @@ export class PayPeriodsService {
       );
     }
 
-    // If reopening from COMPLETED or CLOSED, we must revert records to DRAFT to allow editing
+    // H3 FIX: Only revert records that have NOT already been paid or are processing.
+    // Reverting paid records to DRAFT risks double-paying workers on the next run.
     if (
       payPeriod.status === PayPeriodStatus.COMPLETED ||
       payPeriod.status === PayPeriodStatus.CLOSED
     ) {
-      await this.payrollRecordRepository.update(
-        { payPeriodId: id },
-        { status: PayrollStatus.DRAFT },
-      );
+      await this.payrollRecordRepository
+        .createQueryBuilder()
+        .update()
+        .set({ status: PayrollStatus.DRAFT })
+        .where('payPeriodId = :id', { id })
+        .andWhere('paymentStatus NOT IN (:...paidStatuses)', {
+          paidStatuses: ['paid', 'processing', 'manual_check'],
+        })
+        .execute();
     }
 
     // Calculate totals from payroll records

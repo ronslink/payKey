@@ -120,45 +120,21 @@ export class PayrollController {
   @Post('calculate')
   async calculatePayrollForWorkers(
     @Request() req: AuthenticatedRequest,
-    @Body() body: { workerIds: string[]; startDate?: string; endDate?: string },
+    @Body()
+    body: {
+      workerIds: string[];
+      payPeriodId?: string;
+      startDate?: string;
+      endDate?: string;
+    },
   ) {
-    // For now, we ignore dates as calculation is based on fixed salary
-    // In the future, we can use dates to prorate salary
-    const fullPayroll = await this.payrollService.calculatePayrollForUser(
+    // H4 FIX: Now passes payPeriodId so the calculation uses actual period dates
+    // instead of the hardcoded current calendar month.
+    return this.payrollService.calculatePayrollBatch(
       req.user.userId,
+      body.workerIds ?? [],
+      body.payPeriodId,
     );
-
-    if (body.workerIds && body.workerIds.length > 0) {
-      const filteredItems = fullPayroll.payrollItems.filter((item) =>
-        body.workerIds.includes(item.workerId),
-      );
-
-      // Recalculate summary
-      const totalGross = filteredItems.reduce(
-        (sum, item) => sum + item.grossSalary,
-        0,
-      );
-      const totalDeductions = filteredItems.reduce(
-        (sum, item) => sum + item.taxBreakdown.totalDeductions,
-        0,
-      );
-      const totalNetPay = filteredItems.reduce(
-        (sum, item) => sum + item.netPay,
-        0,
-      );
-
-      return {
-        payrollItems: filteredItems,
-        summary: {
-          totalGross: Math.round(totalGross * 100) / 100,
-          totalDeductions: Math.round(totalDeductions * 100) / 100,
-          totalNetPay: Math.round(totalNetPay * 100) / 100,
-          workerCount: filteredItems.length,
-        },
-      };
-    }
-
-    return fullPayroll;
   }
 
   @Get('calculate/:workerId')
