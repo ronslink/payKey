@@ -179,6 +179,9 @@ export class Worker {
   @Column({ type: 'timestamp', nullable: true })
   terminatedAt: Date;
 
+  @Column({ default: false })
+  finalPayProvided: boolean;
+
   @Column({ nullable: true })
   emergencyContactName: string;
 

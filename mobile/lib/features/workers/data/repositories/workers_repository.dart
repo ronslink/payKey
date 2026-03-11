@@ -32,11 +32,13 @@ class WorkersRepository {
   ///
   /// Returns a list of [WorkerModel] sorted by creation date (newest first).
   /// Throws [WorkerRepositoryException] on failure.
-  Future<List<WorkerModel>> getWorkers() async {
+  Future<List<WorkerModel>> getWorkers({bool includeInactive = false}) async {
     return _executeRequest(
       operation: 'fetch workers',
       request: () async {
-        final response = await _apiService.workers.getAll();
+        final response = await _apiService.workers.getAll(
+          queryParams: includeInactive ? {'includeInactive': 'true'} : null,
+        );
         final data = response.data as List;
         return data.map((item) => _mapJsonToWorker(item as Map<String, dynamic>)).toList();
       },

@@ -80,7 +80,7 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
     try {
       // 1. Fetch Workers for phone numbers
       final workerRepo = ref.read(workersRepositoryProvider);
-      final allWorkers = await workerRepo.getWorkers(); 
+      final allWorkers = await workerRepo.getWorkers(includeInactive: true); 
       final workers = allWorkers.where((w) => widget.workerIds.contains(w.id)).toList();
       
       _workerPhones = { for (var w in workers) w.id : w.phoneNumber };

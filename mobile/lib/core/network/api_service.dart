@@ -584,7 +584,7 @@ class AuthEndpoints extends BaseEndpoints {
 class WorkerEndpoints extends BaseEndpoints {
   const WorkerEndpoints(super.api);
 
-  Future<Response> getAll() => _api.get('/workers');
+  Future<Response> getAll({Map<String, dynamic>? queryParams}) => _api.get('/workers', queryParams: queryParams);
 
   Future<Response> getById(String id) => _api.get('/workers/$id');
 

@@ -173,11 +173,18 @@ export class PayrollService {
   async calculatePayrollForUser(
     userId: string,
   ): Promise<PayrollCalculationResult> {
-    const workers = await this.workersRepository.find({
-      where: { userId, isActive: true },
-    });
-
     const { year, month } = this.getCurrentPeriod();
+    const startDate = new Date(year, month, 1);
+    const endDate = new Date(year, month + 1, 0);
+
+    const workers = await this.workersRepository
+      .createQueryBuilder('w')
+      .where('w.userId = :userId', { userId })
+      .andWhere(
+        '(w.isActive = :isActive OR (w.isActive = :isInactive AND w.terminatedAt BETWEEN :startDate AND :endDate AND w.finalPayProvided = :finalPayProvided))',
+        { isActive: true, isInactive: false, startDate, endDate, finalPayProvided: false },
+      )
+      .getMany();
 
     const payrollItems = await Promise.all(
       workers.map((worker) =>
@@ -205,9 +212,23 @@ export class PayrollService {
       `Starting batch payroll calculation for ${workerIds.length} workers`,
     );
 
-    const workers = await this.workersRepository.find({
-      where: { userId, isActive: true },
-    });
+    // H4 FIX: Use the actual PayPeriod dates when provided, not hardcoded current month.
+    // calculateAdjustedSalary accepts { payPeriodId } so leave and hourly calcs
+    // use the correct date range instead of the current calendar month.
+    const payrollPeriod: { year: number; month: number } | { payPeriodId: string } =
+      payPeriodId ? { payPeriodId } : this.getCurrentPeriod();
+
+    const { startDate, endDate } = await this.resolvePeriodDates(payrollPeriod);
+
+    let workersQuery = this.workersRepository
+      .createQueryBuilder('w')
+      .where('w.userId = :userId', { userId })
+      .andWhere(
+        '(w.isActive = :isActive OR (w.isActive = :isInactive AND w.terminatedAt BETWEEN :startDate AND :endDate AND w.finalPayProvided = :finalPayProvided))',
+        { isActive: true, isInactive: false, startDate, endDate, finalPayProvided: false },
+      );
+
+    const workers = await workersQuery.getMany();
 
     const selectedWorkers =
       workerIds.length > 0
@@ -556,8 +577,10 @@ export class PayrollService {
     });
 
     // Filter out records for terminated/inactive workers — they should not be paid
-    // even if a stale draft record exists from before the termination
-    const records = allRecords.filter((r) => r.worker.isActive);
+    // unless they haven't received their final pay yet
+    const records = allRecords.filter(
+      (r) => r.worker.isActive || !r.worker.finalPayProvided,
+    );
     if (allRecords.length !== records.length) {
       const skipped = allRecords
         .filter((r) => !r.worker.isActive)
@@ -640,6 +663,21 @@ export class PayrollService {
         instructions:
           'Please check your wallet balance or worker details and try again.',
       });
+    }
+
+    // 3.5 Mark finalPayProvided for terminated workers who were successfully paid
+    const inactiveWorkersToMark = records
+      .filter((r) => !r.worker.isActive)
+      .map((r) => r.workerId);
+
+    if (inactiveWorkersToMark.length > 0) {
+      this.logger.log(
+        `Marking final pay as provided for ${inactiveWorkersToMark.length} terminated workers`,
+      );
+      await this.workersRepository.update(
+        { id: In(inactiveWorkersToMark) },
+        { finalPayProvided: true },
+      );
     }
 
     // 4. Generate Documents (Only if payments succeeded)

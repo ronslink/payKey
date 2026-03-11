@@ -5,6 +5,7 @@ import {
   Patch,
   Body,
   Param,
+  Query,
   UseGuards,
   Request,
   Res,
@@ -42,8 +43,13 @@ export class WorkersController {
   // ======================================================================================
 
   @Get()
-  async findAll(@Request() req: AuthenticatedRequest, @Res() res: Response) {
-    const workers = await this.workersService.findAll(req.user.userId);
+  async findAll(
+    @Request() req: AuthenticatedRequest,
+    @Res() res: Response,
+    @Query('includeInactive') includeInactive?: string,
+  ) {
+    const fetchInactive = includeInactive === 'true';
+    const workers = await this.workersService.findAll(req.user.userId, fetchInactive);
 
     // Explicitly prevent caching to avoid 304 responses
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
