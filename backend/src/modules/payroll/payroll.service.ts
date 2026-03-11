@@ -26,6 +26,7 @@ import {
   LeaveType,
 } from '../workers/entities/leave-request.entity';
 import { Worker, EmploymentType, PaymentMethod } from '../workers/entities/worker.entity';
+import { Termination } from '../workers/entities/termination.entity';
 import { PayPeriod, PayPeriodStatus } from './entities/pay-period.entity';
 import {
   TimeEntry,
@@ -155,6 +156,8 @@ export class PayrollService {
     private readonly leaveRepository: Repository<LeaveRequest>,
     @InjectRepository(TimeEntry)
     private readonly timeEntryRepository: Repository<TimeEntry>,
+    @InjectRepository(Termination)
+    private readonly terminationRepository: Repository<Termination>,
     private readonly taxesService: TaxesService,
     private readonly payrollPaymentService: PayrollPaymentService,
     private readonly activitiesService: ActivitiesService,
@@ -918,9 +921,36 @@ export class PayrollService {
 
   private async calculateWorkerPayroll(
     worker: Worker,
-    period: { year: number; month: number },
+    period: { year: number; month: number } | { payPeriodId: string },
   ): Promise<PayrollItem> {
     try {
+      if (!worker.isActive && worker.terminationId) {
+        const termination = await this.terminationRepository.findOne({
+          where: { id: worker.terminationId },
+        });
+
+        if (termination) {
+          const outstanding = termination.paymentBreakdown?.outstandingPayments || 0;
+          const totalGross =
+            Number(termination.proratedSalary) +
+            Number(termination.unusedLeavePayout) +
+            Number(termination.severancePay) +
+            outstanding;
+
+          return {
+            workerId: worker.id,
+            workerName: worker.name,
+            grossSalary: totalGross,
+            originalGross: this.parseNumber(worker.salaryGross),
+            leaveDeduction: 0,
+            unpaidLeaveDays: 0,
+            taxBreakdown: await this.taxesService.calculateTaxes(totalGross),
+            netPay: Number(termination.totalFinalPayment),
+            phoneNumber: worker.phoneNumber,
+          };
+        }
+      }
+
       const { adjustedGross, deduction, leaveDays } =
         await this.calculateAdjustedSalary(worker, period);
 
