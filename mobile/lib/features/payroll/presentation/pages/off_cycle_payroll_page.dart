@@ -3,9 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/pay_period_model.dart';
-import '../../data/repositories/pay_period_repository.dart';
 import '../providers/pay_period_provider.dart';
-import 'payroll_confirm_page.dart';
 
 /// Off-Cycle / On-Demand Payroll Page
 ///
@@ -123,7 +121,6 @@ class _OffCyclePayrollPageState extends ConsumerState<OffCyclePayrollPage> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Off-Cycle Payroll'),
@@ -194,7 +191,7 @@ class _OffCyclePayrollPageState extends ConsumerState<OffCyclePayrollPage> {
                   'Pay all active workers in this off-cycle run',
                 ),
                 value: _allWorkers,
-                activeColor: const Color(0xFFF59E0B),
+                activeTrackColor: const Color(0xFFF59E0B),
                 onChanged: (v) => setState(() => _allWorkers = v),
               ),
 
@@ -284,9 +281,9 @@ class _InfoBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.35)),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

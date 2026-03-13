@@ -266,10 +266,10 @@ class _TerminateWorkerPageState extends ConsumerState<TerminateWorkerPage> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: colorScheme.primaryContainer.withOpacity(0.3),
+                    color: colorScheme.primaryContainer.withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                        color: colorScheme.primary.withOpacity(0.3)),
+                        color: colorScheme.primary.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
@@ -458,7 +458,7 @@ class _FinalPayModeCard extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: isSelected
-              ? colorScheme.primaryContainer.withOpacity(0.5)
+              ? colorScheme.primaryContainer.withValues(alpha: 0.5)
               : Colors.grey.shade50,
           border: Border.all(
             color:
