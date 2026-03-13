@@ -10,10 +10,12 @@ import {
   Repository,
   MoreThanOrEqual,
   Between,
+  LessThan,
   DataSource,
   In,
   EntityManager,
 } from 'typeorm';
+import { Cron, CronExpression } from '@nestjs/schedule';
 
 import { ActivitiesService } from '../activities/activities.service';
 import { ActivityType } from '../activities/entities/activity.entity';
@@ -25,7 +27,11 @@ import {
   LeaveStatus,
   LeaveType,
 } from '../workers/entities/leave-request.entity';
-import { Worker, EmploymentType, PaymentMethod } from '../workers/entities/worker.entity';
+import {
+  Worker,
+  EmploymentType,
+  PaymentMethod,
+} from '../workers/entities/worker.entity';
 import { Termination } from '../workers/entities/termination.entity';
 import { PayPeriod, PayPeriodStatus } from './entities/pay-period.entity';
 import {
@@ -185,7 +191,13 @@ export class PayrollService {
       .where('w.userId = :userId', { userId })
       .andWhere(
         '(w.isActive = :isActive OR (w.isActive = :isInactive AND w.terminatedAt BETWEEN :startDate AND :endDate AND w.finalPayProvided = :finalPayProvided))',
-        { isActive: true, isInactive: false, startDate, endDate, finalPayProvided: false },
+        {
+          isActive: true,
+          isInactive: false,
+          startDate,
+          endDate,
+          finalPayProvided: false,
+        },
       )
       .getMany();
 
@@ -218,17 +230,26 @@ export class PayrollService {
     // H4 FIX: Use the actual PayPeriod dates when provided, not hardcoded current month.
     // calculateAdjustedSalary accepts { payPeriodId } so leave and hourly calcs
     // use the correct date range instead of the current calendar month.
-    const payrollPeriod: { year: number; month: number } | { payPeriodId: string } =
-      payPeriodId ? { payPeriodId } : this.getCurrentPeriod();
+    const payrollPeriod:
+      | { year: number; month: number }
+      | { payPeriodId: string } = payPeriodId
+      ? { payPeriodId }
+      : this.getCurrentPeriod();
 
     const { startDate, endDate } = await this.resolvePeriodDates(payrollPeriod);
 
-    let workersQuery = this.workersRepository
+    const workersQuery = this.workersRepository
       .createQueryBuilder('w')
       .where('w.userId = :userId', { userId })
       .andWhere(
         '(w.isActive = :isActive OR (w.isActive = :isInactive AND w.terminatedAt BETWEEN :startDate AND :endDate AND w.finalPayProvided = :finalPayProvided))',
-        { isActive: true, isInactive: false, startDate, endDate, finalPayProvided: false },
+        {
+          isActive: true,
+          isInactive: false,
+          startDate,
+          endDate,
+          finalPayProvided: false,
+        },
       );
 
     const workers = await workersQuery.getMany();
@@ -246,9 +267,7 @@ export class PayrollService {
     // calculateAdjustedSalary accepts { payPeriodId } so leave and hourly calcs
     // use the correct date range instead of the current calendar month.
     const period: { year: number; month: number } | { payPeriodId: string } =
-      payPeriodId
-        ? { payPeriodId }
-        : this.getCurrentPeriod();
+      payPeriodId ? { payPeriodId } : this.getCurrentPeriod();
 
     const payrollItems = await this.processWorkersInChunks(
       selectedWorkers,
@@ -547,6 +566,44 @@ export class PayrollService {
         `Failed to revert PayPeriod ${payPeriodId} to ACTIVE:`,
         e,
       );
+    }
+  }
+
+  /**
+   * Safety Net: Periodically sweep for PayPeriods stuck in 'PROCESSING'
+   * due to a hard server crash before the queue could catch the failure.
+   */
+  @Cron(CronExpression.EVERY_10_MINUTES)
+  async recoverStalledPayrollJobs() {
+    this.logger.debug(
+      'Running cron: Checking for stalled payroll finalization jobs...',
+    );
+
+    try {
+      // Find pay periods that have been PROCESSING for more than 30 minutes
+      const thirtyMinutesAgo = new Date();
+      thirtyMinutesAgo.setMinutes(thirtyMinutesAgo.getMinutes() - 30);
+
+      const stalledPeriods = await this.payPeriodRepository.find({
+        where: {
+          status: PayPeriodStatus.PROCESSING,
+          updatedAt: LessThan(thirtyMinutesAgo),
+        },
+      });
+
+      if (stalledPeriods.length > 0) {
+        const stalledIds = stalledPeriods.map((p) => p.id);
+        this.logger.warn(
+          `Found ${stalledPeriods.length} stalled pay periods in PROCESSING state. Reverting to ACTIVE: ${stalledIds.join(', ')}`,
+        );
+
+        await this.payPeriodRepository.update(
+          { id: In(stalledIds) },
+          { status: PayPeriodStatus.ACTIVE },
+        );
+      }
+    } catch (error) {
+      this.logger.error('Failed to recover stalled payroll jobs:', error);
     }
   }
 
@@ -930,7 +987,8 @@ export class PayrollService {
         });
 
         if (termination) {
-          const outstanding = termination.paymentBreakdown?.outstandingPayments || 0;
+          const outstanding =
+            termination.paymentBreakdown?.outstandingPayments || 0;
           const totalGross =
             Number(termination.proratedSalary) +
             Number(termination.unusedLeavePayout) +

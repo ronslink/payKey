@@ -25,7 +25,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { AuthenticatedRequest } from '../../common/interfaces/user.interface';
 
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository, In, DataSource } from 'typeorm';
 import {
   SubscriptionPayment,
   PaymentStatus,
@@ -57,6 +57,7 @@ export class PaymentsController {
   private readonly logger = new Logger(PaymentsController.name);
 
   constructor(
+    private dataSource: DataSource,
     @InjectRepository(Transaction)
     private transactionsRepository: Repository<Transaction>,
     @InjectRepository(User)
@@ -269,10 +270,8 @@ export class PaymentsController {
 
     return {
       success: true,
-      // Use IntaSend's available_balance as the truth for "Ready to Spend"
-      available_balance: Number(
-        intasendWallet.available_balance ?? user?.walletBalance ?? 0,
-      ),
+      // Fix 3: Standardize on the local ledger as the absolute source of truth
+      available_balance: Number(user?.walletBalance ?? 0),
       // Use combined clearing balance
       clearing_balance: totalClearing,
       currency: 'KES',
@@ -458,227 +457,231 @@ export class PaymentsController {
       );
     }
 
-    // 1. Find Transactions (Handing Bulk by tracking_id)
-    // We search for ANY transaction matching:
-    // - providerRef == invoice_id
-    // - providerRef == tracking_id
-    // - id == api_ref (Use Transaction ID as matching key)
-    const searchCriteria: any[] = [
-      ...(invoice_id ? [{ providerRef: invoice_id }] : []),
-      ...(tracking_id ? [{ providerRef: tracking_id }] : []),
-    ];
+    // 1. Transaction Wrapper for Idempotency
+    return await this.dataSource.transaction(async (manager) => {
+      // Find Transactions with Pessimistic Lock
+      // We search for ANY transaction matching:
+      // - providerRef == invoice_id
+      // - providerRef == tracking_id
+      // - id == api_ref (Use Transaction ID as matching key)
+      const searchCriteria: any[] = [
+        ...(invoice_id ? [{ providerRef: invoice_id }] : []),
+        ...(tracking_id ? [{ providerRef: tracking_id }] : []),
+      ];
 
-    // Only add api_ref if it looks like a UUID (to avoid matching random strings against ID)
-    if (
-      api_ref &&
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-        api_ref,
-      )
-    ) {
-      searchCriteria.push({ id: api_ref });
-    }
-
-    if (searchCriteria.length === 0) {
-      console.warn('⚠️ No valid search criteria found for webhook');
-      return { status: 'ignored', reason: 'No identifiers found' };
-    }
-
-    const transactions = await this.transactionsRepository.find({
-      where: searchCriteria,
-    });
-
-    if (transactions.length === 0) {
-      console.warn(
-        `⚠️ Transaction not found for Invoice: ${invoice_id} / Tracking: ${tracking_id} / Ref: ${api_ref}`,
-      );
-      return { status: 'ignored', reason: 'Transaction not found' };
-    }
-
-    // 2. Idempotency Check (Check first one)
-    const firstTx = transactions[0];
-    if (
-      firstTx.status === TransactionStatus.SUCCESS ||
-      firstTx.status === TransactionStatus.FAILED ||
-      (firstTx.status === TransactionStatus.CLEARING &&
-        body.clearing_status === 'CLEARING')
-    ) {
-      console.log(
-        `🔹 Idempotency: Transaction(s) ${firstTx.providerRef} already final. Skipping.`,
-      );
-      return { status: 'ignored', reason: 'Already finalized' };
-    }
-
-    // 3. Determine New Status
-    let newStatus = TransactionStatus.PENDING;
-    const { clearing_status } = body;
-
-    // Normalize state to uppercase — IntaSend sends 'Completed' for B2C payouts
-    // but 'COMPLETE' for STK deposits. Handle all variants case-insensitively.
-    const stateUpper = (state || '').toUpperCase();
-    if (stateUpper === 'COMPLETE' || stateUpper === 'COMPLETED') {
-      if (clearing_status === 'CLEARING') {
-        newStatus = TransactionStatus.CLEARING;
-      } else {
-        newStatus = TransactionStatus.SUCCESS;
+      // Only add api_ref if it looks like a UUID (to avoid matching random strings against ID)
+      if (
+        api_ref &&
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          api_ref,
+        )
+      ) {
+        searchCriteria.push({ id: api_ref });
       }
-    } else if (stateUpper === 'FAILED' || stateUpper === 'CANCELLED') {
-      newStatus = TransactionStatus.FAILED;
-    }
 
-    // 4. Update ALL matching transactions
-    for (const tx of transactions) {
-      const previousStatus = tx.status;
-      tx.status = newStatus;
+      if (searchCriteria.length === 0) {
+        console.warn('⚠️ No valid search criteria found for webhook');
+        return { status: 'ignored', reason: 'No identifiers found' };
+      }
 
-      // Detect payment method from IntaSend provider field
-      const provider = body.provider as string | undefined;
-      if (provider && !tx.paymentMethod) {
-        switch (provider.toUpperCase()) {
-          case 'M-PESA':
-            tx.paymentMethod = PaymentMethodType.MPESA_STK;
-            break;
-          case 'CARD-PAYMENT':
-            tx.paymentMethod = PaymentMethodType.CARD;
-            break;
-          case 'BANK-PAYMENT':
-            tx.paymentMethod = PaymentMethodType.PESALINK;
-            break;
-          default:
-            tx.paymentMethod = PaymentMethodType.UNKNOWN;
+      const transactions = await manager.find(Transaction, {
+        where: searchCriteria,
+        lock: { mode: 'pessimistic_write' }, // Lock the rows to prevent double webhook execution
+      });
+
+      if (transactions.length === 0) {
+        console.warn(
+          `⚠️ Transaction not found for Invoice: ${invoice_id} / Tracking: ${tracking_id} / Ref: ${api_ref}`,
+        );
+        return { status: 'ignored', reason: 'Transaction not found' };
+      }
+
+      // 2. Idempotency Check (Check first one)
+      const firstTx = transactions[0];
+      if (
+        firstTx.status === TransactionStatus.SUCCESS ||
+        firstTx.status === TransactionStatus.FAILED ||
+        (firstTx.status === TransactionStatus.CLEARING &&
+          body.clearing_status === 'CLEARING')
+      ) {
+        console.log(
+          `🔹 Idempotency: Transaction(s) ${firstTx.providerRef} already final. Skipping.`,
+        );
+        return { status: 'ignored', reason: 'Already finalized' };
+      }
+
+      // 3. Determine New Status
+      let newStatus = TransactionStatus.PENDING;
+      const { clearing_status } = body;
+
+      // Normalize state to uppercase — IntaSend sends 'Completed' for B2C payouts
+      // but 'COMPLETE' for STK deposits. Handle all variants case-insensitively.
+      const stateUpper = (state || '').toUpperCase();
+      if (stateUpper === 'COMPLETE' || stateUpper === 'COMPLETED') {
+        if (clearing_status === 'CLEARING') {
+          newStatus = TransactionStatus.CLEARING;
+        } else {
+          newStatus = TransactionStatus.SUCCESS;
         }
+      } else if (stateUpper === 'FAILED' || stateUpper === 'CANCELLED') {
+        newStatus = TransactionStatus.FAILED;
       }
 
-      tx.metadata = {
-        ...(typeof tx.metadata === 'string'
-          ? JSON.parse(tx.metadata)
-          : tx.metadata),
-        webhookEvent: body,
-        updatedAt: new Date().toISOString(),
-      };
+      // 4. Update ALL matching transactions
+      for (const tx of transactions) {
+        const previousStatus = tx.status;
+        tx.status = newStatus;
 
-      // Handle Deposit Logic (Only credit once per transaction)
-      // Note: tracking_id based bulk payouts are usually TYPE=PAYOUT, not DEPOSIT.
-      // DEPOSITS usually have unique invoice_id.
-      // Handle Deposit Logic (Only credit once per transaction)
-      if (tx.type === TransactionType.DEPOSIT) {
-        if (newStatus === TransactionStatus.CLEARING) {
-          // If we are moving TO clearing, add to clearing balance
-          // But check if we were already in clearing? Idempotency handles that.
-          // What if we were PENDING? Add to clearing.
-          await this.usersRepository.increment(
-            { id: tx.userId },
-            'clearingBalance',
-            Number(value || tx.amount),
-          );
-        } else if (newStatus === TransactionStatus.SUCCESS) {
-          await this.usersRepository.increment(
-            { id: tx.userId },
-            'walletBalance',
-            Number(value || tx.amount),
-          );
+        // Detect payment method from IntaSend provider field
+        const provider = body.provider as string | undefined;
+        if (provider && !tx.paymentMethod) {
+          switch (provider.toUpperCase()) {
+            case 'M-PESA':
+              tx.paymentMethod = PaymentMethodType.MPESA_STK;
+              break;
+            case 'CARD-PAYMENT':
+              tx.paymentMethod = PaymentMethodType.CARD;
+              break;
+            case 'BANK-PAYMENT':
+              tx.paymentMethod = PaymentMethodType.PESALINK;
+              break;
+            default:
+              tx.paymentMethod = PaymentMethodType.UNKNOWN;
+          }
+        }
 
-          // If it was previously in clearing, remove from clearing balance
-          if (previousStatus === TransactionStatus.CLEARING) {
-            await this.usersRepository.decrement(
+        tx.metadata = {
+          ...(typeof tx.metadata === 'string'
+            ? JSON.parse(tx.metadata)
+            : tx.metadata),
+          webhookEvent: body,
+          updatedAt: new Date().toISOString(),
+        };
+
+        // Handle Deposit Logic (Only credit once per transaction)
+        if (tx.type === TransactionType.DEPOSIT) {
+          if (newStatus === TransactionStatus.CLEARING) {
+            await manager.increment(
+              User,
               { id: tx.userId },
               'clearingBalance',
               Number(value || tx.amount),
             );
+          } else if (newStatus === TransactionStatus.SUCCESS) {
+            await manager.increment(
+              User,
+              { id: tx.userId },
+              'walletBalance',
+              Number(value || tx.amount),
+            );
+
+            if (previousStatus === TransactionStatus.CLEARING) {
+              await manager.decrement(
+                User,
+                { id: tx.userId },
+                'clearingBalance',
+                Number(value || tx.amount),
+              );
+            }
           }
         }
-      }
 
-      // Handle B2C Payout Logic - Update PayrollRecord status
-      if (
-        tx.type === TransactionType.SALARY_PAYOUT &&
-        tx.metadata?.payrollRecordId
-      ) {
-        const payrollRecordId = tx.metadata.payrollRecordId;
-        let paymentStatus: string;
+        // Handle B2C Payout Logic - Update PayrollRecord status
+        if (
+          tx.type === TransactionType.SALARY_PAYOUT &&
+          tx.metadata?.payrollRecordId
+        ) {
+          const payrollRecordId = tx.metadata.payrollRecordId;
+          let paymentStatus: string;
 
-        if (newStatus === TransactionStatus.SUCCESS) {
-          paymentStatus = 'paid';
-        } else if (newStatus === TransactionStatus.FAILED) {
-          paymentStatus = 'failed';
-        } else {
-          paymentStatus = 'processing';
-        }
+          if (newStatus === TransactionStatus.SUCCESS) {
+            paymentStatus = 'paid';
+          } else if (newStatus === TransactionStatus.FAILED) {
+            paymentStatus = 'failed';
+          } else {
+            paymentStatus = 'processing';
+          }
 
-        await this.payrollRecordRepository.update(payrollRecordId, {
-          paymentStatus,
-          paymentDate:
-            newStatus === TransactionStatus.SUCCESS ? new Date() : undefined,
-        });
-
-        console.log(
-          `📊 PayrollRecord ${payrollRecordId} updated to ${paymentStatus}`,
-        );
-      }
-    }
-
-    await this.transactionsRepository.save(transactions);
-
-    // 6. Send Push Notifications for status updates
-    if (newStatus !== TransactionStatus.PENDING) {
-      const userId = firstTx.userId;
-      const deviceToken = await this.deviceTokenRepository.findOne({
-        where: { userId, isActive: true },
-        order: { lastUsedAt: 'DESC' },
-      });
-
-      if (deviceToken) {
-        const transactionType =
-          firstTx.type === TransactionType.DEPOSIT ? 'TOPUP' : 'PAYOUT';
-        const workerName = firstTx.metadata?.workerName || 'Worker';
-        const amount = Number(firstTx.amount);
-
-        await this.notificationsService.sendPaymentStatusNotification(
-          deviceToken.token,
-          workerName,
-          amount,
-          newStatus as 'PENDING' | 'CLEARING' | 'SUCCESS' | 'FAILED',
-          transactionType,
-        );
-        console.log(`📱 Push notification sent for ${newStatus}`);
-      }
-    }
-
-    // 7. Subscription Logic (Legacy/Single handling)
-    if (firstTx.metadata?.subscriptionPaymentId) {
-      const subPaymentId = firstTx.metadata.subscriptionPaymentId;
-      const isSuccess = newStatus === TransactionStatus.SUCCESS;
-      const status = isSuccess ? PaymentStatus.COMPLETED : PaymentStatus.FAILED;
-
-      await this.subscriptionPaymentRepository.update(subPaymentId, {
-        status,
-        transactionId: invoice_id || tracking_id,
-        paidDate: isSuccess ? new Date() : undefined,
-      });
-
-      if (isSuccess) {
-        const payment = await this.subscriptionPaymentRepository.findOne({
-          where: { id: subPaymentId },
-        });
-        if (payment) {
-          const subscription = await this.subscriptionRepository.findOne({
-            where: { id: payment.subscriptionId },
+          await manager.update(PayrollRecord, payrollRecordId, {
+            paymentStatus,
+            paymentDate:
+              newStatus === TransactionStatus.SUCCESS ? new Date() : undefined,
           });
-          if (subscription) {
-            subscription.status = SubscriptionStatus.ACTIVE;
-            await this.subscriptionRepository.save(subscription);
-            await this.usersRepository.update(payment.userId, {
-              tier: subscription.tier as any,
+
+          console.log(
+            `📊 PayrollRecord ${payrollRecordId} updated to ${paymentStatus}`,
+          );
+        }
+      }
+
+      await manager.save(Transaction, transactions);
+
+      // 6. Send Push Notifications for status updates
+      if (newStatus !== TransactionStatus.PENDING) {
+        const userId = firstTx.userId;
+        const deviceToken = await this.deviceTokenRepository.findOne({
+          where: { userId, isActive: true },
+          order: { lastUsedAt: 'DESC' },
+        });
+
+        if (deviceToken) {
+          const transactionType =
+            firstTx.type === TransactionType.DEPOSIT ? 'TOPUP' : 'PAYOUT';
+          const workerName = firstTx.metadata?.workerName || 'Worker';
+          const amount = Number(firstTx.amount);
+
+          await this.notificationsService.sendPaymentStatusNotification(
+            deviceToken.token,
+            workerName,
+            amount,
+            newStatus as 'PENDING' | 'CLEARING' | 'SUCCESS' | 'FAILED',
+            transactionType,
+          );
+          console.log(`📱 Push notification sent for ${newStatus}`);
+        }
+      }
+
+      // 7. Subscription Logic (Legacy/Single handling)
+      if (firstTx.metadata?.subscriptionPaymentId) {
+        const subPaymentId = firstTx.metadata.subscriptionPaymentId;
+        const isSuccess = newStatus === TransactionStatus.SUCCESS;
+        const status = isSuccess
+          ? PaymentStatus.COMPLETED
+          : PaymentStatus.FAILED;
+
+        await manager.update(SubscriptionPayment, subPaymentId, {
+          status,
+          transactionId: invoice_id || tracking_id,
+          paidDate: isSuccess ? new Date() : undefined,
+        });
+
+        if (isSuccess) {
+          const payment = await manager.findOne(SubscriptionPayment, {
+            where: { id: subPaymentId },
+          });
+          if (payment) {
+            const subscription = await manager.findOne(Subscription, {
+              where: { id: payment.subscriptionId },
             });
-            console.log(`🎉 Subscription Activated for User ${payment.userId}`);
+            if (subscription) {
+              subscription.status = SubscriptionStatus.ACTIVE;
+              await manager.save(Subscription, subscription);
+              await manager.update(User, payment.userId, {
+                tier: subscription.tier as any,
+              });
+              console.log(
+                `🎉 Subscription Activated for User ${payment.userId}`,
+              );
+            }
           }
         }
       }
-    }
 
-    return {
-      status: 'success',
-      updated: transactions.length,
-      challenge: body.challenge, // Echo challenge if present (required by IntaSend)
-    };
+      return {
+        status: 'success',
+        updated: transactions.length,
+        challenge: body.challenge, // Echo challenge if present (required by IntaSend)
+      };
+    });
   }
 }

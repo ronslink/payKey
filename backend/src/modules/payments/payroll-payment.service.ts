@@ -331,32 +331,7 @@ export class PayrollPaymentService {
 
       // Schedule safety net status check job (only in production where payouts are async)
       if (finalStatus === 'processing' && trackingId) {
-        const payPeriodId = records[0]?.payPeriodId;
-        const userId = records[0]?.userId;
-        const recordIds = records.map((r) => r.id);
-
-        this.logger.log(
-          `Scheduling status check for tracking ID ${trackingId} in ${this.STATUS_CHECK_DELAY_MS / 1000}s`,
-        );
-
-        await this.payrollQueue.add(
-          'check-payout-status',
-          {
-            trackingId,
-            payPeriodId,
-            userId,
-            recordIds,
-            attempt: 1,
-          },
-          {
-            delay: this.STATUS_CHECK_DELAY_MS,
-            attempts: 3, // Retry up to 3 times if job fails
-            backoff: {
-              type: 'exponential',
-              delay: 60000, // 1 minute base delay for retries
-            },
-          },
-        );
+        await this.schedulePayoutStatusCheckJob(trackingId, records);
       }
     } catch (e: any) {
       this.logger.error('Bulk Payout Failed', e);
@@ -645,6 +620,11 @@ export class PayrollPaymentService {
           message: 'Bank transfer initiated',
         });
       }
+
+      // Fix 1: Add safety net status check for Bank Payouts as well
+      if (finalStatus === 'processing' && trackingId) {
+        await this.schedulePayoutStatusCheckJob(trackingId, records);
+      }
     } catch (e: any) {
       this.logger.error('Bank Bulk Payout Failed', e);
 
@@ -801,5 +781,43 @@ export class PayrollPaymentService {
       })
       .join('\n');
     return headers + rows;
+  }
+
+  /**
+   * Helper to schedule a payout status check job
+   * Acts as a safety net if webhooks fail or are missed
+   */
+  private async schedulePayoutStatusCheckJob(
+    trackingId: string,
+    records: PayrollRecord[],
+  ) {
+    if (records.length === 0) return;
+
+    const payPeriodId = records[0]?.payPeriodId;
+    const userId = records[0]?.userId;
+    const recordIds = records.map((r) => r.id);
+
+    this.logger.log(
+      `Scheduling status check for tracking ID ${trackingId} in ${this.STATUS_CHECK_DELAY_MS / 1000}s`,
+    );
+
+    await this.payrollQueue.add(
+      'check-payout-status',
+      {
+        trackingId,
+        payPeriodId,
+        userId,
+        recordIds,
+        attempt: 1,
+      },
+      {
+        delay: this.STATUS_CHECK_DELAY_MS,
+        attempts: 3, // Retry up to 3 times if job fails
+        backoff: {
+          type: 'exponential',
+          delay: 60000, // 1 minute base delay for retries
+        },
+      },
+    );
   }
 }
