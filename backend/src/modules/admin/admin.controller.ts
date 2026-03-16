@@ -24,9 +24,7 @@ export class AdminController {
   // ─── Analytics ──────────────────────────────────────────────────────────────
 
   @Get('analytics/dashboard')
-  async getDashboard(
-    @Query('currency') currency: string = 'USD',
-  ) {
+  async getDashboard(@Query('currency') currency: string = 'USD') {
     return this.adminService.getDashboardMetrics(currency);
   }
 

@@ -18,7 +18,9 @@ export class PlatinumGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const user = request.user;
 
-    this.logger.debug(`PlatinumGuard check: user=${user?.email}, userId=${user?.userId}, role=${user?.role}, tier=${user?.tier}`);
+    this.logger.debug(
+      `PlatinumGuard check: user=${user?.email}, userId=${user?.userId}, role=${user?.role}, tier=${user?.tier}`,
+    );
 
     if (!user) {
       throw new ForbiddenException('User not authenticated');
@@ -36,7 +38,9 @@ export class PlatinumGuard implements CanActivate {
     // Get user with current subscription details
     const userDetails = await this.usersService.findOneById(targetUserId);
 
-    this.logger.debug(`PlatinumGuard: targetUserId=${targetUserId}, foundUser=${userDetails?.email}, userTier=${userDetails?.tier}`);
+    this.logger.debug(
+      `PlatinumGuard: targetUserId=${targetUserId}, foundUser=${userDetails?.email}, userTier=${userDetails?.tier}`,
+    );
 
     if (!userDetails) {
       throw new ForbiddenException('User not found');
@@ -44,13 +48,17 @@ export class PlatinumGuard implements CanActivate {
 
     // Check tier
     if (userDetails.tier !== UserTier.PLATINUM) {
-      this.logger.warn(`PlatinumGuard: Access denied for ${userDetails.email} - tier is ${userDetails.tier}, not PLATINUM`);
+      this.logger.warn(
+        `PlatinumGuard: Access denied for ${userDetails.email} - tier is ${userDetails.tier}, not PLATINUM`,
+      );
       throw new ForbiddenException(
         'This feature is available only for PLATINUM users. Please upgrade to access.',
       );
     }
 
-    this.logger.debug(`PlatinumGuard: Access granted for ${userDetails.email} - tier is PLATINUM`);
+    this.logger.debug(
+      `PlatinumGuard: Access granted for ${userDetails.email} - tier is PLATINUM`,
+    );
 
     return true;
   }

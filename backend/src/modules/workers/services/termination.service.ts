@@ -10,8 +10,15 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { Worker } from '../entities/worker.entity';
 import { Termination } from '../entities/termination.entity';
-import { PayrollRecord, PayrollStatus } from '../../payroll/entities/payroll-record.entity';
-import { PayPeriod, PayPeriodStatus, PayPeriodFrequency } from '../../payroll/entities/pay-period.entity';
+import {
+  PayrollRecord,
+  PayrollStatus,
+} from '../../payroll/entities/payroll-record.entity';
+import {
+  PayPeriod,
+  PayPeriodStatus,
+  PayPeriodFrequency,
+} from '../../payroll/entities/pay-period.entity';
 import { TaxesService } from '../../taxes/taxes.service';
 import {
   CreateTerminationDto,
@@ -66,9 +73,10 @@ export class TerminationService {
       );
     }
 
-    const termDate = terminationDate instanceof Date
-      ? terminationDate
-      : new Date(terminationDate as unknown as string);
+    const termDate =
+      terminationDate instanceof Date
+        ? terminationDate
+        : new Date(terminationDate as unknown as string);
 
     if (isNaN(termDate.getTime())) {
       throw new BadRequestException('Invalid termination date provided');
@@ -148,7 +156,11 @@ export class TerminationService {
       throw new BadRequestException('Invalid termination date provided');
     }
 
-    const finalPayment = await this.calculateFinalPayment(workerId, userId, terminationDate);
+    const finalPayment = await this.calculateFinalPayment(
+      workerId,
+      userId,
+      terminationDate,
+    );
 
     const severancePay = dto.severancePay ?? 0;
     const outstandingPayments = dto.outstandingPayments ?? 0;
@@ -190,7 +202,7 @@ export class TerminationService {
       if (!activePeriod) {
         throw new BadRequestException(
           'No active or draft pay period found. Cannot include final pay in regular payroll. ' +
-          'Please create a pay period first or choose a different final pay mode.',
+            'Please create a pay period first or choose a different final pay mode.',
         );
       }
 
@@ -247,12 +259,12 @@ export class TerminationService {
         isOffCycle: true,
         userId,
         createdBy: userId,
-        notes: { comments: `Auto-created for final pay of terminated worker ${worker.name}` },
+        notes: {
+          comments: `Auto-created for final pay of terminated worker ${worker.name}`,
+        },
       });
 
-      const savedPeriod = (await this.payPeriodRepository.save(
-        offCyclePeriod,
-      )) as PayPeriod;
+      const savedPeriod = await this.payPeriodRepository.save(offCyclePeriod);
 
       // Write the PayrollRecord into the new off-cycle period as DRAFT
       const payrollRecord = this.payrollRecordRepository.create({
@@ -323,9 +335,7 @@ export class TerminationService {
       },
     });
 
-    const savedTermination = (await this.terminationRepository.save(
-      termination,
-    )) as Termination;
+    const savedTermination = await this.terminationRepository.save(termination);
 
     worker.isActive = false;
     worker.terminatedAt = terminationDate;
@@ -345,10 +355,16 @@ export class TerminationService {
           .orderBy('period.startDate', 'ASC')
           .getOne();
         if (activePeriod) {
-          await this.taxesService.generateTaxSubmission(activePeriod.id, userId);
+          await this.taxesService.generateTaxSubmission(
+            activePeriod.id,
+            userId,
+          );
         }
       } catch (e) {
-        this.logger.warn('Failed to update tax submission after termination:', e);
+        this.logger.warn(
+          'Failed to update tax submission after termination:',
+          e,
+        );
       }
     }
 

@@ -54,7 +54,7 @@ export class AdminService {
     private readonly configService: ConfigService,
     private readonly exchangeRateService: ExchangeRateService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
-  ) { }
+  ) {}
 
   // ─── Analytics Dashboard ───────────────────────────────────────────────────
 
@@ -75,7 +75,9 @@ export class AdminService {
         rates[key] = rate;
         return rate;
       } catch (e) {
-        this.logger.warn(`Could not get exchange rate for ${from} -> ${to}, using 1:1`);
+        this.logger.warn(
+          `Could not get exchange rate for ${from} -> ${to}, using 1:1`,
+        );
         rates[key] = 1;
         return 1;
       }
@@ -87,15 +89,23 @@ export class AdminService {
     try {
       if (displayCurrency === 'KES') {
         // Convert USD to KES
-        exchangeRate = await this.exchangeRateService.getLatestRate('USD', 'KES');
+        exchangeRate = await this.exchangeRateService.getLatestRate(
+          'USD',
+          'KES',
+        );
         rateSource = 'USD';
       } else if (displayCurrency === 'EUR') {
         // Convert KES to EUR for display (KES is stored in DB)
-        exchangeRate = await this.exchangeRateService.getLatestRate('KES', 'EUR');
+        exchangeRate = await this.exchangeRateService.getLatestRate(
+          'KES',
+          'EUR',
+        );
         rateSource = 'KES';
       }
     } catch (e) {
-      this.logger.warn(`Could not get exchange rate for ${displayCurrency}, using 1:1`);
+      this.logger.warn(
+        `Could not get exchange rate for ${displayCurrency}, using 1:1`,
+      );
     }
 
     const [
@@ -466,15 +476,24 @@ export class AdminService {
         containers.map(async (c) => {
           let cpu = 0;
           let memory = 0;
-          
+
           if (c.State === 'running') {
             try {
-              const stats = await docker.getContainer(c.Id).stats({ stream: false });
-              const cpuDelta = stats.cpu_stats.cpu_usage.total_usage - stats.precpu_stats.cpu_usage.total_usage;
-              const systemDelta = stats.cpu_stats.system_cpu_usage - stats.precpu_stats.system_cpu_usage;
+              const stats = await docker
+                .getContainer(c.Id)
+                .stats({ stream: false });
+              const cpuDelta =
+                stats.cpu_stats.cpu_usage.total_usage -
+                stats.precpu_stats.cpu_usage.total_usage;
+              const systemDelta =
+                stats.cpu_stats.system_cpu_usage -
+                stats.precpu_stats.system_cpu_usage;
               const cpuCount = stats.cpu_stats.online_cpus || 1;
-              cpu = systemDelta > 0 ? Math.round((cpuDelta / systemDelta) * cpuCount * 100) : 0;
-              
+              cpu =
+                systemDelta > 0
+                  ? Math.round((cpuDelta / systemDelta) * cpuCount * 100)
+                  : 0;
+
               const memUsage = stats.memory_stats.usage || 0;
               const memLimit = stats.memory_stats.limit || 1;
               memory = Math.round((memUsage / memLimit) * 100);
@@ -482,7 +501,7 @@ export class AdminService {
               // Ignore stats errors
             }
           }
-          
+
           return {
             name: c.Names[0]?.replace(/^\//, ''),
             status: c.Status,
@@ -491,7 +510,7 @@ export class AdminService {
             cpu,
             memory,
           };
-        })
+        }),
       );
 
       return { status: 'ok', containers: containerList };
@@ -504,11 +523,11 @@ export class AdminService {
   private getServerInfo() {
     const uptime = os.uptime();
     const loadAvg = os.loadavg();
-    
+
     return {
       uptime: Math.round(uptime),
       uptimeFormatted: `${Math.floor(uptime / 86400)}d ${Math.floor((uptime % 86400) / 3600)}h`,
-      loadAvg: loadAvg.map(l => Math.round(l * 100) / 100),
+      loadAvg: loadAvg.map((l) => Math.round(l * 100) / 100),
       cpuCount: os.cpus().length,
     };
   }
@@ -620,7 +639,7 @@ export class AdminService {
             // Plain text log - try to detect level
             const upperLine = line.toUpperCase();
             let level = 'LOG';
-            
+
             // TypeORM query logs should be INFO, not ERROR
             if (upperLine.startsWith('QUERY:')) {
               level = 'INFO';
@@ -631,11 +650,20 @@ export class AdminService {
             ) {
               // Only mark as ERROR if it looks like an actual error log
               level = 'ERROR';
-            } else if (upperLine.includes('[WARN]') || upperLine.includes(' WARN ')) {
+            } else if (
+              upperLine.includes('[WARN]') ||
+              upperLine.includes(' WARN ')
+            ) {
               level = 'WARN';
-            } else if (upperLine.includes('[DEBUG]') || upperLine.includes(' DEBUG ')) {
+            } else if (
+              upperLine.includes('[DEBUG]') ||
+              upperLine.includes(' DEBUG ')
+            ) {
               level = 'DEBUG';
-            } else if (upperLine.includes('[INFO]') || upperLine.includes(' INFO ')) {
+            } else if (
+              upperLine.includes('[INFO]') ||
+              upperLine.includes(' INFO ')
+            ) {
               level = 'INFO';
             }
 

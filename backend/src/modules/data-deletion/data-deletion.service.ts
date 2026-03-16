@@ -1,4 +1,9 @@
-import { Injectable, Logger, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import {
@@ -43,7 +48,7 @@ export class DataDeletionService {
     @InjectRepository(Subscription)
     private subscriptionRepository: Repository<Subscription>,
     private dataSource: DataSource,
-  ) { }
+  ) {}
 
   /**
    * Create a new deletion request
@@ -60,9 +65,14 @@ export class DataDeletionService {
 
     if (user.passwordHash) {
       if (!dto.password) {
-        throw new BadRequestException('Password is required to confirm deletion.');
+        throw new BadRequestException(
+          'Password is required to confirm deletion.',
+        );
       }
-      const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash);
+      const isPasswordValid = await bcrypt.compare(
+        dto.password,
+        user.passwordHash,
+      );
       if (!isPasswordValid) {
         throw new UnauthorizedException('Invalid email or password.');
       }

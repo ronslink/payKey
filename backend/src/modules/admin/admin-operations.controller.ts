@@ -317,8 +317,11 @@ export class AdminOperationsController {
 
     const summary = {
       total: pending.length,
-      salaryPayouts: pending.filter((t) => t.type === TransactionType.SALARY_PAYOUT).length,
-      deposits: pending.filter((t) => t.type === TransactionType.DEPOSIT).length,
+      salaryPayouts: pending.filter(
+        (t) => t.type === TransactionType.SALARY_PAYOUT,
+      ).length,
+      deposits: pending.filter((t) => t.type === TransactionType.DEPOSIT)
+        .length,
       withProviderRef: pending.filter((t) => !!t.providerRef).length,
       simulationOrTest: pending.filter(
         (t) =>
@@ -352,7 +355,9 @@ export class AdminOperationsController {
       where: { status: TransactionStatus.PENDING },
     });
 
-    this.logger.log(`Found ${pendingTransactions.length} PENDING transactions to process`);
+    this.logger.log(
+      `Found ${pendingTransactions.length} PENDING transactions to process`,
+    );
 
     // 2. Clean up simulation/test deposits (will never resolve via webhook)
     const staleTestTxns = pendingTransactions.filter(
@@ -367,7 +372,11 @@ export class AdminOperationsController {
     if (staleTestTxns.length > 0) {
       await this.transactionRepo.update(
         { id: In(staleTestTxns.map((t) => t.id)) },
-        { status: TransactionStatus.FAILED, metadata: () => `metadata || '{"cleanedBy":"admin-sync","reason":"stale_test_or_no_ref"}'::jsonb` },
+        {
+          status: TransactionStatus.FAILED,
+          metadata: () =>
+            `metadata || '{"cleanedBy":"admin-sync","reason":"stale_test_or_no_ref"}'::jsonb`,
+        },
       );
       results.cleaned = staleTestTxns.map((t) => ({
         id: t.id,
@@ -376,7 +385,9 @@ export class AdminOperationsController {
         providerRef: t.providerRef,
         reason: 'stale_test_or_no_ref',
       }));
-      this.logger.log(`Cleaned ${staleTestTxns.length} stale test/simulation transactions`);
+      this.logger.log(
+        `Cleaned ${staleTestTxns.length} stale test/simulation transactions`,
+      );
     }
 
     // 3. Sync real SALARY_PAYOUT transactions via IntaSend API
@@ -397,7 +408,8 @@ export class AdminOperationsController {
 
     for (const [trackingId, txns] of byTrackingId.entries()) {
       try {
-        const intaSendStatus = await this.intaSendService.checkPayoutStatus(trackingId);
+        const intaSendStatus =
+          await this.intaSendService.checkPayoutStatus(trackingId);
         const batchStatus = (
           intaSendStatus?.file_status ||
           intaSendStatus?.status ||
@@ -418,9 +430,12 @@ export class AdminOperationsController {
         } else {
           // Still processing — check individual transactions within the batch
           const transactions = intaSendStatus?.transactions || [];
-          const allDone = transactions.length > 0 &&
+          const allDone =
+            transactions.length > 0 &&
             transactions.every((t: any) =>
-              ['successful', 'completed'].includes((t.status || '').toLowerCase()),
+              ['successful', 'completed'].includes(
+                (t.status || '').toLowerCase(),
+              ),
             );
           if (allDone) {
             newStatus = TransactionStatus.SUCCESS;
@@ -434,7 +449,8 @@ export class AdminOperationsController {
             { id: In(txns.map((t) => t.id)) },
             {
               status: newStatus,
-              metadata: () => `metadata || '{"syncedBy":"admin-sync","intaSendStatus":"${batchStatus}"}'::jsonb`,
+              metadata: () =>
+                `metadata || '{"syncedBy":"admin-sync","intaSendStatus":"${batchStatus}"}'::jsonb`,
             },
           );
 
@@ -448,7 +464,9 @@ export class AdminOperationsController {
               { id: In(payrollRecordIds) },
               {
                 paymentStatus: newPaymentStatus,
-                ...(newPaymentStatus === 'paid' ? { paymentDate: new Date() } : {}),
+                ...(newPaymentStatus === 'paid'
+                  ? { paymentDate: new Date() }
+                  : {}),
               },
             );
           }
@@ -491,8 +509,14 @@ export class AdminOperationsController {
     for (const tx of realDepositTxns) {
       try {
         // For deposits, check STK push status via the invoice/tracking ID
-        const intaSendStatus = await this.intaSendService.checkPayoutStatus(tx.providerRef);
-        const rawStatus = (intaSendStatus?.status || intaSendStatus?.invoice?.state || 'unknown').toLowerCase();
+        const intaSendStatus = await this.intaSendService.checkPayoutStatus(
+          tx.providerRef,
+        );
+        const rawStatus = (
+          intaSendStatus?.status ||
+          intaSendStatus?.invoice?.state ||
+          'unknown'
+        ).toLowerCase();
 
         if (['completed', 'successful', 'complete'].includes(rawStatus)) {
           await this.transactionRepo.update(

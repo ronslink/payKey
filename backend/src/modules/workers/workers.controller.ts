@@ -49,7 +49,10 @@ export class WorkersController {
     @Query('includeInactive') includeInactive?: string,
   ) {
     const fetchInactive = includeInactive === 'true';
-    const workers = await this.workersService.findAll(req.user.userId, fetchInactive);
+    const workers = await this.workersService.findAll(
+      req.user.userId,
+      fetchInactive,
+    );
 
     // Explicitly prevent caching to avoid 304 responses
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');

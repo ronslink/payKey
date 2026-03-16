@@ -10,7 +10,8 @@ export class CreateDeletionRequestDto {
   email: string;
 
   @ApiPropertyOptional({
-    description: 'Password of the account to delete (required if user has a password)',
+    description:
+      'Password of the account to delete (required if user has a password)',
     example: 'password123',
   })
   @IsOptional()

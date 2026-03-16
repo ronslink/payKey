@@ -110,17 +110,20 @@ export class EmployeePortalService {
     variants.add(digits);
 
     if (digits.startsWith('254') && digits.length === 12) {
-      variants.add('+' + digits);           // +254XXXXXXXXX
-      variants.add('0' + digits.slice(3));  // 07XXXXXXXX
-      variants.add(digits.slice(3));        // 7XXXXXXXX
+      variants.add('+' + digits); // +254XXXXXXXXX
+      variants.add('0' + digits.slice(3)); // 07XXXXXXXX
+      variants.add(digits.slice(3)); // 7XXXXXXXX
     } else if (digits.startsWith('0') && digits.length === 10) {
       variants.add('+254' + digits.slice(1)); // +254XXXXXXXXX
-      variants.add('254' + digits.slice(1));  // 254XXXXXXXXX
-      variants.add(digits.slice(1));          // 7XXXXXXXX
-    } else if ((digits.startsWith('7') || digits.startsWith('1')) && digits.length === 9) {
+      variants.add('254' + digits.slice(1)); // 254XXXXXXXXX
+      variants.add(digits.slice(1)); // 7XXXXXXXX
+    } else if (
+      (digits.startsWith('7') || digits.startsWith('1')) &&
+      digits.length === 9
+    ) {
       variants.add('+254' + digits); // +254XXXXXXXXX
-      variants.add('254' + digits);  // 254XXXXXXXXX
-      variants.add('0' + digits);    // 07XXXXXXXX
+      variants.add('254' + digits); // 254XXXXXXXXX
+      variants.add('0' + digits); // 07XXXXXXXX
     }
 
     return Array.from(variants);

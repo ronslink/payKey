@@ -40,7 +40,9 @@ export class CreateTerminationDto {
   @Min(0)
   @IsOptional()
   // Mobile sends this as a number; coerce floats to int just in case
-  @Transform(({ value }) => (value != null ? Math.floor(Number(value)) : undefined))
+  @Transform(({ value }) =>
+    value != null ? Math.floor(Number(value)) : undefined,
+  )
   noticePeriodDays?: number;
 
   @IsString()

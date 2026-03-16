@@ -42,6 +42,10 @@ export class SupportController {
     @Param('id') id: string,
     @Body() body: { message: string },
   ) {
-    return this.supportService.addUserMessage(id, req.user.userId, body.message);
+    return this.supportService.addUserMessage(
+      id,
+      req.user.userId,
+      body.message,
+    );
   }
 }

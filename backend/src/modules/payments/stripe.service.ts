@@ -775,93 +775,100 @@ export class StripeService {
       return; // Ignore non-wallet payments
     }
 
-    const transaction = await this.transactionRepository.findOne({
-      where: { id: transactionId },
-    });
-    if (!transaction) {
-      this.logger.error(`Transaction not found for PI: ${paymentIntent.id}`);
-      return;
-    }
+    const amountToCredit = await this.transactionRepository.manager.transaction(
+      async (manager) => {
+        const transaction = await manager.findOne(Transaction, {
+          where: { id: transactionId },
+          lock: { mode: 'pessimistic_write' },
+        });
+        if (!transaction) {
+          this.logger.error(
+            `Transaction not found for PI: ${paymentIntent.id}`,
+          );
+          return undefined;
+        }
 
-    if (transaction.status === TransactionStatus.SUCCESS) {
-      this.logger.log(`Transaction ${transactionId} already processed`);
-      return;
-    }
+        if (transaction.status === TransactionStatus.SUCCESS) {
+          this.logger.log(`Transaction ${transactionId} already processed`);
+          return undefined;
+        }
 
-    // Update Transaction
-    transaction.status = TransactionStatus.SUCCESS;
-    transaction.providerRef = paymentIntent.id;
-    // transaction.updatedAt = new Date(); // Not in entity
-    await this.transactionRepository.save(transaction);
+        // Update Transaction
+        transaction.status = TransactionStatus.SUCCESS;
+        transaction.providerRef = paymentIntent.id;
+        // transaction.updatedAt = new Date(); // Not in entity
+        await manager.save(Transaction, transaction);
 
-    // Credit Wallet
-    // Stripe charges are in cents, so we use amount/100
-    const amountReceivedEur = paymentIntent.amount_received / 100;
+        // Credit Wallet
+        // Stripe charges are in cents, so we use amount/100
+        const amountReceivedEur = paymentIntent.amount_received / 100;
 
-    let amountToCredit = amountReceivedEur;
-    let appliedRate = 1;
-    let targetCurrency = 'EUR';
+        let amount = amountReceivedEur;
+        let appliedRate = 1;
+        let targetCurrency = 'EUR';
 
-    // FX Conversion (EUR -> KES)
-    if (transaction.currency !== 'KES' && transaction.currency !== 'USD') {
-      targetCurrency = 'KES';
-      try {
-        // Fetch latest periodic rate (Cached/DB)
-        appliedRate = await this.exchangeRateService.getLatestRate(
-          'EUR',
-          'KES',
+        // FX Conversion (EUR -> KES)
+        if (transaction.currency !== 'KES' && transaction.currency !== 'USD') {
+          targetCurrency = 'KES';
+          try {
+            // Fetch latest periodic rate (Cached/DB)
+            appliedRate = await this.exchangeRateService.getLatestRate(
+              'EUR',
+              'KES',
+            );
+            amount = this.roundCurrency(amountReceivedEur * appliedRate);
+          } catch (e) {
+            this.logger.error(
+              'FX Conversion Failed. Using 1:1 Fallback (Manual Review Required)',
+              e,
+            );
+            // Fallback is 1:1, effectively freezing real value transfer until resolved
+          }
+        }
+
+        // Update Transaction Metadata
+        transaction.metadata = {
+          ...transaction.metadata,
+          fxApplied: {
+            sourceAmount: amountReceivedEur,
+            sourceCurrency: 'EUR',
+            targetCurrency,
+            rate: appliedRate,
+            creditedAmount: amount,
+          },
+        };
+        await manager.save(Transaction, transaction);
+
+        await manager.increment(User, { id: userId }, 'walletBalance', amount);
+
+        this.logger.log(
+          `Wallet credited for user ${userId}: ${amount} KES (Rate: ${appliedRate}, Source: ${amountReceivedEur} EUR)`,
         );
-        amountToCredit = this.roundCurrency(amountReceivedEur * appliedRate);
-      } catch (e) {
-        this.logger.error(
-          'FX Conversion Failed. Using 1:1 Fallback (Manual Review Required)',
-          e,
-        );
-        // Fallback is 1:1, effectively freezing real value transfer until resolved
-      }
-    }
 
-    // Update Transaction Metadata
-    transaction.metadata = {
-      ...transaction.metadata,
-      fxApplied: {
-        sourceAmount: amountReceivedEur,
-        sourceCurrency: 'EUR',
-        targetCurrency,
-        rate: appliedRate,
-        creditedAmount: amountToCredit,
+        return amount;
       },
-    };
-    await this.transactionRepository.save(transaction);
-
-    await this.userRepository.increment(
-      { id: userId },
-      'walletBalance',
-      amountToCredit,
     );
 
-    this.logger.log(
-      `Wallet credited for user ${userId}: ${amountToCredit} KES (Rate: ${appliedRate}, Source: ${amountReceivedEur} EUR)`,
-    );
+    if (amountToCredit !== undefined) {
+      // Send Push Notification
+      try {
+        const deviceToken = await this.deviceTokenRepository.findOne({
+          where: { userId, isActive: true },
+          order: { lastUsedAt: 'DESC' },
+        });
 
-    // Send Push Notification
-    try {
-      const deviceToken = await this.deviceTokenRepository.findOne({
-        where: { userId, isActive: true },
-        order: { lastUsedAt: 'DESC' },
-      });
-
-      if (deviceToken?.token) {
-        await this.notificationsService.sendPaymentStatusNotification(
-          deviceToken.token,
-          'Wallet', // "Worker Name" context used as "Wallet" for topups
-          amountToCredit,
-          'SUCCESS',
-          'TOPUP',
-        );
+        if (deviceToken?.token) {
+          await this.notificationsService.sendPaymentStatusNotification(
+            deviceToken.token,
+            'Wallet', // "Worker Name" context used as "Wallet" for topups
+            amountToCredit,
+            'SUCCESS',
+            'TOPUP',
+          );
+        }
+      } catch (e) {
+        this.logger.error('Failed to send Top-Up Notification', e);
       }
-    } catch (e) {
-      this.logger.error('Failed to send Top-Up Notification', e);
     }
   }
 

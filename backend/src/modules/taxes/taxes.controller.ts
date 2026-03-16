@@ -27,7 +27,7 @@ class CalculateGrossUpDto {
 @Controller('taxes')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class TaxesController {
-  constructor(private readonly taxesService: TaxesService) { }
+  constructor(private readonly taxesService: TaxesService) {}
 
   @Post('calculate')
   calculateTaxes(@Body() dto: CalculateTaxDto) {
@@ -40,7 +40,8 @@ export class TaxesController {
     if (!isFinite(targetNet) || targetNet <= 0) {
       throw new BadRequestException('targetNet must be a positive number');
     }
-    const grossSalary = await this.taxesService.calculateGrossFromNet(targetNet);
+    const grossSalary =
+      await this.taxesService.calculateGrossFromNet(targetNet);
     const taxBreakdown = await this.taxesService.calculateTaxes(grossSalary);
 
     return {

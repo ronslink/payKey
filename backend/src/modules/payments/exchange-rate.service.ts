@@ -93,11 +93,13 @@ export class ExchangeRateService {
       // Also fetch direct USD rates for accuracy
       try {
         const usdResponse = await lastValueFrom(
-          this.httpService.get('https://api.exchangerate-api.com/v4/latest/USD'),
+          this.httpService.get(
+            'https://api.exchangerate-api.com/v4/latest/USD',
+          ),
         );
         const usdRates = usdResponse.data.rates;
         const usdToKesDirect = usdRates['KES'];
-        
+
         if (usdToKesDirect) {
           await this.rateRepository.save({
             sourceCurrency: 'USD',
@@ -108,9 +110,10 @@ export class ExchangeRateService {
           this.logger.log(`Updated USD->KES rate (direct): ${usdToKesDirect}`);
         }
       } catch (usdError) {
-        this.logger.warn('Could not fetch direct USD rates, using calculated rate');
+        this.logger.warn(
+          'Could not fetch direct USD rates, using calculated rate',
+        );
       }
-
     } catch (e) {
       this.logger.error(
         'Failed to update rates. Using last successful rate.',

@@ -31,16 +31,16 @@ const YEAR = parseInt(
 
 const dbConfig = process.env.DATABASE_URL
   ? {
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
-  }
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false },
+    }
   : {
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT || '5432'),
-    user: process.env.DB_USERNAME || process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || 'Tina76',
-    database: process.env.DB_NAME || 'paykey',
-  };
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '5432'),
+      user: process.env.DB_USERNAME || process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD || 'Tina76',
+      database: process.env.DB_NAME || 'paykey',
+    };
 
 // ── Campaign definitions ──────────────────────────────────────────────────────
 
@@ -139,11 +139,11 @@ async function seedAnnualCampaigns() {
         const displaySettings = isEmail
           ? null
           : JSON.stringify({
-            position: 'top',
-            dismissible: true,
-            autoHideAfter: null,
-            showOnPages: ['dashboard', 'subscription'],
-          });
+              position: 'top',
+              dismissible: true,
+              autoHideAfter: null,
+              showOnPages: ['dashboard', 'subscription'],
+            });
 
         const existing = await client.query(
           `SELECT id FROM campaigns WHERE name = $1`,

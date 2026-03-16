@@ -210,7 +210,9 @@ export class SubscriptionPaymentsController {
     @Headers('stripe-signature') signature: string,
     @Request() req: any,
   ) {
-    this.logger.log('🔵 Stripe Webhook received at /payments/subscriptions/webhook');
+    this.logger.log(
+      '🔵 Stripe Webhook received at /payments/subscriptions/webhook',
+    );
 
     if (!signature) {
       this.logger.warn('Missing stripe-signature header');

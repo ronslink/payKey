@@ -177,10 +177,14 @@ export class AuthService {
     const iosClientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
     const webClientId = this.configService.get<string>('GOOGLE_WEB_CLIENT_ID');
 
-    const allowedAudiences = [iosClientId, webClientId].filter(Boolean) as string[];
+    const allowedAudiences = [iosClientId, webClientId].filter(
+      Boolean,
+    ) as string[];
 
     if (allowedAudiences.length === 0) {
-      console.warn('No GOOGLE_CLIENT_ID or GOOGLE_WEB_CLIENT_ID configured — skipping Google token verification (dev fallback)');
+      console.warn(
+        'No GOOGLE_CLIENT_ID or GOOGLE_WEB_CLIENT_ID configured — skipping Google token verification (dev fallback)',
+      );
       return { sub: idToken, email: undefined };
     }
 
@@ -194,7 +198,9 @@ export class AuthService {
         audience: allowedAudiences,
       });
       const payload = ticket.getPayload()!;
-      console.debug(`Google token verified. Audience: ${payload.aud}, Platform client matched.`);
+      console.debug(
+        `Google token verified. Audience: ${payload.aud}, Platform client matched.`,
+      );
       return payload;
     } catch (error) {
       throw new Error(`Google token verification failed: ${error.message}`);

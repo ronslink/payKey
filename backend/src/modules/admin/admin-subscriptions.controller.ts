@@ -95,9 +95,7 @@ export class AdminSubscriptionsController {
   }
 
   @Get('dashboard')
-  async getSubscriptionDashboard(
-    @Query('currency') currency?: string,
-  ) {
+  async getSubscriptionDashboard(@Query('currency') currency?: string) {
     const displayCurrency = currency || 'USD';
     const cacheKey = `admin_subscription_dashboard_${displayCurrency}`;
     const cached = await this.cacheManager.get(cacheKey);
@@ -109,9 +107,15 @@ export class AdminSubscriptionsController {
     let exchangeRate = 1;
     try {
       if (displayCurrency === 'KES') {
-        exchangeRate = await this.exchangeRateService.getLatestRate('USD', 'KES');
+        exchangeRate = await this.exchangeRateService.getLatestRate(
+          'USD',
+          'KES',
+        );
       } else if (displayCurrency === 'EUR') {
-        exchangeRate = await this.exchangeRateService.getLatestRate('USD', 'EUR');
+        exchangeRate = await this.exchangeRateService.getLatestRate(
+          'USD',
+          'EUR',
+        );
       }
     } catch (e) {
       // Use 1:1 if rate not available
@@ -253,9 +257,15 @@ export class AdminSubscriptionsController {
     let exchangeRate = 1;
     try {
       if (displayCurrency === 'KES') {
-        exchangeRate = await this.exchangeRateService.getLatestRate('USD', 'KES');
+        exchangeRate = await this.exchangeRateService.getLatestRate(
+          'USD',
+          'KES',
+        );
       } else if (displayCurrency === 'EUR') {
-        exchangeRate = await this.exchangeRateService.getLatestRate('USD', 'EUR');
+        exchangeRate = await this.exchangeRateService.getLatestRate(
+          'USD',
+          'EUR',
+        );
       }
     } catch (e) {
       // Use 1:1 if rate not available
@@ -346,8 +356,10 @@ export class AdminSubscriptionsController {
         billingPeriod: r.billing_period,
         amount: parseFloat(r.amount) || 0,
         currency: r.currency,
-        totalSubscriptionRevenue: (parseFloat(r.total_subscription_revenue) || 0) * exchangeRate,
-        totalSubscriptionRevenueOriginal: parseFloat(r.total_subscription_revenue) || 0,
+        totalSubscriptionRevenue:
+          (parseFloat(r.total_subscription_revenue) || 0) * exchangeRate,
+        totalSubscriptionRevenueOriginal:
+          parseFloat(r.total_subscription_revenue) || 0,
         workerCount: parseInt(r.worker_count) || 0,
       })),
     };

@@ -347,7 +347,10 @@ export class IntaSendService {
       // Sanitize name: IntaSend allows letters, numbers, underscores, dashes, spaces only
       // Strip commas, dots, and any other disallowed characters
       const rawName = t.name && t.name.trim() ? t.name.trim() : 'Worker';
-      const effectiveName = rawName.replace(/[^a-zA-Z0-9 _-]/g, ' ').replace(/\s+/g, ' ').trim();
+      const effectiveName = rawName
+        .replace(/[^a-zA-Z0-9 _-]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
 
       return {
         name: effectiveName,

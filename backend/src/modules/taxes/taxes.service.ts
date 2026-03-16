@@ -26,7 +26,7 @@ export class TaxesService {
     private taxConfigService: TaxConfigService,
     private usersService: UsersService,
     private activitiesService: ActivitiesService,
-  ) { }
+  ) {}
 
   async createTaxTable(data: Partial<TaxTable>): Promise<TaxTable> {
     const taxTable = this.taxTableRepository.create(data);
@@ -270,7 +270,10 @@ export class TaxesService {
    * Tax configs are fetched once upfront and passed through to avoid
    * repeated DB round-trips on every binary-search iteration.
    */
-  async calculateGrossFromNet(targetNet: number, date: Date = new Date()): Promise<number> {
+  async calculateGrossFromNet(
+    targetNet: number,
+    date: Date = new Date(),
+  ): Promise<number> {
     if (targetNet <= 0) return 0;
 
     // ── Fetch all tax configs once, upfront ──────────────────────────────────
@@ -309,9 +312,10 @@ export class TaxesService {
         let prevLimit = 0;
         for (const bracket of payeConfig.configuration.brackets) {
           if (remaining <= 0) break;
-          const taxable = bracket.to === null
-            ? remaining
-            : Math.min(remaining, bracket.to - prevLimit);
+          const taxable =
+            bracket.to === null
+              ? remaining
+              : Math.min(remaining, bracket.to - prevLimit);
           tax += taxable * bracket.rate;
           remaining -= taxable;
           prevLimit = bracket.to || prevLimit;
@@ -323,7 +327,8 @@ export class TaxesService {
       // SHIF
       let shif = 0;
       if (shifConfig?.configuration?.percentage !== undefined) {
-        const shifAmount = grossSalary * (shifConfig.configuration.percentage / 100);
+        const shifAmount =
+          grossSalary * (shifConfig.configuration.percentage / 100);
         const minAmount = shifConfig.configuration.minAmount || 0;
         shif = Math.round(Math.max(shifAmount, minAmount) * 100) / 100;
       }
@@ -331,9 +336,10 @@ export class TaxesService {
       // Housing Levy
       let housingLevy = 0;
       if (housingConfig?.configuration?.percentage !== undefined) {
-        housingLevy = Math.round(
-          grossSalary * (housingConfig.configuration.percentage / 100) * 100,
-        ) / 100;
+        housingLevy =
+          Math.round(
+            grossSalary * (housingConfig.configuration.percentage / 100) * 100,
+          ) / 100;
       }
 
       return Math.round((nssf + paye + shif + housingLevy) * 100) / 100;
