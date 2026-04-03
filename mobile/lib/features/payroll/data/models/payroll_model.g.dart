@@ -53,6 +53,9 @@ _PayrollCalculation _$PayrollCalculationFromJson(Map<String, dynamic> json) =>
       grossSalary: (json['grossSalary'] as num?)?.toDouble() ?? 0,
       bonuses: (json['bonuses'] as num?)?.toDouble() ?? 0,
       otherEarnings: (json['otherEarnings'] as num?)?.toDouble() ?? 0,
+      nonCashBenefits: (json['nonCashBenefits'] as num?)?.toDouble() ?? 0,
+      taxExemptAllowances:
+          (json['taxExemptAllowances'] as num?)?.toDouble() ?? 0,
       otherDeductions: (json['otherDeductions'] as num?)?.toDouble() ?? 0,
       taxBreakdown: TaxBreakdown.fromJson(
         json['taxBreakdown'] as Map<String, dynamic>,
@@ -71,6 +74,8 @@ Map<String, dynamic> _$PayrollCalculationToJson(_PayrollCalculation instance) =>
       'grossSalary': instance.grossSalary,
       'bonuses': instance.bonuses,
       'otherEarnings': instance.otherEarnings,
+      'nonCashBenefits': instance.nonCashBenefits,
+      'taxExemptAllowances': instance.taxExemptAllowances,
       'otherDeductions': instance.otherDeductions,
       'taxBreakdown': instance.taxBreakdown,
       'netPay': instance.netPay,

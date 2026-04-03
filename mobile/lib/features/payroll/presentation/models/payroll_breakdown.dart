@@ -13,6 +13,8 @@ class PayrollBreakdown {
   final double paye;
   final double otherDeductions;
   final double otherEarnings;
+  final double nonCashBenefits;
+  final double taxExemptAllowances;
   final double netSalary;
 
   const PayrollBreakdown({
@@ -24,6 +26,8 @@ class PayrollBreakdown {
     required this.paye,
     this.otherDeductions = 0,
     this.otherEarnings = 0,
+    this.nonCashBenefits = 0,
+    this.taxExemptAllowances = 0,
     required this.netSalary,
   });
 
@@ -47,6 +51,8 @@ class PayrollBreakdown {
         paye = 0,
         otherDeductions = 0,
         otherEarnings = 0,
+        nonCashBenefits = 0,
+        taxExemptAllowances = 0,
         netSalary = 0;
 
   /// Creates a breakdown from a backend calculation.
@@ -62,6 +68,8 @@ class PayrollBreakdown {
       paye: calc.taxBreakdown.paye,
       otherDeductions: calc.otherDeductions,
       otherEarnings: calc.otherEarnings + calc.bonuses,
+      nonCashBenefits: calc.nonCashBenefits,
+      taxExemptAllowances: calc.taxExemptAllowances,
       netSalary: calc.netPay,
     );
   }
@@ -77,6 +85,8 @@ class PayrollBreakdown {
     double totalPaye = 0;
     double totalOtherDeductions = 0;
     double totalOtherEarnings = 0;
+    double totalNonCashBenefits = 0;
+    double totalTaxExemptAllowances = 0;
     double totalNet = 0;
 
     for (final b in breakdowns) {
@@ -87,6 +97,8 @@ class PayrollBreakdown {
       totalPaye += b.paye;
       totalOtherDeductions += b.otherDeductions;
       totalOtherEarnings += b.otherEarnings;
+      totalNonCashBenefits += b.nonCashBenefits;
+      totalTaxExemptAllowances += b.taxExemptAllowances;
       totalNet += b.netSalary;
     }
 
@@ -99,6 +111,8 @@ class PayrollBreakdown {
       paye: totalPaye,
       otherDeductions: totalOtherDeductions,
       otherEarnings: totalOtherEarnings,
+      nonCashBenefits: totalNonCashBenefits,
+      taxExemptAllowances: totalTaxExemptAllowances,
       netSalary: totalNet,
     );
   }

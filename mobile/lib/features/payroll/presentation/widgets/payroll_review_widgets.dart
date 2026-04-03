@@ -87,6 +87,10 @@ class PayrollSummaryCard extends StatelessWidget {
       children: [
         _SummaryRow(label: 'Gross Salary', amount: totals.grossSalary),
         const SizedBox(height: 8),
+        _SummaryRow(label: 'Non-Cash Benefits', amount: totals.nonCashBenefits),
+        const SizedBox(height: 8),
+        _SummaryRow(label: 'Tax Exempt Allowances', amount: totals.taxExemptAllowances),
+        const SizedBox(height: 8),
         _SummaryRow(
           label: 'NSSF Contribution',
           amount: totals.nssfContribution,
@@ -332,6 +336,14 @@ class WorkerBreakdownCard extends StatelessWidget {
       children: [
         const Divider(height: 24),
         _BreakdownRow(label: 'Gross Salary', amount: breakdown.grossSalary),
+        _BreakdownRow(
+          label: 'Non-Cash Benefits',
+          amount: breakdown.nonCashBenefits,
+        ),
+        _BreakdownRow(
+          label: 'Tax Exempt Allowances',
+          amount: breakdown.taxExemptAllowances,
+        ),
         _BreakdownRow(
           label: 'NSSF',
           amount: breakdown.nssfContribution,

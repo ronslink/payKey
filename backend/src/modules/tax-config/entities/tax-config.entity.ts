@@ -54,6 +54,12 @@ export interface TaxConfiguration {
   personalRelief?: number;
   insuranceRelief?: number;
   maxInsuranceRelief?: number;
+
+  // Limits
+  maxPensionContribution?: number;
+  maxMortgageInterest?: number;
+  maxHospContribution?: number;
+  maxExemptMeals?: number;
 }
 
 @Entity('tax_config')

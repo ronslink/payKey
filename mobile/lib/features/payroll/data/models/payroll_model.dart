@@ -108,6 +108,12 @@ abstract class PayrollCalculation with _$PayrollCalculation {
     /// Other earnings (allowances, overtime, etc.).
     @Default(0) double otherEarnings,
 
+    /// Non-cash benefits (taxable but not paid in cash).
+    @Default(0) double nonCashBenefits,
+
+    /// Taxable exempt allowances (non-taxable, paid in cash).
+    @Default(0) double taxExemptAllowances,
+
     /// Additional deductions (loans, advances, etc.).
     @Default(0) double otherDeductions,
 

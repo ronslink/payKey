@@ -14,6 +14,7 @@ import {
   DataSource,
   In,
   EntityManager,
+  FindOptionsWhere,
 } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
 
@@ -109,6 +110,8 @@ export interface DraftPayrollItem {
   bonuses?: number;
   otherEarnings?: number;
   otherDeductions?: number;
+  nonCashBenefits?: number;
+  taxExemptAllowances?: number;
 }
 
 export interface DraftPayrollUpdateInput {
@@ -116,6 +119,8 @@ export interface DraftPayrollUpdateInput {
   bonuses?: number;
   otherEarnings?: number;
   otherDeductions?: number;
+  nonCashBenefits?: number;
+  taxExemptAllowances?: number;
   holidayHours?: number;
   sundayHours?: number;
 }
@@ -313,7 +318,11 @@ export class PayrollService {
       await this.calculateAdjustedSalary(worker, this.getCurrentPeriod());
 
     const effectiveGross = adjustedGross > 0 ? adjustedGross : grossSalary;
-    const taxBreakdown = await this.taxesService.calculateTaxes(effectiveGross);
+    const taxBreakdown = await this.taxesService.calculateTaxes(
+      effectiveGross,
+      new Date(),
+      this.getTaxAdvancedOptions(worker),
+    );
     const netPay = this.roundCurrency(
       effectiveGross - taxBreakdown.totalDeductions,
     );
@@ -460,7 +469,11 @@ export class PayrollService {
     const overtimePay = this.calculateOvertimePay(record, worker);
     record.overtimePay = overtimePay;
 
-    await this.recalculateRecordTotals(record, overtimePay);
+    await this.recalculateRecordTotals(
+      record,
+      overtimePay,
+      worker || undefined,
+    );
 
     return this.payrollRepository.save(record);
   }
@@ -623,8 +636,11 @@ export class PayrollService {
       `Finalizing payroll for period ${payPeriodId} (skipPayout: ${skipPayout})`,
     );
 
-    // Find records that need to be finalized (draft status)
-    const query: any = { userId, payPeriodId, status: PayrollStatus.DRAFT };
+    const query: FindOptionsWhere<PayrollRecord> = {
+      userId,
+      payPeriodId,
+      status: PayrollStatus.DRAFT,
+    };
 
     // Filter by workerIds if provided
     if (workerIds && workerIds.length > 0) {
@@ -913,15 +929,15 @@ export class PayrollService {
       .select(['id', '"walletBalance"'])
       .from('users', 'u')
       .where('u.id = :userId', { userId })
-      .getRawOne();
+      .getRawOne<{ id: string; walletBalance: string | number }>();
 
     if (!userResult) {
       throw new NotFoundException('User not found');
     }
 
-    const walletBalance = parseFloat(userResult.walletBalance) || 0;
+    const walletBalance = parseFloat(String(userResult.walletBalance)) || 0;
 
-    const query: any = {
+    const query: FindOptionsWhere<PayrollRecord> = {
       payPeriodId,
       userId,
       status: In([PayrollStatus.FINALIZED, PayrollStatus.DRAFT]),
@@ -943,14 +959,14 @@ export class PayrollService {
 
     // Calculate minimum required balance
     const totalNetPay = records.reduce(
-      (sum, r) => sum + (parseFloat(r.netSalary as any) || 0),
+      (sum, r) => sum + (parseFloat(String(r.netSalary)) || 0),
       0,
     );
 
     // Estimate IntaSend B2C payout fees per NON-CASH worker only
     // Fee tiers: <200 = KES 10, 200-1000 = KES 20, >1000 = KES 100
     const estimatedFees = nonCashRecords.reduce((sum, r) => {
-      const net = parseFloat(r.netSalary as any) || 0;
+      const net = parseFloat(String(r.netSalary)) || 0;
       if (net < 200) return sum + 10;
       if (net <= 1000) return sum + 20;
       return sum + 100;
@@ -1002,7 +1018,11 @@ export class PayrollService {
             originalGross: this.parseNumber(worker.salaryGross),
             leaveDeduction: 0,
             unpaidLeaveDays: 0,
-            taxBreakdown: await this.taxesService.calculateTaxes(totalGross),
+            taxBreakdown: await this.taxesService.calculateTaxes(
+              totalGross,
+              new Date(),
+              this.getTaxAdvancedOptions(worker),
+            ),
             netPay: Number(termination.totalFinalPayment),
             phoneNumber: worker.phoneNumber,
           };
@@ -1019,8 +1039,11 @@ export class PayrollService {
         }
       }
 
-      const taxBreakdown =
-        await this.taxesService.calculateTaxes(adjustedGross);
+      const taxBreakdown = await this.taxesService.calculateTaxes(
+        adjustedGross,
+        new Date(),
+        this.getTaxAdvancedOptions(worker),
+      );
       const netPay = this.roundCurrency(
         adjustedGross - taxBreakdown.totalDeductions,
       );
@@ -1043,7 +1066,7 @@ export class PayrollService {
       );
       return this.createErrorPayrollItem(
         worker,
-        error.message || 'Failed to calculate taxes',
+        error instanceof Error ? error.message : 'Failed to calculate taxes',
       );
     }
   }
@@ -1218,6 +1241,13 @@ export class PayrollService {
   ): Promise<PayrollRecord[]> {
     const results: PayrollRecord[] = [];
 
+    // Pre-fetch workers to use their advanced tax options
+    const workerIds = [...new Set(items.map((i) => i.workerId))];
+    const workers = await manager.find(Worker, {
+      where: { id: In(workerIds), userId },
+    });
+    const workerMap = new Map(workers.map((w) => [w.id, w]));
+
     for (let i = 0; i < items.length; i += SAVE_BATCH_SIZE) {
       const batch = items.slice(i, i + SAVE_BATCH_SIZE);
       const batchPromises = batch.map((item) =>
@@ -1228,6 +1258,7 @@ export class PayrollService {
           item,
           periodStart,
           periodEnd,
+          workerMap.get(item.workerId),
         ),
       );
 
@@ -1245,13 +1276,32 @@ export class PayrollService {
     item: DraftPayrollItem,
     periodStart: Date,
     periodEnd: Date,
+    worker?: Worker,
   ): Promise<PayrollRecord> {
-    const totalEarnings =
+    // Non-cash benefits are taxable but not paid in cash.
+    // Tax-exempt allowances are non-taxable cash additions.
+    const nonCashBenefits = item.nonCashBenefits || 0;
+    const taxExemptAllowances = item.taxExemptAllowances || 0;
+    const cashEarnings =
       item.grossSalary + (item.bonuses || 0) + (item.otherEarnings || 0);
-    const taxBreakdown = await this.taxesService.calculateTaxes(totalEarnings);
+    // Create a temporary record-like object to use existing getTaxAdvancedOptions
+    const tempRecordForOptions = new PayrollRecord();
+    tempRecordForOptions.nonCashBenefits = nonCashBenefits;
+
+    const advancedOptions = this.getTaxAdvancedOptions(
+      worker,
+      tempRecordForOptions,
+    );
+
+    const taxBreakdown = await this.taxesService.calculateTaxes(
+      cashEarnings,
+      new Date(),
+      advancedOptions,
+    );
     const totalDeductions =
       taxBreakdown.totalDeductions + (item.otherDeductions || 0);
-    const netPay = totalEarnings - totalDeductions;
+    // Net pay: cash earnings + tax-exempt allowances - deductions (non-cash excluded)
+    const netPay = cashEarnings + taxExemptAllowances - totalDeductions;
 
     let record = await manager.findOne(PayrollRecord, {
       where: { userId, payPeriodId, workerId: item.workerId },
@@ -1277,6 +1327,8 @@ export class PayrollService {
     record.bonuses = item.bonuses || 0;
     record.otherEarnings = item.otherEarnings || 0;
     record.otherDeductions = item.otherDeductions || 0;
+    record.nonCashBenefits = nonCashBenefits;
+    record.taxExemptAllowances = taxExemptAllowances;
     record.taxAmount = taxBreakdown.paye;
     record.netSalary = netPay;
     record.taxBreakdown = taxBreakdown;
@@ -1303,6 +1355,10 @@ export class PayrollService {
       record.holidayHours = updates.holidayHours;
     if (updates.sundayHours !== undefined)
       record.sundayHours = updates.sundayHours;
+    if (updates.nonCashBenefits !== undefined)
+      record.nonCashBenefits = updates.nonCashBenefits;
+    if (updates.taxExemptAllowances !== undefined)
+      record.taxExemptAllowances = updates.taxExemptAllowances;
   }
 
   private calculateOvertimePay(
@@ -1329,22 +1385,46 @@ export class PayrollService {
     return holidayPay + sundayPay;
   }
 
+  private getTaxAdvancedOptions(worker?: Worker, record?: PayrollRecord) {
+    return {
+      nonCashBenefits: record ? this.parseNumber(record.nonCashBenefits) : 0,
+      pensionContribution: worker
+        ? this.parseNumber(worker.pensionContribution)
+        : 0,
+      mortgageInterest: worker ? this.parseNumber(worker.mortgageInterest) : 0,
+      hospContribution: worker ? this.parseNumber(worker.hospContribution) : 0,
+      hasDisabilityExemption: worker ? worker.hasDisabilityExemption : false,
+      lifeInsurancePremium: worker
+        ? this.parseNumber(worker.lifeInsurancePremium)
+        : 0,
+    };
+  }
+
   private async recalculateRecordTotals(
     record: PayrollRecord,
     overtimePay: number,
+    worker?: Worker,
   ): Promise<void> {
-    const totalEarnings =
+    const cashEarnings =
       this.parseNumber(record.grossSalary) +
       this.parseNumber(record.bonuses) +
       this.parseNumber(record.otherEarnings) +
       overtimePay;
 
-    const taxBreakdown = await this.taxesService.calculateTaxes(totalEarnings);
+    const taxExemptAllowances = this.parseNumber(record.taxExemptAllowances);
+
+    const taxBreakdown = await this.taxesService.calculateTaxes(
+      cashEarnings,
+      new Date(),
+      this.getTaxAdvancedOptions(worker, record),
+    );
+
     const totalDeductions =
       taxBreakdown.totalDeductions + this.parseNumber(record.otherDeductions);
 
     record.taxAmount = taxBreakdown.paye;
-    record.netSalary = totalEarnings - totalDeductions;
+    // Payout is strictly Cash Earnings + Tax Exempt Allowances - deductions
+    record.netSalary = cashEarnings + taxExemptAllowances - totalDeductions;
     record.taxBreakdown = taxBreakdown;
     record.deductions = {
       ...taxBreakdown,
@@ -1361,6 +1441,8 @@ export class PayrollService {
       bonuses: this.parseNumber(record.bonuses),
       otherEarnings: this.parseNumber(record.otherEarnings),
       otherDeductions: this.parseNumber(record.otherDeductions),
+      nonCashBenefits: this.parseNumber(record.nonCashBenefits),
+      taxExemptAllowances: this.parseNumber(record.taxExemptAllowances),
       taxBreakdown: record.taxBreakdown,
       netPay: this.parseNumber(record.netSalary),
       status: record.status,
@@ -1402,11 +1484,20 @@ export class PayrollService {
       return { success: true, count: payslips.length };
     } catch (error) {
       this.logger.error('Failed to generate payslips:', error);
-      return { success: false, count: 0, error: error.message };
+      return {
+        success: false,
+        count: 0,
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 
-  private async processPayoutsAsync(records: PayrollRecord[]) {
+  private async processPayoutsAsync(records: PayrollRecord[]): Promise<{
+    successCount: number;
+    failureCount: number;
+    results: any[];
+    error?: string;
+  }> {
     this.logger.log('Starting M-Pesa payout processing...');
 
     try {
@@ -1421,7 +1512,7 @@ export class PayrollService {
         successCount: 0,
         failureCount: records.length,
         results: [],
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
       };
     }
   }
@@ -1444,7 +1535,7 @@ export class PayrollService {
     payPeriodId: string,
     workerCount: number,
     totalAmount: number,
-    payoutResults: any,
+    payoutResults: { successCount: number; failureCount: number },
     payslipsGenerated: number,
   ): Promise<void> {
     try {

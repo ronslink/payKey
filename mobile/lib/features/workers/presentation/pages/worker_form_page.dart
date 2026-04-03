@@ -83,6 +83,7 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
   DateTime _startDate = DateTime.now();
   String _employmentType = 'FIXED';
   String? _selectedPropertyId;
+  bool _hasDisabilityExemption = false;
   bool _isSaving = false;
 
   bool _isNetPayTarget = false;
@@ -121,6 +122,7 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
       _startDate = worker.startDate ?? DateTime.now();
       _employmentType = worker.employmentType;
       _selectedPropertyId = worker.propertyId;
+      _hasDisabilityExemption = worker.hasDisabilityExemption;
     } else {
       _paymentFrequency = PaymentFrequency.monthly;
       _paymentMethod = PaymentMethod.mpesa;
@@ -254,6 +256,11 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
       emergencyContactName: _controllers.emergencyName.nullableText,
       emergencyContactPhone: _controllers.emergencyPhone.nullableText,
       emergencyContactRelationship: _controllers.emergencyRelationship.nullableText,
+      pensionContribution: _controllers.pensionContribution.doubleValue,
+      mortgageInterest: _controllers.mortgageInterest.doubleValue,
+      hospContribution: _controllers.hospContribution.doubleValue,
+      lifeInsurancePremium: _controllers.lifeInsurancePremium.doubleValue,
+      hasDisabilityExemption: _hasDisabilityExemption,
       dateOfBirth: _dateOfBirth,
       // Link worker to default property (only if PLATINUM user has one set)
       propertyId: _selectedPropertyId ?? defaultPropertyId,
@@ -287,6 +294,11 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
       emergencyContactName: _controllers.emergencyName.nullableText,
       emergencyContactPhone: _controllers.emergencyPhone.nullableText,
       emergencyContactRelationship: _controllers.emergencyRelationship.nullableText,
+      pensionContribution: _controllers.pensionContribution.doubleValue,
+      mortgageInterest: _controllers.mortgageInterest.doubleValue,
+      hospContribution: _controllers.hospContribution.doubleValue,
+      lifeInsurancePremium: _controllers.lifeInsurancePremium.doubleValue,
+      hasDisabilityExemption: _hasDisabilityExemption,
       dateOfBirth: _dateOfBirth,
       propertyId: _selectedPropertyId,
     );
@@ -348,6 +360,12 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
               _EmergencyContactSection(controllers: _controllers),
               const SizedBox(height: 24),
               _StatutoryDetailsSection(controllers: _controllers),
+              const SizedBox(height: 24),
+              _AdvancedTaxSection(
+                controllers: _controllers,
+                hasDisabilityExemption: _hasDisabilityExemption,
+                onDisabilityChanged: (val) => setState(() => _hasDisabilityExemption = val),
+              ),
               const SizedBox(height: 24),
               _EmploymentDetailsSection(
                 controllers: _controllers,
@@ -439,6 +457,12 @@ class _WorkerFormControllers {
   final housingAllowance = TextEditingController();
   final transportAllowance = TextEditingController();
 
+  // Advanced Tax & Reliefs
+  final pensionContribution = TextEditingController();
+  final mortgageInterest = TextEditingController();
+  final hospContribution = TextEditingController();
+  final lifeInsurancePremium = TextEditingController();
+
   // Payment Details
   final mpesaNumber = TextEditingController();
   final bankName = TextEditingController();
@@ -469,6 +493,11 @@ class _WorkerFormControllers {
     housingAllowance.text = worker.housingAllowance.toString();
     transportAllowance.text = worker.transportAllowance.toString();
 
+    pensionContribution.text = worker.pensionContribution.toString();
+    mortgageInterest.text = worker.mortgageInterest.toString();
+    hospContribution.text = worker.hospContribution.toString();
+    lifeInsurancePremium.text = worker.lifeInsurancePremium.toString();
+
     mpesaNumber.text = worker.mpesaNumber ?? '';
     bankName.text = worker.bankName ?? '';
     bankCode.text = worker.bankCode ?? '';
@@ -494,6 +523,12 @@ class _WorkerFormControllers {
     salary.dispose();
     housingAllowance.dispose();
     transportAllowance.dispose();
+    
+    pensionContribution.dispose();
+    mortgageInterest.dispose();
+    hospContribution.dispose();
+    lifeInsurancePremium.dispose();
+
     mpesaNumber.dispose();
     bankName.dispose();
     bankCode.dispose();
@@ -699,6 +734,78 @@ class _StatutoryDetailsSection extends StatelessWidget {
           hint: 'Enter NHIF Number',
         ),
       ],
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Advanced Tax & Reliefs Section
+// -----------------------------------------------------------------------------
+
+class _AdvancedTaxSection extends StatelessWidget {
+  final _WorkerFormControllers controllers;
+  final bool hasDisabilityExemption;
+  final ValueChanged<bool> onDisabilityChanged;
+
+  const _AdvancedTaxSection({
+    required this.controllers,
+    required this.hasDisabilityExemption,
+    required this.onDisabilityChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      color: _AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          title: const Text(
+            'Advanced Tax & Reliefs',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          childrenPadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+          children: [
+            _FormTextField(
+              controller: controllers.pensionContribution,
+              label: 'Voluntary Pension Contribution',
+              hint: 'e.g. 1000',
+              keyboardType: TextInputType.number,
+            ),
+            _FormTextField(
+              controller: controllers.mortgageInterest,
+              label: 'Monthly Mortgage Interest',
+              hint: 'e.g. 5000',
+              keyboardType: TextInputType.number,
+            ),
+            _FormTextField(
+              controller: controllers.hospContribution,
+              label: 'HOSP Contribution',
+              hint: 'e.g. 2000',
+              keyboardType: TextInputType.number,
+            ),
+            _FormTextField(
+              controller: controllers.lifeInsurancePremium,
+              label: 'Life Insurance Premium',
+              hint: 'e.g. 1500',
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 8),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Registered Disability Exemption'),
+              subtitle: const Text('Exempt up to Ksh 150,000 per month'),
+              value: hasDisabilityExemption,
+              onChanged: onDisabilityChanged,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -9,6 +9,8 @@ class WorkerHoursControllerManager {
   final Map<String, TextEditingController> _overtimeControllers = {};
   final Map<String, TextEditingController> _bonusesControllers = {};
   final Map<String, TextEditingController> _deductionsControllers = {};
+  final Map<String, TextEditingController> _nonCashBenefitsControllers = {};
+  final Map<String, TextEditingController> _taxExemptAllowancesControllers = {};
   final Map<String, TextEditingController> _daysWorkedControllers = {};
   final Map<String, bool> _isPartialPeriod = {};
   
@@ -140,6 +142,22 @@ class WorkerHoursControllerManager {
     );
   }
 
+  /// Get or create non cash benefits controller
+  TextEditingController getNonCashBenefitsController(String workerId) {
+    return _nonCashBenefitsControllers.putIfAbsent(
+      workerId,
+      () => TextEditingController(text: '0'),
+    );
+  }
+
+  /// Get or create tax exempt allowances controller
+  TextEditingController getTaxExemptAllowancesController(String workerId) {
+    return _taxExemptAllowancesControllers.putIfAbsent(
+      workerId,
+      () => TextEditingController(text: '0'),
+    );
+  }
+
   /// Get or create deductions controller
   TextEditingController getDeductionsController(String workerId) {
     return _deductionsControllers.putIfAbsent(
@@ -245,6 +263,20 @@ class WorkerHoursControllerManager {
     return double.tryParse(controller.text) ?? 0;
   }
 
+  /// Get non cash benefits value for a worker
+  double getNonCashBenefits(String workerId) {
+    final controller = _nonCashBenefitsControllers[workerId];
+    if (controller == null) return 0;
+    return double.tryParse(controller.text) ?? 0;
+  }
+
+  /// Get tax exempt allowances value for a worker
+  double getTaxExemptAllowances(String workerId) {
+    final controller = _taxExemptAllowancesControllers[workerId];
+    if (controller == null) return 0;
+    return double.tryParse(controller.text) ?? 0;
+  }
+
   /// Get deductions value for a worker
   double getDeductions(String workerId) {
     final controller = _deductionsControllers[workerId];
@@ -272,6 +304,10 @@ class WorkerHoursControllerManager {
       _overtimeControllers.remove(id);
       _bonusesControllers[id]?.dispose();
       _bonusesControllers.remove(id);
+      _nonCashBenefitsControllers[id]?.dispose();
+      _nonCashBenefitsControllers.remove(id);
+      _taxExemptAllowancesControllers[id]?.dispose();
+      _taxExemptAllowancesControllers.remove(id);
       _deductionsControllers[id]?.dispose();
       _deductionsControllers.remove(id);
       _daysWorkedControllers[id]?.dispose();
@@ -301,6 +337,12 @@ class WorkerHoursControllerManager {
     for (final controller in _bonusesControllers.values) {
       controller.dispose();
     }
+    for (final controller in _nonCashBenefitsControllers.values) {
+      controller.dispose();
+    }
+    for (final controller in _taxExemptAllowancesControllers.values) {
+      controller.dispose();
+    }
     for (final controller in _deductionsControllers.values) {
       controller.dispose();
     }
@@ -310,6 +352,8 @@ class WorkerHoursControllerManager {
     _hoursControllers.clear();
     _overtimeControllers.clear();
     _bonusesControllers.clear();
+    _nonCashBenefitsControllers.clear();
+    _taxExemptAllowancesControllers.clear();
     _deductionsControllers.clear();
     _daysWorkedControllers.clear();
     _isPartialPeriod.clear();

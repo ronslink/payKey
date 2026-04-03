@@ -92,6 +92,22 @@ export class PayrollRecord {
   })
   otherDeductions: number;
 
+  @Column('decimal', {
+    precision: 10,
+    scale: 2,
+    default: 0,
+    transformer: new ColumnNumericTransformer(),
+  })
+  nonCashBenefits: number;
+
+  @Column('decimal', {
+    precision: 10,
+    scale: 2,
+    default: 0,
+    transformer: new ColumnNumericTransformer(),
+  })
+  taxExemptAllowances: number;
+
   @Column('decimal', { precision: 10, scale: 2, default: 0 })
   holidayHours: number;
 

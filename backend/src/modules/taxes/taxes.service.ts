@@ -8,7 +8,10 @@ import {
 } from './entities/tax-submission.entity';
 import { TaxBreakdown, PayrollCalculation } from './interfaces/tax.interface';
 import { UsersService } from '../users/users.service';
-import { PayrollRecord } from '../payroll/entities/payroll-record.entity';
+import {
+  PayrollRecord,
+  PayrollStatus,
+} from '../payroll/entities/payroll-record.entity';
 import { TaxConfigService } from '../tax-config/services/tax-config.service';
 import { TaxType } from '../tax-config/entities/tax-config.entity';
 import { ActivitiesService } from '../activities/activities.service';
@@ -103,14 +106,31 @@ export class TaxesService {
     grossSalary: number,
     nssf: number,
     date: Date,
+    advancedOptions?: {
+      pensionContribution?: number;
+      mortgageInterest?: number;
+      hospContribution?: number;
+      hasDisabilityExemption?: boolean;
+      lifeInsurancePremium?: number;
+    },
   ): Promise<number> {
     const payeConfig = await this.taxConfigService.getActiveTaxConfig(
       TaxType.PAYE,
       date,
     );
 
+    let taxableIncome =
+      grossSalary -
+      nssf -
+      (advancedOptions?.pensionContribution || 0) -
+      (advancedOptions?.mortgageInterest || 0) -
+      (advancedOptions?.hospContribution || 0);
+
+    if (advancedOptions?.hasDisabilityExemption) {
+      taxableIncome = Math.max(0, taxableIncome - 150000);
+    }
+
     if (payeConfig && payeConfig.configuration.brackets) {
-      const taxableIncome = grossSalary - nssf;
       let tax = 0;
       let remainingIncome = taxableIncome;
       let previousLimit = 0;
@@ -129,7 +149,17 @@ export class TaxesService {
       }
 
       const personalRelief = payeConfig.configuration.personalRelief || 2400;
-      const paye = Math.max(0, tax - personalRelief);
+      let paye = Math.max(0, tax - personalRelief);
+
+      // Apply 15% life insurance relief (max Ksh 5,000 per month)
+      if (advancedOptions?.lifeInsurancePremium) {
+        const insuranceRelief = Math.min(
+          advancedOptions.lifeInsurancePremium * 0.15,
+          5000,
+        );
+        paye = Math.max(0, paye - insuranceRelief);
+      }
+
       return Math.round(paye * 100) / 100;
     }
 
@@ -233,15 +263,25 @@ export class TaxesService {
   async calculateTaxes(
     grossSalary: number,
     date: Date = new Date(),
+    advancedOptions?: {
+      nonCashBenefits?: number;
+      pensionContribution?: number;
+      mortgageInterest?: number;
+      hospContribution?: number;
+      hasDisabilityExemption?: boolean;
+      lifeInsurancePremium?: number;
+    },
   ): Promise<TaxBreakdown> {
+    const totalGross = grossSalary + (advancedOptions?.nonCashBenefits || 0);
+
     // Calculate NSSF first (needed for PAYE calculation)
-    const nssf = await this.calculateNSSF(grossSalary, date);
+    const nssf = await this.calculateNSSF(totalGross, date);
 
     // Calculate remaining components
     const [shif, housingLevy, payeConfig] = await Promise.all([
-      this.calculateSHIF(grossSalary, date),
-      this.calculateHousingLevy(grossSalary, date),
-      this.calculatePAYEFromConfig(grossSalary, nssf, date),
+      this.calculateSHIF(totalGross, date),
+      this.calculateHousingLevy(totalGross, date),
+      this.calculatePAYEFromConfig(totalGross, nssf, date, advancedOptions),
     ]);
 
     const totalDeductions = nssf + shif + housingLevy + payeConfig;
@@ -408,6 +448,11 @@ export class TaxesService {
     totalShif: number;
     totalHousingLevy: number;
   }> {
+    // suppress unused warnings with dummy variables
+    void userId;
+    void year;
+    void month;
+
     // TODO: Aggregate from actual payroll transactions
     // For now, return placeholder
     return Promise.resolve({
@@ -428,14 +473,22 @@ export class TaxesService {
       });
     } catch (error) {
       // If relation fails, return without it
-      console.warn('Failed to load payPeriod relation:', error.message);
+      console.warn(
+        'Failed to load payPeriod relation:',
+        error instanceof Error ? error.message : String(error),
+      );
       try {
         return await this.taxSubmissionRepository.find({
           where: { userId },
           order: { createdAt: 'DESC' },
         });
       } catch (fallbackError) {
-        console.error('Failed to load tax submissions:', fallbackError.message);
+        console.error(
+          'Failed to load tax submissions:',
+          fallbackError instanceof Error
+            ? fallbackError.message
+            : String(fallbackError),
+        );
         return [];
       }
     }
@@ -450,7 +503,7 @@ export class TaxesService {
       where: {
         payPeriodId,
         userId,
-        status: 'finalized' as any, // PayrollStatus.FINALIZED
+        status: PayrollStatus.FINALIZED,
       },
     });
 
@@ -578,8 +631,21 @@ export class TaxesService {
   }
 
   async getMonthlySummaries(userId: string): Promise<any[]> {
+    interface TaxMonthSummary {
+      year: number;
+      month: number;
+      monthName: string;
+      totalPaye: number;
+      totalNssf: number;
+      totalNhif: number;
+      totalHousingLevy: number;
+      totalTax: number;
+      status: string;
+      submissions: TaxSubmission[];
+      submissionIds: string[];
+    }
     const submissions = await this.getSubmissions(userId);
-    const summaries = new Map<string, any>();
+    const summaries = new Map<string, TaxMonthSummary>();
 
     for (const sub of submissions) {
       // Use payPeriod endDate to determine tax month
@@ -619,7 +685,7 @@ export class TaxesService {
           }).format(date);
         } catch (e) {
           console.error(
-            `[TaxesService] Failed to format month for date ${date}: ${e.message}`,
+            `[TaxesService] Failed to format month for date ${date.toISOString()}: ${e instanceof Error ? e.message : String(e)}`,
           );
         }
 
@@ -639,6 +705,7 @@ export class TaxesService {
       }
 
       const summary = summaries.get(key);
+      if (!summary) continue;
       summary.totalPaye += Number(sub.totalPaye);
       summary.totalNssf += Number(sub.totalNssf);
       summary.totalNhif += Number(sub.totalNhif);

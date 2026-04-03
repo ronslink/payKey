@@ -306,7 +306,9 @@ mixin _$PayrollCalculation {
  String get workerName;/// Base salary before any additions or deductions.
  double get grossSalary;/// Additional bonus payments.
  double get bonuses;/// Other earnings (allowances, overtime, etc.).
- double get otherEarnings;/// Additional deductions (loans, advances, etc.).
+ double get otherEarnings;/// Non-cash benefits (taxable but not paid in cash).
+ double get nonCashBenefits;/// Taxable exempt allowances (non-taxable, paid in cash).
+ double get taxExemptAllowances;/// Additional deductions (loans, advances, etc.).
  double get otherDeductions;/// Breakdown of statutory tax deductions.
  TaxBreakdown get taxBreakdown;/// Final amount payable to worker.
  double get netPay;/// Current status in the payroll workflow.
@@ -325,16 +327,16 @@ $PayrollCalculationCopyWith<PayrollCalculation> get copyWith => _$PayrollCalcula
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is PayrollCalculation&&(identical(other.id, id) || other.id == id)&&(identical(other.workerId, workerId) || other.workerId == workerId)&&(identical(other.workerName, workerName) || other.workerName == workerName)&&(identical(other.grossSalary, grossSalary) || other.grossSalary == grossSalary)&&(identical(other.bonuses, bonuses) || other.bonuses == bonuses)&&(identical(other.otherEarnings, otherEarnings) || other.otherEarnings == otherEarnings)&&(identical(other.otherDeductions, otherDeductions) || other.otherDeductions == otherDeductions)&&(identical(other.taxBreakdown, taxBreakdown) || other.taxBreakdown == taxBreakdown)&&(identical(other.netPay, netPay) || other.netPay == netPay)&&(identical(other.status, status) || other.status == status)&&(identical(other.isEdited, isEdited) || other.isEdited == isEdited)&&(identical(other.propertyId, propertyId) || other.propertyId == propertyId));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PayrollCalculation&&(identical(other.id, id) || other.id == id)&&(identical(other.workerId, workerId) || other.workerId == workerId)&&(identical(other.workerName, workerName) || other.workerName == workerName)&&(identical(other.grossSalary, grossSalary) || other.grossSalary == grossSalary)&&(identical(other.bonuses, bonuses) || other.bonuses == bonuses)&&(identical(other.otherEarnings, otherEarnings) || other.otherEarnings == otherEarnings)&&(identical(other.nonCashBenefits, nonCashBenefits) || other.nonCashBenefits == nonCashBenefits)&&(identical(other.taxExemptAllowances, taxExemptAllowances) || other.taxExemptAllowances == taxExemptAllowances)&&(identical(other.otherDeductions, otherDeductions) || other.otherDeductions == otherDeductions)&&(identical(other.taxBreakdown, taxBreakdown) || other.taxBreakdown == taxBreakdown)&&(identical(other.netPay, netPay) || other.netPay == netPay)&&(identical(other.status, status) || other.status == status)&&(identical(other.isEdited, isEdited) || other.isEdited == isEdited)&&(identical(other.propertyId, propertyId) || other.propertyId == propertyId));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,workerId,workerName,grossSalary,bonuses,otherEarnings,otherDeductions,taxBreakdown,netPay,status,isEdited,propertyId);
+int get hashCode => Object.hash(runtimeType,id,workerId,workerName,grossSalary,bonuses,otherEarnings,nonCashBenefits,taxExemptAllowances,otherDeductions,taxBreakdown,netPay,status,isEdited,propertyId);
 
 @override
 String toString() {
-  return 'PayrollCalculation(id: $id, workerId: $workerId, workerName: $workerName, grossSalary: $grossSalary, bonuses: $bonuses, otherEarnings: $otherEarnings, otherDeductions: $otherDeductions, taxBreakdown: $taxBreakdown, netPay: $netPay, status: $status, isEdited: $isEdited, propertyId: $propertyId)';
+  return 'PayrollCalculation(id: $id, workerId: $workerId, workerName: $workerName, grossSalary: $grossSalary, bonuses: $bonuses, otherEarnings: $otherEarnings, nonCashBenefits: $nonCashBenefits, taxExemptAllowances: $taxExemptAllowances, otherDeductions: $otherDeductions, taxBreakdown: $taxBreakdown, netPay: $netPay, status: $status, isEdited: $isEdited, propertyId: $propertyId)';
 }
 
 
@@ -345,7 +347,7 @@ abstract mixin class $PayrollCalculationCopyWith<$Res>  {
   factory $PayrollCalculationCopyWith(PayrollCalculation value, $Res Function(PayrollCalculation) _then) = _$PayrollCalculationCopyWithImpl;
 @useResult
 $Res call({
- String? id, String workerId, String workerName, double grossSalary, double bonuses, double otherEarnings, double otherDeductions, TaxBreakdown taxBreakdown, double netPay, String status, bool isEdited, String? propertyId
+ String? id, String workerId, String workerName, double grossSalary, double bonuses, double otherEarnings, double nonCashBenefits, double taxExemptAllowances, double otherDeductions, TaxBreakdown taxBreakdown, double netPay, String status, bool isEdited, String? propertyId
 });
 
 
@@ -362,7 +364,7 @@ class _$PayrollCalculationCopyWithImpl<$Res>
 
 /// Create a copy of PayrollCalculation
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = freezed,Object? workerId = null,Object? workerName = null,Object? grossSalary = null,Object? bonuses = null,Object? otherEarnings = null,Object? otherDeductions = null,Object? taxBreakdown = null,Object? netPay = null,Object? status = null,Object? isEdited = null,Object? propertyId = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = freezed,Object? workerId = null,Object? workerName = null,Object? grossSalary = null,Object? bonuses = null,Object? otherEarnings = null,Object? nonCashBenefits = null,Object? taxExemptAllowances = null,Object? otherDeductions = null,Object? taxBreakdown = null,Object? netPay = null,Object? status = null,Object? isEdited = null,Object? propertyId = freezed,}) {
   return _then(_self.copyWith(
 id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String?,workerId: null == workerId ? _self.workerId : workerId // ignore: cast_nullable_to_non_nullable
@@ -370,6 +372,8 @@ as String,workerName: null == workerName ? _self.workerName : workerName // igno
 as String,grossSalary: null == grossSalary ? _self.grossSalary : grossSalary // ignore: cast_nullable_to_non_nullable
 as double,bonuses: null == bonuses ? _self.bonuses : bonuses // ignore: cast_nullable_to_non_nullable
 as double,otherEarnings: null == otherEarnings ? _self.otherEarnings : otherEarnings // ignore: cast_nullable_to_non_nullable
+as double,nonCashBenefits: null == nonCashBenefits ? _self.nonCashBenefits : nonCashBenefits // ignore: cast_nullable_to_non_nullable
+as double,taxExemptAllowances: null == taxExemptAllowances ? _self.taxExemptAllowances : taxExemptAllowances // ignore: cast_nullable_to_non_nullable
 as double,otherDeductions: null == otherDeductions ? _self.otherDeductions : otherDeductions // ignore: cast_nullable_to_non_nullable
 as double,taxBreakdown: null == taxBreakdown ? _self.taxBreakdown : taxBreakdown // ignore: cast_nullable_to_non_nullable
 as TaxBreakdown,netPay: null == netPay ? _self.netPay : netPay // ignore: cast_nullable_to_non_nullable
@@ -470,10 +474,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? id,  String workerId,  String workerName,  double grossSalary,  double bonuses,  double otherEarnings,  double otherDeductions,  TaxBreakdown taxBreakdown,  double netPay,  String status,  bool isEdited,  String? propertyId)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? id,  String workerId,  String workerName,  double grossSalary,  double bonuses,  double otherEarnings,  double nonCashBenefits,  double taxExemptAllowances,  double otherDeductions,  TaxBreakdown taxBreakdown,  double netPay,  String status,  bool isEdited,  String? propertyId)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _PayrollCalculation() when $default != null:
-return $default(_that.id,_that.workerId,_that.workerName,_that.grossSalary,_that.bonuses,_that.otherEarnings,_that.otherDeductions,_that.taxBreakdown,_that.netPay,_that.status,_that.isEdited,_that.propertyId);case _:
+return $default(_that.id,_that.workerId,_that.workerName,_that.grossSalary,_that.bonuses,_that.otherEarnings,_that.nonCashBenefits,_that.taxExemptAllowances,_that.otherDeductions,_that.taxBreakdown,_that.netPay,_that.status,_that.isEdited,_that.propertyId);case _:
   return orElse();
 
 }
@@ -491,10 +495,10 @@ return $default(_that.id,_that.workerId,_that.workerName,_that.grossSalary,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? id,  String workerId,  String workerName,  double grossSalary,  double bonuses,  double otherEarnings,  double otherDeductions,  TaxBreakdown taxBreakdown,  double netPay,  String status,  bool isEdited,  String? propertyId)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? id,  String workerId,  String workerName,  double grossSalary,  double bonuses,  double otherEarnings,  double nonCashBenefits,  double taxExemptAllowances,  double otherDeductions,  TaxBreakdown taxBreakdown,  double netPay,  String status,  bool isEdited,  String? propertyId)  $default,) {final _that = this;
 switch (_that) {
 case _PayrollCalculation():
-return $default(_that.id,_that.workerId,_that.workerName,_that.grossSalary,_that.bonuses,_that.otherEarnings,_that.otherDeductions,_that.taxBreakdown,_that.netPay,_that.status,_that.isEdited,_that.propertyId);case _:
+return $default(_that.id,_that.workerId,_that.workerName,_that.grossSalary,_that.bonuses,_that.otherEarnings,_that.nonCashBenefits,_that.taxExemptAllowances,_that.otherDeductions,_that.taxBreakdown,_that.netPay,_that.status,_that.isEdited,_that.propertyId);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -511,10 +515,10 @@ return $default(_that.id,_that.workerId,_that.workerName,_that.grossSalary,_that
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? id,  String workerId,  String workerName,  double grossSalary,  double bonuses,  double otherEarnings,  double otherDeductions,  TaxBreakdown taxBreakdown,  double netPay,  String status,  bool isEdited,  String? propertyId)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? id,  String workerId,  String workerName,  double grossSalary,  double bonuses,  double otherEarnings,  double nonCashBenefits,  double taxExemptAllowances,  double otherDeductions,  TaxBreakdown taxBreakdown,  double netPay,  String status,  bool isEdited,  String? propertyId)?  $default,) {final _that = this;
 switch (_that) {
 case _PayrollCalculation() when $default != null:
-return $default(_that.id,_that.workerId,_that.workerName,_that.grossSalary,_that.bonuses,_that.otherEarnings,_that.otherDeductions,_that.taxBreakdown,_that.netPay,_that.status,_that.isEdited,_that.propertyId);case _:
+return $default(_that.id,_that.workerId,_that.workerName,_that.grossSalary,_that.bonuses,_that.otherEarnings,_that.nonCashBenefits,_that.taxExemptAllowances,_that.otherDeductions,_that.taxBreakdown,_that.netPay,_that.status,_that.isEdited,_that.propertyId);case _:
   return null;
 
 }
@@ -526,7 +530,7 @@ return $default(_that.id,_that.workerId,_that.workerName,_that.grossSalary,_that
 @JsonSerializable()
 
 class _PayrollCalculation extends PayrollCalculation {
-  const _PayrollCalculation({this.id, required this.workerId, required this.workerName, this.grossSalary = 0, this.bonuses = 0, this.otherEarnings = 0, this.otherDeductions = 0, required this.taxBreakdown, required this.netPay, this.status = PayrollStatus.draft, this.isEdited = false, this.propertyId}): super._();
+  const _PayrollCalculation({this.id, required this.workerId, required this.workerName, this.grossSalary = 0, this.bonuses = 0, this.otherEarnings = 0, this.nonCashBenefits = 0, this.taxExemptAllowances = 0, this.otherDeductions = 0, required this.taxBreakdown, required this.netPay, this.status = PayrollStatus.draft, this.isEdited = false, this.propertyId}): super._();
   factory _PayrollCalculation.fromJson(Map<String, dynamic> json) => _$PayrollCalculationFromJson(json);
 
 /// Unique identifier. Null for new/unsaved calculations.
@@ -541,6 +545,10 @@ class _PayrollCalculation extends PayrollCalculation {
 @override@JsonKey() final  double bonuses;
 /// Other earnings (allowances, overtime, etc.).
 @override@JsonKey() final  double otherEarnings;
+/// Non-cash benefits (taxable but not paid in cash).
+@override@JsonKey() final  double nonCashBenefits;
+/// Taxable exempt allowances (non-taxable, paid in cash).
+@override@JsonKey() final  double taxExemptAllowances;
 /// Additional deductions (loans, advances, etc.).
 @override@JsonKey() final  double otherDeductions;
 /// Breakdown of statutory tax deductions.
@@ -567,16 +575,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PayrollCalculation&&(identical(other.id, id) || other.id == id)&&(identical(other.workerId, workerId) || other.workerId == workerId)&&(identical(other.workerName, workerName) || other.workerName == workerName)&&(identical(other.grossSalary, grossSalary) || other.grossSalary == grossSalary)&&(identical(other.bonuses, bonuses) || other.bonuses == bonuses)&&(identical(other.otherEarnings, otherEarnings) || other.otherEarnings == otherEarnings)&&(identical(other.otherDeductions, otherDeductions) || other.otherDeductions == otherDeductions)&&(identical(other.taxBreakdown, taxBreakdown) || other.taxBreakdown == taxBreakdown)&&(identical(other.netPay, netPay) || other.netPay == netPay)&&(identical(other.status, status) || other.status == status)&&(identical(other.isEdited, isEdited) || other.isEdited == isEdited)&&(identical(other.propertyId, propertyId) || other.propertyId == propertyId));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PayrollCalculation&&(identical(other.id, id) || other.id == id)&&(identical(other.workerId, workerId) || other.workerId == workerId)&&(identical(other.workerName, workerName) || other.workerName == workerName)&&(identical(other.grossSalary, grossSalary) || other.grossSalary == grossSalary)&&(identical(other.bonuses, bonuses) || other.bonuses == bonuses)&&(identical(other.otherEarnings, otherEarnings) || other.otherEarnings == otherEarnings)&&(identical(other.nonCashBenefits, nonCashBenefits) || other.nonCashBenefits == nonCashBenefits)&&(identical(other.taxExemptAllowances, taxExemptAllowances) || other.taxExemptAllowances == taxExemptAllowances)&&(identical(other.otherDeductions, otherDeductions) || other.otherDeductions == otherDeductions)&&(identical(other.taxBreakdown, taxBreakdown) || other.taxBreakdown == taxBreakdown)&&(identical(other.netPay, netPay) || other.netPay == netPay)&&(identical(other.status, status) || other.status == status)&&(identical(other.isEdited, isEdited) || other.isEdited == isEdited)&&(identical(other.propertyId, propertyId) || other.propertyId == propertyId));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,workerId,workerName,grossSalary,bonuses,otherEarnings,otherDeductions,taxBreakdown,netPay,status,isEdited,propertyId);
+int get hashCode => Object.hash(runtimeType,id,workerId,workerName,grossSalary,bonuses,otherEarnings,nonCashBenefits,taxExemptAllowances,otherDeductions,taxBreakdown,netPay,status,isEdited,propertyId);
 
 @override
 String toString() {
-  return 'PayrollCalculation(id: $id, workerId: $workerId, workerName: $workerName, grossSalary: $grossSalary, bonuses: $bonuses, otherEarnings: $otherEarnings, otherDeductions: $otherDeductions, taxBreakdown: $taxBreakdown, netPay: $netPay, status: $status, isEdited: $isEdited, propertyId: $propertyId)';
+  return 'PayrollCalculation(id: $id, workerId: $workerId, workerName: $workerName, grossSalary: $grossSalary, bonuses: $bonuses, otherEarnings: $otherEarnings, nonCashBenefits: $nonCashBenefits, taxExemptAllowances: $taxExemptAllowances, otherDeductions: $otherDeductions, taxBreakdown: $taxBreakdown, netPay: $netPay, status: $status, isEdited: $isEdited, propertyId: $propertyId)';
 }
 
 
@@ -587,7 +595,7 @@ abstract mixin class _$PayrollCalculationCopyWith<$Res> implements $PayrollCalcu
   factory _$PayrollCalculationCopyWith(_PayrollCalculation value, $Res Function(_PayrollCalculation) _then) = __$PayrollCalculationCopyWithImpl;
 @override @useResult
 $Res call({
- String? id, String workerId, String workerName, double grossSalary, double bonuses, double otherEarnings, double otherDeductions, TaxBreakdown taxBreakdown, double netPay, String status, bool isEdited, String? propertyId
+ String? id, String workerId, String workerName, double grossSalary, double bonuses, double otherEarnings, double nonCashBenefits, double taxExemptAllowances, double otherDeductions, TaxBreakdown taxBreakdown, double netPay, String status, bool isEdited, String? propertyId
 });
 
 
@@ -604,7 +612,7 @@ class __$PayrollCalculationCopyWithImpl<$Res>
 
 /// Create a copy of PayrollCalculation
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = freezed,Object? workerId = null,Object? workerName = null,Object? grossSalary = null,Object? bonuses = null,Object? otherEarnings = null,Object? otherDeductions = null,Object? taxBreakdown = null,Object? netPay = null,Object? status = null,Object? isEdited = null,Object? propertyId = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = freezed,Object? workerId = null,Object? workerName = null,Object? grossSalary = null,Object? bonuses = null,Object? otherEarnings = null,Object? nonCashBenefits = null,Object? taxExemptAllowances = null,Object? otherDeductions = null,Object? taxBreakdown = null,Object? netPay = null,Object? status = null,Object? isEdited = null,Object? propertyId = freezed,}) {
   return _then(_PayrollCalculation(
 id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String?,workerId: null == workerId ? _self.workerId : workerId // ignore: cast_nullable_to_non_nullable
@@ -612,6 +620,8 @@ as String,workerName: null == workerName ? _self.workerName : workerName // igno
 as String,grossSalary: null == grossSalary ? _self.grossSalary : grossSalary // ignore: cast_nullable_to_non_nullable
 as double,bonuses: null == bonuses ? _self.bonuses : bonuses // ignore: cast_nullable_to_non_nullable
 as double,otherEarnings: null == otherEarnings ? _self.otherEarnings : otherEarnings // ignore: cast_nullable_to_non_nullable
+as double,nonCashBenefits: null == nonCashBenefits ? _self.nonCashBenefits : nonCashBenefits // ignore: cast_nullable_to_non_nullable
+as double,taxExemptAllowances: null == taxExemptAllowances ? _self.taxExemptAllowances : taxExemptAllowances // ignore: cast_nullable_to_non_nullable
 as double,otherDeductions: null == otherDeductions ? _self.otherDeductions : otherDeductions // ignore: cast_nullable_to_non_nullable
 as double,taxBreakdown: null == taxBreakdown ? _self.taxBreakdown : taxBreakdown // ignore: cast_nullable_to_non_nullable
 as TaxBreakdown,netPay: null == netPay ? _self.netPay : netPay // ignore: cast_nullable_to_non_nullable

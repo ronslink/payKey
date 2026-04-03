@@ -144,6 +144,41 @@ export class Worker {
   })
   transportAllowance: number;
 
+  @Column('decimal', {
+    precision: 12,
+    scale: 2,
+    default: 0,
+    transformer: decimalTransformer,
+  })
+  pensionContribution: number;
+
+  @Column('decimal', {
+    precision: 12,
+    scale: 2,
+    default: 0,
+    transformer: decimalTransformer,
+  })
+  mortgageInterest: number;
+
+  @Column('decimal', {
+    precision: 12,
+    scale: 2,
+    default: 0,
+    transformer: decimalTransformer,
+  })
+  hospContribution: number;
+
+  @Column('decimal', {
+    precision: 12,
+    scale: 2,
+    default: 0,
+    transformer: decimalTransformer,
+  })
+  lifeInsurancePremium: number;
+
+  @Column({ default: false })
+  hasDisabilityExemption: boolean;
+
   @Column({
     type: 'enum',
     enum: PaymentFrequency,

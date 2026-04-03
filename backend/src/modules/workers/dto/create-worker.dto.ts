@@ -84,6 +84,25 @@ export class CreateWorkerDto {
   @IsOptional()
   transportAllowance?: number;
 
+  @IsNumber()
+  @IsOptional()
+  pensionContribution?: number;
+
+  @IsNumber()
+  @IsOptional()
+  mortgageInterest?: number;
+
+  @IsNumber()
+  @IsOptional()
+  hospContribution?: number;
+
+  @IsNumber()
+  @IsOptional()
+  lifeInsurancePremium?: number;
+
+  @IsOptional()
+  hasDisabilityExemption?: boolean;
+
   @IsEnum(PaymentFrequency)
   @IsOptional()
   paymentFrequency?: PaymentFrequency;

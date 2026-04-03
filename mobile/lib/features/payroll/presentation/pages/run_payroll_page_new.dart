@@ -667,6 +667,8 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
       ),
       overtimeController: _controllerManager.getOvertimeController(worker.id),
       bonusesController: _controllerManager.getBonusesController(worker.id),
+      nonCashBenefitsController: _controllerManager.getNonCashBenefitsController(worker.id),
+      taxExemptAllowancesController: _controllerManager.getTaxExemptAllowancesController(worker.id),
       deductionsController: _controllerManager.getDeductionsController(worker.id),
       daysWorkedController: _controllerManager.getDaysWorkedController(
         worker.id,
@@ -961,6 +963,8 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
       final hours = _controllerManager.getHours(worker.id);
       final overtime = _controllerManager.getOvertime(worker.id);
       final bonuses = _controllerManager.getBonuses(worker.id);
+      final nonCashBenefits = _controllerManager.getNonCashBenefits(worker.id);
+      final taxExemptAllowances = _controllerManager.getTaxExemptAllowances(worker.id);
       final deductions = _controllerManager.getDeductions(worker.id);
       final daysWorked = _controllerManager.getDaysWorked(worker.id);
       
@@ -985,6 +989,8 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
         'workerId': calc.workerId,
         'grossSalary': grossPay,
         'bonuses': bonuses,
+        'nonCashBenefits': nonCashBenefits,
+        'taxExemptAllowances': taxExemptAllowances,
         'otherEarnings': calc.otherEarnings,
         'otherDeductions': deductions,
         'daysWorked': daysWorked,

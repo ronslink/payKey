@@ -16,6 +16,8 @@ class PayrollCalculator {
     double hours = 0,
     double overtime = 0,
     double bonuses = 0,
+    double taxExemptAllowances = 0,
+    double nonCashBenefits = 0, // Used for tax, but excluded in net cash.
     double deductions = 0,
     double prorationFactor = 1.0,
   }) {
@@ -36,7 +38,7 @@ class PayrollCalculator {
 
     // Apply adjustments
     // Note: Deductions here are manual "other deductions" (like loans), not tax
-    return basePay + bonuses - deductions;
+    return basePay + bonuses + taxExemptAllowances - deductions;
   }
   // ===========================================================================
   // TAX CONSTANTS (Kenya 2024/2025)

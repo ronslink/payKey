@@ -13,6 +13,8 @@ class WorkerPayrollCard extends StatelessWidget {
   final TextEditingController hoursController;
   final TextEditingController overtimeController;
   final TextEditingController bonusesController;
+  final TextEditingController nonCashBenefitsController;
+  final TextEditingController taxExemptAllowancesController;
   final TextEditingController deductionsController;
   final TextEditingController daysWorkedController;
   final int totalDaysInPeriod;
@@ -28,6 +30,8 @@ class WorkerPayrollCard extends StatelessWidget {
     required this.hoursController,
     required this.overtimeController,
     required this.bonusesController,
+    required this.nonCashBenefitsController,
+    required this.taxExemptAllowancesController,
     required this.deductionsController,
     required this.daysWorkedController,
     required this.totalDaysInPeriod,
@@ -58,6 +62,8 @@ class WorkerPayrollCard extends StatelessWidget {
       hours: double.tryParse(hoursController.text) ?? 0,
       overtime: double.tryParse(overtimeController.text) ?? 0,
       bonuses: double.tryParse(bonusesController.text) ?? 0,
+      nonCashBenefits: double.tryParse(nonCashBenefitsController.text) ?? 0,
+      taxExemptAllowances: double.tryParse(taxExemptAllowancesController.text) ?? 0,
       deductions: double.tryParse(deductionsController.text) ?? 0,
       prorationFactor: prorationFactor,
     );
@@ -269,6 +275,28 @@ class WorkerPayrollCard extends StatelessWidget {
                 hint: '0',
                 icon: Icons.remove_circle_outline,
                 iconColor: Colors.red,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildInputField(
+                context,
+                label: 'Non-Cash Benefits',
+                controller: nonCashBenefitsController,
+                hint: '0',
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildInputField(
+                context,
+                label: 'Tax Exempt Alwcs',
+                controller: taxExemptAllowancesController,
+                hint: '0',
               ),
             ),
           ],

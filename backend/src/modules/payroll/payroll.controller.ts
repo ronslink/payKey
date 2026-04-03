@@ -15,16 +15,10 @@ import {
 import type { Response } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { PayrollRecord } from './entities/payroll-record.entity';
+import { PayrollRecord, PayrollStatus } from './entities/payroll-record.entity';
 import { User } from '../users/entities/user.entity';
 import type { AuthenticatedRequest } from '../../common/interfaces/user.interface';
-import {
-  PayrollService,
-  PayrollCalculationResult,
-  PayrollItem,
-  PayrollSummary,
-  FundsVerificationResult,
-} from './payroll.service';
+import { PayrollService, PayrollCalculationResult } from './payroll.service';
 import { PayslipService } from './payslip.service';
 import { TaxesService } from '../taxes/taxes.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -71,7 +65,7 @@ export class PayrollController {
       where: {
         payPeriodId,
         userId: req.user.userId,
-        status: 'finalized' as any,
+        status: PayrollStatus.FINALIZED,
       },
       relations: ['worker', 'payPeriod'],
     });
@@ -247,6 +241,8 @@ export class PayrollController {
         bonuses?: number;
         otherEarnings?: number;
         otherDeductions?: number;
+        nonCashBenefits?: number;
+        taxExemptAllowances?: number;
       }>;
     },
   ) {
@@ -267,6 +263,8 @@ export class PayrollController {
       bonuses?: number;
       otherEarnings?: number;
       otherDeductions?: number;
+      nonCashBenefits?: number;
+      taxExemptAllowances?: number;
       holidayHours?: number;
       sundayHours?: number;
     },
@@ -313,7 +311,8 @@ export class PayrollController {
   async downloadPayslip(
     @Request() req: AuthenticatedRequest,
     @Param('payrollRecordId') payrollRecordId: string,
-    @Res({ passthrough: true }) res: Response,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    @Res({ passthrough: true }) _res: Response,
   ): Promise<StreamableFile> {
     const record = await this.payrollRepository.findOne({
       where: { id: payrollRecordId, userId: req.user.userId },
@@ -346,7 +345,7 @@ export class PayrollController {
     } catch (error) {
       console.error('Error generating payslip:', error);
       throw new InternalServerErrorException(
-        error.message || 'Failed to generate payslip',
+        error instanceof Error ? error.message : 'Failed to generate payslip',
       );
     }
   }
@@ -365,7 +364,7 @@ export class PayrollController {
       where: {
         payPeriodId,
         userId: req.user.userId,
-        status: 'finalized' as any,
+        status: PayrollStatus.FINALIZED,
       },
       relations: ['worker'],
     });
@@ -437,7 +436,7 @@ export class PayrollController {
       where: {
         payPeriodId,
         userId: req.user.userId,
-        status: 'finalized' as any,
+        status: PayrollStatus.FINALIZED,
       },
       relations: ['worker'],
     });
@@ -542,8 +541,8 @@ export class PayrollController {
       jobId: job.id,
       status: state,
       progress: typeof progress === 'number' ? progress : 0,
-      data: job.data,
-      result: job.returnvalue,
+      data: job.data as Record<string, unknown>,
+      result: job.returnvalue as unknown,
       failedReason: job.failedReason,
       finishedOn: job.finishedOn,
       processedOn: job.processedOn,

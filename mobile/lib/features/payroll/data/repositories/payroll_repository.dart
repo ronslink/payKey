@@ -476,6 +476,8 @@ class PayrollRepository {
       json['bonuses'] = toDouble(json['bonuses']);
       json['otherEarnings'] = toDouble(json['otherEarnings']);
       json['otherDeductions'] = toDouble(json['otherDeductions']);
+      json['nonCashBenefits'] = toDouble(json['nonCashBenefits']);
+      json['taxExemptAllowances'] = toDouble(json['taxExemptAllowances']);
       json['netPay'] = toDouble(json['netPay']);
 
       // Ensure tax breakdown numbers
