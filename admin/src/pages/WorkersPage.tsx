@@ -221,6 +221,7 @@ export default function WorkersPage() {
         queryFn: () => adminWorkers.list({
             search: search || undefined,
             page,
+            limit: 10, // We are explicitly requesting 10 employers per page to prevent massive worker queries
             isActive: statusFilter === 'active' ? true : statusFilter === 'inactive' ? false : undefined,
             paymentMethod: methodFilter,
             portalStatus: portalFilter,
@@ -228,7 +229,8 @@ export default function WorkersPage() {
     });
 
     const workers      = data?.data || [];
-    const totalWorkers = data?.total || 0;
+    const totalWorkers = data?.totalWorkers || 0;
+    const totalEmployers = data?.totalEmployers || 0;
     const activeCount  = data?.activeCount  ?? workers.filter((w: any) => w.isActive).length;
     const inactiveCount = data?.inactiveCount ?? workers.filter((w: any) => !w.isActive).length;
     const connectedCount = data?.connectedCount ?? workers.filter((w: any) => w.linkedUserId).length;
@@ -253,7 +255,8 @@ export default function WorkersPage() {
     const toggleGroup = (id: string) => setExpandedGroups(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
     const allExpanded = groups.length > 0 && groups.every(g => expandedGroups.has(g.employer_id));
     const toggleAll   = () => setExpandedGroups(allExpanded ? new Set() : new Set(groups.map(g => g.employer_id)));
-    const totalPages  = Math.ceil(totalWorkers / 20);
+    const limit       = data?.limit || 10;
+    const totalPages  = Math.ceil(totalEmployers / limit);
 
     const statCards = [
         { label: 'Total Workers',    value: totalWorkers,   icon: <TeamOutlined />,        color: '#6366f1', bg: '#eef2ff', filter: () => { setStatusFilter(undefined); setPortalFilter(undefined); setPage(1); }, active: !statusFilter && !portalFilter },
@@ -316,7 +319,7 @@ export default function WorkersPage() {
             <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', background: '#f8fafc', borderBottom: '1px solid #e8eaf0' }}>
                     <Text style={{ fontSize: 12, color: '#64748b' }}>
-                        {isLoading ? 'Loading…' : `${groups.length} employer${groups.length !== 1 ? 's' : ''} · ${totalWorkers} workers`}
+                        {isLoading ? 'Loading…' : `${totalEmployers} employer${totalEmployers !== 1 ? 's' : ''} total · Showing page ${page} of ${Math.max(1, totalPages)}`}
                     </Text>
                     {groups.length > 0 && (
                         <Button size="small" type="text" style={{ fontSize: 12, color: '#6366f1', fontWeight: 500 }} onClick={toggleAll}>
@@ -346,9 +349,9 @@ export default function WorkersPage() {
                     })
                 )}
 
-                {!isLoading && totalWorkers > 20 && (
+                {!isLoading && totalEmployers > limit && (
                     <div style={{ padding: '12px 16px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8 }}>
-                        <Text style={{ fontSize: 12, color: '#64748b' }}>{totalWorkers} total</Text>
+                        <Text style={{ fontSize: 12, color: '#64748b' }}>{totalEmployers} employers</Text>
                         <Button size="small" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>← Prev</Button>
                         <span style={{ fontSize: 12, color: '#475569', padding: '0 4px' }}>Page {page} of {totalPages}</span>
                         <Button size="small" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Next →</Button>

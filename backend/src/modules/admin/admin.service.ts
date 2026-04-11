@@ -782,45 +782,106 @@ export class AdminService {
 
   // ─── Workers ────────────────────────────────────────────────────────────────
 
-  async getWorkers(search?: string, page = 1, limit = 20) {
-    const query = await this.dataSource.query(
-      `
-      SELECT
-        w.id,
-        w.name as worker_name,
-        w."phoneNumber",
-        w."salaryGross",
-        w."isActive",
-        w."paymentMethod",
-        w."createdAt",
-        w."linkedUserId",
-        w."inviteCode",
-        u.id as employer_id,
-        u.email as employer_email,
-        COALESCE(u."businessName", CONCAT(u."firstName", ' ', u."lastName"), u.email) as employer_name
+  async getWorkers(filters: { search?: string; page?: number; limit?: number; isActive?: boolean; paymentMethod?: string; portalStatus?: string }) {
+    const { search, page = 1, limit = 10, isActive, paymentMethod, portalStatus } = filters;
+
+    const conditions: string[] = ['1=1'];
+    const params: any[] = [];
+    let paramIdx = 1;
+
+    if (search) {
+      conditions.push(`(w.name ILIKE $${paramIdx} OR u.email ILIKE $${paramIdx} OR u."businessName" ILIKE $${paramIdx})`);
+      params.push(`%${search}%`);
+      paramIdx++;
+    }
+    if (isActive !== undefined) {
+      conditions.push(`w."isActive" = $${paramIdx}`);
+      params.push(isActive);
+      paramIdx++;
+    }
+    if (paymentMethod) {
+      conditions.push(`w."paymentMethod" = $${paramIdx}`);
+      params.push(paymentMethod);
+      paramIdx++;
+    }
+    if (portalStatus === 'connected') {
+      conditions.push(`w."linkedUserId" IS NOT NULL`);
+    } else if (portalStatus === 'invited') {
+      conditions.push(`w."linkedUserId" IS NULL AND w."inviteCode" IS NOT NULL`);
+    }
+
+    const whereClause = conditions.join(' AND ');
+
+    // 1. Get total number of distinct employers matching the criteria
+    const countResult = await this.dataSource.query(`
+      SELECT COUNT(DISTINCT u.id) as total
       FROM workers w
       JOIN users u ON u.id = w."userId"
-      WHERE 1=1
-        ${search ? `AND (w.name ILIKE $1 OR u.email ILIKE $1 OR u."businessName" ILIKE $1)` : ''}
-      ORDER BY w."createdAt" DESC
-      LIMIT ${limit} OFFSET ${(page - 1) * limit}
-    `,
-      search ? [`%${search}%`] : [],
-    );
+      WHERE ${whereClause}
+    `, params);
 
-    const countResult = await this.dataSource.query(
-      `
-      SELECT COUNT(*) as total FROM workers w
+    // 2. Paginate over employers (sorted by employer creation date)
+    const employers = await this.dataSource.query(`
+      SELECT DISTINCT u.id, u."createdAt"
+      FROM workers w
       JOIN users u ON u.id = w."userId"
-      WHERE 1=1
-        ${search ? `AND (w.name ILIKE $1 OR u.email ILIKE $1 OR u."businessName" ILIKE $1)` : ''}
-    `,
-      search ? [`%${search}%`] : [],
-    );
+      WHERE ${whereClause}
+      ORDER BY u."createdAt" DESC
+      LIMIT ${limit} OFFSET ${(page - 1) * limit}
+    `, params);
+
+    let workers = [];
+
+    if (employers.length > 0) {
+      const employerIds = employers.map((e: any) => e.id);
+      const employerPlaceholders = employerIds.map((_: any, i: number) => `$${paramIdx + i}`).join(',');
+
+      // 3. Fetch all matching workers for those employers, preserving order
+      workers = await this.dataSource.query(`
+        SELECT
+          w.id,
+          w.name as worker_name,
+          w."phoneNumber",
+          w."salaryGross",
+          w."isActive",
+          w."paymentMethod",
+          w."createdAt",
+          w."linkedUserId",
+          w."inviteCode",
+          u.id as employer_id,
+          u.email as employer_email,
+          u."createdAt" as employer_created_at,
+          COALESCE(u."businessName", CONCAT(u."firstName", ' ', u."lastName"), u.email) as employer_name
+        FROM workers w
+        JOIN users u ON u.id = w."userId"
+        WHERE ${whereClause.replace(/\$\d+/g, (m) => m)} AND u.id IN (${employerPlaceholders})
+        ORDER BY u."createdAt" DESC, w."createdAt" DESC
+      `, [...params, ...employerIds]);
+    }
+
+    // 4. Compute global system stats for the dashboard summary cards
+    const statsResult = await this.dataSource.query(`
+      SELECT 
+        COUNT(w.id) as total_workers,
+        COUNT(CASE WHEN w."isActive" = true THEN 1 END) as active_count,
+        COUNT(CASE WHEN w."isActive" = false THEN 1 END) as inactive_count,
+        COUNT(CASE WHEN w."linkedUserId" IS NOT NULL THEN 1 END) as connected_count,
+        COUNT(CASE WHEN w."linkedUserId" IS NULL AND w."inviteCode" IS NOT NULL THEN 1 END) as invited_count
+      FROM workers w
+      JOIN users u ON u.id = w."userId"
+      WHERE ${whereClause}
+    `, params);
+
+    const stats = statsResult[0] || {};
 
     return {
-      data: query,
-      total: parseInt(countResult[0]?.total || '0'),
+      data: workers,
+      totalEmployers: parseInt(countResult[0]?.total || '0'),
+      totalWorkers: parseInt(stats.total_workers || '0'),
+      activeCount: parseInt(stats.active_count || '0'),
+      inactiveCount: parseInt(stats.inactive_count || '0'),
+      connectedCount: parseInt(stats.connected_count || '0'),
+      invitedCount: parseInt(stats.invited_count || '0'),
       page,
       limit,
     };

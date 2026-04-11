@@ -55,13 +55,19 @@ export class AdminController {
   async getWorkers(
     @Query('search') search?: string,
     @Query('page') page = '1',
-    @Query('limit') limit = '20',
+    @Query('limit') limit = '10', // Changing default limit for groups to 10
+    @Query('isActive') isActive?: string,
+    @Query('paymentMethod') paymentMethod?: string,
+    @Query('portalStatus') portalStatus?: string,
   ) {
-    return this.adminService.getWorkers(
+    return this.adminService.getWorkers({
       search,
-      parseInt(page),
-      parseInt(limit),
-    );
+      page: parseInt(page),
+      limit: parseInt(limit),
+      isActive: isActive !== undefined ? isActive === 'true' : undefined,
+      paymentMethod,
+      portalStatus,
+    });
   }
 
   // ─── Transactions ───────────────────────────────────────────────────────────
