@@ -1,6 +1,17 @@
-Release Notes - Version 1.1.2 (Build 12)
+Release Notes - Version 2.0.1 (Build 14)
 
-## Bug Fixes
+## Improvements
+
+### Build Configuration
+- Fixed R8/ProGuard configuration for Android release builds
+- Updated ProGuard rules to handle Stripe SDK class references
+- Improved Android build stability
+
+---
+
+## Previous Release (1.1.2 / Build 12)
+
+### Bug Fixes
 
 ### Leave Management
 - Fixed crash on the Requests tab: "String is not a subtype of num" error when loading leave requests
@@ -20,6 +31,8 @@ Release Notes - Version 1.1.2 (Build 12)
 ### Subscriptions
 - Stripe subscription payments are no longer duplicated in payment history
 - Subscription tier, amount, and next billing date now populate correctly after checkout
+
+---
 
 ## Previous Build (1.1.1 / Build 11)
 
