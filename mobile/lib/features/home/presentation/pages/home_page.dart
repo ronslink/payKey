@@ -67,8 +67,14 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Widget _buildTour(BuildContext context) {
-    // Only show if onboarding is completed and we haven't seen this tour
-    final showTour = ref.watch(showDashboardTourProvider);
+    // Only show if onboarding is completed and we haven't seen this tour.
+    // Crucially, showDashboardTourProvider returns false while loading,
+    // so no overlay is rendered until SharedPreferences confirms the tour
+    // hasn't been completed yet.
+    final tourProgress = ref.watch(tourProgressProvider);
+    final showTour = tourProgress.isLoaded &&
+        tourProgress.onboardingCompleted &&
+        !tourProgress.hasSeen(TourKeys.dashboardTour);
 
     if (!showTour) {
       return const SizedBox.shrink();

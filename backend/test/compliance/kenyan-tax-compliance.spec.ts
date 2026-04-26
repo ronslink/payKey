@@ -111,9 +111,10 @@ describe('Kenyan Tax Compliance Tests', () => {
 
     testCases.forEach(({ salary, expectedPAYE, description }) => {
       it(`should calculate PAYE correctly for ${description}: KES ${salary}`, async () => {
-        const paye = await service.calculatePAYEFromConfig(
+        const paye = await (service as any).calculatePAYEFromConfig(
           salary,
           0,
+          0, // shif = 0 for bracket-only tests (no insurance relief)
           new Date('2024-01-01'),
         );
         expect(paye).toBeCloseTo(expectedPAYE, 0);
@@ -242,9 +243,10 @@ describe('Kenyan Tax Compliance Tests', () => {
         new Date('2024-01-01'),
       );
       const taxableIncome = grossSalary - nssf.employeeContribution;
-      const paye = await service.calculatePAYEFromConfig(
+      const paye = await (service as any).calculatePAYEFromConfig(
         grossSalary,
         nssf.employeeContribution,
+        0, // shif = 0 for this personal relief test
         new Date('2024-01-01'),
       );
 
@@ -254,9 +256,10 @@ describe('Kenyan Tax Compliance Tests', () => {
 
     it('should not apply personal relief if PAYE is zero', async () => {
       const grossSalary = 15000; // Below PAYE threshold
-      const paye = await service.calculatePAYEFromConfig(
+      const paye = await (service as any).calculatePAYEFromConfig(
         grossSalary,
         0,
+        0, // shif = 0, testing zero-PAYE case
         new Date('2024-01-01'),
       );
 
@@ -480,13 +483,15 @@ describe('Kenyan Tax Compliance Tests', () => {
           }
         });
 
-      const oldRatePaye = await service.calculatePAYEFromConfig(
+      const oldRatePaye = await (service as any).calculatePAYEFromConfig(
         salary,
+        0,
         0,
         oldRateDate,
       );
-      const newRatePaye = await service.calculatePAYEFromConfig(
+      const newRatePaye = await (service as any).calculatePAYEFromConfig(
         salary,
+        0,
         0,
         newRateDate,
       );

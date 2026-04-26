@@ -176,6 +176,22 @@ export class Worker {
   })
   lifeInsurancePremium: number;
 
+  @Column('decimal', {
+    precision: 12,
+    scale: 2,
+    default: 0,
+    transformer: decimalTransformer,
+  })
+  nonCashBenefits: number;
+
+  @Column('decimal', {
+    precision: 12,
+    scale: 2,
+    default: 0,
+    transformer: decimalTransformer,
+  })
+  nonTaxableAllowance: number;
+
   @Column({ default: false })
   hasDisabilityExemption: boolean;
 

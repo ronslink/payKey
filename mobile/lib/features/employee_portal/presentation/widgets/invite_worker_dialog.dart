@@ -477,9 +477,15 @@ class _InviteCodeView extends StatelessWidget {
             style: TextStyle(color: _DialogColors.primary, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: inviteCode.inviteCode.split('').map(_buildCodeDigit).toList(),
+          // Use spaced Text instead of fixed-size digit boxes — fully responsive
+          Text(
+            inviteCode.inviteCode.split('').join('  '),
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 4,
+              color: _DialogColors.primary,
+            ),
           ),
           const SizedBox(height: 16),
           Text(
@@ -487,26 +493,6 @@ class _InviteCodeView extends StatelessWidget {
             style: TextStyle(fontSize: 12, color: Colors.grey[600]),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildCodeDigit(String digit) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: _DialogColors.primary),
-      ),
-      child: Text(
-        digit,
-        style: const TextStyle(
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-          color: _DialogColors.primary,
-        ),
       ),
     );
   }

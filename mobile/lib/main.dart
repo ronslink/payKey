@@ -119,6 +119,13 @@ class _PaydomeAppState extends ConsumerState<PaydomeApp> {
     if (!kIsWeb) {
       NotificationService().onMessageOpenedApp.listen(_handleNotificationTap);
     }
+
+    // Listen for unauthorized events to redirect to login
+    ApiService().onUnauthorized.listen((_) {
+      if (mounted) {
+        ref.read(routerProvider).go(AppRoutes.login);
+      }
+    });
   }
 
   void _handleNotificationTap(RemoteMessage message) {

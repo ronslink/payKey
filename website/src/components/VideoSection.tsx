@@ -1,20 +1,8 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { Play, Video, Target, Lightbulb, Zap } from 'lucide-react';
 
 export function VideoSection() {
-    const videoRef = useRef<HTMLVideoElement>(null);
     const [isPlaying, setIsPlaying] = useState(false);
-
-    const togglePlay = () => {
-        if (videoRef.current) {
-            if (isPlaying) {
-                videoRef.current.pause();
-            } else {
-                videoRef.current.play();
-            }
-            setIsPlaying(!isPlaying);
-        }
-    };
 
     return (
         <section className="section" style={{ background: 'var(--dark-bg)' }}>
@@ -42,29 +30,41 @@ export function VideoSection() {
                         boxShadow: '0 20px 60px oklch(0.55 0.2 265 / 0.2)',
                         background: 'var(--dark-surface)'
                     }}>
-                        <video
-                            ref={videoRef}
-                            style={{
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'cover'
-                            }}
-                            controls
-                            poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1920' height='1080'%3E%3Crect width='1920' height='1080' fill='%230f172a'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='48' fill='%2394a3b8'%3EPaydome Explainer Video%3C/text%3E%3C/svg%3E"
-                            onPlay={() => setIsPlaying(true)}
-                            onPause={() => setIsPlaying(false)}
-                        >
-                            <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4" />
-                            Your browser does not support the video tag.
-                        </video>
+                        {isPlaying ? (
+                            <img
+                                src="/explainer.webp"
+                                alt="Paydome Walkthrough Demo"
+                                style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                    cursor: 'pointer'
+                                }}
+                                onClick={() => setIsPlaying(false)}
+                                title="Click to pause"
+                            />
+                        ) : (
+                            <img
+                                src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1920' height='1080'%3E%3Crect width='1920' height='1080' fill='%230f172a'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='48' fill='%2394a3b8'%3EPaydome Explainer Video%3C/text%3E%3C/svg%3E"
+                                alt="Video Poster"
+                                style={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover'
+                                }}
+                            />
+                        )}
 
                         {/* Custom Play Button Overlay (shows when paused) */}
                         {!isPlaying && (
                             <button
-                                onClick={togglePlay}
+                                onClick={() => setIsPlaying(true)}
                                 style={{
                                     position: 'absolute',
                                     top: '50%',

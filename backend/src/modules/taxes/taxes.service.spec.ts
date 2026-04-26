@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TaxesService } from './taxes.service';
 import { TaxConfigService } from '../tax-config/services/tax-config.service';
+import { TaxType } from '../tax-config/entities/tax-config.entity';
 import { TaxSubmission } from './entities/tax-submission.entity';
 import { TaxTable } from './entities/tax-table.entity';
 import { PayrollRecord } from '../payroll/entities/payroll-record.entity';
@@ -13,7 +14,31 @@ describe('TaxesService', () => {
 
   beforeEach(async () => {
     const mockTaxConfigService = {
-      getActiveTaxConfig: jest.fn().mockResolvedValue(null),
+      getActiveTaxConfig: jest.fn().mockImplementation((type) => {
+        switch(type) {
+          case TaxType.NSSF_TIER1:
+            return { configuration: { tiers: [{ rate: 0.06, salaryTo: 8000 }] } };
+          case TaxType.NSSF_TIER2:
+            return { configuration: { tiers: [{ rate: 0.06, salaryFrom: 8001, salaryTo: 72000 }] } };
+          case TaxType.SHIF:
+            return { configuration: { percentage: 2.75, minAmount: 300 } };
+          case TaxType.HOUSING_LEVY:
+            return { configuration: { percentage: 1.5 } };
+          case TaxType.PAYE:
+            return {
+              configuration: {
+                personalRelief: 2400,
+                brackets: [
+                  { to: 24000, rate: 0.1 },
+                  { to: 32333, rate: 0.25 },
+                  { to: null, rate: 0.3 }
+                ]
+              }
+            };
+          default:
+            return null;
+        }
+      }),
       getAllActiveTaxConfigs: jest.fn().mockResolvedValue([]),
     };
 

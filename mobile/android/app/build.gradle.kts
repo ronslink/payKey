@@ -58,6 +58,14 @@ android {
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("release")
             proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
+            isMinifyEnabled = true
+            isShrinkResources = true
+        }
+    }
+    
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
         }
     }
 

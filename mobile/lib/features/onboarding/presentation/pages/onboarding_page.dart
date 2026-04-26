@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/countries_provider.dart';
@@ -243,6 +244,12 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
       case 2:
         if (_kraPinController.text.trim().isEmpty) {
           _showValidationError('KRA PIN is required for tax compliance');
+          return false;
+        }
+        // Validate KRA PIN format: must be exactly A123456789B (letter, 9 digits, letter)
+        final kraRegex = RegExp(r'^[A-Z]\d{9}[A-Z]$');
+        if (!kraRegex.hasMatch(_kraPinController.text.trim().toUpperCase())) {
+          _showValidationError('KRA PIN must be 11 characters in format A123456789B');
           return false;
         }
         if (!_isResident && _countryOfOrigin == null) {
@@ -665,7 +672,20 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
           'e.g., A000000000A',
           required: true,
           icon: Icons.qr_code_rounded,
-          helperText: 'Your Kenya Revenue Authority PIN',
+          helperText: 'Format: A123456789B (11 characters)',
+          maxLength: 11,
+          textCapitalization: TextCapitalization.characters,
+          inputFormatters: [_UpperCaseTextFormatter()],
+          validator: (value) {
+            if (value == null || value.trim().isEmpty) {
+              return 'KRA PIN is required';
+            }
+            final kraRegex = RegExp(r'^[A-Z]\d{9}[A-Z]$');
+            if (!kraRegex.hasMatch(value.trim().toUpperCase())) {
+              return 'Invalid format. Expected: A123456789B (11 characters)';
+            }
+            return null;
+          },
         ),
         const SizedBox(height: 24),
         Container(
@@ -1066,7 +1086,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
       onTap: () => onChanged(value),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFF3B82F6) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
@@ -1081,15 +1101,18 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
             Icon(
               isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
               color: isSelected ? Colors.white : Colors.white60,
-              size: 18,
+              size: 16,
             ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected ? Colors.white : Colors.white70,
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isSelected ? Colors.white : Colors.white70,
+                ),
               ),
             ),
           ],
@@ -1107,6 +1130,10 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
     IconData? icon,
     String? helperText,
     int maxLines = 1,
+    int? maxLength,
+    TextCapitalization textCapitalization = TextCapitalization.none,
+    List<TextInputFormatter>? inputFormatters,
+    String? Function(String?)? validator,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1123,6 +1150,9 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
         TextFormField(
           controller: controller,
           maxLines: maxLines,
+          maxLength: maxLength,
+          textCapitalization: textCapitalization,
+          inputFormatters: inputFormatters,
           style: const TextStyle(fontSize: 16, color: Colors.white),
           decoration: InputDecoration(
             hintText: hint,
@@ -1146,8 +1176,9 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
               borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 2),
             ),
             errorStyle: const TextStyle(color: Color(0xFFF87171)),
+            counterStyle: TextStyle(color: Colors.white.withValues(alpha: 0.4)),
           ),
-          validator: (value) {
+          validator: validator ?? (value) {
             if (required && (value == null || value.trim().isEmpty)) {
               return '$label is required';
             }
@@ -1283,6 +1314,20 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Forces all text input to uppercase.
+class _UpperCaseTextFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    return newValue.copyWith(
+      text: newValue.text.toUpperCase(),
+      selection: newValue.selection,
     );
   }
 }

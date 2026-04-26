@@ -66,8 +66,22 @@ class _EmployeeLoginPageState extends ConsumerState<EmployeeLoginPage> {
         });
       }
     } catch (e) {
+      final errorMsg = ApiService().getErrorMessage(e);
+      final errorStr = e.toString().toLowerCase();
+      
       setState(() {
-        _errorMessage = 'Invalid phone number or PIN';
+        if (errorStr.contains('socketexception') || 
+            errorStr.contains('failed host lookup') || 
+            errorStr.contains('connection timeout')) {
+          _errorMessage = 'Network error. Please check your internet connection.';
+        } else {
+          // If the message is overly generic or a fallback from Dio, provide a sensible default.
+          if (errorMsg.contains('DioException') || errorMsg.trim().isEmpty) {
+            _errorMessage = 'Invalid phone number or PIN';
+          } else {
+            _errorMessage = errorMsg.replaceFirst('Exception: ', '').trim();
+          }
+        }
       });
     } finally {
       if (mounted) {
@@ -119,8 +133,22 @@ class _EmployeeLoginPageState extends ConsumerState<EmployeeLoginPage> {
         });
       }
     } catch (e) {
+      final errorMsg = ApiService().getErrorMessage(e);
+      final errorStr = e.toString().toLowerCase();
+      
       setState(() {
-        _errorMessage = 'Invalid invite code or phone number';
+        if (errorStr.contains('socketexception') || 
+            errorStr.contains('failed host lookup') || 
+            errorStr.contains('connection timeout')) {
+          _errorMessage = 'Network error. Please check your internet connection.';
+        } else {
+          // If the message is overly generic or a fallback from Dio, provide a sensible default.
+          if (errorMsg.contains('DioException') || errorMsg.trim().isEmpty) {
+            _errorMessage = 'Invalid invite code or phone number';
+          } else {
+            _errorMessage = errorMsg.replaceFirst('Exception: ', '').trim();
+          }
+        }
       });
     } finally {
       if (mounted) {

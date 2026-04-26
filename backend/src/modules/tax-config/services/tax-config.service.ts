@@ -156,6 +156,8 @@ export class TaxConfigService implements OnModuleInit {
           personalRelief: 2400,
           insuranceRelief: 0.15,
           maxInsuranceRelief: 5000,
+          maxAllowablePension: 20000,
+          disabilityExemptionAmount: 150000,
         },
         paymentDeadline: '9th of following month',
         notes: 'PAYE rates effective July 1, 2023',

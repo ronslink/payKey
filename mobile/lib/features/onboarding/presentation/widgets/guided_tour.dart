@@ -36,6 +36,7 @@ class GuidedTour extends StatefulWidget {
 class _GuidedTourState extends State<GuidedTour>
     with TickerProviderStateMixin {
   int _currentStep = 0;
+  bool _isReady = false; // Prevents overlay rendering before first frame
   late AnimationController _fadeController;
   late AnimationController _pulseController;
   late Animation<double> _fadeAnimation;
@@ -46,6 +47,10 @@ class _GuidedTourState extends State<GuidedTour>
   void initState() {
     super.initState();
     _initializeAnimations();
+    // Delay tour start until after first frame so all GlobalKeys are mounted
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _isReady = true);
+    });
   }
 
   void _initializeAnimations() {
@@ -107,6 +112,8 @@ class _GuidedTourState extends State<GuidedTour>
 
   @override
   Widget build(BuildContext context) {
+    // Don't render until after the first frame — GlobalKeys must be attached
+    if (!_isReady) return const SizedBox.shrink();
     if (widget.steps.isEmpty) return const SizedBox.shrink();
 
     final step = widget.steps[_currentStep];

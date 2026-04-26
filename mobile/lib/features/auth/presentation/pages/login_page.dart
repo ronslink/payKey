@@ -34,6 +34,52 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     }
   }
 
+  String _getFriendlyErrorMessage(Object? error) {
+    if (error == null) return 'An unknown error occurred.';
+    
+    String message = error.toString();
+    
+    // Clean up typical wrappers
+    if (message.startsWith('Exception: ')) {
+      message = message.substring('Exception: '.length);
+    }
+    if (message.contains('DioException') && message.contains('message:')) {
+      final match = RegExp(r'message:\s*([^,}]+)').firstMatch(message);
+      if (match != null) {
+        message = match.group(1)?.trim() ?? message;
+      }
+    } else if (message.contains('DioException [bad response]:')) {
+      final match = RegExp(r'''Response:.*?([^"'\n}]+)''').firstMatch(message);
+      if (match != null) {
+        message = match.group(1)?.trim() ?? message;
+      }
+    }
+    
+    // If it's still a raw DioException string, just show a fallback so users don't see technical blobs
+    if (message.startsWith('DioException')) {
+      message = 'An error occurred while connecting. Please try again.';
+    }
+
+    final lower = message.toLowerCase();
+    
+    if (lower.contains('invalid credentials') || 
+        lower.contains('unauthorized') || 
+        lower.contains('incorrect') || 
+        lower.contains('401') ||
+        lower.contains('login failed')) {
+      return 'The email or password you entered is incorrect. Please try again.';
+    }
+    
+    if (lower.contains('socketexception') || 
+        lower.contains('network error') ||
+        lower.contains('connection timeout') ||
+        lower.contains('failed host lookup')) {
+      return 'Network error. Please check your internet connection.';
+    }
+    
+    return message;
+  }
+
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.only(top: 60, bottom: 40),
@@ -205,14 +251,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   Widget build(BuildContext context) {
     ref.listen(authStateProvider, (previous, next) {
-      if (next.hasError) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(next.error.toString()),
-            backgroundColor: Colors.red,
-          ),
-        );
-      } else if (!next.isLoading && !next.hasError && previous?.isLoading == true) {
+      if (!next.isLoading && !next.hasError && previous?.isLoading == true) {
          context.go('/home');
       }
     });
@@ -248,6 +287,29 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      if (authState.hasError) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.red.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.error_outline, color: Colors.red.shade700, size: 20),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _getFriendlyErrorMessage(authState.error),
+                                  style: TextStyle(color: Colors.red.shade700, fontSize: 14),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
                       _buildTextField(
                         controller: _emailController,
                         label: 'Email',

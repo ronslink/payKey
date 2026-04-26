@@ -296,7 +296,7 @@ class _WorkerDetailPageState extends ConsumerState<WorkerDetailPage> {
 
     return Scaffold(
       backgroundColor: _AppColors.background,
-      appBar: _buildAppBar(worker),
+      appBar: _buildAppBar(worker, hasPortalAccess: portalAccess.value?.hasAccess == true && portalAccess.value?.isPreview != true),
       body: workersState.when(
         data: (workers) {
           final workerData = _findWorker(workers);
@@ -306,7 +306,7 @@ class _WorkerDetailPageState extends ConsumerState<WorkerDetailPage> {
           return _WorkerDetailContent(
             worker: workerData,
             onEdit: () => _navigateToEdit(workerData),
-            onInvite: portalAccess.value?.hasAccess == true 
+            onInvite: portalAccess.value?.hasAccess == true && portalAccess.value?.isPreview != true
                 ? () => _handleMenuAction('invite', workerData) 
                 : null,
             onAvatarTap: _pickAndUploadPhoto,
@@ -324,7 +324,7 @@ class _WorkerDetailPageState extends ConsumerState<WorkerDetailPage> {
     );
   }
 
-  PreferredSizeWidget _buildAppBar(WorkerModel? worker) {
+  PreferredSizeWidget _buildAppBar(WorkerModel? worker, {bool hasPortalAccess = false}) {
     return AppBar(
       backgroundColor: _AppColors.surface,
       foregroundColor: _AppColors.textPrimary,
@@ -341,16 +341,18 @@ class _WorkerDetailPageState extends ConsumerState<WorkerDetailPage> {
         PopupMenuButton<String>(
           icon: const Icon(Icons.more_vert, color: _AppColors.textSecondary),
           onSelected: (action) => _handleMenuAction(action, worker),
-          itemBuilder: (_) => const [
-            PopupMenuItem(
-              value: 'invite',
-              child: _MenuItemRow(
-                icon: Icons.person_add,
-                label: 'Invite to App',
-                color: Color(0xFF6366F1),
+          itemBuilder: (_) => [
+            // Invite to App only shown to Platinum subscribers
+            if (hasPortalAccess)
+              const PopupMenuItem(
+                value: 'invite',
+                child: _MenuItemRow(
+                  icon: Icons.person_add,
+                  label: 'Invite to App',
+                  color: Color(0xFF6366F1),
+                ),
               ),
-            ),
-            PopupMenuItem(
+            const PopupMenuItem(
               value: 'edit',
               child: _MenuItemRow(
                 icon: Icons.edit,
@@ -358,7 +360,7 @@ class _WorkerDetailPageState extends ConsumerState<WorkerDetailPage> {
                 color: _AppColors.primary,
               ),
             ),
-            PopupMenuItem(
+            const PopupMenuItem(
               value: 'terminate',
               child: _MenuItemRow(
                 icon: Icons.cancel,

@@ -323,8 +323,12 @@ export class PayrollService {
       new Date(),
       this.getTaxAdvancedOptions(worker),
     );
+
     const netPay = this.roundCurrency(
-      effectiveGross - taxBreakdown.totalDeductions,
+      effectiveGross -
+        taxBreakdown.totalDeductions -
+        (Number(worker.pensionContribution) || 0) +
+        (Number(worker.nonTaxableAllowance) || 0),
     );
 
     return {
@@ -1039,13 +1043,25 @@ export class PayrollService {
         }
       }
 
+<<<<<<< HEAD
       const taxBreakdown = await this.taxesService.calculateTaxes(
         adjustedGross,
         new Date(),
         this.getTaxAdvancedOptions(worker),
       );
+=======
+      const taxBreakdown = await this.taxesService.calculateTaxes(adjustedGross, new Date(), {
+        pensionContribution: Number(worker.pensionContribution) || 0,
+        nonCashBenefits: Number(worker.nonCashBenefits) || 0,
+        hasDisabilityExemption: worker.hasDisabilityExemption,
+      });
+
+>>>>>>> origin/main
       const netPay = this.roundCurrency(
-        adjustedGross - taxBreakdown.totalDeductions,
+        adjustedGross -
+          taxBreakdown.totalDeductions -
+          (Number(worker.pensionContribution) || 0) +
+          (Number(worker.nonTaxableAllowance) || 0),
       );
 
       return {
@@ -1386,8 +1402,10 @@ export class PayrollService {
   }
 
   private getTaxAdvancedOptions(worker?: Worker, record?: PayrollRecord) {
+    const workerNonCash = worker ? this.parseNumber(worker.nonCashBenefits) : 0;
+    const recordNonCash = record ? this.parseNumber(record.nonCashBenefits) : 0;
     return {
-      nonCashBenefits: record ? this.parseNumber(record.nonCashBenefits) : 0,
+      nonCashBenefits: recordNonCash > 0 ? recordNonCash : workerNonCash,
       pensionContribution: worker
         ? this.parseNumber(worker.pensionContribution)
         : 0,

@@ -12,6 +12,7 @@ import { DataSource } from 'typeorm';
 import { User } from '../users/entities/user.entity';
 import { LeaveRequest } from '../workers/entities/leave-request.entity';
 import { TimeEntry } from '../time-tracking/entities/time-entry.entity';
+import { Termination } from '../workers/entities/termination.entity';
 
 describe('PayrollService', () => {
   let service: PayrollService;
@@ -44,6 +45,11 @@ describe('PayrollService', () => {
     workersRepo = {
       find: jest.fn(),
       findOne: jest.fn(),
+      createQueryBuilder: jest.fn().mockReturnValue({
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([]),
+      }),
     };
 
     taxesService = {
@@ -76,6 +82,10 @@ describe('PayrollService', () => {
         },
         {
           provide: getRepositoryToken(TimeEntry),
+          useValue: { find: jest.fn().mockResolvedValue([]) },
+        },
+        {
+          provide: getRepositoryToken(Termination),
           useValue: { find: jest.fn().mockResolvedValue([]) },
         },
         {
@@ -127,7 +137,7 @@ describe('PayrollService', () => {
   describe('calculatePayrollForUser', () => {
     it('should calculate payroll for valid workers correctly', async () => {
       // Mock workers found
-      workersRepo.find.mockResolvedValue([mockWorker]);
+      workersRepo.createQueryBuilder().getMany.mockResolvedValue([mockWorker]);
 
       // Mock tax calculation
       taxesService.calculateTaxes.mockResolvedValue(mockTaxBreakdown);
@@ -135,9 +145,7 @@ describe('PayrollService', () => {
       const result = await service.calculatePayrollForUser('user-1');
 
       // Assertions
-      expect(workersRepo.find).toHaveBeenCalledWith({
-        where: { userId: 'user-1', isActive: true },
-      });
+      expect(workersRepo.createQueryBuilder).toHaveBeenCalled();
       expect(taxesService.calculateTaxes).toHaveBeenCalledWith(50000);
 
       expect(result.summary.workerCount).toBe(1);
@@ -151,7 +159,7 @@ describe('PayrollService', () => {
 
     it('should handle zero or invalid salary gracefully', async () => {
       const invalidWorker = { ...mockWorker, salaryGross: 0 };
-      workersRepo.find.mockResolvedValue([invalidWorker]);
+      workersRepo.createQueryBuilder().getMany.mockResolvedValue([invalidWorker]);
 
       const result = await service.calculatePayrollForUser('user-1');
 
@@ -163,7 +171,7 @@ describe('PayrollService', () => {
     });
 
     it('should handle tax calculation errors gracefully', async () => {
-      workersRepo.find.mockResolvedValue([mockWorker]);
+      workersRepo.createQueryBuilder().getMany.mockResolvedValue([mockWorker]);
       taxesService.calculateTaxes.mockRejectedValue(
         new Error('Tax service down'),
       );
@@ -181,7 +189,7 @@ describe('PayrollService', () => {
         { ...mockWorker, id: '1', salaryGross: 50000 },
         { ...mockWorker, id: '2', salaryGross: 30000 },
       ];
-      workersRepo.find.mockResolvedValue(workers);
+      workersRepo.createQueryBuilder().getMany.mockResolvedValue(workers);
 
       taxesService.calculateTaxes
         .mockResolvedValueOnce(mockTaxBreakdown) // For 50k

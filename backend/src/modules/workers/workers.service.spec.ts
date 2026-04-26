@@ -6,11 +6,13 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { CreateWorkerDto } from './dto/create-worker.dto';
 import { NotFoundException } from '@nestjs/common';
 import { ActivitiesService } from '../activities/activities.service';
+import { User } from '../users/entities/user.entity';
 
 describe('WorkersService', () => {
   let service: WorkersService;
   let mockWorkerRepository: Partial<Repository<Worker>>;
   let mockActivitiesService: Partial<ActivitiesService>;
+  let mockUserRepository: Partial<Repository<User>>;
 
   beforeEach(async () => {
     mockWorkerRepository = {
@@ -19,11 +21,15 @@ describe('WorkersService', () => {
       save: jest.fn(),
       remove: jest.fn(),
       create: jest.fn(),
-      count: jest.fn(),
+      count: jest.fn().mockResolvedValue(0),
     };
 
     mockActivitiesService = {
       logActivity: jest.fn().mockResolvedValue(undefined),
+    };
+
+    mockUserRepository = {
+      findOne: jest.fn().mockResolvedValue({ id: 'user-123', workerLimit: 10 }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -32,6 +38,10 @@ describe('WorkersService', () => {
         {
           provide: getRepositoryToken(Worker),
           useValue: mockWorkerRepository,
+        },
+        {
+          provide: getRepositoryToken(User),
+          useValue: mockUserRepository,
         },
         {
           provide: ActivitiesService,
@@ -157,12 +167,10 @@ describe('WorkersService', () => {
       expect(result).toEqual(mockWorker);
     });
 
-    it('should return null when worker not found', async () => {
+    it('should throw error when worker not found', async () => {
       (mockWorkerRepository.findOne as jest.Mock).mockResolvedValue(null);
 
-      const result = await service.findOne('999', 'user-123');
-
-      expect(result).toBeNull();
+      await expect(service.findOne('999', 'user-123')).rejects.toThrow(NotFoundException);
     });
   });
 

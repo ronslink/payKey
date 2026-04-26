@@ -55,8 +55,10 @@ export interface TaxConfiguration {
   insuranceRelief?: number;
   maxInsuranceRelief?: number;
 
-  // Limits
+  // Limits and thresholds
   maxPensionContribution?: number;
+  maxAllowablePension?: number;
+  disabilityExemptionAmount?: number;
   maxMortgageInterest?: number;
   maxHospContribution?: number;
   maxExemptMeals?: number;
