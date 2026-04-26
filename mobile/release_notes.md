@@ -1,4 +1,26 @@
-Release Notes - Version 2.0.1 (Build 14)
+Release Notes - Version 2.0.5 (Build 18)
+
+## New Features & Tax Compliance
+- **Advanced Benefits & Deductions**: Workers can now log Voluntary Pension, Non-Cash Benefits, and Non-Taxable Allowances directly in the app.
+- **Disability Tax Exemption**: Full support for the statutory KES 150,000 monthly disability tax exemption.
+- **Dynamic Tax Configuration**: All tax thresholds and percentages are now dynamically synced with the backend, allowing instant updates without requiring app updates when KRA rules change.
+
+## Improvements & Bug Fixes
+- **Authentication Stability**: Fixed an issue causing "ghost sessions" where expired tokens would leave users stuck on the dashboard with a 401 Unauthorized error instead of redirecting to login.
+- **Google Sign-In**: Improved internal handling of Google Sign-in cancellation events.
+
+---
+
+Release Notes - Version 2.0.3 (Build 16)
+
+## Improvements & Bug Fixes
+
+### Authentication & Error Handling
+-https://play.google.com/apps/test/com.payglobus.paydome/18
+
+---
+
+## Previous Release (2.0.1 / Build 14)
 
 ## Improvements
 

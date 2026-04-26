@@ -15,14 +15,22 @@ import '../../../subscriptions/presentation/providers/subscription_provider.dart
 // CONSTANTS
 // =============================================================================
 
-/// App color scheme constants.
+/// App color scheme — theme-aware helpers.
+///
+/// Call with a BuildContext so colours adapt to light / dark mode.
 abstract class _AppColors {
-  static const background = Color(0xFFF9FAFB);
-  static const surface = Colors.white;
-  static const textPrimary = Color(0xFF111827);
+  // Fixed brand colours
   static const primary = Color(0xFF3B82F6);
   static const success = Colors.green;
   static const error = Colors.red;
+
+  // Theme-aware colours
+  static Color background(BuildContext context) =>
+      Theme.of(context).colorScheme.surfaceContainerHighest;
+  static Color surface(BuildContext context) =>
+      Theme.of(context).colorScheme.surface;
+  static Color textPrimary(BuildContext context) =>
+      Theme.of(context).colorScheme.onSurface;
 }
 
 /// Payment frequency options.
@@ -247,10 +255,6 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
       employmentType: _employmentType,
       housingAllowance: _controllers.housingAllowance.doubleValue,
       transportAllowance: _controllers.transportAllowance.doubleValue,
-      pensionContribution: _controllers.pensionContribution.doubleValue,
-      nonCashBenefits: _controllers.nonCashBenefits.doubleValue,
-      nonTaxableAllowance: _controllers.nonTaxableAllowance.doubleValue,
-      hasDisabilityExemption: _controllers.hasDisabilityExemption,
       paymentFrequency: _paymentFrequency.value,
       paymentMethod: _paymentMethod.value,
       mpesaNumber: _controllers.mpesaNumber.nullableText,
@@ -351,7 +355,7 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
     final properties = propertiesAsync.value ?? [];
 
     return Scaffold(
-      backgroundColor: _AppColors.background,
+      backgroundColor: _AppColors.background(context),
       appBar: _buildAppBar(),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -428,8 +432,8 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: _AppColors.surface,
-      foregroundColor: _AppColors.textPrimary,
+      backgroundColor: _AppColors.surface(context),
+      foregroundColor: _AppColors.textPrimary(context),
       elevation: 0,
       title: Text(
         widget.isEditing ? 'Edit Worker' : 'Add Worker',
@@ -653,7 +657,7 @@ class _PersonalInfoSection extends StatelessWidget {
               hintText: 'Select date of birth',
               border: const OutlineInputBorder(),
               filled: true,
-              fillColor: _AppColors.background,
+              fillColor: _AppColors.background(context),
               suffixIcon: const Icon(Icons.calendar_today),
               errorText: isUnderAge 
                   ? 'Worker must be at least 13 years old (Kenya Labor Law)' 
@@ -662,7 +666,7 @@ class _PersonalInfoSection extends StatelessWidget {
             child: Text(
               displayText,
               style: TextStyle(
-                color: dateOfBirth == null ? Colors.grey : _AppColors.textPrimary,
+                color: dateOfBirth == null ? Colors.grey : _AppColors.textPrimary(context),
               ),
             ),
           ),
@@ -785,18 +789,24 @@ class _AdvancedBenefitsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 0,
-      color: _AppColors.surface,
+      color: _AppColors.surface(context),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey.shade200),
+        side: BorderSide(color: Theme.of(context).dividerColor),
       ),
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
-          title: const Text(
+          title: Text(
             'Advanced Benefits & Deductions',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: _AppColors.textPrimary(context),
+            ),
           ),
+          iconColor: Theme.of(context).colorScheme.onSurface,
+          collapsedIconColor: Theme.of(context).colorScheme.onSurface,
           childrenPadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
           children: [
             _FormTextField(
@@ -901,11 +911,11 @@ class _EmploymentDetailsSection extends StatelessWidget {
         if (showPropertySelector) ...[
           DropdownButtonFormField<String>(
             initialValue: selectedPropertyId,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Property (Location)',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
               filled: true,
-              fillColor: _AppColors.background,
+              fillColor: _AppColors.background(context),
             ),
             items: [
               const DropdownMenuItem<String>(
@@ -925,11 +935,11 @@ class _EmploymentDetailsSection extends StatelessWidget {
         // Employment Type Dropdown
         DropdownButtonFormField<String>(
           initialValue: employmentType,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             labelText: 'Employment Type',
-            border: OutlineInputBorder(),
+            border: const OutlineInputBorder(),
             filled: true,
-            fillColor: _AppColors.background,
+            fillColor: _AppColors.background(context),
           ),
           items: const [
             DropdownMenuItem(value: 'FIXED', child: Text('Fixed Salary')),
@@ -954,17 +964,17 @@ class _EmploymentDetailsSection extends StatelessWidget {
             }
           },
           child: InputDecorator(
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Start Date',
               hintText: 'Select start date',
-              border: OutlineInputBorder(),
+              border: const OutlineInputBorder(),
               filled: true,
-              fillColor: _AppColors.background,
-              suffixIcon: Icon(Icons.calendar_today),
+              fillColor: _AppColors.background(context),
+              suffixIcon: const Icon(Icons.calendar_today),
             ),
             child: Text(
               '${startDate.day}/${startDate.month}/${startDate.year}',
-              style: const TextStyle(color: _AppColors.textPrimary),
+              style: TextStyle(color: _AppColors.textPrimary(context)),
             ),
           ),
         ),
@@ -1143,11 +1153,11 @@ class _BankPaymentFields extends ConsumerWidget {
             return DropdownButtonFormField<String>(
               key: ValueKey('bank_${isValid ? currentCode : "null"}'),
               initialValue: isValid ? currentCode : null,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Bank Name',
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
                 filled: true,
-                fillColor: _AppColors.background,
+                fillColor: _AppColors.background(context),
               ),
               items: banks.map((b) {
                 return DropdownMenuItem<String>(
@@ -1239,7 +1249,7 @@ class _FormSection extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: _AppColors.surface,
+        color: _AppColors.surface(context),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -1254,10 +1264,10 @@ class _FormSection extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: _AppColors.textPrimary,
+              color: _AppColors.textPrimary(context),
             ),
           ),
           const SizedBox(height: 24),
@@ -1322,8 +1332,8 @@ class _FormTextField extends StatelessWidget {
       textCapitalization: textCapitalization,
       inputFormatters: inputFormatters,
       autovalidateMode: AutovalidateMode.onUserInteraction,
-      style: const TextStyle(
-        color: _AppColors.textPrimary,
+      style: TextStyle(
+        color: _AppColors.textPrimary(context),
         fontSize: 16,
         fontWeight: FontWeight.w500,
       ),
@@ -1332,13 +1342,13 @@ class _FormTextField extends StatelessWidget {
         hintText: hint,
         border: const OutlineInputBorder(),
         filled: true,
-        fillColor: _AppColors.background,
-        labelStyle: const TextStyle(
-          color: Color(0xFF374151), // Gray 700 — high contrast label
+        fillColor: _AppColors.background(context),
+        labelStyle: TextStyle(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
           fontWeight: FontWeight.w500,
         ),
-        hintStyle: const TextStyle(
-          color: Color(0xFF9CA3AF), // Gray 400 — visible but distinct from input
+        hintStyle: TextStyle(
+          color: Theme.of(context).hintColor,
         ),
       ),
       validator: _buildValidator(),
@@ -1394,7 +1404,7 @@ class _FormDropdown<T> extends StatelessWidget {
         labelText: label,
         border: const OutlineInputBorder(),
         filled: true,
-        fillColor: _AppColors.background,
+        fillColor: _AppColors.background(context),
       ),
       items: items
           .map((item) => DropdownMenuItem<T>(

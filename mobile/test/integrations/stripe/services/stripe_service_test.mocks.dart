@@ -168,6 +168,14 @@ class MockApiService extends _i1.Mock implements _i4.ApiService {
           as _i3.FlutterSecureStorage);
 
   @override
+  _i5.Stream<void> get onUnauthorized =>
+      (super.noSuchMethod(
+            Invocation.getter(#onUnauthorized),
+            returnValue: _i5.Stream<void>.empty(),
+          )
+          as _i5.Stream<void>);
+
+  @override
   _i4.AuthEndpoints get auth =>
       (super.noSuchMethod(
             Invocation.getter(#auth),
