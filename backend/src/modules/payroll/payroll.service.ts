@@ -1043,20 +1043,11 @@ export class PayrollService {
         }
       }
 
-<<<<<<< HEAD
       const taxBreakdown = await this.taxesService.calculateTaxes(
         adjustedGross,
         new Date(),
         this.getTaxAdvancedOptions(worker),
       );
-=======
-      const taxBreakdown = await this.taxesService.calculateTaxes(adjustedGross, new Date(), {
-        pensionContribution: Number(worker.pensionContribution) || 0,
-        nonCashBenefits: Number(worker.nonCashBenefits) || 0,
-        hasDisabilityExemption: worker.hasDisabilityExemption,
-      });
-
->>>>>>> origin/main
       const netPay = this.roundCurrency(
         adjustedGross -
           taxBreakdown.totalDeductions -

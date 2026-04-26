@@ -146,7 +146,11 @@ describe('PayrollService', () => {
 
       // Assertions
       expect(workersRepo.createQueryBuilder).toHaveBeenCalled();
-      expect(taxesService.calculateTaxes).toHaveBeenCalledWith(50000);
+      expect(taxesService.calculateTaxes).toHaveBeenCalledWith(
+        50000,
+        expect.any(Date),
+        expect.any(Object),
+      );
 
       expect(result.summary.workerCount).toBe(1);
       expect(result.summary.totalGross).toBe(50000);
