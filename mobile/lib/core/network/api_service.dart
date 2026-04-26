@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http_parser/http_parser.dart';
@@ -37,6 +38,10 @@ class ApiService {
   final FlutterSecureStorage secureStorage = const FlutterSecureStorage();
 
   static String get baseUrl => ApiConstants.baseUrl;
+
+  // Stream for handling unauthorized errors
+  final _unauthorizedController = StreamController<void>.broadcast();
+  Stream<void> get onUnauthorized => _unauthorizedController.stream;
 
   // Endpoint accessors
   late final AuthEndpoints auth;
@@ -110,7 +115,8 @@ class ApiService {
       onError: (error, handler) async {
         if (error.response?.statusCode == 401) {
           await clearToken();
-          // TODO: Navigate to login page or emit auth state change
+          // Emit unauthorized event so the app can navigate to the login page
+          _unauthorizedController.add(null);
         }
         return handler.next(error);
       },

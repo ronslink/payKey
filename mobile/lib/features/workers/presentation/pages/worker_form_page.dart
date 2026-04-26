@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/models/worker_model.dart';
@@ -244,6 +245,10 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
       employmentType: _employmentType,
       housingAllowance: _controllers.housingAllowance.doubleValue,
       transportAllowance: _controllers.transportAllowance.doubleValue,
+      pensionContribution: _controllers.pensionContribution.doubleValue,
+      nonCashBenefits: _controllers.nonCashBenefits.doubleValue,
+      nonTaxableAllowance: _controllers.nonTaxableAllowance.doubleValue,
+      hasDisabilityExemption: _controllers.hasDisabilityExemption,
       paymentFrequency: _paymentFrequency.value,
       paymentMethod: _paymentMethod.value,
       mpesaNumber: _controllers.mpesaNumber.nullableText,
@@ -277,6 +282,10 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
       employmentType: _employmentType,
       housingAllowance: _controllers.housingAllowance.doubleValue,
       transportAllowance: _controllers.transportAllowance.doubleValue,
+      pensionContribution: _controllers.pensionContribution.doubleValue,
+      nonCashBenefits: _controllers.nonCashBenefits.doubleValue,
+      nonTaxableAllowance: _controllers.nonTaxableAllowance.doubleValue,
+      hasDisabilityExemption: _controllers.hasDisabilityExemption,
       paymentFrequency: _paymentFrequency.value,
       paymentMethod: _paymentMethod.value,
       mpesaNumber: _controllers.mpesaNumber.nullableText,
@@ -376,6 +385,8 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
                 calculatedGross: _calculatedGross,
               ),
               const SizedBox(height: 24),
+              _AdvancedBenefitsSection(controllers: _controllers),
+              const SizedBox(height: 24),
               _PaymentDetailsSection(
                 controllers: _controllers,
                 paymentFrequency: _paymentFrequency,
@@ -445,6 +456,12 @@ class _WorkerFormControllers {
   final bankCode = TextEditingController();
   final bankAccount = TextEditingController();
 
+  // Advanced Benefits
+  final pensionContribution = TextEditingController();
+  final nonCashBenefits = TextEditingController();
+  final nonTaxableAllowance = TextEditingController();
+  bool hasDisabilityExemption = false;
+
   // Notes
   final notes = TextEditingController();
 
@@ -474,6 +491,11 @@ class _WorkerFormControllers {
     bankCode.text = worker.bankCode ?? '';
     bankAccount.text = worker.bankAccount ?? '';
 
+    pensionContribution.text = worker.pensionContribution > 0 ? worker.pensionContribution.toString() : '';
+    nonCashBenefits.text = worker.nonCashBenefits > 0 ? worker.nonCashBenefits.toString() : '';
+    nonTaxableAllowance.text = worker.nonTaxableAllowance > 0 ? worker.nonTaxableAllowance.toString() : '';
+    hasDisabilityExemption = worker.hasDisabilityExemption;
+
     notes.text = worker.notes ?? '';
     
     emergencyName.text = worker.emergencyContactName ?? '';
@@ -498,6 +520,9 @@ class _WorkerFormControllers {
     bankName.dispose();
     bankCode.dispose();
     bankAccount.dispose();
+    pensionContribution.dispose();
+    nonCashBenefits.dispose();
+    nonTaxableAllowance.dispose();
     notes.dispose();
     emergencyName.dispose();
     emergencyPhone.dispose();
@@ -686,7 +711,18 @@ class _StatutoryDetailsSection extends StatelessWidget {
         _FormTextField(
           controller: controllers.kraPin,
           label: 'KRA PIN',
-          hint: 'Enter KRA PIN',
+          hint: 'e.g. A123456789B',
+          maxLength: 11,
+          textCapitalization: TextCapitalization.characters,
+          inputFormatters: [_UpperCaseTextFormatter()],
+          validator: (value) {
+            if (value == null || value.trim().isEmpty) return null; // Optional for workers
+            final kraRegex = RegExp(r'^[A-Z]\d{9}[A-Z]$');
+            if (!kraRegex.hasMatch(value.trim().toUpperCase())) {
+              return 'Invalid format. Expected: A123456789B';
+            }
+            return null;
+          },
         ),
         _FormTextField(
           controller: controllers.nssf,
@@ -699,6 +735,88 @@ class _StatutoryDetailsSection extends StatelessWidget {
           hint: 'Enter NHIF Number',
         ),
       ],
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Advanced Benefits Section
+// -----------------------------------------------------------------------------
+
+class _AdvancedBenefitsSection extends StatefulWidget {
+  final _WorkerFormControllers controllers;
+
+  const _AdvancedBenefitsSection({required this.controllers});
+
+  @override
+  State<_AdvancedBenefitsSection> createState() => _AdvancedBenefitsSectionState();
+}
+
+class _AdvancedBenefitsSectionState extends State<_AdvancedBenefitsSection> {
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 24.0),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: ExpansionTile(
+        title: const Text(
+          'Advanced Benefits & Deductions',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: _AppColors.textPrimary,
+          ),
+        ),
+        subtitle: const Text('Pension, disability, non-cash benefits'),
+        collapsedBackgroundColor: Colors.transparent,
+        backgroundColor: Colors.transparent,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _FormTextField(
+                  controller: widget.controllers.pensionContribution,
+                  label: 'Voluntary Pension Contribution',
+                  hint: '0.00',
+                  keyboardType: TextInputType.number,
+                ),
+                _FormTextField(
+                  controller: widget.controllers.nonCashBenefits,
+                  label: 'Non-Cash Benefits (Value)',
+                  hint: '0.00',
+                  keyboardType: TextInputType.number,
+                ),
+                _FormTextField(
+                  controller: widget.controllers.nonTaxableAllowance,
+                  label: 'Non-Taxable Allowances',
+                  hint: '0.00',
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 16),
+                SwitchListTile(
+                  title: const Text('Disability Exemption'),
+                  subtitle: const Text('Exempts the first KES 150,000 from PAYE'),
+                  value: widget.controllers.hasDisabilityExemption,
+                  onChanged: (val) {
+                    setState(() {
+                      widget.controllers.hasDisabilityExemption = val;
+                    });
+                  },
+                  activeTrackColor: _AppColors.primary,
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1145,6 +1263,12 @@ class _FormTextField extends StatelessWidget {
   final TextInputType keyboardType;
   final bool isRequired;
   final int maxLines;
+  final int? maxLength;
+  final TextCapitalization textCapitalization;
+  /// Optional input formatters (e.g. uppercase)
+  final List<TextInputFormatter>? inputFormatters;
+  /// Optional custom validator — composed on top of the required check.
+  final String? Function(String?)? validator;
 
   const _FormTextField({
     required this.controller,
@@ -1153,6 +1277,10 @@ class _FormTextField extends StatelessWidget {
     this.keyboardType = TextInputType.text,
     this.isRequired = false,
     this.maxLines = 1,
+    this.maxLength,
+    this.textCapitalization = TextCapitalization.none,
+    this.inputFormatters,
+    this.validator,
   });
 
   @override
@@ -1161,15 +1289,45 @@ class _FormTextField extends StatelessWidget {
       controller: controller,
       keyboardType: keyboardType,
       maxLines: maxLines,
+      maxLength: maxLength,
+      textCapitalization: textCapitalization,
+      inputFormatters: inputFormatters,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
+      style: const TextStyle(
+        color: _AppColors.textPrimary,
+        fontSize: 16,
+        fontWeight: FontWeight.w500,
+      ),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
         border: const OutlineInputBorder(),
         filled: true,
         fillColor: _AppColors.background,
+        labelStyle: const TextStyle(
+          color: Color(0xFF374151), // Gray 700 — high contrast label
+          fontWeight: FontWeight.w500,
+        ),
+        hintStyle: const TextStyle(
+          color: Color(0xFF9CA3AF), // Gray 400 — visible but distinct from input
+        ),
       ),
-      validator: isRequired ? _requiredValidator : null,
+      validator: _buildValidator(),
     );
+  }
+
+  String? Function(String?)? _buildValidator() {
+    if (validator != null) {
+      return (value) {
+        // Run required check first
+        if (isRequired) {
+          final reqResult = _requiredValidator(value);
+          if (reqResult != null) return reqResult;
+        }
+        return validator!(value);
+      };
+    }
+    return isRequired ? _requiredValidator : null;
   }
 
   String? _requiredValidator(String? value) {
@@ -1266,6 +1424,24 @@ class _SubmitButton extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
+    );
+  }
+}
+
+// =============================================================================
+// INPUT FORMATTERS
+// =============================================================================
+
+/// Forces all text input to uppercase.
+class _UpperCaseTextFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    return newValue.copyWith(
+      text: newValue.text.toUpperCase(),
+      selection: newValue.selection,
     );
   }
 }

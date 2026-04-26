@@ -8,6 +8,8 @@ import {
   Min,
   Max,
   Length,
+  Matches,
+  IsBoolean,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 import {
@@ -36,6 +38,12 @@ export class CreateWorkerDto {
 
   @IsString()
   @IsOptional()
+  @Matches(/^[A-Z]\d{9}[A-Z]$/, {
+    message: 'KRA PIN must be in the format A123456789Z',
+  })
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.toUpperCase().trim() : value,
+  )
   kraPin?: string;
 
   @IsNumber()
@@ -83,6 +91,22 @@ export class CreateWorkerDto {
   @IsNumber()
   @IsOptional()
   transportAllowance?: number;
+
+  @IsNumber()
+  @IsOptional()
+  pensionContribution?: number;
+
+  @IsNumber()
+  @IsOptional()
+  nonCashBenefits?: number;
+
+  @IsNumber()
+  @IsOptional()
+  nonTaxableAllowance?: number;
+
+  @IsBoolean()
+  @IsOptional()
+  hasDisabilityExemption?: boolean;
 
   @IsEnum(PaymentFrequency)
   @IsOptional()

@@ -313,9 +313,17 @@ export class PayrollService {
       await this.calculateAdjustedSalary(worker, this.getCurrentPeriod());
 
     const effectiveGross = adjustedGross > 0 ? adjustedGross : grossSalary;
-    const taxBreakdown = await this.taxesService.calculateTaxes(effectiveGross);
+    const taxBreakdown = await this.taxesService.calculateTaxes(effectiveGross, new Date(), {
+      pensionContribution: Number(worker.pensionContribution) || 0,
+      nonCashBenefits: Number(worker.nonCashBenefits) || 0,
+      hasDisabilityExemption: worker.hasDisabilityExemption,
+    });
+
     const netPay = this.roundCurrency(
-      effectiveGross - taxBreakdown.totalDeductions,
+      effectiveGross -
+        taxBreakdown.totalDeductions -
+        (Number(worker.pensionContribution) || 0) +
+        (Number(worker.nonTaxableAllowance) || 0),
     );
 
     return {
@@ -1019,10 +1027,17 @@ export class PayrollService {
         }
       }
 
-      const taxBreakdown =
-        await this.taxesService.calculateTaxes(adjustedGross);
+      const taxBreakdown = await this.taxesService.calculateTaxes(adjustedGross, new Date(), {
+        pensionContribution: Number(worker.pensionContribution) || 0,
+        nonCashBenefits: Number(worker.nonCashBenefits) || 0,
+        hasDisabilityExemption: worker.hasDisabilityExemption,
+      });
+
       const netPay = this.roundCurrency(
-        adjustedGross - taxBreakdown.totalDeductions,
+        adjustedGross -
+          taxBreakdown.totalDeductions -
+          (Number(worker.pensionContribution) || 0) +
+          (Number(worker.nonTaxableAllowance) || 0),
       );
 
       return {

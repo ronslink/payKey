@@ -60,6 +60,19 @@ export class EmployeePortalController {
     @Request() req: any,
     @Param('workerId') workerId: string,
   ) {
+    // Employee portal is a Platinum-only feature
+    // We also block trial/preview users — generating a real invite is an action, not a preview
+    const featureAccess = await this.featureAccessService.checkFeatureAccess(
+      req.user.userId,
+      'employee_portal',
+    );
+
+    if (!featureAccess.hasAccess || featureAccess.isPreview) {
+      throw new ForbiddenException(
+        'Employee portal invitations require a Platinum subscription.',
+      );
+    }
+
     return this.employeePortalService.generateInviteCode(
       workerId,
       req.user.userId,
@@ -74,6 +87,18 @@ export class EmployeePortalController {
     @Request() req: any,
     @Param('workerId') workerId: string,
   ) {
+    // Status check also gated — non-subscribers shouldn’t see portal invite state
+    const featureAccess = await this.featureAccessService.checkFeatureAccess(
+      req.user.userId,
+      'employee_portal',
+    );
+
+    if (!featureAccess.hasAccess) {
+      throw new ForbiddenException(
+        'Employee portal requires a Platinum subscription.',
+      );
+    }
+
     return this.employeePortalService.checkInviteStatus(
       workerId,
       req.user.userId,

@@ -117,7 +117,7 @@ abstract class AppTheme {
       ),
       labelStyle: GoogleFonts.inter(color: _textSecondary),
       floatingLabelStyle: GoogleFonts.inter(color: _seedColor),
-      hintStyle: GoogleFonts.inter(color: Colors.grey.shade500), // Darker hint for better visibility
+      hintStyle: GoogleFonts.inter(color: Colors.grey.shade600), // Darker hint for better visibility
     ),
   );
 
@@ -230,7 +230,7 @@ abstract class AppTheme {
       ),
       labelStyle: GoogleFonts.inter(color: _darkTextSecondary),
       floatingLabelStyle: GoogleFonts.inter(color: _seedColor),
-      hintStyle: GoogleFonts.inter(color: Colors.grey.shade500),
+      hintStyle: GoogleFonts.inter(color: Colors.grey.shade400), // Brighter hint for dark mode visibility
     ),
     
     // Bottom Sheet Theme

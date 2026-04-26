@@ -88,6 +88,22 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     ],
     importAccess: true,
   },
+  // QA_UNLIMITED is only available in non-production environments
+  ...(process.env.NODE_ENV !== 'production'
+    ? [
+        {
+          tier: 'QA_UNLIMITED',
+          name: 'QA Unlimited',
+          priceUSD: 0,
+          priceKES: 1,
+          priceUSDYearly: 0,
+          priceKESYearly: 1,
+          workerLimit: 9999,
+          features: ['Unlimited features for QA testing — non-production only'],
+          importAccess: true,
+        } as SubscriptionPlan,
+      ]
+    : []),
 ];
 
 export const TRIAL_PERIOD_DAYS = 14;

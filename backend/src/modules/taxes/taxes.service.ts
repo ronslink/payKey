@@ -102,7 +102,13 @@ export class TaxesService {
   private async calculatePAYEFromConfig(
     grossSalary: number,
     nssf: number,
+    shif: number,
     date: Date,
+    options: {
+      pensionContribution?: number;
+      nonCashBenefits?: number;
+      hasDisabilityExemption?: boolean;
+    } = {},
   ): Promise<number> {
     const payeConfig = await this.taxConfigService.getActiveTaxConfig(
       TaxType.PAYE,
@@ -110,7 +116,25 @@ export class TaxesService {
     );
 
     if (payeConfig && payeConfig.configuration.brackets) {
-      const taxableIncome = grossSalary - nssf;
+      const {
+        pensionContribution = 0,
+        nonCashBenefits = 0,
+        hasDisabilityExemption = false,
+      } = options;
+
+      const maxPension = payeConfig.configuration.maxAllowablePension ?? 20000;
+      const disabilityAmount = payeConfig.configuration.disabilityExemptionAmount ?? 150000;
+
+      // Combined NSSF + Pension is capped for tax deduction purposes
+      const allowablePensionDeduction = Math.min(nssf + pensionContribution, maxPension);
+      
+      let taxableIncome = grossSalary + nonCashBenefits - allowablePensionDeduction;
+
+      // Disability Exemption: first X amount is tax-free
+      if (hasDisabilityExemption) {
+        taxableIncome = Math.max(0, taxableIncome - disabilityAmount);
+      }
+
       let tax = 0;
       let remainingIncome = taxableIncome;
       let previousLimit = 0;
@@ -129,7 +153,12 @@ export class TaxesService {
       }
 
       const personalRelief = payeConfig.configuration.personalRelief || 2400;
-      const paye = Math.max(0, tax - personalRelief);
+      // Insurance relief: 15% of SHIF contribution, capped at KES 5,000/month
+      const insuranceRelief = Math.min(
+        shif * (payeConfig.configuration.insuranceRelief || 0.15),
+        payeConfig.configuration.maxInsuranceRelief || 5000,
+      );
+      const paye = Math.max(0, tax - personalRelief - insuranceRelief);
       return Math.round(paye * 100) / 100;
     }
 
@@ -233,24 +262,31 @@ export class TaxesService {
   async calculateTaxes(
     grossSalary: number,
     date: Date = new Date(),
+    options: {
+      pensionContribution?: number;
+      nonCashBenefits?: number;
+      hasDisabilityExemption?: boolean;
+    } = {},
   ): Promise<TaxBreakdown> {
     // Calculate NSSF first (needed for PAYE calculation)
     const nssf = await this.calculateNSSF(grossSalary, date);
 
-    // Calculate remaining components
-    const [shif, housingLevy, payeConfig] = await Promise.all([
-      this.calculateSHIF(grossSalary, date),
+    // Calculate SHIF before PAYE — SHIF drives the insurance relief deduction
+    const shif = await this.calculateSHIF(grossSalary, date);
+
+    // Calculate remaining components (PAYE now receives shif for insurance relief)
+    const [housingLevy, paye] = await Promise.all([
       this.calculateHousingLevy(grossSalary, date),
-      this.calculatePAYEFromConfig(grossSalary, nssf, date),
+      this.calculatePAYEFromConfig(grossSalary, nssf, shif, date, options),
     ]);
 
-    const totalDeductions = nssf + shif + housingLevy + payeConfig;
+    const totalDeductions = nssf + shif + housingLevy + paye;
 
     return {
       nssf,
       nhif: shif,
       housingLevy,
-      paye: payeConfig,
+      paye,
       totalDeductions: Math.round(totalDeductions * 100) / 100,
     };
   }
@@ -273,6 +309,11 @@ export class TaxesService {
   async calculateGrossFromNet(
     targetNet: number,
     date: Date = new Date(),
+    options: {
+      pensionContribution?: number;
+      nonCashBenefits?: number;
+      hasDisabilityExemption?: boolean;
+    } = {},
   ): Promise<number> {
     if (targetNet <= 0) return 0;
 
@@ -303,10 +344,34 @@ export class TaxesService {
       }
       nssf = Math.round(nssf * 100) / 100;
 
+      // SHIF — must be calculated before PAYE (used in insurance relief)
+      let shif = 0;
+      if (shifConfig?.configuration?.percentage !== undefined) {
+        const shifAmount =
+          grossSalary * (shifConfig.configuration.percentage / 100);
+        const minAmount = shifConfig.configuration.minAmount || 0;
+        shif = Math.round(Math.max(shifAmount, minAmount) * 100) / 100;
+      }
+
       // PAYE
       let paye = 0;
       if (payeConfig?.configuration?.brackets) {
-        const taxableIncome = grossSalary - nssf;
+        const {
+          pensionContribution = 0,
+          nonCashBenefits = 0,
+          hasDisabilityExemption = false,
+        } = options;
+
+        const maxPension = payeConfig.configuration.maxAllowablePension ?? 20000;
+        const disabilityAmount = payeConfig.configuration.disabilityExemptionAmount ?? 150000;
+
+        const allowablePensionDeduction = Math.min(nssf + pensionContribution, maxPension);
+        let taxableIncome = grossSalary + nonCashBenefits - allowablePensionDeduction;
+
+        if (hasDisabilityExemption) {
+          taxableIncome = Math.max(0, taxableIncome - disabilityAmount);
+        }
+
         let tax = 0;
         let remaining = taxableIncome;
         let prevLimit = 0;
@@ -321,16 +386,12 @@ export class TaxesService {
           prevLimit = bracket.to || prevLimit;
         }
         const relief = payeConfig.configuration.personalRelief || 2400;
-        paye = Math.round(Math.max(0, tax - relief) * 100) / 100;
-      }
-
-      // SHIF
-      let shif = 0;
-      if (shifConfig?.configuration?.percentage !== undefined) {
-        const shifAmount =
-          grossSalary * (shifConfig.configuration.percentage / 100);
-        const minAmount = shifConfig.configuration.minAmount || 0;
-        shif = Math.round(Math.max(shifAmount, minAmount) * 100) / 100;
+        // Insurance relief: 15% of SHIF, capped at KES 5,000
+        const insuranceRelief = Math.min(
+          shif * (payeConfig.configuration.insuranceRelief || 0.15),
+          payeConfig.configuration.maxInsuranceRelief || 5000,
+        );
+        paye = Math.round(Math.max(0, tax - relief - insuranceRelief) * 100) / 100;
       }
 
       // Housing Levy

@@ -152,7 +152,22 @@ class AuthNotifier extends AsyncNotifier<void> {
     } catch (error, stackTrace) {
       debugPrint('❌ [Google Sign-In] Error: $error');
       debugPrint('Stack trace: $stackTrace');
-      state = AsyncValue.error(error.toString(), stackTrace);
+
+      // Silently reset state when user cancels — no error toast needed
+      final errorStr = error.toString().toLowerCase();
+      if (errorStr.contains('cancel') ||
+          errorStr.contains('sign_in_canceled') ||
+          errorStr.contains('canceled') ||
+          errorStr.contains('user_canceled')) {
+        state = const AsyncValue.data(null);
+        return;
+      }
+
+      // Show a user-friendly message for all other errors
+      state = AsyncValue.error(
+        'Google sign-in failed. Please try again.',
+        stackTrace,
+      );
     }
   }
 

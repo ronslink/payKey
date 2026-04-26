@@ -53,7 +53,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         message = match.group(1)?.trim() ?? message;
       }
     } else if (message.contains('DioException [bad response]:')) {
-      final match = RegExp(r'Response:.*?([^"'\n}]+)').firstMatch(message);
+      final match = RegExp(r'''Response:.*?([^"'\n}]+)''').firstMatch(message);
       if (match != null) {
         message = match.group(1)?.trim() ?? message;
       }

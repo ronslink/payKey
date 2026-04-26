@@ -5,7 +5,7 @@
  * and whether mock data is available during the trial period.
  */
 
-export type SubscriptionTier = 'FREE' | 'BASIC' | 'GOLD' | 'PLATINUM';
+export type SubscriptionTier = 'FREE' | 'BASIC' | 'GOLD' | 'PLATINUM' | 'QA_UNLIMITED';
 
 export interface FeatureDefinition {
   key: string;
@@ -205,6 +205,8 @@ export const TIER_LIMITS: Record<SubscriptionTier, { workerLimit: number }> = {
   BASIC: { workerLimit: 5 },
   GOLD: { workerLimit: 10 },
   PLATINUM: { workerLimit: 20 },
+  // QA_UNLIMITED: non-production testing tier with no limits
+  QA_UNLIMITED: { workerLimit: 9999 },
 };
 
 /**
@@ -221,6 +223,8 @@ export function tierHasFeature(
   tier: SubscriptionTier,
   featureKey: string,
 ): boolean {
+  // QA_UNLIMITED has access to everything — it's a superset of PLATINUM for testing
+  if (tier === 'QA_UNLIMITED') return true;
   const feature = getFeatureByKey(featureKey);
   if (!feature) return true; // Unknown features are allowed by default
   return feature.tiers.includes(tier);
