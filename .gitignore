@@ -56,7 +56,6 @@ Thumbs.db
 **/android/**/local.properties
 **/android/**/.externalNativeBuild
 **/android/.cxx/
-**/android/app/src/main/res/mipmap-*/
 **/android/app/build/
 **/ios/Flutter/Flutter.framework
 **/ios/Flutter/app.flx
