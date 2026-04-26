@@ -281,7 +281,7 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
     return Text(
       label,
       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: Colors.grey.shade600,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             letterSpacing: 1,
           ),
     );
@@ -294,9 +294,9 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: payPeriodsAsync.when(
         loading: () => const Padding(
@@ -427,12 +427,12 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.green.shade100,
+                      color: Colors.green.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text(
+                    child: const Text(
                       'Closed',
-                      style: TextStyle(fontSize: 10, color: Colors.green.shade700),
+                      style: TextStyle(fontSize: 10, color: Colors.green),
                     ),
                   ),
               ],
@@ -613,14 +613,14 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
                   _isWorkersSectionExpanded 
                       ? Icons.keyboard_arrow_up_rounded 
                       : Icons.keyboard_arrow_down_rounded,
-                  color: Colors.grey.shade600,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ],
             ),
             Text(
               '${_selectedWorkerIds.length} / $count Selected',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey.shade600,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
             ),
           ],
@@ -708,7 +708,7 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -745,7 +745,7 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
         const SizedBox(width: 8),
         Text(
           _isAutomatedMode ? 'Automated (Skip Review)' : 'Manual Review',
-          style: TextStyle(color: Colors.grey.shade700),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
         ),
       ],
     );

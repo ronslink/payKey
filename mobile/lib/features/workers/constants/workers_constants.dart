@@ -37,8 +37,9 @@ class WorkersTheme {
   WorkersTheme._();
 
   // Colors
-  static const Color backgroundColor = Color(0xFFF8FAFC);
-  static const Color cardBackground = Colors.white;
+  static Color backgroundColor(BuildContext context) => Theme.of(context).colorScheme.surfaceContainerHighest;
+  static Color cardBackground(BuildContext context) => Theme.of(context).colorScheme.surface;
+  
   static const Color activeColor = Colors.green;
   static const Color inactiveColor = Colors.grey;
   static const MaterialColor warningColor = Colors.orange;
@@ -53,12 +54,12 @@ class WorkersTheme {
   static const double pagePadding = 16.0;
 
   // Card decoration
-  static BoxDecoration cardDecoration({bool hasWarning = false}) {
+  static BoxDecoration cardDecoration(BuildContext context, {bool hasWarning = false}) {
     return BoxDecoration(
-      color: cardBackground,
+      color: cardBackground(context),
       borderRadius: BorderRadius.circular(cardBorderRadius),
       border: Border.all(
-        color: hasWarning ? warningColor.shade200 : Colors.grey.shade200,
+        color: hasWarning ? warningColor.shade200 : Theme.of(context).dividerColor,
       ),
       boxShadow: [
         BoxShadow(

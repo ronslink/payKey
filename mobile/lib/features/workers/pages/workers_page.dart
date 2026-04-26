@@ -108,7 +108,7 @@ class _WorkersPageState extends ConsumerState<WorkersPage> {
     final workersAsync = ref.watch(workersProvider);
 
     return Scaffold(
-      backgroundColor: WorkersTheme.backgroundColor,
+      backgroundColor: WorkersTheme.backgroundColor(context),
       appBar: _buildAppBar(context),
       floatingActionButton: _buildFab(context),
       body: Column(
@@ -144,6 +144,7 @@ class _WorkersPageState extends ConsumerState<WorkersPage> {
 
     return AppBar(
       backgroundColor: Colors.transparent,
+      foregroundColor: Theme.of(context).colorScheme.onSurface,
       elevation: 0,
       title: const Text('My Workforce'),
       actions: [

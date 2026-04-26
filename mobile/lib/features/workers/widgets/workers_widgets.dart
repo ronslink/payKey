@@ -61,7 +61,7 @@ class _StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(12),
-      decoration: WorkersTheme.cardDecoration(),
+      decoration: WorkersTheme.cardDecoration(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -72,7 +72,7 @@ class _StatCard extends StatelessWidget {
               Text(
                 config.label.toUpperCase(),
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: Colors.grey.shade600,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       letterSpacing: 0.5,
                     ),
               ),
@@ -111,9 +111,9 @@ class WorkerSearchBar extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
-          color: WorkersTheme.cardBackground,
+          color: WorkersTheme.cardBackground(context),
           borderRadius: BorderRadius.circular(WorkersTheme.cardBorderRadius),
-          border: Border.all(color: Colors.grey.shade300),
+          border: Border.all(color: Theme.of(context).dividerColor),
         ),
         child: Row(
           children: [
@@ -124,7 +124,7 @@ class WorkerSearchBar extends StatelessWidget {
                 controller: controller,
                 decoration: InputDecoration(
                   hintText: 'Search name, KRA PIN, phone...',
-                  hintStyle: TextStyle(color: Colors.grey.shade400),
+                  hintStyle: TextStyle(color: Theme.of(context).hintColor),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(vertical: 14),
                 ),
@@ -133,7 +133,7 @@ class WorkerSearchBar extends StatelessWidget {
             if (query.isNotEmpty)
               GestureDetector(
                 onTap: onClear,
-                child: Icon(Icons.close, color: Colors.grey.shade400, size: 20),
+                child: Icon(Icons.close, color: Theme.of(context).hintColor, size: 20),
               ),
           ],
         ),
@@ -198,16 +198,16 @@ class _FilterChip extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected ? primaryColor : WorkersTheme.cardBackground,
+            color: isSelected ? primaryColor : WorkersTheme.cardBackground(context),
             borderRadius: BorderRadius.circular(WorkersTheme.chipBorderRadius),
             border: Border.all(
-              color: isSelected ? primaryColor : Colors.grey.shade300,
+              color: isSelected ? primaryColor : Theme.of(context).dividerColor,
             ),
           ),
           child: Text(
             filter.label,
             style: TextStyle(
-              color: isSelected ? Colors.white : Colors.grey.shade700,
+              color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
               fontSize: 13,
             ),
@@ -247,9 +247,9 @@ class PropertyFilterDropdown extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          color: WorkersTheme.cardBackground,
+          color: WorkersTheme.cardBackground(context),
           borderRadius: BorderRadius.circular(WorkersTheme.cardBorderRadius),
-          border: Border.all(color: Colors.grey.shade300),
+          border: Border.all(color: Theme.of(context).dividerColor),
         ),
         child: DropdownButtonHideUnderline(
           child: DropdownButton<String?>(
@@ -299,7 +299,7 @@ class PropertyFilterDropdown extends StatelessWidget {
           icon,
           size: 18,
           color: isHint
-              ? Colors.grey.shade600
+              ? Theme.of(context).colorScheme.onSurfaceVariant
               : Theme.of(context).primaryColor,
         ),
         const SizedBox(width: 10),
@@ -308,8 +308,8 @@ class PropertyFilterDropdown extends StatelessWidget {
             name,
             overflow: TextOverflow.ellipsis,
             style: isHint
-                ? TextStyle(color: Colors.grey.shade700)
-                : null,
+                ? TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)
+                : TextStyle(color: Theme.of(context).colorScheme.onSurface),
           ),
         ),
       ],

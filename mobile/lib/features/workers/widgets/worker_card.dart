@@ -62,13 +62,13 @@ class WorkerCard extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
-        decoration: WorkersTheme.cardDecoration(hasWarning: hasIssue),
+        decoration: WorkersTheme.cardDecoration(context, hasWarning: hasIssue),
         child: Row(
           children: [
             _buildAvatar(context),
             const SizedBox(width: 14),
             Expanded(child: _buildInfo(context)),
-            Icon(Icons.chevron_right, color: Colors.grey.shade400),
+            Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant),
           ],
         ),
       ),
@@ -126,7 +126,7 @@ class WorkerCard extends StatelessWidget {
         Text(
           data.jobTitle ?? 'Employee',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey.shade600,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
         ),
         if (data.complianceStatus.hasIssues) _buildComplianceWarning(),

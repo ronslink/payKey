@@ -16,7 +16,7 @@ import '../../../onboarding/presentation/providers/tour_progress_provider.dart';
 import '../../../onboarding/presentation/models/tour_models.dart';
 import '../providers/statutory_deadlines_provider.dart';
 import '../../../../integrations/intasend/providers/intasend_providers.dart';
-
+import '../../../settings/providers/settings_provider.dart';
 /// New Home page with the redesigned dashboard UI
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -144,6 +144,8 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget _buildHeader(BuildContext context) {
     final theme = Theme.of(context);
     final greeting = _getGreeting();
+    final settingsAsync = ref.watch(settingsProvider);
+    final photoUrl = settingsAsync.whenOrNull(data: (settings) => settings.photoUrl);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
@@ -156,7 +158,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                 Text(
                   greeting,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey.shade600,
+                    color: theme.colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -236,8 +238,11 @@ class _HomePageState extends ConsumerState<HomePage> {
               children: [
                 CircleAvatar(
                   radius: 24,
-                  backgroundColor: Colors.grey.shade200,
-                  child: const Icon(Icons.person, color: Colors.grey),
+                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                  backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
+                  child: photoUrl == null 
+                      ? Icon(Icons.person, color: theme.colorScheme.onSurfaceVariant)
+                      : null,
                 ),
                 Positioned(
                   right: 0,
@@ -572,9 +577,9 @@ class _HomePageState extends ConsumerState<HomePage> {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade200),
+          border: Border.all(color: Theme.of(context).dividerColor),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.03),
@@ -603,7 +608,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                     Text(
                       'Wallet Balance',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.grey.shade600,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -613,7 +618,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                         wallet.formattedBalance,
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: const Color(0xFF1E293B),
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       loading: () => const SizedBox(
@@ -662,7 +667,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-          child: Text('Quick Actions', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: const Color(0xFF1E293B))),
+          child: Text('Quick Actions', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -829,7 +834,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey[100],
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
       ),
       child: const Row(
@@ -880,9 +885,9 @@ class _HomePageState extends ConsumerState<HomePage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Row(
         children: [
@@ -901,7 +906,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-                Text(subtitle, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600)),
+                Text(subtitle, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
               ],
             ),
           ),
