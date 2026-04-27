@@ -76,9 +76,8 @@ class _HomePageState extends ConsumerState<HomePage> {
         tourProgress.onboardingCompleted &&
         !tourProgress.hasSeen(TourKeys.dashboardTour);
 
-    if (!showTour) {
-      return const SizedBox.shrink();
-    }
+    // Temporarily disabled due to Android opacity compositor bug
+    return const SizedBox.shrink();
 
     final steps = [
       TourStep(
