@@ -148,39 +148,41 @@ export class PayrollController {
     @Body()
     body: { workerIds: string[]; payPeriodId: string; skipPayout?: boolean },
   ) {
+    console.log('processPayroll received body:', JSON.stringify(body));
+    console.log('payPeriodId is:', body.payPeriodId);
     // 1. Calculate payroll for verification
     const payrollCalculation =
-      await this.payrollService.calculatePayrollForUser(req.user.userId);
+      await this.payrollService.calculatePayrollBatch(req.user.userId, body.workerIds, body.payPeriodId);
 
-    // Filter to ensure we only process what is requested
-    const itemsToProcess = payrollCalculation.payrollItems.filter((item) =>
-      body.workerIds.includes(item.workerId),
-    );
+    const itemsToProcess = payrollCalculation.payrollItems;
 
     if (itemsToProcess.length === 0) {
       throw new Error('No workers selected for processing');
     }
 
-    // 2. Ensure they are saved as DRAFT first (Repo relies on DRAFT records to finalize)
-    // FIX: Do NOT recalculate and overwrite here. The frontend has already saved the draft with specific user inputs (e.g. partial pay).
-    // Overwriting here with default calculation destroys those edits.
-    // We assume the draft is already saved correctly by the client.
-
-    /* 
-    const draftItems = itemsToProcess.map((item) => ({
-      workerId: item.workerId,
-      grossSalary: item.grossSalary,
-      bonuses: 0, // Default for auto-run
-      otherEarnings: 0,
-      otherDeductions: 0,
-    }));
-
-    await this.payrollService.saveDraftPayroll(
+    // 2. Ensure DRAFT records exist before finalizing.
+    // If drafts already exist (standard flow with user edits), don't overwrite.
+    // If no drafts exist (off-cycle flow, first run), create them now.
+    const existingDrafts = await this.payrollService.getDraftPayroll(
       req.user.userId,
       body.payPeriodId,
-      draftItems,
     );
-    */
+
+    if (!existingDrafts || existingDrafts.length === 0) {
+      const draftItems = itemsToProcess.map((item) => ({
+        workerId: item.workerId,
+        grossSalary: item.grossSalary,
+        bonuses: 0,
+        otherEarnings: 0,
+        otherDeductions: 0,
+      }));
+
+      await this.payrollService.saveDraftPayroll(
+        req.user.userId,
+        body.payPeriodId,
+        draftItems,
+      );
+    }
 
     // 3. Finalize immediately (Automated Flow)
     // This executes: Funds Check -> Finalize Records -> Generate Payslips -> Tax Submission

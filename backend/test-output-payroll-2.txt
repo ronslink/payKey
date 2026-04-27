@@ -1,0 +1,74 @@
+FAIL src/modules/payroll/payroll.service.spec.ts
+  PayrollService
+    ΓêÜ should be defined (8 ms)
+    calculatePayrollForUser
+      ├ù should calculate payroll for valid workers correctly (1 ms)
+      ├ù should handle zero or invalid salary gracefully (1 ms)
+      ├ù should handle tax calculation errors gracefully (2 ms)
+      ├ù should aggregate totals correctly for multiple workers (2 ms)
+
+  ΓùÅ PayrollService ΓÇ║ calculatePayrollForUser ΓÇ║ should calculate payroll for valid workers correctly
+
+    TypeError: this.workersRepository.createQueryBuilder is not a function
+
+      188 |
+      189 |     const workers = await this.workersRepository
+    > 190 |       .createQueryBuilder('w')
+          |        ^
+      191 |       .where('w.userId = :userId', { userId })
+      192 |       .andWhere(
+      193 |         '(w.isActive = :isActive OR (w.isActive = :isInactive AND w.terminatedAt BETWEEN :startDate AND :endDate AND w.finalPayProvided = :finalPayProvided))',
+
+      at PayrollService.calculatePayrollForUser (modules/payroll/payroll.service.ts:190:8)
+      at Object.<anonymous> (modules/payroll/payroll.service.spec.ts:140:36)
+
+  ΓùÅ PayrollService ΓÇ║ calculatePayrollForUser ΓÇ║ should handle zero or invalid salary gracefully
+
+    TypeError: this.workersRepository.createQueryBuilder is not a function
+
+      188 |
+      189 |     const workers = await this.workersRepository
+    > 190 |       .createQueryBuilder('w')
+          |        ^
+      191 |       .where('w.userId = :userId', { userId })
+      192 |       .andWhere(
+      193 |         '(w.isActive = :isActive OR (w.isActive = :isInactive AND w.terminatedAt BETWEEN :startDate AND :endDate AND w.finalPayProvided = :finalPayProvided))',
+
+      at PayrollService.calculatePayrollForUser (modules/payroll/payroll.service.ts:190:8)
+      at Object.<anonymous> (modules/payroll/payroll.service.spec.ts:161:36)
+
+  ΓùÅ PayrollService ΓÇ║ calculatePayrollForUser ΓÇ║ should handle tax calculation errors gracefully
+
+    TypeError: this.workersRepository.createQueryBuilder is not a function
+
+      188 |
+      189 |     const workers = await this.workersRepository
+    > 190 |       .createQueryBuilder('w')
+          |        ^
+      191 |       .where('w.userId = :userId', { userId })
+      192 |       .andWhere(
+      193 |         '(w.isActive = :isActive OR (w.isActive = :isInactive AND w.terminatedAt BETWEEN :startDate AND :endDate AND w.finalPayProvided = :finalPayProvided))',
+
+      at PayrollService.calculatePayrollForUser (modules/payroll/payroll.service.ts:190:8)
+      at Object.<anonymous> (modules/payroll/payroll.service.spec.ts:176:36)
+
+  ΓùÅ PayrollService ΓÇ║ calculatePayrollForUser ΓÇ║ should aggregate totals correctly for multiple workers
+
+    TypeError: this.workersRepository.createQueryBuilder is not a function
+
+      188 |
+      189 |     const workers = await this.workersRepository
+    > 190 |       .createQueryBuilder('w')
+          |        ^
+      191 |       .where('w.userId = :userId', { userId })
+      192 |       .andWhere(
+      193 |         '(w.isActive = :isActive OR (w.isActive = :isInactive AND w.terminatedAt BETWEEN :startDate AND :endDate AND w.finalPayProvided = :finalPayProvided))',
+
+      at PayrollService.calculatePayrollForUser (modules/payroll/payroll.service.ts:190:8)
+      at Object.<anonymous> (modules/payroll/payroll.service.spec.ts:195:36)
+
+Test Suites: 1 failed, 1 total
+Tests:       4 failed, 1 passed, 5 total
+Snapshots:   0 total
+Time:        1.777 s, estimated 2 s
+Ran all test suites matching /src\\modules\\payroll\\payroll.service.spec.ts/i.

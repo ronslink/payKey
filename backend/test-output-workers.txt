@@ -1,0 +1,62 @@
+FAIL src/modules/workers/workers.service.spec.ts
+  WorkersService
+    ΓêÜ should be defined (8 ms)
+    create
+      ├ù should create a worker with valid data (2 ms)
+    findAll
+      ΓêÜ should return workers for specific user (2 ms)
+      ΓêÜ should return empty array for user with no workers (2 ms)
+    findOne
+      ΓêÜ should find a specific worker by id and user (1 ms)
+      ├ù should return null when worker not found (1 ms)
+    update
+      ΓêÜ should update worker with new data (1 ms)
+      ΓêÜ should throw error when worker not found (2 ms)
+    remove
+      ΓêÜ should remove worker successfully (1 ms)
+      ΓêÜ should throw error when worker not found (1 ms)
+    getWorkerCount
+      ΓêÜ should return correct worker count (1 ms)
+      ΓêÜ should return zero for user with no active workers
+    archiveWorker
+      ΓêÜ should archive worker successfully (1 ms)
+      ΓêÜ should throw error when worker not found (8 ms)
+    Edge Cases
+      ΓêÜ should handle database errors gracefully (3 ms)
+      ΓêÜ should handle concurrent updates correctly (1 ms)
+
+  ΓùÅ WorkersService ΓÇ║ create ΓÇ║ should create a worker with valid data
+
+    NotFoundException: User not found
+
+      29 |     // 1. Check Worker Limit
+      30 |     const user = await this.usersRepository.findOne({ where: { id: userId } });
+    > 31 |     if (!user) throw new NotFoundException('User not found');
+         |                      ^
+      32 |
+      33 |     const currentCount = await this.getWorkerCount(userId);
+      34 |
+
+      at WorkersService.create (modules/workers/workers.service.ts:31:22)
+      at Object.<anonymous> (modules/workers/workers.service.spec.ts:82:22)
+
+  ΓùÅ WorkersService ΓÇ║ findOne ΓÇ║ should return null when worker not found
+
+    NotFoundException: Worker not found
+
+      79 |
+      80 |     if (!worker) {
+    > 81 |       throw new NotFoundException('Worker not found');
+         |             ^
+      82 |     }
+      83 |
+      84 |     return worker;
+
+      at WorkersService.findOne (modules/workers/workers.service.ts:81:13)
+      at Object.<anonymous> (modules/workers/workers.service.spec.ts:168:22)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 14 passed, 16 total
+Snapshots:   0 total
+Time:        1.206 s, estimated 2 s
+Ran all test suites matching /src\\modules\\workers\\workers.service.spec.ts/i.

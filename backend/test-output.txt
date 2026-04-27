@@ -1,0 +1,154 @@
+FAIL src/modules/taxes/taxes.service.spec.ts
+  TaxesService
+    ΓêÜ should be defined (14 ms)
+    calculateTaxes
+      ├ù should calculate all taxes correctly for salary of 50000 (2 ms)
+      ├ù should calculate net pay correctly (1 ms)
+      ├ù should handle zero salary with minimum SHIF (1 ms)
+      ├ù should have totalDeductions equal to sum of individual taxes (1 ms)
+      ├ù should calculate housing levy at 1.5% (1 ms)
+      ├ù should calculate SHIF at approximately 2.75% (1 ms)
+      ├ù should increase taxes as salary increases (1 ms)
+      ├ù should have PAYE reduced by personal relief (1 ms)
+
+  ΓùÅ TaxesService ΓÇ║ calculateTaxes ΓÇ║ should calculate all taxes correctly for salary of 50000
+
+    NotFoundException: SHIF tax configuration not found for date 2026-03-16T13:23:27.358Z
+
+      160 |     }
+      161 |
+    > 162 |     throw new NotFoundException(
+          |           ^
+      163 |       `SHIF tax configuration not found for date ${date.toISOString()}`,
+      164 |     );
+      165 |   }
+
+      at TaxesService.calculateSHIF (modules/taxes/taxes.service.ts:162:11)
+          at async Promise.all (index 0)
+      at TaxesService.calculateTaxes (modules/taxes/taxes.service.ts:241:45)
+      at Object.<anonymous> (modules/taxes/taxes.service.spec.ts:77:22)
+
+  ΓùÅ TaxesService ΓÇ║ calculateTaxes ΓÇ║ should calculate net pay correctly
+
+    NotFoundException: SHIF tax configuration not found for date 2026-03-16T13:23:27.368Z
+
+      160 |     }
+      161 |
+    > 162 |     throw new NotFoundException(
+          |           ^
+      163 |       `SHIF tax configuration not found for date ${date.toISOString()}`,
+      164 |     );
+      165 |   }
+
+      at TaxesService.calculateSHIF (modules/taxes/taxes.service.ts:162:11)
+          at async Promise.all (index 0)
+      at TaxesService.calculateTaxes (modules/taxes/taxes.service.ts:241:45)
+      at Object.<anonymous> (modules/taxes/taxes.service.spec.ts:88:21)
+
+  ΓùÅ TaxesService ΓÇ║ calculateTaxes ΓÇ║ should handle zero salary with minimum SHIF
+
+    NotFoundException: SHIF tax configuration not found for date 2026-03-16T13:23:27.370Z
+
+      160 |     }
+      161 |
+    > 162 |     throw new NotFoundException(
+          |           ^
+      163 |       `SHIF tax configuration not found for date ${date.toISOString()}`,
+      164 |     );
+      165 |   }
+
+      at TaxesService.calculateSHIF (modules/taxes/taxes.service.ts:162:11)
+          at async Promise.all (index 0)
+      at TaxesService.calculateTaxes (modules/taxes/taxes.service.ts:241:45)
+      at Object.<anonymous> (modules/taxes/taxes.service.spec.ts:96:21)
+
+  ΓùÅ TaxesService ΓÇ║ calculateTaxes ΓÇ║ should have totalDeductions equal to sum of individual taxes
+
+    NotFoundException: SHIF tax configuration not found for date 2026-03-16T13:23:27.371Z
+
+      160 |     }
+      161 |
+    > 162 |     throw new NotFoundException(
+          |           ^
+      163 |       `SHIF tax configuration not found for date ${date.toISOString()}`,
+      164 |     );
+      165 |   }
+
+      at TaxesService.calculateSHIF (modules/taxes/taxes.service.ts:162:11)
+          at async Promise.all (index 0)
+      at TaxesService.calculateTaxes (modules/taxes/taxes.service.ts:241:45)
+      at Object.<anonymous> (modules/taxes/taxes.service.spec.ts:108:21)
+
+  ΓùÅ TaxesService ΓÇ║ calculateTaxes ΓÇ║ should calculate housing levy at 1.5%
+
+    NotFoundException: SHIF tax configuration not found for date 2026-03-16T13:23:27.372Z
+
+      160 |     }
+      161 |
+    > 162 |     throw new NotFoundException(
+          |           ^
+      163 |       `SHIF tax configuration not found for date ${date.toISOString()}`,
+      164 |     );
+      165 |   }
+
+      at TaxesService.calculateSHIF (modules/taxes/taxes.service.ts:162:11)
+          at async Promise.all (index 0)
+      at TaxesService.calculateTaxes (modules/taxes/taxes.service.ts:241:45)
+      at Object.<anonymous> (modules/taxes/taxes.service.spec.ts:117:21)
+
+  ΓùÅ TaxesService ΓÇ║ calculateTaxes ΓÇ║ should calculate SHIF at approximately 2.75%
+
+    NotFoundException: SHIF tax configuration not found for date 2026-03-16T13:23:27.373Z
+
+      160 |     }
+      161 |
+    > 162 |     throw new NotFoundException(
+          |           ^
+      163 |       `SHIF tax configuration not found for date ${date.toISOString()}`,
+      164 |     );
+      165 |   }
+
+      at TaxesService.calculateSHIF (modules/taxes/taxes.service.ts:162:11)
+          at async Promise.all (index 0)
+      at TaxesService.calculateTaxes (modules/taxes/taxes.service.ts:241:45)
+      at Object.<anonymous> (modules/taxes/taxes.service.spec.ts:125:21)
+
+  ΓùÅ TaxesService ΓÇ║ calculateTaxes ΓÇ║ should increase taxes as salary increases
+
+    NotFoundException: SHIF tax configuration not found for date 2026-03-16T13:23:27.374Z
+
+      160 |     }
+      161 |
+    > 162 |     throw new NotFoundException(
+          |           ^
+      163 |       `SHIF tax configuration not found for date ${date.toISOString()}`,
+      164 |     );
+      165 |   }
+
+      at TaxesService.calculateSHIF (modules/taxes/taxes.service.ts:162:11)
+          at async Promise.all (index 0)
+      at TaxesService.calculateTaxes (modules/taxes/taxes.service.ts:241:45)
+      at Object.<anonymous> (modules/taxes/taxes.service.spec.ts:132:30)
+
+  ΓùÅ TaxesService ΓÇ║ calculateTaxes ΓÇ║ should have PAYE reduced by personal relief
+
+    NotFoundException: SHIF tax configuration not found for date 2026-03-16T13:23:27.375Z
+
+      160 |     }
+      161 |
+    > 162 |     throw new NotFoundException(
+          |           ^
+      163 |       `SHIF tax configuration not found for date ${date.toISOString()}`,
+      164 |     );
+      165 |   }
+
+      at TaxesService.calculateSHIF (modules/taxes/taxes.service.ts:162:11)
+          at async Promise.all (index 0)
+      at TaxesService.calculateTaxes (modules/taxes/taxes.service.ts:241:45)
+      at Object.<anonymous> (modules/taxes/taxes.service.spec.ts:143:21)
+
+Test Suites: 1 failed, 1 total
+Tests:       8 failed, 1 passed, 9 total
+Snapshots:   0 total
+Time:        1.342 s, estimated 2 s
+Ran all test suites matching /src\\modules\\taxes\\taxes.service.spec.ts/i.

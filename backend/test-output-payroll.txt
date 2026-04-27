@@ -1,0 +1,219 @@
+FAIL src/modules/payroll/payroll.service.spec.ts
+  PayrollService
+    ├ù should be defined (8 ms)
+    calculatePayrollForUser
+      ├ù should calculate payroll for valid workers correctly (2 ms)
+      ├ù should handle zero or invalid salary gracefully (2 ms)
+      ├ù should handle tax calculation errors gracefully (1 ms)
+      ├ù should aggregate totals correctly for multiple workers (2 ms)
+
+  ΓùÅ PayrollService ΓÇ║ should be defined
+
+    Nest can't resolve dependencies of the PayrollService (WorkerRepository, PayrollRecordRepository, PayPeriodRepository, UserRepository, LeaveRequestRepository, TimeEntryRepository, ?, TaxesService, PayrollPaymentService, ActivitiesService, DataSource, PayslipService, BullQueue_payroll-processing). Please make sure that the argument "TerminationRepository" at index [6] is available in the RootTestModule context.
+
+    Potential solutions:
+    - Is RootTestModule a valid NestJS module?
+    - If "TerminationRepository" is a provider, is it part of the current RootTestModule?
+    - If "TerminationRepository" is exported from a separate @Module, is that module imported within RootTestModule?
+      @Module({
+        imports: [ /* the Module containing "TerminationRepository" */ ]
+      })
+
+    For more common dependency resolution issues, see: https://docs.nestjs.com/faq/common-errors
+
+      52 |     };
+      53 |
+    > 54 |     const module: TestingModule = await Test.createTestingModule({
+         |                                   ^
+      55 |       providers: [
+      56 |         PayrollService,
+      57 |         {
+
+      at TestingInjector.lookupComponentInParentModules (../node_modules/@nestjs/core/injector/injector.js:290:19)
+      at TestingInjector.resolveComponentWrapper (../node_modules/@nestjs/testing/testing-injector.js:19:45)
+      at resolveParam (../node_modules/@nestjs/core/injector/injector.js:140:38)
+          at async Promise.all (index 6)
+      at TestingInjector.resolveConstructorParams (../node_modules/@nestjs/core/injector/injector.js:169:27)
+      at TestingInjector.loadInstance (../node_modules/@nestjs/core/injector/injector.js:75:13)
+      at TestingInjector.loadProvider (../node_modules/@nestjs/core/injector/injector.js:103:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:56:13
+          at async Promise.all (index 3)
+      at TestingInstanceLoader.createInstancesOfProviders (../node_modules/@nestjs/core/injector/instance-loader.js:55:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:40:13
+          at async Promise.all (index 1)
+      at TestingInstanceLoader.createInstances (../node_modules/@nestjs/core/injector/instance-loader.js:39:9)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/core/injector/instance-loader.js:22:13)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-instance-loader.js:9:9)
+      at TestingModuleBuilder.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-module.builder.js:118:9)
+      at TestingModuleBuilder.compile (../node_modules/@nestjs/testing/testing-module.builder.js:74:9)
+      at Object.<anonymous> (modules/payroll/payroll.service.spec.ts:54:35)
+
+  ΓùÅ PayrollService ΓÇ║ calculatePayrollForUser ΓÇ║ should calculate payroll for valid workers correctly
+
+    Nest can't resolve dependencies of the PayrollService (WorkerRepository, PayrollRecordRepository, PayPeriodRepository, UserRepository, LeaveRequestRepository, TimeEntryRepository, ?, TaxesService, PayrollPaymentService, ActivitiesService, DataSource, PayslipService, BullQueue_payroll-processing). Please make sure that the argument "TerminationRepository" at index [6] is available in the RootTestModule context.
+
+    Potential solutions:
+    - Is RootTestModule a valid NestJS module?
+    - If "TerminationRepository" is a provider, is it part of the current RootTestModule?
+    - If "TerminationRepository" is exported from a separate @Module, is that module imported within RootTestModule?
+      @Module({
+        imports: [ /* the Module containing "TerminationRepository" */ ]
+      })
+
+    For more common dependency resolution issues, see: https://docs.nestjs.com/faq/common-errors
+
+      52 |     };
+      53 |
+    > 54 |     const module: TestingModule = await Test.createTestingModule({
+         |                                   ^
+      55 |       providers: [
+      56 |         PayrollService,
+      57 |         {
+
+      at TestingInjector.lookupComponentInParentModules (../node_modules/@nestjs/core/injector/injector.js:290:19)
+      at TestingInjector.resolveComponentWrapper (../node_modules/@nestjs/testing/testing-injector.js:19:45)
+      at resolveParam (../node_modules/@nestjs/core/injector/injector.js:140:38)
+          at async Promise.all (index 6)
+      at TestingInjector.resolveConstructorParams (../node_modules/@nestjs/core/injector/injector.js:169:27)
+      at TestingInjector.loadInstance (../node_modules/@nestjs/core/injector/injector.js:75:13)
+      at TestingInjector.loadProvider (../node_modules/@nestjs/core/injector/injector.js:103:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:56:13
+          at async Promise.all (index 3)
+      at TestingInstanceLoader.createInstancesOfProviders (../node_modules/@nestjs/core/injector/instance-loader.js:55:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:40:13
+          at async Promise.all (index 1)
+      at TestingInstanceLoader.createInstances (../node_modules/@nestjs/core/injector/instance-loader.js:39:9)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/core/injector/instance-loader.js:22:13)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-instance-loader.js:9:9)
+      at TestingModuleBuilder.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-module.builder.js:118:9)
+      at TestingModuleBuilder.compile (../node_modules/@nestjs/testing/testing-module.builder.js:74:9)
+      at Object.<anonymous> (modules/payroll/payroll.service.spec.ts:54:35)
+
+  ΓùÅ PayrollService ΓÇ║ calculatePayrollForUser ΓÇ║ should handle zero or invalid salary gracefully
+
+    Nest can't resolve dependencies of the PayrollService (WorkerRepository, PayrollRecordRepository, PayPeriodRepository, UserRepository, LeaveRequestRepository, TimeEntryRepository, ?, TaxesService, PayrollPaymentService, ActivitiesService, DataSource, PayslipService, BullQueue_payroll-processing). Please make sure that the argument "TerminationRepository" at index [6] is available in the RootTestModule context.
+
+    Potential solutions:
+    - Is RootTestModule a valid NestJS module?
+    - If "TerminationRepository" is a provider, is it part of the current RootTestModule?
+    - If "TerminationRepository" is exported from a separate @Module, is that module imported within RootTestModule?
+      @Module({
+        imports: [ /* the Module containing "TerminationRepository" */ ]
+      })
+
+    For more common dependency resolution issues, see: https://docs.nestjs.com/faq/common-errors
+
+      52 |     };
+      53 |
+    > 54 |     const module: TestingModule = await Test.createTestingModule({
+         |                                   ^
+      55 |       providers: [
+      56 |         PayrollService,
+      57 |         {
+
+      at TestingInjector.lookupComponentInParentModules (../node_modules/@nestjs/core/injector/injector.js:290:19)
+      at TestingInjector.resolveComponentWrapper (../node_modules/@nestjs/testing/testing-injector.js:19:45)
+      at resolveParam (../node_modules/@nestjs/core/injector/injector.js:140:38)
+          at async Promise.all (index 6)
+      at TestingInjector.resolveConstructorParams (../node_modules/@nestjs/core/injector/injector.js:169:27)
+      at TestingInjector.loadInstance (../node_modules/@nestjs/core/injector/injector.js:75:13)
+      at TestingInjector.loadProvider (../node_modules/@nestjs/core/injector/injector.js:103:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:56:13
+          at async Promise.all (index 3)
+      at TestingInstanceLoader.createInstancesOfProviders (../node_modules/@nestjs/core/injector/instance-loader.js:55:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:40:13
+          at async Promise.all (index 1)
+      at TestingInstanceLoader.createInstances (../node_modules/@nestjs/core/injector/instance-loader.js:39:9)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/core/injector/instance-loader.js:22:13)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-instance-loader.js:9:9)
+      at TestingModuleBuilder.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-module.builder.js:118:9)
+      at TestingModuleBuilder.compile (../node_modules/@nestjs/testing/testing-module.builder.js:74:9)
+      at Object.<anonymous> (modules/payroll/payroll.service.spec.ts:54:35)
+
+  ΓùÅ PayrollService ΓÇ║ calculatePayrollForUser ΓÇ║ should handle tax calculation errors gracefully
+
+    Nest can't resolve dependencies of the PayrollService (WorkerRepository, PayrollRecordRepository, PayPeriodRepository, UserRepository, LeaveRequestRepository, TimeEntryRepository, ?, TaxesService, PayrollPaymentService, ActivitiesService, DataSource, PayslipService, BullQueue_payroll-processing). Please make sure that the argument "TerminationRepository" at index [6] is available in the RootTestModule context.
+
+    Potential solutions:
+    - Is RootTestModule a valid NestJS module?
+    - If "TerminationRepository" is a provider, is it part of the current RootTestModule?
+    - If "TerminationRepository" is exported from a separate @Module, is that module imported within RootTestModule?
+      @Module({
+        imports: [ /* the Module containing "TerminationRepository" */ ]
+      })
+
+    For more common dependency resolution issues, see: https://docs.nestjs.com/faq/common-errors
+
+      52 |     };
+      53 |
+    > 54 |     const module: TestingModule = await Test.createTestingModule({
+         |                                   ^
+      55 |       providers: [
+      56 |         PayrollService,
+      57 |         {
+
+      at TestingInjector.lookupComponentInParentModules (../node_modules/@nestjs/core/injector/injector.js:290:19)
+      at TestingInjector.resolveComponentWrapper (../node_modules/@nestjs/testing/testing-injector.js:19:45)
+      at resolveParam (../node_modules/@nestjs/core/injector/injector.js:140:38)
+          at async Promise.all (index 6)
+      at TestingInjector.resolveConstructorParams (../node_modules/@nestjs/core/injector/injector.js:169:27)
+      at TestingInjector.loadInstance (../node_modules/@nestjs/core/injector/injector.js:75:13)
+      at TestingInjector.loadProvider (../node_modules/@nestjs/core/injector/injector.js:103:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:56:13
+          at async Promise.all (index 3)
+      at TestingInstanceLoader.createInstancesOfProviders (../node_modules/@nestjs/core/injector/instance-loader.js:55:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:40:13
+          at async Promise.all (index 1)
+      at TestingInstanceLoader.createInstances (../node_modules/@nestjs/core/injector/instance-loader.js:39:9)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/core/injector/instance-loader.js:22:13)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-instance-loader.js:9:9)
+      at TestingModuleBuilder.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-module.builder.js:118:9)
+      at TestingModuleBuilder.compile (../node_modules/@nestjs/testing/testing-module.builder.js:74:9)
+      at Object.<anonymous> (modules/payroll/payroll.service.spec.ts:54:35)
+
+  ΓùÅ PayrollService ΓÇ║ calculatePayrollForUser ΓÇ║ should aggregate totals correctly for multiple workers
+
+    Nest can't resolve dependencies of the PayrollService (WorkerRepository, PayrollRecordRepository, PayPeriodRepository, UserRepository, LeaveRequestRepository, TimeEntryRepository, ?, TaxesService, PayrollPaymentService, ActivitiesService, DataSource, PayslipService, BullQueue_payroll-processing). Please make sure that the argument "TerminationRepository" at index [6] is available in the RootTestModule context.
+
+    Potential solutions:
+    - Is RootTestModule a valid NestJS module?
+    - If "TerminationRepository" is a provider, is it part of the current RootTestModule?
+    - If "TerminationRepository" is exported from a separate @Module, is that module imported within RootTestModule?
+      @Module({
+        imports: [ /* the Module containing "TerminationRepository" */ ]
+      })
+
+    For more common dependency resolution issues, see: https://docs.nestjs.com/faq/common-errors
+
+      52 |     };
+      53 |
+    > 54 |     const module: TestingModule = await Test.createTestingModule({
+         |                                   ^
+      55 |       providers: [
+      56 |         PayrollService,
+      57 |         {
+
+      at TestingInjector.lookupComponentInParentModules (../node_modules/@nestjs/core/injector/injector.js:290:19)
+      at TestingInjector.resolveComponentWrapper (../node_modules/@nestjs/testing/testing-injector.js:19:45)
+      at resolveParam (../node_modules/@nestjs/core/injector/injector.js:140:38)
+          at async Promise.all (index 6)
+      at TestingInjector.resolveConstructorParams (../node_modules/@nestjs/core/injector/injector.js:169:27)
+      at TestingInjector.loadInstance (../node_modules/@nestjs/core/injector/injector.js:75:13)
+      at TestingInjector.loadProvider (../node_modules/@nestjs/core/injector/injector.js:103:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:56:13
+          at async Promise.all (index 3)
+      at TestingInstanceLoader.createInstancesOfProviders (../node_modules/@nestjs/core/injector/instance-loader.js:55:9)
+      at ../node_modules/@nestjs/core/injector/instance-loader.js:40:13
+          at async Promise.all (index 1)
+      at TestingInstanceLoader.createInstances (../node_modules/@nestjs/core/injector/instance-loader.js:39:9)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/core/injector/instance-loader.js:22:13)
+      at TestingInstanceLoader.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-instance-loader.js:9:9)
+      at TestingModuleBuilder.createInstancesOfDependencies (../node_modules/@nestjs/testing/testing-module.builder.js:118:9)
+      at TestingModuleBuilder.compile (../node_modules/@nestjs/testing/testing-module.builder.js:74:9)
+      at Object.<anonymous> (modules/payroll/payroll.service.spec.ts:54:35)
+
+Test Suites: 1 failed, 1 total
+Tests:       5 failed, 5 total
+Snapshots:   0 total
+Time:        1.808 s, estimated 2 s
+Ran all test suites matching /src\\modules\\payroll\\payroll.service.spec.ts/i.

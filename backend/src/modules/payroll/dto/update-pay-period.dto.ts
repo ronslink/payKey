@@ -37,5 +37,6 @@ export class UpdatePayPeriodDto {
   approvedAt?: Date;
 
   @IsOptional()
+  @IsBoolean()
   isOffCycle?: boolean;
 }

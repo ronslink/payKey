@@ -27,7 +27,7 @@ export class SupportMessage {
   @Column({ type: 'uuid' })
   ticketId: string;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'uuid', nullable: true })
   senderId: string;
 
   @Column({

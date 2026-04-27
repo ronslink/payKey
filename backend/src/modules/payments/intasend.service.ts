@@ -648,6 +648,18 @@ export class IntaSendService {
   ) {
     // Docs: https://developers.intasend.com/docs/working-wallets/collect-payments/#initiate-collection
     const url = `${this.baseUrl}/v1/checkout/`;
+
+    // Sanitize names to prevent "No special characters are allowed" errors from IntaSend
+    const cleanFirstName = (firstName || 'User')
+      .replace(/[^a-zA-Z0-9 _-]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim() || 'User';
+      
+    const cleanLastName = (lastName || 'User')
+      .replace(/[^a-zA-Z0-9 _-]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim() || 'User';
+
     try {
       const response = await lastValueFrom(
         this.httpService.post(
@@ -657,8 +669,8 @@ export class IntaSendService {
             amount: amount,
             currency: 'KES',
             email: email,
-            first_name: firstName,
-            last_name: lastName,
+            first_name: cleanFirstName,
+            last_name: cleanLastName,
             api_ref: reference,
             redirect_url: 'https://paydome.co/payment/success', // Or mobile deep link
             method: 'M-PESA-STK-PUSH,CARD-PAYMENT,BANK-PAYMENT', // Enable PesaLink (BANK-PAYMENT)

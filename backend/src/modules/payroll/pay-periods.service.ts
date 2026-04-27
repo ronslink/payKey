@@ -41,12 +41,12 @@ export class PayPeriodsService {
     createPayPeriodDto: CreatePayPeriodDto,
     userId: string,
   ): Promise<PayPeriod> {
-    // Validate that start date is before end date
+    // Validate that start date is before or equal to end date
     if (
-      new Date(createPayPeriodDto.startDate) >=
+      new Date(createPayPeriodDto.startDate) >
       new Date(createPayPeriodDto.endDate)
     ) {
-      throw new BadRequestException('Start date must be before end date');
+      throw new BadRequestException('Start date must be before or equal to end date');
     }
 
     // Check for overlapping pay periods (only for this user)
@@ -233,8 +233,8 @@ export class PayPeriodsService {
       const newStartDate = updatePayPeriodDto.startDate || payPeriod.startDate;
       const newEndDate = updatePayPeriodDto.endDate || payPeriod.endDate;
 
-      if (new Date(newStartDate) >= new Date(newEndDate)) {
-        throw new BadRequestException('Start date must be before end date');
+      if (new Date(newStartDate) > new Date(newEndDate)) {
+        throw new BadRequestException('Start date must be before or equal to end date');
       }
 
       // Check for overlapping periods (excluding current one, only for this user)
@@ -277,6 +277,13 @@ export class PayPeriodsService {
 
   async remove(id: string): Promise<void> {
     const payPeriod = await this.findOne(id);
+
+    // Only off-cycle pay periods can be deleted
+    if (!payPeriod.isOffCycle) {
+      throw new BadRequestException(
+        'System-generated pay periods cannot be deleted. Only off-cycle payrolls can be removed.',
+      );
+    }
 
     // Prevent deletion of processed or completed periods
     if (

@@ -33,5 +33,6 @@ export class CreatePayPeriodDto {
   createdBy?: string;
 
   @IsOptional()
+  @IsBoolean()
   isOffCycle?: boolean;
 }
