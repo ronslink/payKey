@@ -101,11 +101,20 @@ describe('TaxesService', () => {
     it('should calculate all taxes correctly for salary of 50000', async () => {
       const result = await service.calculateTaxes(50000, new Date());
 
-      expect(result.nssf).toBeGreaterThanOrEqual(0);
-      expect(result.nhif).toBeGreaterThanOrEqual(0);
-      expect(result.housingLevy).toBeGreaterThanOrEqual(0);
-      expect(result.paye).toBeGreaterThanOrEqual(0);
-      expect(result.totalDeductions).toBeGreaterThanOrEqual(0);
+      // SHIF: 2.75% of 50k = 1375
+      expect(result.nhif).toBeCloseTo(1375, 2);
+      // AHL: 1.5% of 50k = 750
+      expect(result.housingLevy).toBeCloseTo(750, 2);
+      // NSSF: Tier 1 (8000*0.06 = 480) + Tier 2 ((50000-8000)*0.06 = 2520) = 3000
+      expect(result.nssf).toBeCloseTo(3000, 2);
+      
+      // Taxable Income = 50000 - 3000 = 47000
+      // PAYE: (24000*0.1) + (8333*0.25) + (14667*0.3) = 8883.35
+      // Reliefs: 2400 (Personal) + (1375 * 0.15 = 206.25 Insurance Relief) = 2606.25
+      // Final PAYE = 8883.35 - 2606.25 = 6277.10
+      expect(result.paye).toBeCloseTo(6277.10, 2);
+      
+      expect(result.totalDeductions).toBeCloseTo(3000 + 1375 + 750 + 6277.10, 2);
     });
 
     it('should calculate net pay correctly', async () => {
@@ -163,12 +172,20 @@ describe('TaxesService', () => {
       expect(highSalaryTaxes.paye).toBeGreaterThan(lowSalaryTaxes.paye);
     });
 
-    it('should have PAYE reduced by personal relief', async () => {
-      // For very low income, personal relief should offset PAYE
+    it('should have PAYE reduced by personal and insurance relief', async () => {
+      // For very low income, personal and insurance relief should completely offset PAYE
       const taxes = await service.calculateTaxes(20000, new Date());
 
-      // At 20k gross, PAYE should be low due to personal relief of 2400
-      expect(taxes.paye).toBeLessThan(taxes.nssf + taxes.nhif);
+      // At 20k gross, PAYE should be 0 due to reliefs
+      expect(taxes.paye).toBe(0);
+      
+      // Let's test a case where PAYE is slightly above relief
+      const taxesAbove = await service.calculateTaxes(30000, new Date());
+      // Taxable = 30000 - 1800 (NSSF) = 28200
+      // PAYE before = (24000*0.1) + (4200*0.25) = 3450
+      // Relief = 2400 + (825*0.15 = 123.75) = 2523.75
+      // Final PAYE = 3450 - 2523.75 = 926.25
+      expect(taxesAbove.paye).toBeCloseTo(926.25, 2);
     });
   });
 });

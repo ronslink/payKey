@@ -18,6 +18,7 @@ class UserSettings {
   final String defaultEmploymentType;
   final String? defaultPropertyId;
   final String? photoUrl;
+  final String? googleId;
   final ThemeMode themeMode;
 
   UserSettings({
@@ -32,6 +33,7 @@ class UserSettings {
     this.defaultEmploymentType = 'FIXED',
     this.defaultPropertyId,
     this.photoUrl,
+    this.googleId,
     this.themeMode = ThemeMode.light,
   });
 
@@ -47,6 +49,7 @@ class UserSettings {
     String? defaultEmploymentType,
     String? defaultPropertyId,
     String? photoUrl,
+    String? googleId,
     ThemeMode? themeMode,
   }) {
     return UserSettings(
@@ -61,6 +64,7 @@ class UserSettings {
       defaultEmploymentType: defaultEmploymentType ?? this.defaultEmploymentType,
       defaultPropertyId: defaultPropertyId ?? this.defaultPropertyId,
       photoUrl: photoUrl ?? this.photoUrl,
+      googleId: googleId ?? this.googleId,
       themeMode: themeMode ?? this.themeMode,
     );
   }
@@ -78,6 +82,7 @@ class UserSettings {
       defaultEmploymentType: json['defaultEmploymentType'] ?? 'FIXED',
       defaultPropertyId: json['defaultPropertyId'],
       photoUrl: json['photoUrl'],
+      googleId: json['googleId'],
     );
   }
 
@@ -94,6 +99,7 @@ class UserSettings {
       'defaultEmploymentType': defaultEmploymentType,
       'defaultPropertyId': defaultPropertyId,
       'photoUrl': photoUrl,
+      'googleId': googleId,
     };
   }
 }

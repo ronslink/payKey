@@ -145,7 +145,13 @@ class _HomePageState extends ConsumerState<HomePage> {
     final theme = Theme.of(context);
     final greeting = _getGreeting();
     final settingsAsync = ref.watch(settingsProvider);
-    final photoUrl = settingsAsync.whenOrNull(data: (settings) => settings.photoUrl);
+    
+    // Fallback to Google Avatar if photoUrl is null but we have a googleId
+    final settings = settingsAsync.value;
+    final photoUrl = settings?.photoUrl;
+    final googleId = settings?.googleId;
+    final displayPhotoUrl = photoUrl ?? 
+        (googleId != null ? 'https://lh3.googleusercontent.com/a/$googleId' : null);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
@@ -239,8 +245,8 @@ class _HomePageState extends ConsumerState<HomePage> {
                 CircleAvatar(
                   radius: 24,
                   backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                  backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
-                  child: photoUrl == null 
+                  backgroundImage: displayPhotoUrl != null ? NetworkImage(displayPhotoUrl) : null,
+                  child: displayPhotoUrl == null 
                       ? Icon(Icons.person, color: theme.colorScheme.onSurfaceVariant)
                       : null,
                 ),

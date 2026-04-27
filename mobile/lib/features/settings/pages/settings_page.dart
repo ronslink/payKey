@@ -119,6 +119,9 @@ class _SettingsContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final displayPhotoUrl = settings.photoUrl ?? 
+        (settings.googleId != null ? 'https://lh3.googleusercontent.com/a/${settings.googleId}' : null);
+
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -127,7 +130,7 @@ class _SettingsContent extends ConsumerWidget {
           ProfileCard(
             tier: tier,
             onEditTap: () => context.push(SettingsRoutes.profileEdit),
-            photoUrl: settings.photoUrl,
+            photoUrl: displayPhotoUrl,
             onAvatarTap: () => _pickAndUploadPhoto(context, ref),
           ),
 

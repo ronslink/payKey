@@ -145,15 +145,17 @@ class _GuidedTourState extends State<GuidedTour>
     );
     const spotlightRadius = OnboardingTheme.radiusLarge + 4;
 
-    return Stack(
-      children: [
-        // True cutout overlay — dark background with transparent hole
-        _buildCutoutOverlay(spotlightRect, spotlightRadius),
-        // Animated pulsing ring around spotlight
-        _buildPulsingRing(spotlightRect, spotlightRadius),
-        // Tooltip card
-        _buildTooltip(context, step, targetPosition, targetSize),
-      ],
+    return SizedBox.expand(
+      child: Stack(
+        children: [
+          // True cutout overlay — dark background with transparent hole
+          _buildCutoutOverlay(spotlightRect, spotlightRadius),
+          // Animated pulsing ring around spotlight
+          _buildPulsingRing(spotlightRect, spotlightRadius),
+          // Tooltip card
+          _buildTooltip(context, step, targetPosition, targetSize),
+        ],
+      ),
     );
   }
 
@@ -178,16 +180,12 @@ class _GuidedTourState extends State<GuidedTour>
     return Positioned.fill(
       child: GestureDetector(
         onTap: () {}, // block taps on overlay
-        // RepaintBoundary is required for BlendMode.clear to work correctly —
-        // it ensures the CustomPainter gets its own compositing layer.
-        child: RepaintBoundary(
-          child: CustomPaint(
-            painter: _CutoutOverlayPainter(
-              spotlightRect: spotlightRect,
-              spotlightRadius: radius,
-              overlayColor:
-                  Colors.black.withValues(alpha: OnboardingTheme.overlayOpacity),
-            ),
+        child: CustomPaint(
+          painter: _CutoutOverlayPainter(
+            spotlightRect: spotlightRect,
+            spotlightRadius: radius,
+            overlayColor:
+                Colors.black.withValues(alpha: OnboardingTheme.overlayOpacity),
           ),
         ),
       ),
@@ -241,6 +239,8 @@ class _GuidedTourState extends State<GuidedTour>
       preferredPosition: step.position,
     );
 
+    debugPrint('TourTooltip for "${step.title}" positioned at: left=${tooltipPos.left}, top=${tooltipPos.top}');
+
     return Positioned(
       left: tooltipPos.left,
       top: tooltipPos.top,
@@ -281,24 +281,26 @@ class _CutoutOverlayPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = overlayColor;
+    final bounds = Offset.zero & size;
 
-    // Fill the entire canvas
-    canvas.drawRect(Offset.zero & size, paint);
+    // saveLayer creates an offscreen buffer. BlendMode.clear will only
+    // affect pixels in this buffer, not the scene behind the CustomPaint.
+    canvas.saveLayer(bounds, Paint());
 
-    // Cut out the spotlight area by drawing transparent rounded rect
-    // using BlendMode.clear — this punches a hole through the overlay
-    final clearPaint = Paint()
-      ..color = Colors.transparent
-      ..blendMode = BlendMode.clear;
+    // 1. Fill the buffer with the dark scrim
+    canvas.drawRect(bounds, Paint()..color = overlayColor);
 
+    // 2. Punch the rounded-rect hole through it
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         spotlightRect,
         Radius.circular(spotlightRadius),
       ),
-      clearPaint,
+      Paint()..blendMode = BlendMode.clear,
     );
+
+    // 3. Composite the buffer (with hole) onto the real canvas
+    canvas.restore();
   }
 
   @override
