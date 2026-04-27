@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/pay_colors.dart';
 
 /// Dialog to confirm initializing pay periods for a year
 class InitializeYearDialog extends StatelessWidget {
@@ -35,7 +36,7 @@ class InitializeYearDialog extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             'This will create 12 monthly pay periods from January $year to December $year.',
-            style: TextStyle(color: Colors.grey.shade600),
+            style: TextStyle(color: context.textSecondary),
           ),
         ],
       ),

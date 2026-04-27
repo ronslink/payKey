@@ -37,6 +37,8 @@ class _GuidedTourState extends State<GuidedTour>
     with TickerProviderStateMixin {
   int _currentStep = 0;
   bool _isReady = false; // Prevents overlay rendering before first frame
+  int _consecutiveMisses = 0; // Safety: bail out if all targets missing
+  static const int _maxConsecutiveMisses = 12; // generous: 2x a 6-step tour
   late AnimationController _fadeController;
   late AnimationController _pulseController;
   late Animation<double> _fadeAnimation;
@@ -49,8 +51,28 @@ class _GuidedTourState extends State<GuidedTour>
     _initializeAnimations();
     // Delay tour start until after first frame so all GlobalKeys are mounted
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) setState(() => _isReady = true);
+      if (mounted) {
+        _scrollToCurrentStep();
+        setState(() => _isReady = true);
+      }
     });
+  }
+
+  void _scrollToCurrentStep() {
+    if (widget.steps.isEmpty || _currentStep >= widget.steps.length) return;
+    final ctx = widget.steps[_currentStep].targetKey.currentContext;
+    if (ctx != null) {
+      try {
+        Scrollable.ensureVisible(
+          ctx,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          alignment: 0.5,
+        );
+      } catch (_) {
+        // Ignore if not in a scrollable
+      }
+    }
   }
 
   void _initializeAnimations() {
@@ -91,6 +113,7 @@ class _GuidedTourState extends State<GuidedTour>
     _fadeController.reverse().then((_) {
       if (mounted) {
         setState(() => _currentStep = stepIndex);
+        _scrollToCurrentStep();
         _fadeController.forward();
       }
     });
@@ -127,13 +150,22 @@ class _GuidedTourState extends State<GuidedTour>
 
     // Ensure we have a valid render object
     final renderObject = targetContext.findRenderObject();
-    if (renderObject == null || renderObject is! RenderBox) {
+    if (renderObject == null || renderObject is! RenderBox || !renderObject.hasSize) {
       _handleMissingTarget();
       return const SizedBox.shrink();
     }
 
     final targetPosition = renderObject.localToGlobal(Offset.zero);
     final targetSize = renderObject.size;
+
+    // Additional safety: if size is zero, skip
+    if (targetSize.width == 0 || targetSize.height == 0) {
+      _handleMissingTarget();
+      return const SizedBox.shrink();
+    }
+
+    // Target found — reset miss counter
+    _consecutiveMisses = 0;
 
     // Spotlight rect with padding
     const padding = 12.0; // slightly more breathing room than the old 8px
@@ -164,13 +196,28 @@ class _GuidedTourState extends State<GuidedTour>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
 
-      if (_currentStep < widget.steps.length - 1) {
-        // Skip missing step
-        setState(() => _currentStep++);
-      } else {
-        // Or finish if it was the last one
+      _consecutiveMisses++;
+
+      // Safety: if we've missed too many times, just complete the tour
+      // to prevent an infinite loop with an opaque overlay stuck on screen
+      if (_consecutiveMisses >= _maxConsecutiveMisses) {
+        debugPrint('GuidedTour: Too many consecutive misses ($_consecutiveMisses), completing tour');
         widget.onComplete();
+        return;
       }
+
+      // Scan forward to find the next step with a valid target
+      for (int i = _currentStep + 1; i < widget.steps.length; i++) {
+        final ctx = widget.steps[i].targetKey.currentContext;
+        if (ctx != null && ctx.findRenderObject() is RenderBox) {
+          setState(() => _currentStep = i);
+          _scrollToCurrentStep();
+          return;
+        }
+      }
+
+      // No valid steps remain — complete the tour
+      widget.onComplete();
     });
   }
 

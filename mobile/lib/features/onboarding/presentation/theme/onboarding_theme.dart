@@ -26,7 +26,7 @@ class OnboardingTheme {
   static const Color borderColor = Color(0xFFE5E7EB);
 
   /// Overlay colors
-  static const double overlayOpacity = 0.7;
+  static const double overlayOpacity = 0.45;
   static const double lightOverlayOpacity = 0.6;
 
   // ===========================================================================

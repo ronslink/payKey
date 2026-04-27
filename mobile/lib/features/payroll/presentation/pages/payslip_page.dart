@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/pay_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -181,33 +182,35 @@ class PayslipPage extends ConsumerWidget {
                 children: [
                   // Earnings Card
                   _buildSectionCard(
+                    context,
                     'Earnings',
                     Icons.trending_up,
                     Colors.green,
                     [
-                      _buildAmountRow('Basic Salary', item.grossSalary),
-                      if (item.bonuses > 0) _buildAmountRow('Bonuses', item.bonuses),
-                      if (item.otherEarnings > 0) _buildAmountRow('Other Earnings', item.otherEarnings),
+                      _buildAmountRow(context, 'Basic Salary', item.grossSalary),
+                      if (item.bonuses > 0) _buildAmountRow(context, 'Bonuses', item.bonuses),
+                      if (item.otherEarnings > 0) _buildAmountRow(context, 'Other Earnings', item.otherEarnings),
                       const Divider(height: 24),
-                      _buildAmountRow('Gross Pay', item.totalGrossEarnings, isBold: true, color: Colors.green.shade700),
+                      _buildAmountRow(context, 'Gross Pay', item.totalGrossEarnings, isBold: true, color: Colors.green.shade700),
                     ],
                   ),
                   const SizedBox(height: 16),
                   
                   // Statutory Deductions Card
                   _buildSectionCard(
+                    context,
                     'Statutory Deductions',
                     Icons.account_balance,
                     Colors.orange,
                     [
-                      _buildAmountRow('PAYE (Income Tax)', item.taxBreakdown.paye, isDeduction: true),
-                      _buildAmountRow('NSSF (Pension)', item.taxBreakdown.nssf, isDeduction: true),
-                      _buildAmountRow('SHIF (Health)', item.taxBreakdown.nhif, isDeduction: true),
-                      _buildAmountRow('Housing Levy', item.taxBreakdown.housingLevy, isDeduction: true),
+                      _buildAmountRow(context, 'PAYE (Income Tax)', item.taxBreakdown.paye, isDeduction: true),
+                      _buildAmountRow(context, 'NSSF (Pension)', item.taxBreakdown.nssf, isDeduction: true),
+                      _buildAmountRow(context, 'SHIF (Health)', item.taxBreakdown.nhif, isDeduction: true),
+                      _buildAmountRow(context, 'Housing Levy', item.taxBreakdown.housingLevy, isDeduction: true),
                       if (item.otherDeductions > 0)
-                        _buildAmountRow('Other Deductions', item.otherDeductions, isDeduction: true),
+                        _buildAmountRow(context, 'Other Deductions', item.otherDeductions, isDeduction: true),
                       const Divider(height: 24),
-                      _buildAmountRow('Total Deductions', item.totalDeductions, isBold: true, color: Colors.red.shade700),
+                      _buildAmountRow(context, 'Total Deductions', item.totalDeductions, isBold: true, color: Colors.red.shade700),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -216,19 +219,19 @@ class PayslipPage extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
+                      color: context.surfaceMuted,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade200),
+                      border: Border.all(color: context.borderMuted),
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.info_outline, color: Colors.grey.shade600, size: 20),
+                        Icon(Icons.info_outline, color: context.iconDefault, size: 20),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             'This payslip complies with Kenya Employment Act 2007, Section 31.',
                             style: TextStyle(
-                              color: Colors.grey.shade600,
+                              color: context.textSecondary,
                               fontSize: 12,
                             ),
                           ),
@@ -246,13 +249,13 @@ class PayslipPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildSectionCard(String title, IconData icon, Color color, List<Widget> children) {
+  Widget _buildSectionCard(BuildContext context, String title, IconData icon, Color color, List<Widget> children) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: context.borderMuted),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -291,7 +294,7 @@ class PayslipPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildAmountRow(String label, double amount, {bool isBold = false, bool isDeduction = false, Color? color}) {
+  Widget _buildAmountRow(BuildContext context, String label, double amount, {bool isBold = false, bool isDeduction = false, Color? color}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -300,7 +303,7 @@ class PayslipPage extends ConsumerWidget {
           Text(
             label,
             style: TextStyle(
-              color: isBold ? Colors.grey.shade800 : Colors.grey.shade600,
+              color: isBold ? context.textPrimary : context.textSecondary,
               fontWeight: isBold ? FontWeight.w600 : FontWeight.normal,
             ),
           ),
@@ -308,7 +311,7 @@ class PayslipPage extends ConsumerWidget {
             '${isDeduction ? "- " : ""}KES ${NumberFormat('#,###.00').format(amount)}',
             style: TextStyle(
               fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
-              color: color ?? (isDeduction ? Colors.red.shade600 : Colors.grey.shade800),
+              color: color ?? (isDeduction ? Colors.red.shade600 : context.textPrimary),
               fontSize: isBold ? 16 : 14,
             ),
           ),

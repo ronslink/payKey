@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/pay_colors.dart';
 import 'package:intl/intl.dart';
 import '../constants/payroll_confirm_constants.dart';
 import '../models/payroll_confirm_state.dart';
@@ -17,7 +18,7 @@ class PaymentResultsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: context.surfacePrimary,
       appBar: AppBar(
         title: const Text('Payment Results'),
         centerTitle: true,
@@ -25,7 +26,7 @@ class PaymentResultsPage extends StatelessWidget {
       ),
       body: Column(
         children: [
-          _buildStatusHeader(),
+          _buildStatusHeader(context),
           const Divider(),
           Expanded(child: _buildWorkerList()),
           _buildFooter(),
@@ -34,7 +35,7 @@ class PaymentResultsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusHeader() {
+  Widget _buildStatusHeader(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
       child: Column(
@@ -54,7 +55,7 @@ class PaymentResultsPage extends StatelessWidget {
                 ? 'Workers will receive M-Pesa notifications shortly.'
                 : '${result.successCount} successful, ${result.failureCount} failed.',
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.grey),
+            style: TextStyle(color: context.textSecondary),
           ),
         ],
       ),
@@ -126,7 +127,7 @@ class WorkerResultTile extends StatelessWidget {
       ),
       subtitle: _buildSubtitle(),
       trailing: result.success
-          ? const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey)
+          ? Icon(Icons.arrow_forward_ios, size: 14, color: context.iconDefault)
           : null,
     );
   }

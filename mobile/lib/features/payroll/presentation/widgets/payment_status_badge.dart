@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/pay_colors.dart';
 
 /// Reusable widget showing payment status with color-coded badge
 /// Matches the design language of TaxStatusBadge in payroll_widgets.dart
@@ -14,7 +15,7 @@ class PaymentStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final config = _getStatusConfig(status);
+    final config = _getStatusConfig(context, status);
 
     return Container(
       padding: EdgeInsets.symmetric(
@@ -47,7 +48,7 @@ class PaymentStatusBadge extends StatelessWidget {
     );
   }
 
-  _StatusConfig _getStatusConfig(String status) {
+  _StatusConfig _getStatusConfig(BuildContext context, String status) {
     switch (status.toLowerCase()) {
       case 'pending':
         return _StatusConfig(
@@ -90,8 +91,8 @@ class PaymentStatusBadge extends StatelessWidget {
         return _StatusConfig(
           icon: Icons.help_outline,
           label: status,
-          backgroundColor: Colors.grey.shade50,
-          textColor: Colors.grey.shade700,
+          backgroundColor: context.surfaceMuted,
+          textColor: context.textSecondary,
         );
     }
   }

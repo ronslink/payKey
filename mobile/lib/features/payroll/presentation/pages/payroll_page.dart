@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/pay_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/pay_period_provider.dart';
@@ -772,14 +773,14 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
                               Icon(
                                 Icons.calendar_today_rounded,
                                 size: 12,
-                                color: Colors.grey[400],
+                                color: context.iconMuted,
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 _formatDateRange(period.startDate, period.endDate),
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.grey[500],
+                                  color: context.textSecondary,
                                 ),
                               ),
                             ],
@@ -898,7 +899,7 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
             child: Icon(
               Icons.calendar_month_rounded,
               size: 48,
-              color: Colors.grey[400],
+              color: context.iconMuted,
             ),
           ),
           const SizedBox(height: 20),
@@ -915,7 +916,7 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
             'Initialize your payroll calendar to get started',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey[500],
+              color: context.textSecondary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -980,7 +981,7 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
                 error.toString(),
                 style: TextStyle(
                   fontSize: 13,
-                  color: Colors.grey[500],
+                  color: context.textSecondary,
                 ),
                 textAlign: TextAlign.center,
               ),

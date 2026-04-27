@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/pay_colors.dart';
 
 /// Progress indicator for multi-step payroll flow
 class PayrollProgressIndicator extends StatelessWidget {
@@ -17,7 +18,7 @@ class PayrollProgressIndicator extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      color: Colors.white,
+      color: context.surfacePrimary,
       child: Column(
         children: [
           Row(
@@ -31,7 +32,7 @@ class PayrollProgressIndicator extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: isActive
                         ? Theme.of(context).primaryColor
-                        : Colors.grey.shade200,
+                        : context.borderMuted,
                     borderRadius: BorderRadius.circular(2),
                     boxShadow: isCurrent
                         ? [
@@ -51,7 +52,7 @@ class PayrollProgressIndicator extends StatelessWidget {
           Text(
             stepLabel,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Colors.grey.shade600,
+                  color: context.textSecondary,
                 ),
           ),
         ],
@@ -102,18 +103,18 @@ class NoWorkersEmptyState extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.people_outline, size: 64, color: Colors.grey.shade300),
+          Icon(Icons.people_outline, size: 64, color: context.iconMuted),
           const SizedBox(height: 16),
           Text(
             'No Workers Found',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Colors.grey.shade700,
+                  color: context.textSecondary,
                 ),
           ),
           const SizedBox(height: 8),
           Text(
             'Add workers to run payroll',
-            style: TextStyle(color: Colors.grey.shade500),
+            style: TextStyle(color: context.textTertiary),
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
@@ -185,7 +186,7 @@ class InitializePayPeriodsCard extends StatelessWidget {
                     Text(
                       subtitle!,
                       style: TextStyle(
-                        color: Colors.grey.shade600,
+                        color: context.textSecondary,
                         fontSize: 12,
                       ),
                     ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/pay_colors.dart';
 
 /// Payroll confirmation constants
 class PayrollConfirmConstants {
@@ -42,12 +43,12 @@ class PayrollConfirmTheme {
   static const double buttonRadius = 16.0;
 
   // Wallet card decoration
-  static BoxDecoration walletCardDecoration({required bool isSufficient}) {
+  static BoxDecoration walletCardDecoration(BuildContext context, {required bool isSufficient}) {
     return BoxDecoration(
-      color: Colors.white,
+      color: context.surfacePrimary,
       borderRadius: BorderRadius.circular(cardBorderRadius),
       border: Border.all(
-        color: isSufficient ? Colors.grey.shade200 : Colors.red.shade200,
+        color: isSufficient ? context.borderMuted : Colors.red.shade200,
         width: 2,
       ),
       boxShadow: [
@@ -78,11 +79,11 @@ class PayrollConfirmTheme {
       );
 
   // Primary action button style
-  static ButtonStyle get primaryButtonStyle => ElevatedButton.styleFrom(
+  static ButtonStyle primaryButtonStyle(BuildContext context) => ElevatedButton.styleFrom(
         backgroundColor: successGreen,
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(vertical: 16),
-        disabledBackgroundColor: Colors.grey.shade300,
+        disabledBackgroundColor: context.borderMuted,
       );
 
   // Dark button style (for results page)

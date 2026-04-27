@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../../../core/theme/pay_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/repositories/payroll_repository.dart';
@@ -179,7 +180,7 @@ class _PayrollProcessingDialogState
             Text(
               _statusMessage,
               style: TextStyle(
-                color: Colors.grey.shade600,
+                color: context.textSecondary,
                 fontSize: 14,
               ),
             ),
@@ -193,7 +194,7 @@ class _PayrollProcessingDialogState
                 child: LinearProgressIndicator(
                   value: _isComplete ? 1.0 : (_progress > 0 ? _progress / 100 : null),
                   minHeight: 8,
-                  backgroundColor: Colors.grey.shade200,
+                  backgroundColor: context.borderMuted,
                   valueColor: AlwaysStoppedAnimation<Color>(
                     _isComplete ? _successColor : _primaryColor,
                   ),
@@ -208,7 +209,7 @@ class _PayrollProcessingDialogState
                   Text(
                     '${widget.workerCount} employee${widget.workerCount == 1 ? '' : 's'}',
                     style: TextStyle(
-                      color: Colors.grey.shade600,
+                      color: context.textSecondary,
                       fontSize: 13,
                     ),
                   ),
@@ -339,13 +340,13 @@ class _PayrollProcessingDialogState
           Icon(
             completed ? Icons.check_circle : Icons.circle_outlined,
             size: 18,
-            color: completed ? _successColor : Colors.grey,
+            color: completed ? _successColor : context.iconMuted,
           ),
           const SizedBox(width: 8),
           Text(
             text,
             style: TextStyle(
-              color: completed ? Colors.black87 : Colors.grey,
+              color: completed ? context.textPrimary : context.textSecondary,
               fontSize: 13,
             ),
           ),

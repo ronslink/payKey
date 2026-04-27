@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/pay_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -210,7 +211,7 @@ class _OffCyclePayrollPageState extends ConsumerState<OffCyclePayrollPage> {
                     'Return here from a worker\'s profile to pre-select.',
                     style: TextStyle(
                       fontSize: 13,
-                      color: Colors.grey.shade600,
+                      color: context.textSecondary,
                     ),
                   ),
               ],
@@ -293,7 +294,7 @@ class _InfoBanner extends StatelessWidget {
           Expanded(
             child: Text(message,
                 style:
-                    TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+                    TextStyle(fontSize: 13, color: context.textSecondary)),
           ),
         ],
       ),

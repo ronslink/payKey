@@ -491,6 +491,21 @@ export class PayrollService {
       relations: ['worker'],
     });
 
+    // Dynamically sync payment method so frontend always shows current worker preference
+    // even if it changed after the draft was originally created
+    records.forEach((r) => {
+      if (r.worker?.paymentMethod) {
+        r.paymentMethod = r.worker.paymentMethod.toLowerCase();
+      }
+    });
+
+    // Dynamically sync payment method for draft records so frontend always shows current worker preference
+    records.forEach((r) => {
+      if (r.status === PayrollStatus.DRAFT && r.worker?.paymentMethod) {
+        r.paymentMethod = r.worker.paymentMethod.toLowerCase();
+      }
+    });
+
     return this.transformRecords(records);
   }
 
@@ -961,8 +976,8 @@ export class PayrollService {
       (r) => r.worker?.paymentMethod !== PaymentMethod.CASH,
     );
 
-    // Calculate minimum required balance
-    const totalNetPay = records.reduce(
+    // Calculate minimum required balance (only for non-cash workers)
+    const totalNetPay = nonCashRecords.reduce(
       (sum, r) => sum + (parseFloat(String(r.netSalary)) || 0),
       0,
     );
@@ -1343,6 +1358,13 @@ export class PayrollService {
       ...taxBreakdown,
       otherDeductions: item.otherDeductions || 0,
     };
+
+    // Sync payment method from the worker's current setting so the record
+    // snapshot stays up-to-date if the employer changes a worker from e.g.
+    // M-Pesa → Cash after the draft was originally created.
+    if (worker) {
+      record.paymentMethod = worker.paymentMethod?.toLowerCase() || 'mpesa';
+    }
 
     return manager.save(PayrollRecord, record);
   }

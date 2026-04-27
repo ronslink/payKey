@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/pay_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:async';
@@ -198,7 +199,7 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
       appBar: AppBar(
         title: const Text('Review Payroll'),
         centerTitle: true,
-        backgroundColor: Colors.white,
+        backgroundColor: context.surfacePrimary,
         elevation: 0,
         actions: [
           IconButton(
@@ -340,7 +341,7 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.surfacePrimary,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.1),
@@ -372,7 +373,7 @@ class _PayrollReviewPageState extends ConsumerState<PayrollReviewPage> {
                   ),
                   Text(
                     'Total paid: KES ${_totals.netSalary.toStringAsFixed(0)}',
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                    style: TextStyle(color: context.textSecondary, fontSize: 14),
                   ),
                 ],
               ),

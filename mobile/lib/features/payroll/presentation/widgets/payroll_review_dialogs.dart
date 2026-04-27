@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/pay_colors.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/payroll_model.dart';
 
@@ -253,18 +254,18 @@ class PaymentResultDialog extends StatelessWidget {
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'The following workers could not be paid:',
-            style: TextStyle(fontSize: 13, color: Colors.grey),
+            style: TextStyle(fontSize: 13, color: context.textSecondary),
           ),
           const SizedBox(height: 8),
           Container(
             height: 100,
             width: double.maxFinite,
             decoration: BoxDecoration(
-              color: Colors.grey.shade50,
+              color: context.surfaceMuted,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.shade200),
+              border: Border.all(color: context.borderMuted),
             ),
             child: ListView.builder(
               itemCount: result.results.length,

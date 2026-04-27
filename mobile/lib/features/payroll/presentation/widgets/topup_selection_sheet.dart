@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import '../../../../core/theme/pay_colors.dart';
 
 
 class TopupSelectionSheet extends StatefulWidget {
@@ -124,7 +125,7 @@ class _TopupSelectionSheetState extends State<TopupSelectionSheet> with SingleTi
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey.shade300,
+                color: context.borderMuted,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -138,7 +139,7 @@ class _TopupSelectionSheetState extends State<TopupSelectionSheet> with SingleTi
           TabBar(
             controller: _tabController,
             labelColor: Colors.black,
-            unselectedLabelColor: Colors.grey,
+            unselectedLabelColor: context.textSecondary,
             indicatorColor: const Color(0xFF1B5E20), // M-Pesa Green approx
             tabs: const [
               Tab(text: 'M-Pesa'),
@@ -188,13 +189,13 @@ class _TopupSelectionSheetState extends State<TopupSelectionSheet> with SingleTi
           style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           decoration: InputDecoration(
             prefixText: 'KES ',
-            prefixStyle: const TextStyle(
+            prefixStyle: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Colors.grey,
+              color: context.textSecondary,
             ),
             filled: true,
-            fillColor: Colors.grey.shade50,
+            fillColor: context.surfaceMuted,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
               borderSide: BorderSide.none,
@@ -217,9 +218,9 @@ class _TopupSelectionSheetState extends State<TopupSelectionSheet> with SingleTi
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: context.surfaceMuted,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: context.borderMuted),
       ),
       child: Column(
         children: [
@@ -238,7 +239,7 @@ class _TopupSelectionSheetState extends State<TopupSelectionSheet> with SingleTi
         Text(
           label,
           style: TextStyle(
-            color: isTotal ? Colors.black : Colors.grey.shade600,
+            color: isTotal ? context.textPrimary : context.textSecondary,
             fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
           ),
         ),
@@ -268,9 +269,9 @@ class _TopupSelectionSheetState extends State<TopupSelectionSheet> with SingleTi
           style: const TextStyle(fontSize: 16),
           decoration: InputDecoration(
             hintText: '07XX...',
-            prefixIcon: const Icon(Icons.phone_android, color: Colors.grey),
+            prefixIcon: Icon(Icons.phone_android, color: context.iconDefault),
             filled: true,
-            fillColor: Colors.grey.shade50,
+            fillColor: context.surfaceMuted,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
               borderSide: BorderSide.none,
@@ -286,21 +287,21 @@ class _TopupSelectionSheetState extends State<TopupSelectionSheet> with SingleTi
   }
 
   Widget _buildCheckoutInfo() {
-     return const Center(
+     return Center(
        child: Text(
          'You will be redirected to complete payment via Card or PesaLink.',
          textAlign: TextAlign.center,
-         style: TextStyle(color: Colors.grey),
+         style: TextStyle(color: context.textSecondary),
        ),
      );
   }
 
   Widget _buildStripeInfo() {
-     return const Center(
+     return Center(
        child: Text(
          'Pay with Card, SEPA, or Apple/Google Pay via Stripe.',
          textAlign: TextAlign.center,
-         style: TextStyle(color: Colors.grey),
+         style: TextStyle(color: context.textSecondary),
        ),
      );
   }

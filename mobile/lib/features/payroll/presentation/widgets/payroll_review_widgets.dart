@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/pay_colors.dart';
 import 'package:intl/intl.dart';
 import '../models/payroll_breakdown.dart';
 import 'payment_status_badge.dart';
@@ -225,12 +226,12 @@ class WorkerBreakdownCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.surfacePrimary,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isExpanded
                 ? Theme.of(context).primaryColor
-                : Colors.grey.shade200,
+                : context.borderMuted,
           ),
           boxShadow: [
             BoxShadow(
@@ -260,7 +261,7 @@ class WorkerBreakdownCard extends StatelessWidget {
         const SizedBox(width: 8),
         Icon(
           isExpanded ? Icons.expand_less : Icons.expand_more,
-          color: Colors.grey.shade400,
+          color: context.iconDefault,
         ),
       ],
     );
@@ -305,7 +306,7 @@ class WorkerBreakdownCard extends StatelessWidget {
         ),
         Text(
           jobTitle ?? 'Employee',
-          style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+          style: TextStyle(color: context.textSecondary, fontSize: 13),
         ),
       ],
     );
@@ -325,7 +326,7 @@ class WorkerBreakdownCard extends StatelessWidget {
         ),
         Text(
           'Net',
-          style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
+          style: TextStyle(color: context.textTertiary, fontSize: 11),
         ),
       ],
     );
@@ -411,7 +412,7 @@ class _BreakdownRow extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              color: isBold ? Colors.black87 : Colors.grey.shade600,
+              color: isBold ? context.textPrimary : context.textSecondary,
               fontWeight: isBold ? FontWeight.w600 : FontWeight.normal,
             ),
           ),
@@ -420,7 +421,7 @@ class _BreakdownRow extends StatelessWidget {
             style: TextStyle(
               color: isNet
                   ? Colors.green
-                  : (isDeduction ? Colors.red.shade600 : Colors.grey.shade900),
+                  : (isDeduction ? Colors.red.shade600 : context.textPrimary),
               fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
             ),
           ),
@@ -452,7 +453,7 @@ class PayrollBottomActionBar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.surfacePrimary,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -522,7 +523,7 @@ class SectionLabel extends StatelessWidget {
       style: TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.bold,
-        color: Colors.grey.shade500,
+        color: context.textSecondary,
         letterSpacing: 1.2,
       ),
     );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/pay_colors.dart';
 import '../constants/payroll_confirm_constants.dart';
 import '../models/payroll_confirm_state.dart';
 
@@ -19,18 +20,19 @@ class WalletBalanceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: PayrollConfirmTheme.walletCardDecoration(
+        context,
         isSufficient: _isSufficient,
       ),
       child: Column(
         children: [
-          _buildHeader(),
-          _buildCostBreakdown(),
+          _buildHeader(context),
+          _buildCostBreakdown(context),
         ],
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -44,10 +46,10 @@ class WalletBalanceCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Text(
+          Text(
             'Current Wallet Balance',
             style: TextStyle(
-              color: Colors.grey,
+              color: context.textSecondary,
               fontSize: 12,
               letterSpacing: 1,
             ),
@@ -87,12 +89,13 @@ class WalletBalanceCard extends StatelessWidget {
     );
   }
 
-  Widget _buildCostBreakdown() {
+  Widget _buildCostBreakdown(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
           _buildRow(
+            context,
             'Total Payroll Cost',
             verification.formattedRequired,
             isBold: true,
@@ -147,14 +150,14 @@ class WalletBalanceCard extends StatelessWidget {
     );
   }
 
-  Widget _buildRow(String label, String value, {bool isBold = false}) {
+  Widget _buildRow(BuildContext context, String label, String value, {bool isBold = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
           style: TextStyle(
-            color: Colors.grey.shade700,
+            color: context.textSecondary,
             fontWeight: isBold ? FontWeight.w600 : FontWeight.normal,
           ),
         ),
@@ -184,7 +187,7 @@ class PayrollSummaryCard extends StatelessWidget {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        side: BorderSide(color: Colors.grey.shade300),
+        side: BorderSide(color: context.borderMuted),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Padding(
@@ -192,7 +195,7 @@ class PayrollSummaryCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSummaryRow('Total Workers', '$workerCount'),
+            _buildSummaryRow(context, 'Total Workers', '$workerCount'),
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 8.0),
               child: Divider(),
@@ -211,13 +214,13 @@ class PayrollSummaryCard extends StatelessWidget {
     );
   }
 
-  Widget _buildSummaryRow(String label, String value) {
+  Widget _buildSummaryRow(BuildContext context, String label, String value) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
-          style: const TextStyle(color: Colors.grey, fontSize: 16),
+          style: TextStyle(color: context.textSecondary, fontSize: 16),
         ),
         Text(
           value,
@@ -267,14 +270,14 @@ class PayrollProcessingIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    return Column(
       children: [
-        CircularProgressIndicator(),
-        SizedBox(height: 16),
-        Text('Processing payments...'),
+        const CircularProgressIndicator(),
+        const SizedBox(height: 16),
+        const Text('Processing payments...'),
         Text(
           'Please do not close this screen',
-          style: TextStyle(color: Colors.grey, fontSize: 12),
+          style: TextStyle(color: context.textSecondary, fontSize: 12),
         ),
       ],
     );
@@ -324,7 +327,7 @@ class ConfirmPayButton extends StatelessWidget {
       children: [
         ElevatedButton(
           onPressed: canProceed ? onPressed : null,
-          style: PayrollConfirmTheme.primaryButtonStyle,
+          style: PayrollConfirmTheme.primaryButtonStyle(context),
           child: Text(
             canProceed ? 'Confirm & Pay $formattedAmount' : 'Insufficient Funds',
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),

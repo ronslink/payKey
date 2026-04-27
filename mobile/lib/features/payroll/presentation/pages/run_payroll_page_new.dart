@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/pay_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -419,7 +420,7 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
                     period.name,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           fontWeight: FontWeight.w500,
-                          color: isClosed ? Colors.grey : null,
+                          color: isClosed ? context.textSecondary : null,
                         ),
                   ),
                 ),

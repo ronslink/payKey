@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/pay_colors.dart';
 import '../constants/payroll_confirm_constants.dart';
 
 /// M-Pesa top-up bottom sheet
@@ -104,7 +105,7 @@ class _MpesaTopupSheetState extends State<MpesaTopupSheet> {
         width: 40,
         height: 4,
         decoration: BoxDecoration(
-          color: Colors.grey.shade300,
+          color: context.borderMuted,
           borderRadius: BorderRadius.circular(2),
         ),
       ),
@@ -127,17 +128,17 @@ class _MpesaTopupSheetState extends State<MpesaTopupSheet> {
           ),
         ),
         const SizedBox(width: 16),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              const Text(
                 'Top Up Wallet',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               Text(
                 'via M-Pesa',
-                style: TextStyle(color: Colors.grey, fontSize: 14),
+                style: TextStyle(color: context.textSecondary, fontSize: 14),
               ),
             ],
           ),
@@ -161,13 +162,13 @@ class _MpesaTopupSheetState extends State<MpesaTopupSheet> {
           style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           decoration: InputDecoration(
             prefixText: '${PayrollConfirmConstants.currencyCode} ',
-            prefixStyle: const TextStyle(
+            prefixStyle: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Colors.grey,
+              color: context.textSecondary,
             ),
             filled: true,
-            fillColor: Colors.grey.shade50,
+            fillColor: context.surfaceMuted,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
               borderSide: BorderSide.none,
@@ -197,9 +198,9 @@ class _MpesaTopupSheetState extends State<MpesaTopupSheet> {
           style: const TextStyle(fontSize: 16),
           decoration: InputDecoration(
             hintText: '07XX...',
-            prefixIcon: const Icon(Icons.phone_android, color: Colors.grey),
+            prefixIcon: Icon(Icons.phone_android, color: context.iconDefault),
             filled: true,
-            fillColor: Colors.grey.shade50,
+            fillColor: context.surfaceMuted,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
               borderSide: BorderSide.none,

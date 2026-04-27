@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/pay_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -417,7 +418,7 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
     }
 
     return Scaffold(
-      backgroundColor: Colors.grey[50], // Manual color since theme missing
+      backgroundColor: context.surfaceMuted,
       appBar: AppBar(
         title: const Text('Confirm Payroll'),
         leading: IconButton(
@@ -452,7 +453,7 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
               Text(
                 _state.error!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.grey),
+                style: TextStyle(color: context.textSecondary),
               ),
               const SizedBox(height: 24),
               ElevatedButton(
@@ -501,7 +502,7 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
         (verification.availableBalance + verification.clearingBalance >= verification.requiredAmount);
     
     return Container(
-      decoration: PayrollConfirmTheme.walletCardDecoration(isSufficient: isSufficient),
+      decoration: PayrollConfirmTheme.walletCardDecoration(context, isSufficient: isSufficient),
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
@@ -513,7 +514,7 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
                 children: [
                   Text(
                     'Wallet Balance',
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                    style: TextStyle(color: context.textSecondary, fontSize: 14),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -610,37 +611,37 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
   }) {
     return Container(
       padding: const EdgeInsets.all(20),
-      // Use Colors.white directly since backgroundColor didn't exist in theme
+      // Use context.surfacePrimary directly since backgroundColor didn't exist in theme
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.surfacePrimary,
         borderRadius: BorderRadius.circular(PayrollConfirmTheme.cardBorderRadius),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: context.borderMuted),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
            const Text('Payroll Summary', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
            const SizedBox(height: 16),
-           _row('Workers', '${verification.workerCount}'),
+           _row(context, 'Workers', '${verification.workerCount}'),
            const Divider(height: 24),
-           _row('Net Pay', 'KES ${verification.netPayTotal.toStringAsFixed(2)}'),
+           _row(context, 'Net Pay', 'KES ${verification.netPayTotal.toStringAsFixed(2)}'),
            if (verification.estimatedFees > 0) ...[
              const SizedBox(height: 8),
-             _row('M-Pesa Fees (by provider)', verification.formattedFees),
+             _row(context, 'M-Pesa Fees (by provider)', verification.formattedFees),
            ],
            const Divider(height: 24),
-           _row('Total Required', verification.formattedRequired, bold: true),
+           _row(context, 'Total Required', verification.formattedRequired, bold: true),
         ],
       ),
     );
   }
   
-  Widget _row(String label, String value, {bool bold = false}) {
+  Widget _row(BuildContext context, String label, String value, {bool bold = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
          Text(label, style: TextStyle(
-           color: bold ? Colors.black : Colors.grey,
+           color: bold ? context.textPrimary : context.textSecondary,
            fontWeight: bold ? FontWeight.bold : FontWeight.normal,
          )),
          Text(value, style: TextStyle(
@@ -660,7 +661,7 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.surfacePrimary,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -672,9 +673,9 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
       child: SafeArea(
         child: ElevatedButton(
           onPressed: canProceed && !isProcessing ? _processPayroll : null,
-          style: PayrollConfirmTheme.primaryButtonStyle.copyWith(
+          style: PayrollConfirmTheme.primaryButtonStyle(context).copyWith(
             backgroundColor: WidgetStateProperty.resolveWith((states) {
-               if (states.contains(WidgetState.disabled)) return Colors.grey;
+               if (states.contains(WidgetState.disabled)) return context.borderMuted;
                return PayrollConfirmTheme.successGreen;
             }),
           ),

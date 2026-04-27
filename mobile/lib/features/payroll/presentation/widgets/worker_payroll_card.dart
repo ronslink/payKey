@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/pay_colors.dart';
 import 'package:intl/intl.dart';
 import '../../../workers/data/models/worker_model.dart';
 import '../constants/payroll_constants.dart';
@@ -77,12 +78,12 @@ class WorkerPayrollCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.white : Colors.grey.shade50,
+          color: isSelected ? context.surfacePrimary : context.surfaceMuted,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isExpanded 
                 ? Theme.of(context).primaryColor 
-                : (isPartialPeriod ? Colors.orange.shade300 : Colors.grey.shade200),
+                : (isPartialPeriod ? Colors.orange.shade300 : context.borderMuted),
             width: isPartialPeriod ? 2 : 1,
           ),
           boxShadow: [
@@ -166,7 +167,7 @@ class WorkerPayrollCard extends StatelessWidget {
                 ),
                 Text(
                   isHourly ? 'Hourly Worker' : 'Monthly Salary',
-                  style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+                  style: TextStyle(color: context.textSecondary, fontSize: 13),
                 ),
               ],
             ),
@@ -183,14 +184,14 @@ class WorkerPayrollCard extends StatelessWidget {
                   color: Theme.of(context).primaryColor,
                 ),
               ),
-              Text('Est.', style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
+              Text('Est.', style: TextStyle(color: context.textTertiary, fontSize: 11)),
             ],
           ),
         const SizedBox(width: 8),
         if (isSelected)
           Icon(
             isExpanded ? Icons.expand_less : Icons.expand_more,
-            color: Colors.grey.shade400,
+            color: context.iconDefault,
           ),
       ],
     );
@@ -312,23 +313,23 @@ class WorkerPayrollCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: context.surfaceMuted,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: context.borderMuted),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: selectedPropertyId,
           isExpanded: true,
-          hint: Text('Select Property (Default: Global)', style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
-          icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
+          hint: Text('Select Property (Default: Global)', style: TextStyle(fontSize: 13, color: context.textSecondary)),
+          icon: Icon(Icons.arrow_drop_down, color: context.iconDefault),
           onChanged: onPropertyIdChanged,
           items: [
             DropdownMenuItem<String>(
               value: null,
               child: Text('All Properties (Global)', style: TextStyle(
                 fontSize: 13,
-                color: selectedPropertyId == null ? Colors.black : Colors.grey.shade700,
+                color: selectedPropertyId == null ? context.textPrimary : context.textSecondary,
                 fontWeight: selectedPropertyId == null ? FontWeight.w500 : FontWeight.normal,
               )),
             ),
@@ -426,7 +427,7 @@ class WorkerPayrollCard extends StatelessWidget {
           color: isSelected ? Colors.white : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected ? Colors.green : Colors.grey.shade300,
+            color: isSelected ? Colors.green : context.borderMuted,
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -435,7 +436,7 @@ class WorkerPayrollCard extends StatelessWidget {
             Icon(
               isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
               size: 18,
-              color: isSelected ? Colors.green : Colors.grey,
+              color: isSelected ? Colors.green : context.iconMuted,
             ),
             const SizedBox(width: 8),
             Column(
@@ -450,7 +451,7 @@ class WorkerPayrollCard extends StatelessWidget {
                 ),
                 Text(
                   sublabel,
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                  style: TextStyle(fontSize: 11, color: context.textSecondary),
                 ),
               ],
             ),
@@ -467,7 +468,7 @@ class WorkerPayrollCard extends StatelessWidget {
         color: !isFullPeriod ? Colors.white : Colors.transparent,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: !isFullPeriod ? Colors.orange : Colors.grey.shade300,
+          color: !isFullPeriod ? Colors.orange : context.borderMuted,
           width: !isFullPeriod ? 2 : 1,
         ),
       ),
@@ -476,7 +477,7 @@ class WorkerPayrollCard extends StatelessWidget {
           Icon(
             !isFullPeriod ? Icons.radio_button_checked : Icons.radio_button_off,
             size: 18,
-            color: !isFullPeriod ? Colors.orange : Colors.grey,
+            color: !isFullPeriod ? Colors.orange : context.iconMuted,
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -498,7 +499,7 @@ class WorkerPayrollCard extends StatelessWidget {
                       suffixText: '/ $totalDaysInPeriod',
                       suffixStyle: TextStyle(
                         fontSize: 11,
-                        color: Colors.grey.shade600,
+                        color: context.textSecondary,
                       ),
                       isDense: true,
                       contentPadding: EdgeInsets.zero,
@@ -522,7 +523,7 @@ class WorkerPayrollCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: context.surfaceMuted,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -530,7 +531,7 @@ class WorkerPayrollCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Base Rate', style: TextStyle(color: Colors.grey.shade700)),
+              Text('Base Rate', style: TextStyle(color: context.textSecondary)),
               Text(
                 isHourly
                     ? 'KES ${formatter.format(worker.hourlyRate ?? 0)}/hr'
@@ -570,7 +571,7 @@ class WorkerPayrollCard extends StatelessWidget {
       children: [
         Text(
           label,
-          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          style: TextStyle(fontSize: 12, color: context.textSecondary),
         ),
         const SizedBox(height: 4),
         TextField(
@@ -579,7 +580,7 @@ class WorkerPayrollCard extends StatelessWidget {
           decoration: InputDecoration(
             hintText: hint,
             filled: true,
-            fillColor: Colors.grey.shade100,
+            fillColor: context.surfaceMuted,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide.none,
