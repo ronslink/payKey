@@ -68,7 +68,9 @@ class _GuidedTourState extends State<GuidedTour>
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
           alignment: 0.5,
-        );
+        ).whenComplete(() {
+          if (mounted) setState(() {});
+        }).catchError((_) {});
       } catch (_) {
         // Ignore if not in a scrollable
       }
@@ -177,17 +179,22 @@ class _GuidedTourState extends State<GuidedTour>
     );
     const spotlightRadius = OnboardingTheme.radiusLarge + 4;
 
-    return SizedBox.expand(
-      child: Stack(
-        children: [
-          // True cutout overlay — dark background with transparent hole
-          _buildCutoutOverlay(spotlightRect, spotlightRadius),
-          // Animated pulsing ring around spotlight
-          _buildPulsingRing(spotlightRect, spotlightRadius),
-          // Tooltip card
-          _buildTooltip(context, step, targetPosition, targetSize),
-        ],
-      ),
+    return AnimatedBuilder(
+      animation: _fadeAnimation,
+      builder: (context, child) {
+        return SizedBox.expand(
+          child: Stack(
+            children: [
+              // True cutout overlay — dark background with transparent hole
+              _buildCutoutOverlay(spotlightRect, spotlightRadius, _fadeAnimation.value),
+              // Animated pulsing ring around spotlight
+              _buildPulsingRing(spotlightRect, spotlightRadius, _fadeAnimation.value),
+              // Tooltip card
+              _buildTooltip(context, step, targetPosition, targetSize),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -223,16 +230,16 @@ class _GuidedTourState extends State<GuidedTour>
 
   /// Renders the semi-transparent overlay with a rounded-rect hole cut out
   /// so the target element is fully visible through the dark scrim.
-  Widget _buildCutoutOverlay(Rect spotlightRect, double radius) {
+  Widget _buildCutoutOverlay(Rect spotlightRect, double radius, double fadeValue) {
     return Positioned.fill(
       child: GestureDetector(
         onTap: () {}, // block taps on overlay
         child: CustomPaint(
+          size: Size.infinite,
           painter: _CutoutOverlayPainter(
             spotlightRect: spotlightRect,
             spotlightRadius: radius,
-            overlayColor:
-                Colors.black.withValues(alpha: OnboardingTheme.overlayOpacity),
+            overlayColor: Colors.black.withValues(alpha: 0.7 * fadeValue),
           ),
         ),
       ),
@@ -240,7 +247,7 @@ class _GuidedTourState extends State<GuidedTour>
   }
 
   /// Animated pulsing ring that draws attention to the highlighted element
-  Widget _buildPulsingRing(Rect spotlightRect, double radius) {
+  Widget _buildPulsingRing(Rect spotlightRect, double radius, double fadeValue) {
     return AnimatedBuilder(
       animation: _pulseAnimation,
       builder: (_, __) {
@@ -248,16 +255,18 @@ class _GuidedTourState extends State<GuidedTour>
         return Positioned(
           left: spotlightRect.left - expansion,
           top: spotlightRect.top - expansion,
-          child: Container(
-            width: spotlightRect.width + expansion * 2,
-            height: spotlightRect.height + expansion * 2,
-            decoration: BoxDecoration(
-              borderRadius:
-                  BorderRadius.circular(radius + expansion),
-              border: Border.all(
-                color: OnboardingTheme.primaryBlue
-                    .withValues(alpha: 0.6 - _pulseAnimation.value * 0.5),
-                width: 2.5,
+          child: Opacity(
+            opacity: fadeValue,
+            child: Container(
+              width: spotlightRect.width + expansion * 2,
+              height: spotlightRect.height + expansion * 2,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(radius + expansion),
+                border: Border.all(
+                  color: OnboardingTheme.primaryBlue
+                      .withValues(alpha: 0.6 - _pulseAnimation.value * 0.5),
+                  width: 2.5,
+                ),
               ),
             ),
           ),
