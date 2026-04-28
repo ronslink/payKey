@@ -260,6 +260,7 @@ abstract class PayPeriod with _$PayPeriod {
     DateTime? updatedAt,
 
     /// Additional notes or comments.
+    @JsonKey(fromJson: _notesFromJson, toJson: _notesToJson)
     String? notes,
 
     /// Owner/employer user ID.
@@ -267,6 +268,9 @@ abstract class PayPeriod with _$PayPeriod {
 
     /// Scheduled payment date.
     DateTime? payDate,
+
+    /// Whether this is an off-cycle payroll (bonus, advance, etc.).
+    @Default(false) bool isOffCycle,
   }) = _PayPeriod;
 
   factory PayPeriod.fromJson(Map<String, dynamic> json) =>
@@ -579,8 +583,24 @@ abstract class UpdatePayPeriodRequest with _$UpdatePayPeriodRequest {
 }
 
 // =============================================================================
-// JSON CONVERTERS
+// JSON SERIALIZATION HELPERS
 // =============================================================================
+
+/// Convert dynamic value to String for notes field.
+String? _notesFromJson(dynamic value) {
+  if (value == null) return null;
+  if (value is String) return value;
+  if (value is Map<String, dynamic>) {
+    return value['comments']?.toString() ?? value['note']?.toString();
+  }
+  return value.toString();
+}
+
+/// Convert String notes field to dynamic object for backend.
+dynamic _notesToJson(String? value) {
+  if (value == null) return null;
+  return {'comments': value};
+}
 
 /// Convert dynamic value to int (handles String and double).
 int? _intFromJson(dynamic value) {

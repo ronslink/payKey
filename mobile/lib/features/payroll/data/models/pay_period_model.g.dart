@@ -24,11 +24,12 @@ _PayPeriod _$PayPeriodFromJson(Map<String, dynamic> json) => _PayPeriod(
   updatedAt: json['updatedAt'] == null
       ? null
       : DateTime.parse(json['updatedAt'] as String),
-  notes: json['notes'] as String?,
+  notes: _notesFromJson(json['notes']),
   userId: json['userId'] as String?,
   payDate: json['payDate'] == null
       ? null
       : DateTime.parse(json['payDate'] as String),
+  isOffCycle: json['isOffCycle'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$PayPeriodToJson(_PayPeriod instance) =>
@@ -46,9 +47,10 @@ Map<String, dynamic> _$PayPeriodToJson(_PayPeriod instance) =>
       'processedWorkers': instance.processedWorkers,
       'createdAt': instance.createdAt?.toIso8601String(),
       'updatedAt': instance.updatedAt?.toIso8601String(),
-      'notes': instance.notes,
+      'notes': _notesToJson(instance.notes),
       'userId': instance.userId,
       'payDate': instance.payDate?.toIso8601String(),
+      'isOffCycle': instance.isOffCycle,
     };
 
 const _$PayPeriodFrequencyEnumMap = {

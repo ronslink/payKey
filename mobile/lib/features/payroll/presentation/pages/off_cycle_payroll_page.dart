@@ -69,12 +69,28 @@ class _OffCyclePayrollPageState extends ConsumerState<OffCyclePayrollPage> {
         if (_endDate.isBefore(_startDate)) _endDate = _startDate;
       } else {
         _endDate = picked;
+        if (_startDate.isAfter(_endDate)) _startDate = _endDate;
       }
     });
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    
+    if (_startDate.isAfter(_endDate)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('End date cannot be before start date')),
+      );
+      return;
+    }
+    
+    if (!_allWorkers && _selectedWorkerIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select at least one worker')),
+      );
+      return;
+    }
+    
     setState(() => _isSubmitting = true);
 
     try {

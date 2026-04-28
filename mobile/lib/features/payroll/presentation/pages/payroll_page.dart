@@ -717,7 +717,7 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
   Widget _buildPayPeriodCard(BuildContext context, PayPeriod period) {
     final statusColor = _getStatusColor(period.status);
     
-    return Container(
+    final cardContent = Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -789,6 +789,16 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
                       ),
                     ),
                     _buildStatusBadge(period.status, statusColor),
+                    if (period.status == PayPeriodStatus.draft && period.isOffCycle) ...[
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, color: Colors.red),
+                        onPressed: () => _confirmAndDelete(context, period),
+                        tooltip: 'Delete Draft',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -834,6 +844,64 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
           ),
         ),
       ),
+    );
+
+    // Only off-cycle draft periods can be swiped to delete
+    if (period.status != PayPeriodStatus.draft || !period.isOffCycle) {
+      return cardContent;
+    }
+
+    return Dismissible(
+      key: Key(period.id),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: Colors.red.shade400,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        child: const Icon(Icons.delete_outline, color: Colors.white, size: 28),
+      ),
+      confirmDismiss: (direction) async {
+        return await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Delete Draft?'),
+            content: const Text('Are you sure you want to delete this draft pay period?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Delete'),
+              ),
+            ],
+          ),
+        );
+      },
+      onDismissed: (direction) async {
+        try {
+          await ref.read(payPeriodsProvider.notifier).deletePayPeriod(period.id);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Pay period deleted')),
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Failed to delete: $e')),
+            );
+            ref.invalidate(payPeriodsProvider);
+          }
+        }
+      },
+      child: cardContent,
     );
   }
 
@@ -883,6 +951,45 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
         ),
       ),
     );
+  }
+
+  Future<void> _confirmAndDelete(BuildContext context, PayPeriod period) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Draft?'),
+        content: const Text('Are you sure you want to delete this draft pay period?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await ref.read(payPeriodsProvider.notifier).deletePayPeriod(period.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Pay period deleted')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete: $e')),
+        );
+        ref.invalidate(payPeriodsProvider);
+      }
+    }
   }
 
   Widget _buildEmptyState() {

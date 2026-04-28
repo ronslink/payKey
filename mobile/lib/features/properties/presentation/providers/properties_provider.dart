@@ -1,15 +1,24 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/property_model.dart';
 import '../../data/repositories/properties_repository.dart';
+import '../../../subscriptions/presentation/providers/subscription_provider.dart';
 
 // Default provider returns active properties
 final propertiesProvider = FutureProvider<List<PropertyModel>>((ref) async {
+  final subscriptionAsync = ref.watch(userSubscriptionProvider);
+  if (subscriptionAsync.value?.plan.name.toUpperCase() != 'PLATINUM') {
+    return [];
+  }
   final repository = ref.watch(propertiesRepositoryProvider);
   return repository.getProperties(status: 'active');
 });
 
 // Provider for archived properties
 final archivedPropertiesProvider = FutureProvider<List<PropertyModel>>((ref) async {
+  final subscriptionAsync = ref.watch(userSubscriptionProvider);
+  if (subscriptionAsync.value?.plan.name.toUpperCase() != 'PLATINUM') {
+    return [];
+  }
   final repository = ref.watch(propertiesRepositoryProvider);
   return repository.getProperties(status: 'archived');
 });

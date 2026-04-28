@@ -29,9 +29,10 @@ mixin _$PayPeriod {
 @JsonKey(fromJson: _intFromJson) int? get processedWorkers;/// When this pay period was created.
  DateTime? get createdAt;/// When this pay period was last updated.
  DateTime? get updatedAt;/// Additional notes or comments.
- String? get notes;/// Owner/employer user ID.
+@JsonKey(fromJson: _notesFromJson, toJson: _notesToJson) String? get notes;/// Owner/employer user ID.
  String? get userId;/// Scheduled payment date.
- DateTime? get payDate;
+ DateTime? get payDate;/// Whether this is an off-cycle payroll (bonus, advance, etc.).
+ bool get isOffCycle;
 /// Create a copy of PayPeriod
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -44,16 +45,16 @@ $PayPeriodCopyWith<PayPeriod> get copyWith => _$PayPeriodCopyWithImpl<PayPeriod>
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is PayPeriod&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.startDate, startDate) || other.startDate == startDate)&&(identical(other.endDate, endDate) || other.endDate == endDate)&&(identical(other.frequency, frequency) || other.frequency == frequency)&&(identical(other.status, status) || other.status == status)&&(identical(other.totalWorkers, totalWorkers) || other.totalWorkers == totalWorkers)&&(identical(other.totalGrossAmount, totalGrossAmount) || other.totalGrossAmount == totalGrossAmount)&&(identical(other.totalNetAmount, totalNetAmount) || other.totalNetAmount == totalNetAmount)&&(identical(other.totalTaxAmount, totalTaxAmount) || other.totalTaxAmount == totalTaxAmount)&&(identical(other.processedWorkers, processedWorkers) || other.processedWorkers == processedWorkers)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.notes, notes) || other.notes == notes)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.payDate, payDate) || other.payDate == payDate));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is PayPeriod&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.startDate, startDate) || other.startDate == startDate)&&(identical(other.endDate, endDate) || other.endDate == endDate)&&(identical(other.frequency, frequency) || other.frequency == frequency)&&(identical(other.status, status) || other.status == status)&&(identical(other.totalWorkers, totalWorkers) || other.totalWorkers == totalWorkers)&&(identical(other.totalGrossAmount, totalGrossAmount) || other.totalGrossAmount == totalGrossAmount)&&(identical(other.totalNetAmount, totalNetAmount) || other.totalNetAmount == totalNetAmount)&&(identical(other.totalTaxAmount, totalTaxAmount) || other.totalTaxAmount == totalTaxAmount)&&(identical(other.processedWorkers, processedWorkers) || other.processedWorkers == processedWorkers)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.notes, notes) || other.notes == notes)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.payDate, payDate) || other.payDate == payDate)&&(identical(other.isOffCycle, isOffCycle) || other.isOffCycle == isOffCycle));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,startDate,endDate,frequency,status,totalWorkers,totalGrossAmount,totalNetAmount,totalTaxAmount,processedWorkers,createdAt,updatedAt,notes,userId,payDate);
+int get hashCode => Object.hash(runtimeType,id,name,startDate,endDate,frequency,status,totalWorkers,totalGrossAmount,totalNetAmount,totalTaxAmount,processedWorkers,createdAt,updatedAt,notes,userId,payDate,isOffCycle);
 
 @override
 String toString() {
-  return 'PayPeriod(id: $id, name: $name, startDate: $startDate, endDate: $endDate, frequency: $frequency, status: $status, totalWorkers: $totalWorkers, totalGrossAmount: $totalGrossAmount, totalNetAmount: $totalNetAmount, totalTaxAmount: $totalTaxAmount, processedWorkers: $processedWorkers, createdAt: $createdAt, updatedAt: $updatedAt, notes: $notes, userId: $userId, payDate: $payDate)';
+  return 'PayPeriod(id: $id, name: $name, startDate: $startDate, endDate: $endDate, frequency: $frequency, status: $status, totalWorkers: $totalWorkers, totalGrossAmount: $totalGrossAmount, totalNetAmount: $totalNetAmount, totalTaxAmount: $totalTaxAmount, processedWorkers: $processedWorkers, createdAt: $createdAt, updatedAt: $updatedAt, notes: $notes, userId: $userId, payDate: $payDate, isOffCycle: $isOffCycle)';
 }
 
 
@@ -64,7 +65,7 @@ abstract mixin class $PayPeriodCopyWith<$Res>  {
   factory $PayPeriodCopyWith(PayPeriod value, $Res Function(PayPeriod) _then) = _$PayPeriodCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, DateTime startDate, DateTime endDate, PayPeriodFrequency frequency, PayPeriodStatus status,@JsonKey(fromJson: _intFromJson) int? totalWorkers,@JsonKey(fromJson: _doubleFromJson) double? totalGrossAmount,@JsonKey(fromJson: _doubleFromJson) double? totalNetAmount,@JsonKey(fromJson: _doubleFromJson) double? totalTaxAmount,@JsonKey(fromJson: _intFromJson) int? processedWorkers, DateTime? createdAt, DateTime? updatedAt, String? notes, String? userId, DateTime? payDate
+ String id, String name, DateTime startDate, DateTime endDate, PayPeriodFrequency frequency, PayPeriodStatus status,@JsonKey(fromJson: _intFromJson) int? totalWorkers,@JsonKey(fromJson: _doubleFromJson) double? totalGrossAmount,@JsonKey(fromJson: _doubleFromJson) double? totalNetAmount,@JsonKey(fromJson: _doubleFromJson) double? totalTaxAmount,@JsonKey(fromJson: _intFromJson) int? processedWorkers, DateTime? createdAt, DateTime? updatedAt,@JsonKey(fromJson: _notesFromJson, toJson: _notesToJson) String? notes, String? userId, DateTime? payDate, bool isOffCycle
 });
 
 
@@ -81,7 +82,7 @@ class _$PayPeriodCopyWithImpl<$Res>
 
 /// Create a copy of PayPeriod
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? startDate = null,Object? endDate = null,Object? frequency = null,Object? status = null,Object? totalWorkers = freezed,Object? totalGrossAmount = freezed,Object? totalNetAmount = freezed,Object? totalTaxAmount = freezed,Object? processedWorkers = freezed,Object? createdAt = freezed,Object? updatedAt = freezed,Object? notes = freezed,Object? userId = freezed,Object? payDate = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? startDate = null,Object? endDate = null,Object? frequency = null,Object? status = null,Object? totalWorkers = freezed,Object? totalGrossAmount = freezed,Object? totalNetAmount = freezed,Object? totalTaxAmount = freezed,Object? processedWorkers = freezed,Object? createdAt = freezed,Object? updatedAt = freezed,Object? notes = freezed,Object? userId = freezed,Object? payDate = freezed,Object? isOffCycle = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -99,7 +100,8 @@ as DateTime?,updatedAt: freezed == updatedAt ? _self.updatedAt : updatedAt // ig
 as DateTime?,notes: freezed == notes ? _self.notes : notes // ignore: cast_nullable_to_non_nullable
 as String?,userId: freezed == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
 as String?,payDate: freezed == payDate ? _self.payDate : payDate // ignore: cast_nullable_to_non_nullable
-as DateTime?,
+as DateTime?,isOffCycle: null == isOffCycle ? _self.isOffCycle : isOffCycle // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 
@@ -184,10 +186,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  DateTime startDate,  DateTime endDate,  PayPeriodFrequency frequency,  PayPeriodStatus status, @JsonKey(fromJson: _intFromJson)  int? totalWorkers, @JsonKey(fromJson: _doubleFromJson)  double? totalGrossAmount, @JsonKey(fromJson: _doubleFromJson)  double? totalNetAmount, @JsonKey(fromJson: _doubleFromJson)  double? totalTaxAmount, @JsonKey(fromJson: _intFromJson)  int? processedWorkers,  DateTime? createdAt,  DateTime? updatedAt,  String? notes,  String? userId,  DateTime? payDate)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  DateTime startDate,  DateTime endDate,  PayPeriodFrequency frequency,  PayPeriodStatus status, @JsonKey(fromJson: _intFromJson)  int? totalWorkers, @JsonKey(fromJson: _doubleFromJson)  double? totalGrossAmount, @JsonKey(fromJson: _doubleFromJson)  double? totalNetAmount, @JsonKey(fromJson: _doubleFromJson)  double? totalTaxAmount, @JsonKey(fromJson: _intFromJson)  int? processedWorkers,  DateTime? createdAt,  DateTime? updatedAt, @JsonKey(fromJson: _notesFromJson, toJson: _notesToJson)  String? notes,  String? userId,  DateTime? payDate,  bool isOffCycle)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _PayPeriod() when $default != null:
-return $default(_that.id,_that.name,_that.startDate,_that.endDate,_that.frequency,_that.status,_that.totalWorkers,_that.totalGrossAmount,_that.totalNetAmount,_that.totalTaxAmount,_that.processedWorkers,_that.createdAt,_that.updatedAt,_that.notes,_that.userId,_that.payDate);case _:
+return $default(_that.id,_that.name,_that.startDate,_that.endDate,_that.frequency,_that.status,_that.totalWorkers,_that.totalGrossAmount,_that.totalNetAmount,_that.totalTaxAmount,_that.processedWorkers,_that.createdAt,_that.updatedAt,_that.notes,_that.userId,_that.payDate,_that.isOffCycle);case _:
   return orElse();
 
 }
@@ -205,10 +207,10 @@ return $default(_that.id,_that.name,_that.startDate,_that.endDate,_that.frequenc
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  DateTime startDate,  DateTime endDate,  PayPeriodFrequency frequency,  PayPeriodStatus status, @JsonKey(fromJson: _intFromJson)  int? totalWorkers, @JsonKey(fromJson: _doubleFromJson)  double? totalGrossAmount, @JsonKey(fromJson: _doubleFromJson)  double? totalNetAmount, @JsonKey(fromJson: _doubleFromJson)  double? totalTaxAmount, @JsonKey(fromJson: _intFromJson)  int? processedWorkers,  DateTime? createdAt,  DateTime? updatedAt,  String? notes,  String? userId,  DateTime? payDate)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  DateTime startDate,  DateTime endDate,  PayPeriodFrequency frequency,  PayPeriodStatus status, @JsonKey(fromJson: _intFromJson)  int? totalWorkers, @JsonKey(fromJson: _doubleFromJson)  double? totalGrossAmount, @JsonKey(fromJson: _doubleFromJson)  double? totalNetAmount, @JsonKey(fromJson: _doubleFromJson)  double? totalTaxAmount, @JsonKey(fromJson: _intFromJson)  int? processedWorkers,  DateTime? createdAt,  DateTime? updatedAt, @JsonKey(fromJson: _notesFromJson, toJson: _notesToJson)  String? notes,  String? userId,  DateTime? payDate,  bool isOffCycle)  $default,) {final _that = this;
 switch (_that) {
 case _PayPeriod():
-return $default(_that.id,_that.name,_that.startDate,_that.endDate,_that.frequency,_that.status,_that.totalWorkers,_that.totalGrossAmount,_that.totalNetAmount,_that.totalTaxAmount,_that.processedWorkers,_that.createdAt,_that.updatedAt,_that.notes,_that.userId,_that.payDate);case _:
+return $default(_that.id,_that.name,_that.startDate,_that.endDate,_that.frequency,_that.status,_that.totalWorkers,_that.totalGrossAmount,_that.totalNetAmount,_that.totalTaxAmount,_that.processedWorkers,_that.createdAt,_that.updatedAt,_that.notes,_that.userId,_that.payDate,_that.isOffCycle);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -225,10 +227,10 @@ return $default(_that.id,_that.name,_that.startDate,_that.endDate,_that.frequenc
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  DateTime startDate,  DateTime endDate,  PayPeriodFrequency frequency,  PayPeriodStatus status, @JsonKey(fromJson: _intFromJson)  int? totalWorkers, @JsonKey(fromJson: _doubleFromJson)  double? totalGrossAmount, @JsonKey(fromJson: _doubleFromJson)  double? totalNetAmount, @JsonKey(fromJson: _doubleFromJson)  double? totalTaxAmount, @JsonKey(fromJson: _intFromJson)  int? processedWorkers,  DateTime? createdAt,  DateTime? updatedAt,  String? notes,  String? userId,  DateTime? payDate)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  DateTime startDate,  DateTime endDate,  PayPeriodFrequency frequency,  PayPeriodStatus status, @JsonKey(fromJson: _intFromJson)  int? totalWorkers, @JsonKey(fromJson: _doubleFromJson)  double? totalGrossAmount, @JsonKey(fromJson: _doubleFromJson)  double? totalNetAmount, @JsonKey(fromJson: _doubleFromJson)  double? totalTaxAmount, @JsonKey(fromJson: _intFromJson)  int? processedWorkers,  DateTime? createdAt,  DateTime? updatedAt, @JsonKey(fromJson: _notesFromJson, toJson: _notesToJson)  String? notes,  String? userId,  DateTime? payDate,  bool isOffCycle)?  $default,) {final _that = this;
 switch (_that) {
 case _PayPeriod() when $default != null:
-return $default(_that.id,_that.name,_that.startDate,_that.endDate,_that.frequency,_that.status,_that.totalWorkers,_that.totalGrossAmount,_that.totalNetAmount,_that.totalTaxAmount,_that.processedWorkers,_that.createdAt,_that.updatedAt,_that.notes,_that.userId,_that.payDate);case _:
+return $default(_that.id,_that.name,_that.startDate,_that.endDate,_that.frequency,_that.status,_that.totalWorkers,_that.totalGrossAmount,_that.totalNetAmount,_that.totalTaxAmount,_that.processedWorkers,_that.createdAt,_that.updatedAt,_that.notes,_that.userId,_that.payDate,_that.isOffCycle);case _:
   return null;
 
 }
@@ -240,7 +242,7 @@ return $default(_that.id,_that.name,_that.startDate,_that.endDate,_that.frequenc
 @JsonSerializable()
 
 class _PayPeriod extends PayPeriod {
-  const _PayPeriod({required this.id, required this.name, required this.startDate, required this.endDate, required this.frequency, required this.status, @JsonKey(fromJson: _intFromJson) this.totalWorkers, @JsonKey(fromJson: _doubleFromJson) this.totalGrossAmount, @JsonKey(fromJson: _doubleFromJson) this.totalNetAmount, @JsonKey(fromJson: _doubleFromJson) this.totalTaxAmount, @JsonKey(fromJson: _intFromJson) this.processedWorkers, this.createdAt, this.updatedAt, this.notes, this.userId, this.payDate}): super._();
+  const _PayPeriod({required this.id, required this.name, required this.startDate, required this.endDate, required this.frequency, required this.status, @JsonKey(fromJson: _intFromJson) this.totalWorkers, @JsonKey(fromJson: _doubleFromJson) this.totalGrossAmount, @JsonKey(fromJson: _doubleFromJson) this.totalNetAmount, @JsonKey(fromJson: _doubleFromJson) this.totalTaxAmount, @JsonKey(fromJson: _intFromJson) this.processedWorkers, this.createdAt, this.updatedAt, @JsonKey(fromJson: _notesFromJson, toJson: _notesToJson) this.notes, this.userId, this.payDate, this.isOffCycle = false}): super._();
   factory _PayPeriod.fromJson(Map<String, dynamic> json) => _$PayPeriodFromJson(json);
 
 /// Unique identifier.
@@ -270,11 +272,13 @@ class _PayPeriod extends PayPeriod {
 /// When this pay period was last updated.
 @override final  DateTime? updatedAt;
 /// Additional notes or comments.
-@override final  String? notes;
+@override@JsonKey(fromJson: _notesFromJson, toJson: _notesToJson) final  String? notes;
 /// Owner/employer user ID.
 @override final  String? userId;
 /// Scheduled payment date.
 @override final  DateTime? payDate;
+/// Whether this is an off-cycle payroll (bonus, advance, etc.).
+@override@JsonKey() final  bool isOffCycle;
 
 /// Create a copy of PayPeriod
 /// with the given fields replaced by the non-null parameter values.
@@ -289,16 +293,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PayPeriod&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.startDate, startDate) || other.startDate == startDate)&&(identical(other.endDate, endDate) || other.endDate == endDate)&&(identical(other.frequency, frequency) || other.frequency == frequency)&&(identical(other.status, status) || other.status == status)&&(identical(other.totalWorkers, totalWorkers) || other.totalWorkers == totalWorkers)&&(identical(other.totalGrossAmount, totalGrossAmount) || other.totalGrossAmount == totalGrossAmount)&&(identical(other.totalNetAmount, totalNetAmount) || other.totalNetAmount == totalNetAmount)&&(identical(other.totalTaxAmount, totalTaxAmount) || other.totalTaxAmount == totalTaxAmount)&&(identical(other.processedWorkers, processedWorkers) || other.processedWorkers == processedWorkers)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.notes, notes) || other.notes == notes)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.payDate, payDate) || other.payDate == payDate));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _PayPeriod&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.startDate, startDate) || other.startDate == startDate)&&(identical(other.endDate, endDate) || other.endDate == endDate)&&(identical(other.frequency, frequency) || other.frequency == frequency)&&(identical(other.status, status) || other.status == status)&&(identical(other.totalWorkers, totalWorkers) || other.totalWorkers == totalWorkers)&&(identical(other.totalGrossAmount, totalGrossAmount) || other.totalGrossAmount == totalGrossAmount)&&(identical(other.totalNetAmount, totalNetAmount) || other.totalNetAmount == totalNetAmount)&&(identical(other.totalTaxAmount, totalTaxAmount) || other.totalTaxAmount == totalTaxAmount)&&(identical(other.processedWorkers, processedWorkers) || other.processedWorkers == processedWorkers)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt)&&(identical(other.notes, notes) || other.notes == notes)&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.payDate, payDate) || other.payDate == payDate)&&(identical(other.isOffCycle, isOffCycle) || other.isOffCycle == isOffCycle));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,name,startDate,endDate,frequency,status,totalWorkers,totalGrossAmount,totalNetAmount,totalTaxAmount,processedWorkers,createdAt,updatedAt,notes,userId,payDate);
+int get hashCode => Object.hash(runtimeType,id,name,startDate,endDate,frequency,status,totalWorkers,totalGrossAmount,totalNetAmount,totalTaxAmount,processedWorkers,createdAt,updatedAt,notes,userId,payDate,isOffCycle);
 
 @override
 String toString() {
-  return 'PayPeriod(id: $id, name: $name, startDate: $startDate, endDate: $endDate, frequency: $frequency, status: $status, totalWorkers: $totalWorkers, totalGrossAmount: $totalGrossAmount, totalNetAmount: $totalNetAmount, totalTaxAmount: $totalTaxAmount, processedWorkers: $processedWorkers, createdAt: $createdAt, updatedAt: $updatedAt, notes: $notes, userId: $userId, payDate: $payDate)';
+  return 'PayPeriod(id: $id, name: $name, startDate: $startDate, endDate: $endDate, frequency: $frequency, status: $status, totalWorkers: $totalWorkers, totalGrossAmount: $totalGrossAmount, totalNetAmount: $totalNetAmount, totalTaxAmount: $totalTaxAmount, processedWorkers: $processedWorkers, createdAt: $createdAt, updatedAt: $updatedAt, notes: $notes, userId: $userId, payDate: $payDate, isOffCycle: $isOffCycle)';
 }
 
 
@@ -309,7 +313,7 @@ abstract mixin class _$PayPeriodCopyWith<$Res> implements $PayPeriodCopyWith<$Re
   factory _$PayPeriodCopyWith(_PayPeriod value, $Res Function(_PayPeriod) _then) = __$PayPeriodCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, DateTime startDate, DateTime endDate, PayPeriodFrequency frequency, PayPeriodStatus status,@JsonKey(fromJson: _intFromJson) int? totalWorkers,@JsonKey(fromJson: _doubleFromJson) double? totalGrossAmount,@JsonKey(fromJson: _doubleFromJson) double? totalNetAmount,@JsonKey(fromJson: _doubleFromJson) double? totalTaxAmount,@JsonKey(fromJson: _intFromJson) int? processedWorkers, DateTime? createdAt, DateTime? updatedAt, String? notes, String? userId, DateTime? payDate
+ String id, String name, DateTime startDate, DateTime endDate, PayPeriodFrequency frequency, PayPeriodStatus status,@JsonKey(fromJson: _intFromJson) int? totalWorkers,@JsonKey(fromJson: _doubleFromJson) double? totalGrossAmount,@JsonKey(fromJson: _doubleFromJson) double? totalNetAmount,@JsonKey(fromJson: _doubleFromJson) double? totalTaxAmount,@JsonKey(fromJson: _intFromJson) int? processedWorkers, DateTime? createdAt, DateTime? updatedAt,@JsonKey(fromJson: _notesFromJson, toJson: _notesToJson) String? notes, String? userId, DateTime? payDate, bool isOffCycle
 });
 
 
@@ -326,7 +330,7 @@ class __$PayPeriodCopyWithImpl<$Res>
 
 /// Create a copy of PayPeriod
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? startDate = null,Object? endDate = null,Object? frequency = null,Object? status = null,Object? totalWorkers = freezed,Object? totalGrossAmount = freezed,Object? totalNetAmount = freezed,Object? totalTaxAmount = freezed,Object? processedWorkers = freezed,Object? createdAt = freezed,Object? updatedAt = freezed,Object? notes = freezed,Object? userId = freezed,Object? payDate = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? startDate = null,Object? endDate = null,Object? frequency = null,Object? status = null,Object? totalWorkers = freezed,Object? totalGrossAmount = freezed,Object? totalNetAmount = freezed,Object? totalTaxAmount = freezed,Object? processedWorkers = freezed,Object? createdAt = freezed,Object? updatedAt = freezed,Object? notes = freezed,Object? userId = freezed,Object? payDate = freezed,Object? isOffCycle = null,}) {
   return _then(_PayPeriod(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
@@ -344,7 +348,8 @@ as DateTime?,updatedAt: freezed == updatedAt ? _self.updatedAt : updatedAt // ig
 as DateTime?,notes: freezed == notes ? _self.notes : notes // ignore: cast_nullable_to_non_nullable
 as String?,userId: freezed == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
 as String?,payDate: freezed == payDate ? _self.payDate : payDate // ignore: cast_nullable_to_non_nullable
-as DateTime?,
+as DateTime?,isOffCycle: null == isOffCycle ? _self.isOffCycle : isOffCycle // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 

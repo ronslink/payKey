@@ -1,0 +1,8 @@
+New in this release:
+- Added support for Cash payment methods in payroll processing
+- Fixed guided tour display issues on the home page
+- Improved profile avatar loading and display
+- Updated tax and deduction calculations including SHIF and PAYE
+- Enhanced security and access controls for the employee portal
+- Added strict KRA PIN validation for better data accuracy
+- General performance improvements and bug fixes

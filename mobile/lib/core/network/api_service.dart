@@ -239,7 +239,11 @@ class ApiService {
     if (error is DioException) {
       final data = error.response?.data;
       if (data is Map && data.containsKey('message')) {
-        return data['message'] as String;
+        final msg = data['message'];
+        if (msg is List && msg.isNotEmpty) {
+          return msg.first.toString();
+        }
+        return msg.toString();
       }
       if (data != null) {
         return data.toString();

@@ -8,6 +8,7 @@ import '../providers/tour_progress_provider.dart';
 import '../../data/models/country_model.dart';
 import '../../../../core/network/api_service.dart';
 import '../../../workers/presentation/providers/workers_provider.dart';
+import '../../../profile/presentation/providers/profile_provider.dart';
 
 class OnboardingPage extends ConsumerStatefulWidget {
   const OnboardingPage({super.key});
@@ -71,6 +72,24 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage>
       duration: const Duration(milliseconds: 500),
     );
     _animationController.forward();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        final profile = await ref.read(profileProvider.future);
+        if (mounted) {
+          setState(() {
+            if (profile.firstName != null && profile.firstName!.isNotEmpty) {
+              _firstNameController.text = profile.firstName!;
+            }
+            if (profile.lastName != null && profile.lastName!.isNotEmpty) {
+              _lastNameController.text = profile.lastName!;
+            }
+          });
+        }
+      } catch (e) {
+        debugPrint('Could not fetch profile for onboarding pre-fill: $e');
+      }
+    });
   }
 
   @override

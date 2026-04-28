@@ -49,6 +49,8 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
   List<WorkerPayout>? _preparedPayouts;
   
   Map<String, String> _workerPhones = {};
+  List<String> _cashWorkerNames = [];
+  List<PayrollCalculation> _calculations = [];
 
   @override
   void initState() {
@@ -66,25 +68,36 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
       );
     });
 
-    if (widget.workerIds.isEmpty) {
-      if (mounted) {
-        setState(() {
-          _state = _state.copyWith(
-            status: PayrollConfirmStatus.error,
-            error: 'No workers selected for payroll',
-          );
-        });
-      }
-      return;
-    }
-
     try {
       // 1. Fetch Workers for phone numbers
       final workerRepo = ref.read(workersRepositoryProvider);
       final allWorkers = await workerRepo.getWorkers(includeInactive: true); 
-      final workers = allWorkers.where((w) => widget.workerIds.contains(w.id)).toList();
+      
+      final workers = widget.workerIds.isEmpty 
+          ? allWorkers 
+          : allWorkers.where((w) => widget.workerIds.contains(w.id)).toList();
+          
+      if (workers.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _state = _state.copyWith(
+              status: PayrollConfirmStatus.error,
+              error: 'No workers selected for payroll',
+            );
+          });
+        }
+        return;
+      }
       
       _workerPhones = { for (var w in workers) w.id : w.phoneNumber };
+      
+      final actualWorkerIds = workers.map((w) => w.id).toList();
+      
+      // Track payment methods for UI display
+      _cashWorkerNames = workers
+          .where((w) => w.paymentMethod.toUpperCase() == 'CASH')
+          .map((w) => w.name)
+          .toList();
 
       // 2. Calculate payroll
       // FIX: Try to get draft payroll first to respect any user edits (e.g. partial salary)
@@ -94,17 +107,33 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
       try {
         final draftItems = await repo.getDraftPayroll(widget.payPeriodId);
         // Filter for selected workers
-        calculations = draftItems.where((c) => widget.workerIds.contains(c.workerId)).toList();
+        calculations = draftItems.where((c) => actualWorkerIds.contains(c.workerId)).toList();
       } catch (_) {
         // Fallback to fresh calculation if draft fetch fails
       }
 
       // If no valid draft items found for selected workers, calculate fresh
       if (calculations.isEmpty) {
-        calculations = await repo.calculatePayroll(widget.workerIds);
+        calculations = await repo.calculatePayroll(actualWorkerIds);
+      }
+      
+      // 2.5 Save draft payroll so backend has DRAFT records for finalization
+      // This is critical for off-cycle flows where no drafts were created yet
+      try {
+        final existingDrafts = await repo.getDraftPayroll(widget.payPeriodId);
+        if (existingDrafts.isEmpty) {
+          final draftItems = calculations.map((c) => {
+            'workerId': c.workerId,
+            'grossSalary': c.grossSalary,
+          }).toList();
+          await repo.saveDraftPayroll(widget.payPeriodId, draftItems);
+        }
+      } catch (_) {
+        // Non-critical: processPayroll controller also creates drafts as fallback
       }
       
       // 3. Map to IntaSend WorkerPayout
+      _calculations = calculations;
       final payouts = calculations.map((c) {
         return WorkerPayout(
           workerId: c.workerId,
@@ -121,7 +150,7 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
       // Use backend verification which supports worker filtering
       final verification = await repo.verifyFunds(
         widget.payPeriodId, 
-        workerIds: widget.workerIds,
+        workerIds: actualWorkerIds,
       );
       
       if (mounted) {
@@ -474,19 +503,207 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildWalletCard(
-            context: context,
-            verification: verification,
-            onTopUp: _showTopupSheet,
-          ),
+          // For all-cash payrolls, show cash disbursement card instead of wallet
+          if (_isAllCash)
+            _buildCashDisbursementCard(context)
+          else ...[
+            _buildWalletCard(
+              context: context,
+              verification: verification,
+              onTopUp: _showTopupSheet,
+            ),
+            if (_cashWorkerNames.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _buildCashPaymentBanner(context),
+            ],
+          ],
           const SizedBox(height: 24),
           _buildSummaryCard(
             context: context,
             verification: verification,
           ),
-          const SizedBox(height: 24),
-          const Center(child: IntaSendTrustBadge(width: 320)),
+          if (!_isAllCash) ...[
+            const SizedBox(height: 24),
+            const Center(child: IntaSendTrustBadge(width: 320)),
+          ],
           const SizedBox(height: 40),
+        ],
+      ),
+    );
+  }
+
+  /// Shows a cash disbursement summary for all-cash payrolls.
+  /// Lists each worker with their net pay (what to hand over)
+  /// and summarizes the employer's statutory tax obligations.
+  Widget _buildCashDisbursementCard(BuildContext context) {
+    // Calculate total tax obligations from the payroll calculations
+    double totalPaye = 0;
+    double totalNssf = 0;
+    double totalShif = 0;
+    double totalHousingLevy = 0;
+    double totalNetPay = 0;
+
+    for (final calc in _calculations) {
+      totalNetPay += calc.netPay;
+      totalPaye += calc.taxBreakdown.paye;
+      totalNssf += calc.taxBreakdown.nssf;
+      totalShif += calc.taxBreakdown.nhif;
+      totalHousingLevy += calc.taxBreakdown.housingLevy;
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: context.surfacePrimary,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.amber.withValues(alpha: 0.08),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.payments_outlined, color: Colors.amber.shade800, size: 24),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Cash Disbursement',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: context.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Hand the amounts below to each worker',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: context.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Per-worker amounts
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: Column(
+              children: [
+                for (final calc in _calculations) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Center(
+                            child: Text(
+                              calc.workerName.isNotEmpty ? calc.workerName[0].toUpperCase() : '?',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.amber.shade800,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            calc.workerName,
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                        Text(
+                          'KES ${calc.netPay.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          // Tax obligations section
+          if (totalPaye > 0 || totalNssf > 0 || totalShif > 0 || totalHousingLevy > 0) ...[
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Your Tax Obligations',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: context.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Remit these to the respective authorities',
+                    style: TextStyle(fontSize: 12, color: context.textSecondary),
+                  ),
+                  const SizedBox(height: 12),
+                  if (totalPaye > 0)
+                    _taxRow(context, 'PAYE (KRA)', totalPaye),
+                  if (totalNssf > 0)
+                    _taxRow(context, 'NSSF', totalNssf),
+                  if (totalShif > 0)
+                    _taxRow(context, 'SHIF (NHIF)', totalShif),
+                  if (totalHousingLevy > 0)
+                    _taxRow(context, 'Housing Levy', totalHousingLevy),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _taxRow(BuildContext context, String label, double amount) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(color: context.textSecondary, fontSize: 14)),
+          Text(
+            'KES ${amount.toStringAsFixed(2)}',
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+          ),
         ],
       ),
     );
@@ -652,11 +869,67 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
     );
   }
 
+  Widget _buildCashPaymentBanner(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.amber.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.payments_outlined, color: Colors.amber.shade800, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                _isAllCash ? 'Cash Payment' : 'Cash Workers',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.amber.shade900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _isAllCash
+                ? 'This is a cash payroll. No wallet deduction required. '
+                  'Please disburse cash to your worker(s) and this run '
+                  'will be recorded as completed.'
+                : '${_cashWorkerNames.join(", ")} will be paid in cash. '
+                  'No wallet deduction for cash workers. '
+                  'Please disburse their pay manually.',
+            style: TextStyle(
+              color: Colors.amber.shade900,
+              fontSize: 13,
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  bool get _isAllCash {
+    final payouts = _preparedPayouts;
+    return _cashWorkerNames.isNotEmpty &&
+        payouts != null &&
+        payouts.isNotEmpty &&
+        _cashWorkerNames.length == payouts.length;
+  }
+
   Widget _buildActionSection(FundVerificationResult? verification) {
     final canProceed = verification?.canProceed ?? false;
     final isProcessing = _state.isProcessing;
     
     if (verification == null) return const SizedBox.shrink();
+
+    final buttonLabel = canProceed 
+        ? (_isAllCash ? 'Confirm & Record' : 'Confirm & Pay')
+        : 'Insufficient Funds';
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -686,9 +959,7 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
                   child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                 )
               : Text(
-                  canProceed 
-                      ? 'Confirm & Pay' 
-                      : 'Insufficient Funds',
+                  buttonLabel,
                   style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
         ),
