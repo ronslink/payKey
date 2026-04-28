@@ -1,4 +1,5 @@
-import { Layout, Menu, Avatar, Dropdown, theme, Badge } from 'antd';
+import { Layout, Menu, Avatar, Dropdown, theme, Badge, Drawer } from 'antd';
+import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
     DashboardOutlined,
@@ -22,11 +23,26 @@ import { adminSupport } from '../api/client';
 
 const { Sider, Header, Content } = Layout;
 
+// ─── Responsive helpers ──────────────────────────────────────────────────────
+function useIsMobile(breakpoint = 768) {
+    const [mobile, setMobile] = useState(false);
+    useEffect(() => {
+        const mq = window.matchMedia(`(max-width: ${breakpoint}px)`);
+        setMobile(mq.matches);
+        const handler = (e: MediaQueryListEvent) => setMobile(e.matches);
+        mq.addEventListener('change', handler);
+        return () => mq.removeEventListener('change', handler);
+    }, [breakpoint]);
+    return mobile;
+}
+
 export default function AdminLayout() {
     const navigate = useNavigate();
     const location = useLocation();
     const { user, logout } = useAuth();
     const { token } = theme.useToken();
+    const isMobile = useIsMobile();
+    const [drawerOpen, setDrawerOpen] = useState(false);
 
     // Fetch open ticket count for badge
     const { data: supportData } = useQuery({
@@ -134,11 +150,16 @@ export default function AdminLayout() {
 
     return (
         <Layout style={{ minHeight: '100vh' }}>
-            <Sider
-                theme="dark"
-                width={224}
-                style={{ background: '#0f172a', position: 'fixed', height: '100vh', left: 0, top: 0, overflowY: 'auto' }}
-            >
+            {/* Desktop sidebar — hidden on mobile */}
+            {!isMobile && (
+                <Sider
+                    theme="dark"
+                    width={224}
+                    breakpoint="lg"
+                    collapsedWidth={0}
+                    onCollapse={() => {}}
+                    style={{ background: '#0f172a', position: 'fixed', height: '100vh', left: 0, top: 0, overflowY: 'auto' }}
+                >
                 {/* Logo */}
                 <div style={{
                     padding: '20px 16px 16px',
@@ -155,29 +176,62 @@ export default function AdminLayout() {
                     </div>
                 </div>
 
+                    <Menu
+                        theme="dark"
+                        mode="inline"
+                        selectedKeys={[selectedKey]}
+                        style={{ background: '#0f172a', border: 'none', paddingTop: 4 }}
+                        onClick={({ key }) => navigate(key)}
+                        items={menuItems as any}
+                    />
+                </Sider>
+            )}
+
+            {/* Mobile drawer */}
+            <Drawer
+                title={<span style={{ color: '#6366f1', fontWeight: 700, fontSize: 16 }}>PayDome Admin</span>}
+                placement="left"
+                width={260}
+                onClose={() => setDrawerOpen(false)}
+                open={drawerOpen}
+                styles={{ body: { padding: 0, background: '#0f172a' } }}
+                closable
+            >
                 <Menu
                     theme="dark"
                     mode="inline"
                     selectedKeys={[selectedKey]}
                     style={{ background: '#0f172a', border: 'none', paddingTop: 4 }}
-                    onClick={({ key }) => navigate(key)}
+                    onClick={({ key }) => { navigate(key); setDrawerOpen(false); }}
                     items={menuItems as any}
                 />
-            </Sider>
+            </Drawer>
 
-            <Layout style={{ marginLeft: 224 }}>
+            <Layout style={{ marginLeft: isMobile ? 0 : 224 }}>
                 <Header style={{
                     background: '#fff',
-                    padding: '0 24px',
+                    padding: isMobile ? '0 16px' : '0 24px',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'flex-end',
+                    justifyContent: isMobile ? 'space-between' : 'flex-end',
                     borderBottom: `1px solid ${token.colorBorderSecondary}`,
                     boxShadow: '0 1px 3px rgba(0,0,0,.06)',
                     position: 'sticky',
                     top: 0,
                     zIndex: 100,
                 }}>
+                    {/* Hamburger — only on mobile */}
+                    {isMobile && (
+                        <button
+                            onClick={() => setDrawerOpen(true)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 8, fontSize: 20, color: '#475569', lineHeight: 1 }}
+                            aria-label="Open menu"
+                        >
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                            </svg>
+                        </button>
+                    )}
                     <Dropdown
                         menu={{
                             items: [
@@ -198,13 +252,14 @@ export default function AdminLayout() {
                         }}
                     >
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '4px 8px', borderRadius: 8 }}>
+
                             <Avatar icon={<UserOutlined />} style={{ background: '#6366f1' }} size="small" />
                             <span style={{ fontWeight: 500, fontSize: 14 }}>{user?.email?.split('@')[0]}</span>
                         </div>
                     </Dropdown>
                 </Header>
 
-                <Content style={{ padding: '24px', background: '#f8fafc', minHeight: 'calc(100vh - 64px)' }}>
+                <Content style={{ padding: isMobile ? '16px' : '24px', background: '#f8fafc', minHeight: 'calc(100vh - 64px)' }}>
                     <Outlet />
                 </Content>
             </Layout>

@@ -448,7 +448,7 @@ export default function LogsPage() {
                         showTotal: (total, range) => `${range[0]}–${range[1]} of ${total} logs`,
                     }}
                     style={{ background: '#fff', borderRadius: 12 }}
-                    scroll={{ y: 500, x: 800 }}
+                    scroll={{ y: 500, x: 'max-content' }}
                     size="small"
                     onRow={(record) => ({
                         onDoubleClick: () => openLogDetail(record),

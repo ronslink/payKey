@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Input, Typography, Tag, Button, Select, Space, Tooltip, Card, Row, Col, Avatar } from 'antd';
 import {
@@ -31,6 +31,18 @@ const SUB_STATUS: Record<string, { color: string; bg: string; icon: React.ReactN
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+function useIsMobile(breakpoint = 768) {
+    const [mobile, setMobile] = useState(false);
+    useEffect(() => {
+        const mq = window.matchMedia(`(max-width: ${breakpoint}px)`);
+        setMobile(mq.matches);
+        const handler = (e: MediaQueryListEvent) => setMobile(e.matches);
+        mq.addEventListener('change', handler);
+        return () => mq.removeEventListener('change', handler);
+    }, [breakpoint]);
+    return mobile;
+}
+
 const fmtKES = (v: number) => Number(v || 0).toLocaleString('en-KE');
 
 const employerColor = (id: string) => {
@@ -44,11 +56,12 @@ const initials = (name: string) => name?.split(' ').map(w => w[0]).join('').toUp
 
 // ─── Employer card row ────────────────────────────────────────────────────────
 
-function EmployerRow({ r, onClick }: { r: any; onClick: () => void }) {
+function EmployerRow({ r, onClick, mobile }: { r: any; onClick: () => void; mobile?: boolean }) {
     const tier   = TIER[r.subscription_tier || 'FREE'];
     const status = SUB_STATUS[r.subscription_status] || null;
     const color  = employerColor(r.id || r.email || '');
     const name   = r.displayName || r.businessName || r.email?.split('@')[0] || '?';
+    const isMobile = mobile || false;
 
     return (
         <div
@@ -102,25 +115,31 @@ function EmployerRow({ r, onClick }: { r: any; onClick: () => void }) {
                 )}
             </div>
 
-            {/* Workers count */}
-            <div style={{ minWidth: 64, textAlign: 'center', flexShrink: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 15, color: '#6366f1' }}>{r.workerCount || 0}</div>
-                <div style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5 }}>workers</div>
-            </div>
-
-            {/* Wallet */}
-            <div style={{ minWidth: 110, textAlign: 'right', flexShrink: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 13, color: Number(r.walletBalance) > 0 ? '#16a34a' : '#94a3b8' }}>
-                    KES {fmtKES(r.walletBalance)}
+            {/* Workers count — hidden on mobile */}
+            {!isMobile && (
+                <div style={{ minWidth: 64, textAlign: 'center', flexShrink: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: '#6366f1' }}>{r.workerCount || 0}</div>
+                    <div style={{ fontSize: 10, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.5 }}>workers</div>
                 </div>
-                <div style={{ fontSize: 10, color: '#94a3b8' }}>wallet</div>
-            </div>
+            )}
 
-            {/* Joined */}
-            <div style={{ minWidth: 84, textAlign: 'right', flexShrink: 0 }}>
-                <div style={{ fontSize: 11, color: '#64748b' }}>{new Date(r.createdAt).toLocaleDateString('en-KE', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
-                <div style={{ fontSize: 10, color: '#94a3b8' }}>joined</div>
-            </div>
+            {/* Wallet — hidden on mobile */}
+            {!isMobile && (
+                <div style={{ minWidth: 110, textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: Number(r.walletBalance) > 0 ? '#16a34a' : '#94a3b8' }}>
+                        KES {fmtKES(r.walletBalance)}
+                    </div>
+                    <div style={{ fontSize: 10, color: '#94a3b8' }}>wallet</div>
+                </div>
+            )}
+
+            {/* Joined — hidden on mobile */}
+            {!isMobile && (
+                <div style={{ minWidth: 84, textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontSize: 11, color: '#64748b' }}>{new Date(r.createdAt).toLocaleDateString('en-KE', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                    <div style={{ fontSize: 10, color: '#94a3b8' }}>joined</div>
+                </div>
+            )}
 
             {/* View button */}
             <div style={{ flexShrink: 0 }}>
@@ -134,9 +153,10 @@ function EmployerRow({ r, onClick }: { r: any; onClick: () => void }) {
 
 // ─── Table header ─────────────────────────────────────────────────────────────
 
-function TableHeader() {
+function TableHeader({ mobile }: { mobile?: boolean }) {
+    if (mobile) return null; // No header on mobile
     return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '7px 16px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '7px 16px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', overflowX: 'auto' }}>
             {[
                 { label: 'Employer', w: 38 + 14 },      // avatar + gap
                 { label: '', flex: 1 },                  // name flex
@@ -159,6 +179,7 @@ function TableHeader() {
 
 export default function UsersPage() {
     const navigate = useNavigate();
+    const isMobile = useIsMobile();
     const [search, setSearch] = useState('');
     const [tier, setTier]     = useState<string | undefined>();
     const [subStatus, setSubStatus] = useState<string | undefined>();
@@ -232,7 +253,7 @@ export default function UsersPage() {
             </Row>
 
             {/* ── Filters ─────────────────────────────────────────────────── */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 8, overflowX: 'auto' }}>
                 <Space wrap>
                     {tier && <Tag closable onClose={() => setTier(undefined)} color="blue" style={{ borderRadius: 12 }}>Plan: {tier}</Tag>}
                     {subStatus && <Tag closable onClose={() => setSubStatus(undefined)} color={subStatus === 'ACTIVE' ? 'green' : 'orange'} style={{ borderRadius: 12 }}>Status: {subStatus.replace('_', ' ')}</Tag>}
@@ -265,7 +286,7 @@ export default function UsersPage() {
                     </Text>
                 </div>
 
-                <TableHeader />
+                <TableHeader mobile={isMobile} />
 
                 {isLoading ? (
                     <div style={{ padding: 56, textAlign: 'center', color: '#94a3b8' }}>Loading employers…</div>
@@ -273,7 +294,7 @@ export default function UsersPage() {
                     <div style={{ padding: 56, textAlign: 'center', color: '#94a3b8' }}>No employers found</div>
                 ) : (
                     employers.map((r: any) => (
-                        <EmployerRow key={r.id} r={r} onClick={() => navigate(`/users/${r.id}`)} />
+                        <EmployerRow key={r.id} r={r} onClick={() => navigate(`/users/${r.id}`)} mobile={isMobile} />
                     ))
                 )}
 

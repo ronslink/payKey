@@ -454,7 +454,7 @@ export default function SupportPage() {
                         showSizeChanger: false,
                         showTotal: (t) => `Total ${t} tickets`,
                     }}
-                    scroll={{ x: 1000 }}
+                    scroll={{ x: 'max-content' }}
                     style={{ borderRadius: 16 }}
                     rowClassName={(record) => record.priority === 'URGENT' ? 'urgent-row' : ''}
                 />
