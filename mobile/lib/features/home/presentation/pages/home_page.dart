@@ -72,6 +72,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     // so no overlay is rendered until SharedPreferences confirms the tour
     // hasn't been completed yet.
     final tourProgress = ref.watch(tourProgressProvider);
+    // ignore: unused_local_variable
     final showTour = tourProgress.isLoaded &&
         tourProgress.onboardingCompleted &&
         !tourProgress.hasSeen(TourKeys.dashboardTour);
@@ -79,6 +80,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     // Temporarily disabled due to Android opacity compositor bug
     return const SizedBox.shrink();
 
+    // ignore: dead_code
     final steps = [
       TourStep(
         targetKey: _payrollKey,

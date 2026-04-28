@@ -541,10 +541,10 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
     double totalNssf = 0;
     double totalShif = 0;
     double totalHousingLevy = 0;
-    double totalNetPay = 0;
+    // double totalNetPay = 0;
 
     for (final calc in _calculations) {
-      totalNetPay += calc.netPay;
+      // totalNetPay += calc.netPay;
       totalPaye += calc.taxBreakdown.paye;
       totalNssf += calc.taxBreakdown.nssf;
       totalShif += calc.taxBreakdown.nhif;
