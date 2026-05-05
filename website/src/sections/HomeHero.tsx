@@ -85,33 +85,33 @@ export default function HomeHero() {
             
             {/* Screenshots container */}
             <div className="relative flex items-end justify-center gap-0 sm:gap-0 h-[400px] sm:h-[500px] lg:h-[600px]">
-              {/* Left phone - Workforce screen */}
+              {/* Left phone - Tax screen */}
               <div className="absolute left-[5%] sm:left-[10%] bottom-0 z-10 w-[35%] sm:w-[30%] max-w-[260px] transform -rotate-6 origin-bottom translate-y-4 hover:translate-y-0 hover:-rotate-3 transition-all duration-500">
                 <div className="relative rounded-[24px] sm:rounded-[32px] overflow-hidden border-2 border-white/10 shadow-2xl shadow-black/50 bg-[#0D1525]">
                   {/* Phone notch */}
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-5 bg-black rounded-b-2xl z-10" />
                   <img
-                    src="/mobile-mockup.jpg"
-                    alt="Paydome Workforce Management Screen"
+                    src="/tax-management-screen.png"
+                    alt="Paydome Tax Management Screen"
                     className="w-full h-auto"
                   />
                 </div>
                 {/* Badge */}
                 <div className="absolute -top-3 -left-2 sm:-top-4 sm:-left-3 bg-[#0D1525]/95 backdrop-blur-xl border border-emerald-500/30 rounded-lg px-2 py-1 sm:px-3 sm:py-1.5 shadow-lg z-20">
                   <span className="text-[9px] sm:text-[10px] text-emerald-400 font-medium flex items-center gap-1">
-                    <Smartphone className="w-2.5 h-2.5" /> My Workforce
+                    <Smartphone className="w-2.5 h-2.5" /> Tax Ready
                   </span>
                 </div>
               </div>
 
-              {/* Center phone - Dashboard (hero) */}
+              {/* Center phone - Payroll screen */}
               <div className="relative z-20 w-[50%] sm:w-[40%] max-w-[320px] transform hover:scale-[1.02] transition-all duration-500">
                 <div className="relative rounded-[28px] sm:rounded-[36px] overflow-hidden border-2 border-white/15 shadow-2xl shadow-emerald-500/10 bg-[#0D1525]">
                   {/* Phone notch */}
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-6 bg-black rounded-b-2xl z-10" />
                   <img
-                    src="/dashboard-mockup.jpg"
-                    alt="Paydome Dashboard - Home Screen"
+                    src="/payroll-management-screen.png"
+                    alt="Paydome Payroll Management Screen"
                     className="w-full h-auto"
                   />
                 </div>
@@ -124,27 +124,27 @@ export default function HomeHero() {
                     </div>
                     <div className="w-px h-8 bg-white/10" />
                     <div>
-                      <div className="text-[9px] text-slate-400">Homes</div>
-                      <div className="text-sm font-bold text-emerald-400">3,000+</div>
+                      <div className="text-[9px] text-slate-400">Payroll</div>
+                      <div className="text-sm font-bold text-emerald-400">Ready</div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Right phone - Payment screen */}
+              {/* Right phone - Finance screen */}
               <div className="absolute right-[5%] sm:right-[10%] bottom-0 z-10 w-[35%] sm:w-[30%] max-w-[260px] transform rotate-6 origin-bottom translate-y-4 hover:translate-y-0 hover:rotate-3 transition-all duration-500">
                 <div className="relative rounded-[24px] sm:rounded-[32px] overflow-hidden border-2 border-white/10 shadow-2xl shadow-black/50 bg-[#0D1525]">
                   {/* Phone notch */}
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-5 bg-black rounded-b-2xl z-10" />
                   <img
-                    src="/worker-payment.jpg"
-                    alt="Paydome Worker Payment via M-Pesa"
+                    src="/finance-overview-screen.png"
+                    alt="Paydome Finance Overview Screen"
                     className="w-full h-auto"
                   />
                 </div>
                 {/* Badge */}
                 <div className="absolute -top-3 -right-2 sm:-top-4 sm:-right-3 bg-[#0D1525]/95 backdrop-blur-xl border border-emerald-500/30 rounded-lg px-2 py-1 sm:px-3 sm:py-1.5 shadow-lg z-20">
-                  <span className="text-[9px] sm:text-[10px] text-emerald-400 font-medium">✓ KRA-registered</span>
+                  <span className="text-[9px] sm:text-[10px] text-emerald-400 font-medium">✓ Finance overview</span>
                 </div>
               </div>
             </div>
