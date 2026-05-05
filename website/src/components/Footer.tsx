@@ -1,45 +1,134 @@
-import { Globe, Shield, Lock } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router-dom'
+import { Shield, Globe, Mail, Phone } from 'lucide-react'
 
-export function Footer() {
-    const currentYear = new Date().getFullYear();
+const footerLinks = {
+  product: [
+    { label: 'Features', href: '/features' },
+    { label: 'Pricing', href: '/pricing' },
+    { label: 'Security', href: '/about' },
+    { label: 'M-Pesa Payments', href: '/features' },
+  ],
+  company: [
+    { label: 'About', href: '/about' },
+    { label: 'Careers', href: '#' },
+    { label: 'Press', href: '#' },
+    { label: 'Blog', href: '#' },
+  ],
+  support: [
+    { label: 'Help Center', href: '/help' },
+    { label: 'Contact Us', href: '/contact' },
+    { label: 'Status', href: '#' },
+    { label: 'WhatsApp Support', href: '#' },
+  ],
+  legal: [
+    { label: 'Privacy Policy', href: '#' },
+    { label: 'Terms of Service', href: '#' },
+    { label: 'Cookie Policy', href: '#' },
+    { label: 'GDPR', href: '#' },
+  ],
+}
 
-    return (
-        <footer style={{ borderTop: '1px solid var(--border)', padding: '4rem 0', background: 'var(--dark-bg)' }}>
-            <div className="container">
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '2rem' }}>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--dark-muted)' }}>
-                        <Globe size={20} />
-                        <span style={{ fontWeight: 600 }}>PayGlobus Group</span>
-                    </div>
-
-                    <div style={{ maxWidth: '600px', margin: '0 auto', color: 'var(--dark-muted)', fontSize: '0.9375rem' }}>
-                        <p>Paydome is a wholly owned subsidiary of PayGlobus GmbH. Bringing German engineering precision to global payroll solutions.</p>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '2rem', marginTop: '1rem', fontSize: '0.875rem', color: 'var(--dark-muted)' }}>
-                        <Link to="/paydome/privacy_policy" style={{ transition: 'color 150ms ease' }}>Privacy Policy</Link>
-                        <a href="#" style={{ transition: 'color 150ms ease' }}>Terms of Service</a>
-                        <a href="/help" style={{ transition: 'color 150ms ease' }}>Contact Support</a>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.5rem', fontSize: '0.8125rem', color: 'oklch(0.5 0 0)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                            <Shield className="w-4 h-4" style={{ color: 'var(--success)' }} />
-                            <span>SOC 2</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                            <Lock className="w-4 h-4" style={{ color: 'var(--success)' }} />
-                            <span>GDPR</span>
-                        </div>
-                    </div>
-
-                    <div style={{ fontSize: '0.875rem', color: 'oklch(0.4 0 0)' }}>
-                        © {currentYear} Paydome / PayGlobus GmbH. All rights reserved.
-                    </div>
-                </div>
+export default function Footer() {
+  return (
+    <footer className="border-t border-white/5 bg-[#050810]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Main Footer */}
+        <div className="py-12 grid grid-cols-2 md:grid-cols-6 gap-8">
+          {/* Brand Column */}
+          <div className="col-span-2">
+            <Link to="/" className="flex items-center gap-2.5 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                <Shield className="w-4.5 h-4.5 text-white" strokeWidth={2.5} />
+              </div>
+              <div className="flex flex-col leading-none">
+                <span className="text-base font-bold text-white tracking-tight">Paydome</span>
+                <span className="text-[10px] text-muted-foreground tracking-wide">by PayGlobus</span>
+              </div>
+            </Link>
+            <p className="text-sm text-slate-400 mb-4 max-w-xs">
+              Modern payroll for Kenyan households. Pay your domestic staff via M-Pesa, stay compliant, and keep proper records.
+            </p>
+            <div className="space-y-2">
+              <a href="mailto:support@paydome.co" className="flex items-center gap-2 text-sm text-slate-400 hover:text-emerald-400 transition-colors">
+                <Mail className="w-4 h-4" />
+                support@paydome.co
+              </a>
+              <a href="tel:+254700123456" className="flex items-center gap-2 text-sm text-slate-400 hover:text-emerald-400 transition-colors">
+                <Phone className="w-4 h-4" />
+                +254 700 123 456
+              </a>
             </div>
-        </footer>
-    );
+          </div>
+
+          {/* Links */}
+          <div>
+            <h4 className="text-sm font-semibold text-white mb-3">Product</h4>
+            <ul className="space-y-2">
+              {footerLinks.product.map((link) => (
+                <li key={link.label}>
+                  <Link to={link.href} className="text-sm text-slate-400 hover:text-emerald-400 transition-colors">
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-white mb-3">Company</h4>
+            <ul className="space-y-2">
+              {footerLinks.company.map((link) => (
+                <li key={link.label}>
+                  <Link to={link.href} className="text-sm text-slate-400 hover:text-emerald-400 transition-colors">
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-white mb-3">Support</h4>
+            <ul className="space-y-2">
+              {footerLinks.support.map((link) => (
+                <li key={link.label}>
+                  <Link to={link.href} className="text-sm text-slate-400 hover:text-emerald-400 transition-colors">
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-white mb-3">Legal</h4>
+            <ul className="space-y-2">
+              {footerLinks.legal.map((link) => (
+                <li key={link.label}>
+                  <Link to={link.href} className="text-sm text-slate-400 hover:text-emerald-400 transition-colors">
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        {/* Bottom Bar */}
+        <div className="py-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <span className="flex items-center gap-1.5 text-xs text-slate-500">
+              <Globe className="w-3.5 h-3.5" />
+              PayGlobus Group
+            </span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-xs text-slate-600">SOC 2 Certified</span>
+            <span className="text-xs text-slate-600">GDPR Ready</span>
+            <span className="text-xs text-slate-600">M-Pesa Authorized</span>
+          </div>
+          <p className="text-xs text-slate-600">
+            © {new Date().getFullYear()} Paydome / PayGlobus GmbH. All rights reserved.
+          </p>
+        </div>
+      </div>
+    </footer>
+  )
 }

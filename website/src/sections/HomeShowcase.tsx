@@ -1,0 +1,83 @@
+import { Check, ArrowRight } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Link } from 'react-router-dom'
+
+const highlights = [
+  'Send salary via M-Pesa in seconds',
+  'Auto NHIF, NSSF & PAYE deductions',
+  'KRA-compliant payslips via SMS/WhatsApp',
+  'Scheduled recurring payments',
+  'Payment reminders so you never forget',
+  'Complete records for tax season',
+]
+
+export default function HomeShowcase() {
+  return (
+    <section className="relative py-24 overflow-hidden">
+      <div className="absolute top-1/2 right-0 w-[500px] h-[500px] bg-emerald-500/5 rounded-full blur-[120px] pointer-events-none -translate-y-1/2" />
+      
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          {/* Left - Image */}
+          <div className="relative order-2 lg:order-1">
+            <div className="absolute -inset-4 bg-gradient-to-r from-emerald-500/15 to-green-500/15 rounded-2xl blur-2xl" />
+            <div className="relative rounded-xl overflow-hidden border border-white/10 shadow-2xl">
+              <img
+                src="/worker-payment.jpg"
+                alt="Domestic worker receiving M-Pesa salary payment"
+                className="w-full h-auto"
+              />
+            </div>
+            {/* Floating notification */}
+            <div className="absolute -bottom-4 -right-4 bg-[#0D1525]/95 backdrop-blur-xl border border-emerald-500/20 rounded-xl p-4 shadow-xl">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                  <Check className="w-4 h-4 text-emerald-400" />
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-white">Salary Received!</div>
+                  <div className="text-xs text-slate-400">KES 15,000 via M-Pesa</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right - Content */}
+          <div className="order-1 lg:order-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium mb-6">
+              How It Works
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-6 leading-tight">
+              Pay your house help,{' '}
+              <span className="text-gradient">gardener & driver</span> with ease
+            </h2>
+            <p className="text-lg text-slate-400 mb-8 leading-relaxed">
+              Whether you have one worker or a full household staff, Paydome makes paying salaries 
+              simple, professional, and compliant. Your staff gets paid on time, every time — 
+              straight to their M-Pesa.
+            </p>
+
+            {/* Highlights */}
+            <div className="space-y-3 mb-8">
+              {highlights.map((item) => (
+                <div key={item} className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
+                    <Check className="w-3 h-3 text-emerald-400" />
+                  </div>
+                  <span className="text-sm text-slate-300">{item}</span>
+                </div>
+              ))}
+            </div>
+
+            <Link to="/features">
+              <Button className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold shadow-lg shadow-emerald-500/20">
+                See All Features
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}

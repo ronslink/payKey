@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://api.paydome.co';
 
@@ -41,40 +42,47 @@ export default function DeleteMe() {
 
     if (submitted) {
         return (
-            <div style={styles.container}>
-                <div style={styles.card}>
-                    <div style={styles.successIcon}>✓</div>
-                    <h1 style={styles.title}>Request Submitted</h1>
-                    <p style={styles.description}>
+            <div className="min-h-screen flex items-center justify-center px-4">
+                <div className="bg-card border border-white/10 rounded-2xl p-8 sm:p-10 max-w-lg w-full shadow-2xl">
+                    <div className="w-16 h-16 rounded-full bg-emerald-500 text-white flex items-center justify-center text-3xl font-bold mx-auto mb-6">
+                        ✓
+                    </div>
+                    <h1 className="text-2xl font-bold text-white text-center mb-4">Request Submitted</h1>
+                    <p className="text-slate-400 text-center leading-relaxed mb-6">
                         Your data deletion request has been received and will be processed automatically.
-                        All data associated with <strong>{email}</strong> will be permanently deleted.
+                        All data associated with <strong className="text-white">{email}</strong> will be permanently deleted.
                     </p>
-                    <div style={styles.infoBox}>
-                        <p style={styles.infoText}>
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 mb-6">
+                        <p className="text-sm text-emerald-400">
                             <strong>Request ID:</strong> {requestId}
                         </p>
-                        <p style={styles.infoText}>
+                        <p className="text-sm text-emerald-400 mt-1">
                             This process is fully automated and typically completes within 24 hours.
                         </p>
                     </div>
-                    <a href="/" style={styles.backLink}>← Back to Home</a>
+                    <Link
+                        to="/"
+                        className="block text-center text-sm text-emerald-400 hover:text-emerald-300 transition-colors"
+                    >
+                        ← Back to Home
+                    </Link>
                 </div>
             </div>
         );
     }
 
     return (
-        <div style={styles.container}>
-            <div style={styles.card}>
-                <h1 style={styles.title}>Delete My Data</h1>
-                <p style={styles.description}>
+        <div className="min-h-screen flex items-center justify-center px-4 py-20">
+            <div className="bg-card border border-white/10 rounded-2xl p-8 sm:p-10 max-w-lg w-full shadow-2xl">
+                <h1 className="text-2xl font-bold text-white text-center mb-4">Delete My Data</h1>
+                <p className="text-slate-400 text-center leading-relaxed mb-6">
                     Request the deletion of all your personal data from payDome.
                     This action is irreversible and will permanently remove your account and all associated data.
                 </p>
 
-                <div style={styles.warningBox}>
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-6 text-sm text-amber-200">
                     <strong>⚠️ Warning:</strong> This will delete:
-                    <ul style={styles.list}>
+                    <ul className="list-disc pl-5 mt-2 space-y-1 text-amber-300/80">
                         <li>Your account and profile information</li>
                         <li>All worker records</li>
                         <li>Payroll history and payslips</li>
@@ -84,9 +92,9 @@ export default function DeleteMe() {
                     </ul>
                 </div>
 
-                <form onSubmit={handleSubmit} style={styles.form}>
-                    <div style={styles.formGroup}>
-                        <label htmlFor="email" style={styles.label}>
+                <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+                    <div className="flex flex-col gap-2">
+                        <label htmlFor="email" className="text-sm font-semibold text-slate-300">
                             Email Address *
                         </label>
                         <input
@@ -96,12 +104,12 @@ export default function DeleteMe() {
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="Enter your account email"
                             required
-                            style={styles.input}
+                            className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-slate-500 outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/25 transition-colors"
                         />
                     </div>
 
-                    <div style={styles.formGroup}>
-                        <label htmlFor="password" style={styles.label}>
+                    <div className="flex flex-col gap-2">
+                        <label htmlFor="password" className="text-sm font-semibold text-slate-300">
                             Password
                         </label>
                         <input
@@ -110,12 +118,12 @@ export default function DeleteMe() {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="Enter your account password (if not Google/Apple)"
-                            style={styles.input}
+                            className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-slate-500 outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/25 transition-colors"
                         />
                     </div>
 
-                    <div style={styles.formGroup}>
-                        <label htmlFor="reason" style={styles.label}>
+                    <div className="flex flex-col gap-2">
+                        <label htmlFor="reason" className="text-sm font-semibold text-slate-300">
                             Reason for Deletion (Optional)
                         </label>
                         <textarea
@@ -124,152 +132,28 @@ export default function DeleteMe() {
                             onChange={(e) => setReason(e.target.value)}
                             placeholder="Help us improve by sharing why you're leaving"
                             rows={3}
-                            style={styles.textarea}
+                            className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-slate-500 outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/25 transition-colors resize-vertical font-[inherit]"
                         />
                     </div>
 
-                    {error && <p style={styles.error}>{error}</p>}
+                    {error && <p className="text-red-400 text-sm">{error}</p>}
 
                     <button
                         type="submit"
                         disabled={isSubmitting}
-                        style={{
-                            ...styles.button,
-                            opacity: isSubmitting ? 0.7 : 1,
-                        }}
+                        className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3.5 rounded-lg transition-all disabled:opacity-60 cursor-pointer mt-2"
                     >
                         {isSubmitting ? 'Submitting...' : 'Delete My Data'}
                     </button>
                 </form>
 
-                <a href="/" style={styles.backLink}>← Cancel and go back</a>
+                <Link
+                    to="/"
+                    className="block text-center mt-6 text-sm text-emerald-400 hover:text-emerald-300 transition-colors"
+                >
+                    ← Cancel and go back
+                </Link>
             </div>
         </div>
     );
 }
-
-const styles: { [key: string]: React.CSSProperties } = {
-    container: {
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #1E40AF 0%, #6366F1 100%)',
-        padding: '20px',
-    },
-    card: {
-        background: 'white',
-        borderRadius: '16px',
-        padding: '40px',
-        maxWidth: '500px',
-        width: '100%',
-        boxShadow: '0 20px 60px rgba(0, 0, 0, 0.2)',
-    },
-    title: {
-        fontSize: '28px',
-        fontWeight: 'bold',
-        color: '#1E293B',
-        marginBottom: '16px',
-        textAlign: 'center',
-    },
-    description: {
-        fontSize: '16px',
-        color: '#64748B',
-        marginBottom: '24px',
-        textAlign: 'center',
-        lineHeight: '1.6',
-    },
-    warningBox: {
-        background: '#FEF3C7',
-        border: '1px solid #F59E0B',
-        borderRadius: '8px',
-        padding: '16px',
-        marginBottom: '24px',
-        fontSize: '14px',
-        color: '#92400E',
-    },
-    list: {
-        marginTop: '8px',
-        marginBottom: '0',
-        paddingLeft: '20px',
-    },
-    form: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '20px',
-    },
-    formGroup: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '8px',
-    },
-    label: {
-        fontSize: '14px',
-        fontWeight: '600',
-        color: '#374151',
-    },
-    input: {
-        padding: '12px 16px',
-        borderRadius: '8px',
-        border: '1px solid #D1D5DB',
-        fontSize: '16px',
-        outline: 'none',
-    },
-    textarea: {
-        padding: '12px 16px',
-        borderRadius: '8px',
-        border: '1px solid #D1D5DB',
-        fontSize: '16px',
-        outline: 'none',
-        resize: 'vertical',
-        fontFamily: 'inherit',
-    },
-    button: {
-        background: '#DC2626',
-        color: 'white',
-        padding: '14px 24px',
-        borderRadius: '8px',
-        border: 'none',
-        fontSize: '16px',
-        fontWeight: '600',
-        cursor: 'pointer',
-        marginTop: '8px',
-    },
-    error: {
-        color: '#DC2626',
-        fontSize: '14px',
-        margin: '0',
-    },
-    backLink: {
-        display: 'block',
-        textAlign: 'center',
-        marginTop: '24px',
-        color: '#6366F1',
-        textDecoration: 'none',
-        fontSize: '14px',
-    },
-    successIcon: {
-        width: '64px',
-        height: '64px',
-        borderRadius: '50%',
-        background: '#10B981',
-        color: 'white',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '32px',
-        margin: '0 auto 24px',
-    },
-    infoBox: {
-        background: '#F0FDF4',
-        border: '1px solid #10B981',
-        borderRadius: '8px',
-        padding: '16px',
-        marginBottom: '24px',
-    },
-    infoText: {
-        fontSize: '14px',
-        color: '#166534',
-        margin: '4px 0',
-    },
-};

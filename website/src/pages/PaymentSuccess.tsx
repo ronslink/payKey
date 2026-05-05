@@ -1,49 +1,27 @@
 import { Link } from 'react-router-dom';
+import { CheckCircle } from 'lucide-react';
 
 export default function PaymentSuccess() {
-  return (
-    <div style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      minHeight: '100vh',
-      margin: 0,
-      backgroundColor: '#f0fdf4',
-      color: '#166534',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-    }}>
-      <div style={{
-        textAlign: 'center',
-        padding: '3rem',
-        background: 'white',
-        borderRadius: '1rem',
-        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-        maxWidth: '90%',
-      }}>
-        <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>✅</div>
-        <h1 style={{ margin: '0 0 0.5rem', fontSize: '2rem' }}>Payment Successful!</h1>
-        <p style={{ margin: 0, color: '#4b5563', fontSize: '1.1rem' }}>
-          Your subscription is now active.
-        </p>
-        <p style={{ marginTop: '1.5rem', color: '#4b5563' }}>
-          You can close this window and return to the PayKey app.
-        </p>
-        <Link
-          to="/"
-          style={{
-            display: 'inline-block',
-            marginTop: '2rem',
-            padding: '0.75rem 1.5rem',
-            backgroundColor: '#166534',
-            color: 'white',
-            textDecoration: 'none',
-            borderRadius: '0.5rem',
-            fontWeight: '500',
-          }}
-        >
-          Go to Home
-        </Link>
-      </div>
-    </div>
-  );
+    return (
+        <div className="min-h-screen flex items-center justify-center px-4">
+            <div className="text-center bg-card border border-white/10 rounded-2xl p-10 sm:p-12 max-w-md w-full shadow-2xl">
+                <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                    <CheckCircle className="w-10 h-10 text-emerald-400" />
+                </div>
+                <h1 className="text-2xl font-bold text-white mb-2">Payment Successful!</h1>
+                <p className="text-slate-400 leading-relaxed">
+                    Your subscription is now active.
+                </p>
+                <p className="text-slate-400 mt-4 leading-relaxed">
+                    You can close this window and return to the PayKey app.
+                </p>
+                <Link
+                    to="/"
+                    className="inline-block mt-8 px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-lg transition-all shadow-lg shadow-emerald-500/20"
+                >
+                    Go to Home
+                </Link>
+            </div>
+        </div>
+    );
 }

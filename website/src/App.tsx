@@ -1,26 +1,32 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Home from './pages/Home';
-import IOSHelp from './pages/iOSHelp';
-import PrivacyPolicy from './pages/PrivacyPolicy';
-import DeleteMe from './pages/DeleteMe';
-import PaymentSuccess from './pages/PaymentSuccess';
+import { Routes, Route } from 'react-router-dom'
+import Layout from './components/Layout'
+import Home from './pages/Home'
+import Pricing from './pages/Pricing'
+import Features from './pages/Features'
+import About from './pages/About'
+import Help from './pages/Help'
+import Contact from './pages/Contact'
+import PrivacyPolicy from './pages/PrivacyPolicy'
+import DeleteMe from './pages/DeleteMe'
+import PaymentSuccess from './pages/PaymentSuccess'
 
-function App() {
+export default function App() {
   return (
-    <Router>
-      <Routes>
+    <Routes>
+      <Route element={<Layout />}>
         <Route path="/" element={<Home />} />
         <Route path="/marketing" element={<Home />} />
+        <Route path="/pricing" element={<Pricing />} />
+        <Route path="/features" element={<Features />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/help" element={<Help />} />
+        <Route path="/contact" element={<Contact />} />
         <Route path="/paydome/privacy_policy" element={<PrivacyPolicy />} />
-        <Route path="/help" element={<IOSHelp />} />
         <Route path="/deleteme" element={<DeleteMe />} />
         <Route path="/subscription/success" element={<PaymentSuccess />} />
         {/* Stripe redirects here after checkout — matches backend success_url */}
         <Route path="/payments/subscriptions/success" element={<PaymentSuccess />} />
-      </Routes>
-    </Router>
-  );
+      </Route>
+    </Routes>
+  )
 }
-
-export default App;
-
