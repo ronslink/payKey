@@ -26,7 +26,7 @@ const featureGroups = [
     borderColor: 'border-blue-500/20',
     iconColor: 'text-blue-400',
     features: [
-      { icon: Calculator, title: 'Auto NHIF Deductions', desc: 'National Hospital Insurance Fund contributions calculated and recorded automatically per KRA guidelines.' },
+      { icon: Calculator, title: 'Auto SHIF Deductions', desc: 'Social Health Insurance Fund contributions calculated and recorded automatically per KRA guidelines.' },
       { icon: Calculator, title: 'Auto NSSF Deductions', desc: 'National Social Security Fund contributions computed and tracked for every pay period.' },
       { icon: Calculator, title: 'PAYE Tax Calculation', desc: 'Pay As You Earn tax computed based on current KRA tax brackets. No more guesswork.' },
       { icon: FileText, title: 'KRA-Ready Reports', desc: 'Generate monthly and annual reports ready for iTax filing. Export in PDF or Excel format.' },
@@ -56,7 +56,7 @@ const featureGroups = [
     features: [
       { icon: Users, title: 'Add Multiple Workers', desc: 'Manage your house help, gardener, driver, and security — all from one account.' },
       { icon: Headphones, title: 'Local Support Team', desc: 'Our Nairobi-based support team understands the Kenyan payroll landscape.' },
-      { icon: MessageSquare, title: 'In-App Chat Support', desc: 'Get help directly within the app. Business plans include priority response.' },
+      { icon: MessageSquare, title: 'In-App Chat Support', desc: 'Get help directly within the app. Gold and Platinum include priority response.' },
       { icon: Shield, title: 'Secure & Private', desc: 'Your data and your worker\'s data are encrypted and never shared with third parties.' },
     ],
   },

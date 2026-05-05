@@ -21,10 +21,10 @@ const faqCategories = [
     ],
   },
   {
-    name: 'NHIF, NSSF & KRA',
+    name: 'PAYE, NSSF, SHIF & KRA',
     icon: Shield,
     questions: [
-      { q: 'Does Paydome calculate NHIF and NSSF?', a: 'Yes. On the Nyumbani and Biashara plans, NHIF and NSSF contributions are calculated automatically based on current KRA rates and deducted from the gross salary.' },
+      { q: 'Does Paydome calculate PAYE, NSSF, and SHIF?', a: 'Yes. Automatic tax calculations are included across PayKey subscription tiers. Paid plans add payroll processing, M-Pesa payments, P9 tax cards, and higher-tier reporting tools.' },
       { q: 'How does PAYE tax work?', a: 'Paydome calculates PAYE (Pay As You Earn) tax based on the current KRA tax brackets. The tax amount is shown on the payslip and deducted before the net pay is sent via M-Pesa.' },
       { q: 'Can I export reports for my accountant?', a: 'Absolutely. Go to "Reports" in the app, select the month or year, and export as PDF or Excel. These reports include all payments, deductions, and contributions.' },
     ],
@@ -33,7 +33,7 @@ const faqCategories = [
     name: 'Payslips',
     icon: FileText,
     questions: [
-      { q: 'How does my worker get their payslip?', a: 'Payslips are sent automatically via SMS or WhatsApp after each payment. They include gross salary, all deductions (NHIF, NSSF, PAYE), and net pay.' },
+      { q: 'How does my worker get their payslip?', a: 'Payslips are sent automatically via SMS or WhatsApp after each payment. They include gross salary, all deductions (PAYE, NSSF, SHIF), and net pay.' },
       { q: 'Are the payslips KRA compliant?', a: 'Yes. Our payslips follow the standard format accepted by KRA and include all required information for tax filing purposes.' },
       { q: 'Can I download payslips for my records?', a: 'Yes. All payslips are stored in your app and can be downloaded as PDF anytime. We recommend keeping them for at least 5 years for tax purposes.' },
     ],
@@ -42,7 +42,7 @@ const faqCategories = [
     name: 'Managing Your Staff',
     icon: Users,
     questions: [
-      { q: 'How many workers can I add?', a: 'The Mwanzo plan supports up to 2 workers, Nyumbani supports up to 10, and Biashara has no limit. You can upgrade anytime as your household grows.' },
+      { q: 'How many workers can I add?', a: 'Free supports up to 1 worker, Basic supports up to 5, Gold supports up to 10, and Platinum supports up to 20. You can upgrade anytime as your household grows.' },
       { q: 'What if a worker leaves?', a: 'You can mark a worker as inactive. Their payment history and records are preserved for your records but they won\'t appear in active payroll.' },
       { q: 'Can I edit a worker\'s salary?', a: 'Yes. Tap on the worker\'s profile and update their salary, role, or phone number. Changes take effect from the next pay cycle.' },
     ],

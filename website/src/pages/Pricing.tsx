@@ -4,53 +4,74 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 const plans = [
   {
-    name: 'Mwanzo',
-    description: 'Perfect for households with 1-2 workers',
-    price: '490',
+    name: 'Free',
+    description: 'Start with one worker and core payroll tools',
+    price: '0',
+    yearlyPrice: '0',
     period: '/month',
     features: [
-      'Up to 2 staff members',
-      'M-Pesa salary payments',
-      'Auto payslip generation',
-      'Payment reminders',
-      'Basic payment history',
-      'Email support',
+      'Up to 1 worker',
+      'Basic worker management',
+      'Automatic tax calculations',
     ],
-    cta: 'Start Free Trial',
+    cta: 'Get Started',
     highlighted: false,
   },
   {
-    name: 'Nyumbani',
-    description: 'For households with full staff',
-    price: '1,490',
+    name: 'Basic',
+    description: 'For households ready to pay through Paydome',
+    price: '1,300',
+    yearlyPrice: '13,000',
     period: '/month',
     features: [
-      'Up to 10 staff members',
-      'M-Pesa & bank transfers',
-      'NHIF, NSSF & PAYE auto-calc',
-      'KRA-compliant payslips (SMS/WhatsApp)',
-      'Scheduled recurring payments',
-      'Full payment reports & exports',
-      'Priority support',
+      'Up to 5 workers',
+      'Automatic tax calculations',
+      'M-Pesa payments',
+      'P9 Tax Cards',
     ],
     cta: 'Start Free Trial',
     highlighted: true,
   },
   {
-    name: 'Biashara',
-    description: 'For estates, agencies & businesses',
-    price: 'Custom',
-    period: '',
+    name: 'Gold',
+    description: 'For larger households that need reporting and imports',
+    price: '3,900',
+    yearlyPrice: '39,000',
+    period: '/month',
     features: [
-      'Unlimited staff',
-      'All payment methods',
-      'Custom payroll schedules',
-      'Multi-location support',
-      'API access',
-      'Dedicated account manager',
-      'Custom reporting',
+      'Up to 10 workers',
+      'Automatic tax calculations',
+      'M-Pesa payments',
+      'P9 Tax Cards',
+      'Advanced reporting',
+      'Accounting exports',
+      'Priority support',
+      'Excel worker import',
     ],
-    cta: 'Contact Us',
+    cta: 'Start Free Trial',
+    highlighted: false,
+  },
+  {
+    name: 'Platinum',
+    description: 'For multi-property households and advanced operations',
+    price: '6,500',
+    yearlyPrice: '65,000',
+    period: '/month',
+    features: [
+      'Up to 20 workers',
+      'Automatic tax calculations',
+      'M-Pesa payments',
+      'Leave tracking',
+      'Time tracking (clock in/out)',
+      'Geofencing',
+      'Advanced reporting',
+      'Accounting exports',
+      'Priority support',
+      'Automatic tax payments to KRA',
+      'Multi-property management',
+      'Excel worker import',
+    ],
+    cta: 'Start Free Trial',
     highlighted: false,
   },
 ]
@@ -70,7 +91,7 @@ const faqItems = [
   },
   {
     q: 'What happens after the 14-day trial?',
-    a: 'You\'ll be asked to choose a plan and add a payment method. If you decide not to continue, your data stays safe and you can export it anytime.',
+    a: 'You can stay on Free or choose Basic, Gold, or Platinum. If you decide not to continue with a paid plan, your data stays safe and you can export it anytime.',
   },
 ]
 
@@ -84,13 +105,13 @@ export default function Pricing() {
             Simple pricing for every <span className="text-gradient">household</span>
           </h1>
           <p className="text-lg text-slate-400 max-w-2xl mx-auto">
-            Start free, pay only when you're ready. All prices in Kenyan Shillings.
+            Start free, then upgrade when you need more workers or advanced payroll tools. All prices are in Kenyan Shillings.
           </p>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
-        <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
+        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-6 lg:gap-8">
           {plans.map((plan) => (
             <div
               key={plan.name}
@@ -112,15 +133,10 @@ export default function Pricing() {
               </div>
 
               <div className="mb-6">
-                {plan.price === 'Custom' ? (
-                  <span className="text-4xl font-bold text-white">{plan.price}</span>
-                ) : (
-                  <>
-                    <span className="text-lg text-slate-400">KES </span>
-                    <span className="text-4xl font-bold text-white">{plan.price}</span>
-                    <span className="text-slate-400">{plan.period}</span>
-                  </>
-                )}
+                <span className="text-lg text-slate-400">KES </span>
+                <span className="text-4xl font-bold text-white">{plan.price}</span>
+                <span className="text-slate-400">{plan.period}</span>
+                <p className="text-xs text-slate-500 mt-2">KES {plan.yearlyPrice} yearly</p>
               </div>
 
               <ul className="space-y-3 mb-8">

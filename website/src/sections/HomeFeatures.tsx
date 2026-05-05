@@ -12,7 +12,7 @@ const features = [
   {
     icon: Shield,
     title: 'KRA Compliant',
-    description: 'Automatic PAYE tax calculations, NHIF and NSSF deductions. Generate compliant payslips and reports ready for KRA filing.',
+    description: 'Automatic PAYE tax calculations, SHIF and NSSF deductions. Generate compliant payslips and reports ready for KRA filing.',
     color: 'from-blue-500/20 to-blue-600/10',
     iconColor: 'text-blue-400',
     borderColor: 'border-blue-500/20',

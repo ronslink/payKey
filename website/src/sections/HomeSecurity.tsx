@@ -27,7 +27,7 @@ export default function HomeSecurity() {
             <div className="space-y-4 mb-8">
               {[
                 { icon: Lock, label: 'Bank-Level Encryption', desc: 'All data protected with AES-256 encryption — the same standard used by banks worldwide' },
-                { icon: FileCheck, label: 'KRA & Statutory Compliant', desc: 'Automatic NHIF, NSSF, and PAYE calculations. Reports ready for iTax filing.' },
+                { icon: FileCheck, label: 'KRA & Statutory Compliant', desc: 'Automatic SHIF, NSSF, and PAYE calculations. Reports ready for iTax filing.' },
                 { icon: Shield, label: 'M-Pesa Secure Integration', desc: 'Direct, authorized M-Pesa API connection. Your money moves safely, every time.' },
                 { icon: Server, label: 'Data Privacy Guaranteed', desc: 'GDPR compliant. Your staff\'s personal data is never shared or sold.' },
               ].map((item) => (

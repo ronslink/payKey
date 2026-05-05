@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 
 const highlights = [
   'Send salary via M-Pesa in seconds',
-  'Auto NHIF, NSSF & PAYE deductions',
+  'Auto SHIF, NSSF & PAYE deductions',
   'KRA-compliant payslips via SMS/WhatsApp',
   'Scheduled recurring payments',
   'Payment reminders so you never forget',
