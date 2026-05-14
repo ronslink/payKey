@@ -6,17 +6,18 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../data/models/subscription_model.dart';
 import '../../data/repositories/subscription_repository.dart';
 import '../providers/subscription_provider.dart';
+import '../providers/feature_access_provider.dart';
 import '../../../../integrations/intasend/intasend.dart';
 import '../../../profile/data/repositories/profile_repository.dart';
-// Note: ProfileModel is implied by repository, but strict typing might need it. 
+// Note: ProfileModel is implied by repository, but strict typing might need it.
 // However, adding it ensures accessibility.
-// Note: ProfileModel is implied by repository, but strict typing might need it. 
+// Note: ProfileModel is implied by repository, but strict typing might need it.
 // However, adding it ensures accessibility.
 import '../../../workers/presentation/providers/workers_provider.dart';
 import '../../../profile/presentation/providers/profile_provider.dart';
 
-
 enum PaymentMethod { stripe, mpesa, bank }
+
 enum BillingPeriod { monthly, yearly }
 
 class PaymentPage extends ConsumerStatefulWidget {
@@ -42,7 +43,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
   void initState() {
     super.initState();
   }
-  
+
   // No explicit _loadProfile needed, we'll listen to the provider in build
 
   @override
@@ -58,18 +59,24 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     try {
       final repo = ref.read(subscriptionRepositoryProvider);
       final checkoutUrl = await repo.subscribeWithStripe(widget.plan.tier);
-      
+
       if (checkoutUrl.isEmpty) {
         throw Exception('Empty checkout URL received from server');
       }
-      
+
       final uri = Uri.parse(checkoutUrl);
-      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-      
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+
       if (launched) {
         if (mounted) _showInstructionsDialog();
       } else {
-        final launchedInApp = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+        final launchedInApp = await launchUrl(
+          uri,
+          mode: LaunchMode.inAppBrowserView,
+        );
         if (!launchedInApp) {
           throw Exception('Could not launch payment URL');
         }
@@ -90,7 +97,10 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     final phone = _phoneController.text.trim();
     if (phone.length < 10) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid phone number'), backgroundColor: Colors.orange),
+        const SnackBar(
+          content: Text('Please enter a valid phone number'),
+          backgroundColor: Colors.orange,
+        ),
       );
       return;
     }
@@ -103,7 +113,9 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     try {
       // Use Subscription Repository (Backend Integration)
       final repo = ref.read(subscriptionRepositoryProvider);
-      final billingPeriod = _selectedBillingPeriod == BillingPeriod.yearly ? 'yearly' : 'monthly';
+      final billingPeriod = _selectedBillingPeriod == BillingPeriod.yearly
+          ? 'yearly'
+          : 'monthly';
       final result = await repo.subscribeWithMpesa(
         widget.plan.tier, // Pass tier as ID for backend lookup
         phone,
@@ -115,7 +127,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
           _mpesaPaymentId = result.paymentId;
           _statusMessage = 'Request sent! Check your phone and enter PIN.';
         });
-        
+
         // Start polling for payment status via Backend
         _startStatusPolling();
       } else {
@@ -136,18 +148,20 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
 
   void _startStatusPolling() async {
     if (_mpesaPaymentId == null) return;
-    
+
     // Poll backend for status
     final repo = ref.read(subscriptionRepositoryProvider);
-    
+
     // Create a local timer for this polling session
     int attempts = 0;
     const maxAttempts = 60; // 3 minutes approx (3s interval)
-    
+
     _statusPollTimer?.cancel();
-    _statusPollTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
+    _statusPollTimer = Timer.periodic(const Duration(seconds: 3), (
+      timer,
+    ) async {
       attempts++;
-      
+
       try {
         if (!mounted) {
           timer.cancel();
@@ -155,7 +169,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
         }
 
         final status = await repo.checkMpesaPaymentStatus(_mpesaPaymentId!);
-        
+
         if (status.isCompleted) {
           timer.cancel();
           if (mounted) {
@@ -164,6 +178,8 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
               _statusMessage = null;
             });
             ref.invalidate(userSubscriptionProvider);
+            ref.invalidate(subscriptionSummaryProvider);
+            ref.invalidate(canAddWorkerProvider);
             _showSuccessDialog();
           }
         } else if (status.isFailed) {
@@ -175,22 +191,24 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
             });
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Payment failed or was cancelled.'), 
-                backgroundColor: Colors.red
+                content: Text('Payment failed or was cancelled.'),
+                backgroundColor: Colors.red,
               ),
             );
           }
         } else if (attempts >= maxAttempts) {
           timer.cancel();
           if (mounted) {
-             setState(() {
+            setState(() {
               _isProcessing = false;
               _statusMessage = null;
             });
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Payment verification timed out. Please check status later.'), 
-                backgroundColor: Colors.orange
+                content: Text(
+                  'Payment verification timed out. Please check status later.',
+                ),
+                backgroundColor: Colors.orange,
               ),
             );
           }
@@ -239,7 +257,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
         title: const Text('Payment Initiated'),
         content: const Text(
           'We have opened the payment page in your browser.\n\n'
-          'Once you complete the payment, please return to this app and click "Refresh" to update your subscription status.'
+          'Once you complete the payment, please return to this app and click "Refresh" to update your subscription status.',
         ),
         actions: [
           TextButton(
@@ -253,6 +271,8 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
             onPressed: () {
               Navigator.pop(context);
               ref.invalidate(userSubscriptionProvider);
+              ref.invalidate(subscriptionSummaryProvider);
+              ref.invalidate(canAddWorkerProvider);
               context.go('/subscriptions');
             },
             child: const Text('Refresh & Check Status'),
@@ -270,14 +290,15 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
       final profileRepo = ref.read(profileRepositoryProvider);
       final profile = await profileRepo.getProfile();
 
-      if (profile.bankName == null || profile.bankName!.isEmpty ||
-          profile.bankAccount == null || profile.bankAccount!.isEmpty) {
-        
+      if (profile.bankName == null ||
+          profile.bankName!.isEmpty ||
+          profile.bankAccount == null ||
+          profile.bankAccount!.isEmpty) {
         if (!mounted) return;
-        
+
         // Prompt user for missing bank details
         final details = await _showBankDetailsDialog();
-        
+
         if (details == null) {
           // User cancelled
           if (mounted) setState(() => _isProcessing = false);
@@ -290,23 +311,31 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
 
       // 2. Proceed with Payment
       final repo = ref.read(subscriptionRepositoryProvider);
-      final billingPeriod = _selectedBillingPeriod == BillingPeriod.yearly ? 'yearly' : 'monthly';
+      final billingPeriod = _selectedBillingPeriod == BillingPeriod.yearly
+          ? 'yearly'
+          : 'monthly';
       final result = await repo.subscribeWithBank(
         widget.plan.tier,
         billingPeriod,
       );
-      
+
       if (result.checkoutUrl.isEmpty) {
         throw Exception('Empty checkout URL received from server');
       }
-      
+
       final uri = Uri.parse(result.checkoutUrl);
-      final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
-      
+      final launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+
       if (launched) {
         if (mounted) _showBankInstructionsDialog(result.processingInfo);
       } else {
-        final launchedInApp = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+        final launchedInApp = await launchUrl(
+          uri,
+          mode: LaunchMode.inAppBrowserView,
+        );
         if (!launchedInApp) {
           throw Exception('Could not launch payment URL');
         }
@@ -347,7 +376,11 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.info_outline, color: Colors.blue, size: 20),
+                    const Icon(
+                      Icons.info_outline,
+                      color: Colors.blue,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -373,6 +406,8 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
             onPressed: () {
               Navigator.pop(context);
               ref.invalidate(userSubscriptionProvider);
+              ref.invalidate(subscriptionSummaryProvider);
+              ref.invalidate(canAddWorkerProvider);
               context.go('/subscriptions');
             },
             child: const Text('Refresh & Check Status'),
@@ -404,11 +439,12 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
       if (next.hasValue && next.value != null) {
         final profile = next.value!;
         if (_phoneController.text == '07' || _phoneController.text.isEmpty) {
-           if (profile.mpesaPhone != null && profile.mpesaPhone!.isNotEmpty) {
-             _phoneController.text = profile.mpesaPhone!;
-           } else if (profile.phoneNumber != null && profile.phoneNumber!.isNotEmpty) {
-             _phoneController.text = profile.phoneNumber!;
-           }
+          if (profile.mpesaPhone != null && profile.mpesaPhone!.isNotEmpty) {
+            _phoneController.text = profile.mpesaPhone!;
+          } else if (profile.phoneNumber != null &&
+              profile.phoneNumber!.isNotEmpty) {
+            _phoneController.text = profile.phoneNumber!;
+          }
         }
       }
     });
@@ -416,18 +452,18 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     // Also verify initial state if provider is already loaded
     final profileAsync = ref.watch(profileProvider);
     profileAsync.whenData((profile) {
-       if (_phoneController.text == '07') {
-           if (profile.mpesaPhone != null && profile.mpesaPhone!.isNotEmpty) {
-             // Defer update to avoid build collisions if strict
-             WidgetsBinding.instance.addPostFrameCallback((_) {
-               if (mounted && _phoneController.text == '07') {
-                 _phoneController.text = profile.mpesaPhone!;
-               }
-             });
-           }
-       }
+      if (_phoneController.text == '07') {
+        if (profile.mpesaPhone != null && profile.mpesaPhone!.isNotEmpty) {
+          // Defer update to avoid build collisions if strict
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _phoneController.text == '07') {
+              _phoneController.text = profile.mpesaPhone!;
+            }
+          });
+        }
+      }
     });
-    
+
     return Scaffold(
       appBar: AppBar(title: const Text('Checkout')),
       body: SingleChildScrollView(
@@ -437,42 +473,45 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
           children: [
             _buildOrderSummary(),
             const SizedBox(height: 32),
-            
+
             const Text(
               'Payment Method',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            
+
             // M-Pesa Option
             _buildPaymentMethodCard(
               method: PaymentMethod.mpesa,
               icon: Icons.phone_android,
               iconColor: const Color(0xFF00A651), // M-Pesa green
               title: 'Pay with M-Pesa',
-              subtitle: 'KES ${_getCurrentPriceKES().toStringAsFixed(0)} - STK Push to your phone',
+              subtitle:
+                  'KES ${_getCurrentPriceKES().toStringAsFixed(0)} - STK Push to your phone',
             ),
             const SizedBox(height: 12),
-            
+
             // Bank Transfer (PesaLink) Option
             _buildPaymentMethodCard(
               method: PaymentMethod.bank,
               icon: Icons.account_balance,
               iconColor: Colors.blue.shade700,
               title: 'Pay via Bank Transfer',
-              subtitle: 'KES ${_getCurrentPriceKES().toStringAsFixed(0)} - Instant via PesaLink',
+              subtitle:
+                  'KES ${_getCurrentPriceKES().toStringAsFixed(0)} - Instant via PesaLink',
             ),
             const SizedBox(height: 12),
-            
+
             // Stripe Option
             _buildPaymentMethodCard(
               method: PaymentMethod.stripe,
               icon: Icons.credit_card,
               iconColor: const Color(0xFF635BFF), // Stripe purple
               title: 'Pay with Card',
-              subtitle: 'USD \$${_getCurrentPriceUSD().toStringAsFixed(2)} - Secure via Stripe',
+              subtitle:
+                  'USD \$${_getCurrentPriceUSD().toStringAsFixed(2)} - Secure via Stripe',
             ),
-            
+
             // Phone number input for M-Pesa
             if (_selectedMethod == PaymentMethod.mpesa) ...[
               const SizedBox(height: 24),
@@ -483,7 +522,9 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                   labelText: 'M-Pesa Phone Number',
                   hintText: '07XX XXX XXX',
                   prefixIcon: const Icon(Icons.phone, color: Color(0xFF00A651)),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   filled: true,
                   fillColor: Colors.grey[50],
                 ),
@@ -491,7 +532,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
             ],
 
             const SizedBox(height: 32),
-            
+
             if (_statusMessage != null) ...[
               Container(
                 padding: const EdgeInsets.all(16),
@@ -513,41 +554,54 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
               ),
               const SizedBox(height: 16),
             ],
-            
+
             ElevatedButton(
               onPressed: _isProcessing ? null : _processPayment,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _selectedMethod == PaymentMethod.mpesa 
-                    ? const Color(0xFF00A651) 
+                backgroundColor: _selectedMethod == PaymentMethod.mpesa
+                    ? const Color(0xFF00A651)
                     : const Color(0xFF635BFF),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               child: _isProcessing
                   ? const SizedBox(
                       height: 24,
                       width: 24,
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
                     )
                   : Text(
                       _selectedMethod == PaymentMethod.stripe
                           ? 'Pay \$${_getCurrentPriceUSD().toStringAsFixed(2)}'
                           : 'Pay KES ${_getCurrentPriceKES().toStringAsFixed(0)}',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
             ),
             const SizedBox(height: 24),
-            
+
             // Trust Badge
-            if (_selectedMethod == PaymentMethod.mpesa || _selectedMethod == PaymentMethod.bank)
+            if (_selectedMethod == PaymentMethod.mpesa ||
+                _selectedMethod == PaymentMethod.bank)
               const Center(child: IntaSendTrustBadge(width: 300))
             else
               Center(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.lock_outline, size: 16, color: Colors.grey),
+                    const Icon(
+                      Icons.lock_outline,
+                      size: 16,
+                      color: Colors.grey,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       'Payments are secure and encrypted by Stripe',
@@ -583,7 +637,12 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
         ),
         child: ListTile(
           leading: Icon(icon, color: iconColor, size: 32),
-          title: Text(title, style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+          title: Text(
+            title,
+            style: TextStyle(
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
           subtitle: Text(subtitle),
           trailing: isSelected
               ? Icon(Icons.check_circle, color: iconColor)
@@ -599,10 +658,10 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
     final yearlyPriceKES = monthlyPriceKES * 10; // 2 months free
     final monthlyPriceUSD = widget.plan.priceUSD;
     final yearlyPriceUSD = monthlyPriceUSD * 10; // 2 months free
-    
+
     final currentPriceKES = isYearly ? yearlyPriceKES : monthlyPriceKES;
     final currentPriceUSD = isYearly ? yearlyPriceUSD : monthlyPriceUSD;
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -615,10 +674,14 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
         children: [
           const Text(
             'Order Summary',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
           ),
           const SizedBox(height: 16),
-          
+
           // Billing Period Toggle
           Container(
             padding: const EdgeInsets.all(4),
@@ -630,22 +693,33 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
               children: [
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => setState(() => _selectedBillingPeriod = BillingPeriod.monthly),
+                    onTap: () => setState(
+                      () => _selectedBillingPeriod = BillingPeriod.monthly,
+                    ),
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
                         color: !isYearly ? Colors.white : Colors.transparent,
                         borderRadius: BorderRadius.circular(6),
-                        boxShadow: !isYearly ? [
-                          BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4)
-                        ] : null,
+                        boxShadow: !isYearly
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.1),
+                                  blurRadius: 4,
+                                ),
+                              ]
+                            : null,
                       ),
                       child: Center(
                         child: Text(
                           'Monthly',
                           style: TextStyle(
-                            fontWeight: !isYearly ? FontWeight.bold : FontWeight.normal,
-                            color: !isYearly ? Colors.black87 : Colors.grey[600],
+                            fontWeight: !isYearly
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            color: !isYearly
+                                ? Colors.black87
+                                : Colors.grey[600],
                           ),
                         ),
                       ),
@@ -654,15 +728,22 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                 ),
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => setState(() => _selectedBillingPeriod = BillingPeriod.yearly),
+                    onTap: () => setState(
+                      () => _selectedBillingPeriod = BillingPeriod.yearly,
+                    ),
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
                         color: isYearly ? Colors.white : Colors.transparent,
                         borderRadius: BorderRadius.circular(6),
-                        boxShadow: isYearly ? [
-                          BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4)
-                        ] : null,
+                        boxShadow: isYearly
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.1),
+                                  blurRadius: 4,
+                                ),
+                              ]
+                            : null,
                       ),
                       child: Center(
                         child: Column(
@@ -670,13 +751,20 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                             Text(
                               'Yearly',
                               style: TextStyle(
-                                fontWeight: isYearly ? FontWeight.bold : FontWeight.normal,
-                                color: isYearly ? Colors.black87 : Colors.grey[600],
+                                fontWeight: isYearly
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                color: isYearly
+                                    ? Colors.black87
+                                    : Colors.grey[600],
                               ),
                             ),
                             const SizedBox(height: 2),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.green.shade100,
                                 borderRadius: BorderRadius.circular(4),
@@ -699,7 +787,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
               ],
             ),
           ),
-          
+
           const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -710,7 +798,10 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                 children: [
                   Text(
                     'KES ${currentPriceKES.toStringAsFixed(0)}',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   Text(
                     'USD \$${currentPriceUSD.toStringAsFixed(2)}',
@@ -727,7 +818,7 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                isYearly ? 'Billed Yearly' : 'Billed Monthly', 
+                isYearly ? 'Billed Yearly' : 'Billed Monthly',
                 style: const TextStyle(fontSize: 14, color: Colors.grey),
               ),
               Text(
@@ -746,12 +837,20 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.celebration, color: Colors.green.shade600, size: 16),
+                  Icon(
+                    Icons.celebration,
+                    color: Colors.green.shade600,
+                    size: 16,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'You save KES ${(monthlyPriceKES * 2).toStringAsFixed(0)} per year!',
-                      style: TextStyle(fontSize: 12, color: Colors.green.shade700, fontWeight: FontWeight.w500),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.green.shade700,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ],
@@ -835,29 +934,31 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
                               (b) => b['bank_code'].toString() == val,
                               orElse: () => {},
                             );
-                            bankNameController.text = bank['bank_name']?.toString() ?? '';
+                            bankNameController.text =
+                                bank['bank_name']?.toString() ?? '';
                           }
                         },
                         validator: (v) => v == null ? 'Required' : null,
                       );
                     },
-                    loading: () => const LinearProgressIndicator(), 
-                    error: (e, s) => Text('Error loading banks: $e', style: const TextStyle(color: Colors.red)),
+                    loading: () => const LinearProgressIndicator(),
+                    error: (e, s) => Text(
+                      'Error loading banks: $e',
+                      style: const TextStyle(color: Colors.red),
+                    ),
                   );
                 },
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: accountController,
-                style: const TextStyle(
-                  color: Color(0xFF111827),
-                  fontSize: 16,
-                ),
+                style: const TextStyle(color: Color(0xFF111827), fontSize: 16),
                 decoration: const InputDecoration(
                   labelText: 'Account Number',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Required' : null,
               ),
             ],
           ),

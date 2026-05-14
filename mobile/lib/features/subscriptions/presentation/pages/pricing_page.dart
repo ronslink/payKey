@@ -33,18 +33,11 @@ class _PricingPageState extends ConsumerState<PricingPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.credit_card,
-                    size: 64,
-                    color: Color(0xFFD1D5DB),
-                  ),
+                  Icon(Icons.credit_card, size: 64, color: Color(0xFFD1D5DB)),
                   SizedBox(height: 16),
                   Text(
                     'No subscription plans available',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Color(0xFF6B7280),
-                    ),
+                    style: TextStyle(fontSize: 18, color: Color(0xFF6B7280)),
                   ),
                 ],
               ),
@@ -62,9 +55,7 @@ class _PricingPageState extends ConsumerState<PricingPage> {
             ),
           );
         },
-        loading: () => const Center(
-          child: CircularProgressIndicator(),
-        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -87,10 +78,7 @@ class _PricingPageState extends ConsumerState<PricingPage> {
               Text(
                 error.toString(),
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Color(0xFF6B7280),
-                  fontSize: 14,
-                ),
+                style: const TextStyle(color: Color(0xFF6B7280), fontSize: 14),
               ),
             ],
           ),
@@ -119,17 +107,17 @@ class _PricingPageState extends ConsumerState<PricingPage> {
           Text(
             'Select the perfect plan for managing your domestic workers',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 16,
-              color: Color(0xFF6B7280),
-            ),
+            style: TextStyle(fontSize: 16, color: Color(0xFF6B7280)),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildPlanCard(SubscriptionPlan plan, AsyncValue<Subscription?> userSubscription) {
+  Widget _buildPlanCard(
+    SubscriptionPlan plan,
+    AsyncValue<Subscription?> userSubscription,
+  ) {
     final isCurrentPlan = userSubscription.when(
       data: (subscription) => subscription?.plan.tier == plan.tier,
       loading: () => false,
@@ -149,7 +137,7 @@ class _PricingPageState extends ConsumerState<PricingPage> {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black .withValues(alpha: 0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -164,7 +152,10 @@ class _PricingPageState extends ConsumerState<PricingPage> {
               right: 0,
               child: Center(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFF10B981),
                     borderRadius: BorderRadius.circular(12),
@@ -196,7 +187,7 @@ class _PricingPageState extends ConsumerState<PricingPage> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                
+
                 // Plan Description
                 Text(
                   plan.description,
@@ -206,7 +197,7 @@ class _PricingPageState extends ConsumerState<PricingPage> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                
+
                 // Price
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -231,14 +222,11 @@ class _PricingPageState extends ConsumerState<PricingPage> {
                     ),
                     const Text(
                       '/month',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Color(0xFF6B7280),
-                      ),
+                      style: TextStyle(fontSize: 18, color: Color(0xFF6B7280)),
                     ),
                   ],
                 ),
-                
+
                 // M-Pesa Price
                 Text(
                   'or KES ${plan.priceKES.toStringAsFixed(0)} via M-Pesa',
@@ -248,22 +236,27 @@ class _PricingPageState extends ConsumerState<PricingPage> {
                   ),
                 ),
                 const SizedBox(height: 24),
-                
+
                 // Features
-                ...plan.features.map((feature) => 
-                  _buildFeature(feature)
-                ),
-                
+                ...plan.features.map((feature) => _buildFeature(feature)),
+
                 const SizedBox(height: 24),
-                
+
                 // Action Button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: isCurrentPlan ? null : () => _handleSelectPlan(plan),
+                    onPressed: isCurrentPlan
+                        ? null
+                        : () => _handleSelectPlan(plan),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _getButtonColor(plan.tier, isCurrentPlan),
-                      foregroundColor: isCurrentPlan ? const Color(0xFF6B7280) : Colors.white,
+                      backgroundColor: _getButtonColor(
+                        plan.tier,
+                        isCurrentPlan,
+                      ),
+                      foregroundColor: isCurrentPlan
+                          ? const Color(0xFF6B7280)
+                          : Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -274,8 +267,8 @@ class _PricingPageState extends ConsumerState<PricingPage> {
                       isCurrentPlan
                           ? 'Current Plan'
                           : isFreeTier
-                              ? 'Get Started Free'
-                              : 'Upgrade to ${plan.tier}',
+                          ? 'Get Started Free'
+                          : 'Upgrade to ${plan.tier}',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -293,24 +286,17 @@ class _PricingPageState extends ConsumerState<PricingPage> {
 
   Widget _buildFeature(String featureKey) {
     final featureText = _getFeatureDisplayText(featureKey);
-    
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          const Icon(
-            Icons.check_circle,
-            size: 20,
-            color: Color(0xFF10B981),
-          ),
+          const Icon(Icons.check_circle, size: 20, color: Color(0xFF10B981)),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               featureText,
-              style: const TextStyle(
-                fontSize: 16,
-                color: Color(0xFF374151),
-              ),
+              style: const TextStyle(fontSize: 16, color: Color(0xFF374151)),
             ),
           ),
         ],
@@ -325,18 +311,12 @@ class _PricingPageState extends ConsumerState<PricingPage> {
         children: [
           Text(
             'All plans include 14-day free trial',
-            style: TextStyle(
-              fontSize: 14,
-              color: Color(0xFF6B7280),
-            ),
+            style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
           ),
           SizedBox(height: 4),
           Text(
             'Cancel anytime',
-            style: TextStyle(
-              fontSize: 14,
-              color: Color(0xFF6B7280),
-            ),
+            style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
           ),
         ],
       ),
@@ -371,7 +351,8 @@ class _PricingPageState extends ConsumerState<PricingPage> {
         return 'Automatic tax payments to KRA';
       case 'finance_software_integration':
         return 'Finance software integration';
-      case 'multi_property':
+      case 'property_management':
+      case 'multi_property_management':
         return 'Multi-property management';
       default:
         return featureKey.replaceAll('_', ' ').toUpperCase();
@@ -387,7 +368,7 @@ class _PricingPageState extends ConsumerState<PricingPage> {
     }
 
     final phoneController = TextEditingController();
-    
+
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -419,43 +400,45 @@ class _PricingPageState extends ConsumerState<PricingPage> {
           ElevatedButton(
             onPressed: () async {
               if (phoneController.text.isEmpty) return;
-              
+
               Navigator.of(dialogContext).pop();
-              
+
               try {
                 // Initiate M-Pesa STK Push
-                await ref.read(paymentsProvider.notifier).initiatePayment(
-                  phoneController.text, 
-                  plan.priceKES,
-                  accountReference: 'payDome-${plan.name}',
-                  transactionDesc: 'Subscription Upgrade',
-                );
+                await ref
+                    .read(paymentsProvider.notifier)
+                    .initiatePayment(
+                      phoneController.text,
+                      plan.priceKES,
+                      accountReference: 'payDome-${plan.name}',
+                      transactionDesc: 'Subscription Upgrade',
+                    );
 
                 if (!mounted) return;
-                
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Request Sent'),
-                      content: Text(
-                        'Please check your phone (${phoneController.text}) to complete the payment of KES ${NumberFormat('#,##0').format(plan.priceKES)}.',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: const Text('OK'),
-                        ),
-                      ],
+
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Request Sent'),
+                    content: Text(
+                      'Please check your phone (${phoneController.text}) to complete the payment of KES ${NumberFormat('#,##0').format(plan.priceKES)}.',
                     ),
-                  );
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('OK'),
+                      ),
+                    ],
+                  ),
+                );
               } catch (e) {
                 if (!mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Payment initiation failed: $e'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Payment initiation failed: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
               }
             },
             style: ElevatedButton.styleFrom(

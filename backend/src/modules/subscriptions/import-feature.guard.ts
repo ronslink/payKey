@@ -39,7 +39,7 @@ export class ImportFeatureGuard implements CanActivate {
 
     if (!canImportWorkers) {
       throw new ForbiddenException(
-        'The import feature is available for paid plans only. Please upgrade to BASIC, GOLD, or PLATINUM to import workers from Excel.',
+        'The import feature is available on GOLD and PLATINUM plans. Please upgrade to import workers from Excel.',
       );
     }
 

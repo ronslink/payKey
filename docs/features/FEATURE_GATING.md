@@ -8,7 +8,7 @@ Features are gated by subscription tier. Guards enforce access control on both b
 | Feature | FREE | BASIC | GOLD | PLATINUM |
 |---------|------|-------|------|----------|
 | **Workers** |
-| Worker CRUD | 1 max | 5 max | 10 max | 15 max |
+| Worker CRUD | 1 max | 5 max | 10 max | 20 max |
 | Worker termination | ✅ | ✅ | ✅ | ✅ |
 | **Payroll** |
 | Basic payroll | ✅ | ✅ | ✅ | ✅ |
@@ -25,17 +25,17 @@ Features are gated by subscription tier. Guards enforce access control on both b
 | Leave approvals | ❌ | ❌ | ❌ | ✅ |
 | Leave balance | ❌ | ❌ | ❌ | ✅ |
 | **Time Tracking** |
-| Clock in/out | ❌ | ✅ | ✅ | ✅ |
-| Attendance reports | ❌ | ❌ | ✅ | ✅ |
+| Clock in/out | ❌ | ❌ | ❌ | ✅ |
+| Attendance reports | ❌ | ❌ | ❌ | ✅ |
 
 ## Backend Guards
 
 | Guard | Purpose | File |
 |-------|---------|------|
-| `SubscriptionGuard` | Validates active subscription | `subscription.guard.ts` |
-| `TierGuard` | Validates minimum tier | `tier.guard.ts` |
-| `ImportFeatureGuard` | Gold+ for imports | `import-feature.guard.ts` |
-| `PlatinumGuard` | Platinum-only features | `platinum.guard.ts` |
+| `SubscriptionGuard` | Refreshes user subscription data before guarded actions | `subscription.guard.ts` |
+| `TierGuard` | Validates minimum tier for explicit tier routes | `common/guards/tier.guard.ts` |
+| `ImportFeatureGuard` | GOLD+ for imports | `import-feature.guard.ts` |
+| `PlatinumGuard` | PLATINUM-only features | `auth/platinum.guard.ts` |
 
 ## Usage in Controllers
 
@@ -62,8 +62,5 @@ Feature checks in `FeatureAccessService`:
 Feature definitions in:
 - `backend/src/modules/subscriptions/feature-access.config.ts`
 
-## Known Gaps
-| Gap | Status |
-|-----|--------|
-| Worker count injection | ⚠️ TODO: Inject WorkersService for validation |
-| Get actual worker count | ⚠️ TODO in feature-access.controller.ts |
+## Current Enforcement Notes
+The `/features` summary uses the active subscription tier, falls back to `users.tier`, and includes the live active worker count. The mobile app refreshes this summary after subscription payment or plan changes so gated screens and worker limits update with the new tier.

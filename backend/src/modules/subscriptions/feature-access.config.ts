@@ -5,7 +5,32 @@
  * and whether mock data is available during the trial period.
  */
 
-export type SubscriptionTier = 'FREE' | 'BASIC' | 'GOLD' | 'PLATINUM' | 'QA_UNLIMITED';
+export type SubscriptionTier =
+  | 'FREE'
+  | 'BASIC'
+  | 'GOLD'
+  | 'PLATINUM'
+  | 'QA_UNLIMITED';
+
+const PRODUCTION = process.env.NODE_ENV === 'production';
+
+export const TIER_ORDER: SubscriptionTier[] = [
+  'FREE',
+  'BASIC',
+  'GOLD',
+  'PLATINUM',
+];
+
+export function normalizeSubscriptionTier(
+  tier?: string | null,
+): SubscriptionTier {
+  const normalized = (tier || 'FREE').toUpperCase();
+  if (normalized === 'QA_UNLIMITED' && !PRODUCTION) return 'QA_UNLIMITED';
+  if (normalized === 'BASIC') return 'BASIC';
+  if (normalized === 'GOLD') return 'GOLD';
+  if (normalized === 'PLATINUM') return 'PLATINUM';
+  return 'FREE';
+}
 
 export interface FeatureDefinition {
   key: string;
@@ -209,6 +234,10 @@ export const TIER_LIMITS: Record<SubscriptionTier, { workerLimit: number }> = {
   QA_UNLIMITED: { workerLimit: 9999 },
 };
 
+export function getTierLimit(tier?: string | null): { workerLimit: number } {
+  return TIER_LIMITS[normalizeSubscriptionTier(tier)];
+}
+
 /**
  * Get a feature definition by key
  */
@@ -223,11 +252,12 @@ export function tierHasFeature(
   tier: SubscriptionTier,
   featureKey: string,
 ): boolean {
+  const normalizedTier = normalizeSubscriptionTier(tier);
   // QA_UNLIMITED has access to everything — it's a superset of PLATINUM for testing
-  if (tier === 'QA_UNLIMITED') return true;
+  if (normalizedTier === 'QA_UNLIMITED') return true;
   const feature = getFeatureByKey(featureKey);
   if (!feature) return true; // Unknown features are allowed by default
-  return feature.tiers.includes(tier);
+  return feature.tiers.includes(normalizedTier);
 }
 
 /**
@@ -236,9 +266,15 @@ export function tierHasFeature(
 export function getFeaturesForTier(
   tier: SubscriptionTier,
 ): FeatureDefinition[] {
-  return FEATURE_ACCESS_MATRIX.filter((f) => f.tiers.includes(tier)).sort(
-    (a, b) => a.displayOrder - b.displayOrder,
-  );
+  const normalizedTier = normalizeSubscriptionTier(tier);
+  if (normalizedTier === 'QA_UNLIMITED') {
+    return [...FEATURE_ACCESS_MATRIX].sort(
+      (a, b) => a.displayOrder - b.displayOrder,
+    );
+  }
+  return FEATURE_ACCESS_MATRIX.filter((f) =>
+    f.tiers.includes(normalizedTier),
+  ).sort((a, b) => a.displayOrder - b.displayOrder);
 }
 
 /**
@@ -250,8 +286,7 @@ export function getLowestTierForFeature(
   const feature = getFeatureByKey(featureKey);
   if (!feature) return null;
 
-  const tierOrder: SubscriptionTier[] = ['FREE', 'BASIC', 'GOLD', 'PLATINUM'];
-  for (const tier of tierOrder) {
+  for (const tier of TIER_ORDER) {
     if (feature.tiers.includes(tier)) {
       return tier;
     }

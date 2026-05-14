@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../data/repositories/subscription_repository.dart';
 import '../../data/models/subscription_model.dart';
 import '../providers/subscription_provider.dart';
+import '../providers/feature_access_provider.dart';
 
 class SubscriptionManagementPage extends ConsumerStatefulWidget {
   const SubscriptionManagementPage({super.key});
@@ -22,6 +23,7 @@ class _SubscriptionManagementPageState
     Future.microtask(() {
       ref.invalidate(subscriptionPlansProvider);
       ref.invalidate(userSubscriptionProvider);
+      ref.invalidate(subscriptionSummaryProvider);
     });
   }
 
@@ -37,10 +39,7 @@ class _SubscriptionManagementPageState
         foregroundColor: const Color(0xFF111827),
         title: const Text(
           'Plans & Pricing',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            letterSpacing: -0.5,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: -0.5),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Color(0xFF111827)),
@@ -58,6 +57,7 @@ class _SubscriptionManagementPageState
             onPressed: () {
               ref.invalidate(subscriptionPlansProvider);
               ref.invalidate(userSubscriptionProvider);
+              ref.invalidate(subscriptionSummaryProvider);
             },
             icon: const Icon(Icons.refresh, color: Color(0xFF6B7280)),
             tooltip: 'Refresh',
@@ -69,6 +69,7 @@ class _SubscriptionManagementPageState
           onRefresh: () async {
             ref.invalidate(subscriptionPlansProvider);
             ref.invalidate(userSubscriptionProvider);
+            ref.invalidate(subscriptionSummaryProvider);
           },
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -90,11 +91,9 @@ class _SubscriptionManagementPageState
                 const SizedBox(height: 24),
 
                 // Plans Grid
-                ...plans.map((plan) => _buildPlanCard(
-                      context,
-                      plan,
-                      userSubState.value,
-                    )),
+                ...plans.map(
+                  (plan) => _buildPlanCard(context, plan, userSubState.value),
+                ),
 
                 const SizedBox(height: 32),
 
@@ -117,7 +116,10 @@ class _SubscriptionManagementPageState
     );
   }
 
-  Widget _buildCurrentPlanCard(BuildContext context, Subscription? subscription) {
+  Widget _buildCurrentPlanCard(
+    BuildContext context,
+    Subscription? subscription,
+  ) {
     if (subscription == null) {
       return Card(
         color: Colors.blue.shade50,
@@ -203,7 +205,9 @@ class _SubscriptionManagementPageState
                           const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2),
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: color.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
@@ -272,7 +276,12 @@ class _SubscriptionManagementPageState
   }
 
   Widget _buildStatItem(
-      BuildContext context, String label, String value, IconData icon, Color color) {
+    BuildContext context,
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Column(
       children: [
         Container(
@@ -295,10 +304,7 @@ class _SubscriptionManagementPageState
         const SizedBox(height: 2),
         Text(
           label,
-          style: TextStyle(
-            color: Colors.grey.shade600,
-            fontSize: 11,
-          ),
+          style: TextStyle(color: Colors.grey.shade600, fontSize: 11),
         ),
       ],
     );
@@ -311,7 +317,11 @@ class _SubscriptionManagementPageState
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            Icon(Icons.workspace_premium, color: Colors.indigo.shade600, size: 48),
+            Icon(
+              Icons.workspace_premium,
+              color: Colors.indigo.shade600,
+              size: 48,
+            ),
             const SizedBox(height: 12),
             Text(
               'Simple, Transparent Pricing',
@@ -325,10 +335,7 @@ class _SubscriptionManagementPageState
             const SizedBox(height: 8),
             Text(
               'Choose the plan that fits your team. No hidden fees, cancel anytime.',
-              style: TextStyle(
-                color: Colors.indigo.shade600,
-                fontSize: 14,
-              ),
+              style: TextStyle(color: Colors.indigo.shade600, fontSize: 14),
               textAlign: TextAlign.center,
             ),
           ],
@@ -338,7 +345,10 @@ class _SubscriptionManagementPageState
   }
 
   Widget _buildPlanCard(
-      BuildContext context, SubscriptionPlan plan, Subscription? currentSub) {
+    BuildContext context,
+    SubscriptionPlan plan,
+    Subscription? currentSub,
+  ) {
     final isCurrentPlan = currentSub?.plan.tier == plan.tier;
     final color = _getPlanColor(plan.tier);
     final isPopular = plan.isPopular;
@@ -385,7 +395,11 @@ class _SubscriptionManagementPageState
                         color: color.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(_getPlanIcon(plan.tier), color: color, size: 28),
+                      child: Icon(
+                        _getPlanIcon(plan.tier),
+                        color: color,
+                        size: 28,
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -413,7 +427,9 @@ class _SubscriptionManagementPageState
                     if (isCurrentPlan)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.green.shade100,
                           borderRadius: BorderRadius.circular(20),
@@ -421,8 +437,11 @@ class _SubscriptionManagementPageState
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.check_circle,
-                                color: Colors.green, size: 16),
+                            Icon(
+                              Icons.check_circle,
+                              color: Colors.green,
+                              size: 16,
+                            ),
                             SizedBox(width: 4),
                             Text(
                               'CURRENT',
@@ -469,10 +488,7 @@ class _SubscriptionManagementPageState
                 const SizedBox(height: 4),
                 Text(
                   '≈ KES ${plan.priceKES.toInt()}',
-                  style: TextStyle(
-                    color: Colors.grey.shade500,
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
                 ),
 
                 const SizedBox(height: 24),
@@ -480,28 +496,30 @@ class _SubscriptionManagementPageState
                 const SizedBox(height: 16),
 
                 // Features
-                ...plan.features.map((feature) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: color.withValues(alpha: 0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(Icons.check, color: color, size: 14),
+                ...plan.features.map(
+                  (feature) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              feature,
-                              style: TextStyle(color: Colors.grey.shade700),
-                            ),
+                          child: Icon(Icons.check, color: color, size: 14),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            feature,
+                            style: TextStyle(color: Colors.grey.shade700),
                           ),
-                        ],
-                      ),
-                    )),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
 
                 const SizedBox(height: 24),
 
@@ -525,7 +543,9 @@ class _SubscriptionManagementPageState
                     child: Text(
                       isCurrentPlan
                           ? 'Current Plan'
-                          : (plan.tier == 'FREE' ? 'Get Started Free' : 'Start 14-Day Trial'),
+                          : (plan.tier == 'FREE'
+                                ? 'Get Started Free'
+                                : 'Start 14-Day Trial'),
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
@@ -577,10 +597,7 @@ class _SubscriptionManagementPageState
             const SizedBox(height: 16),
             Text(
               '14-day free trial • Cancel anytime • No hidden fees',
-              style: TextStyle(
-                color: Colors.green.shade700,
-                fontSize: 12,
-              ),
+              style: TextStyle(color: Colors.green.shade700, fontSize: 12),
               textAlign: TextAlign.center,
             ),
           ],
@@ -607,15 +624,18 @@ class _SubscriptionManagementPageState
     final faqs = [
       {
         'q': 'Can I change my plan later?',
-        'a': 'Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately.',
+        'a':
+            'Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately.',
       },
       {
         'q': 'What happens when my trial ends?',
-        'a': 'You\'ll be automatically switched to your selected plan. We\'ll notify you before any charges.',
+        'a':
+            'You\'ll be automatically switched to your selected plan. We\'ll notify you before any charges.',
       },
       {
         'q': 'Is there a long-term commitment?',
-        'a': 'No! All plans are month-to-month. Cancel anytime with no penalties.',
+        'a':
+            'No! All plans are month-to-month. Cancel anytime with no penalties.',
       },
     ];
 
@@ -640,26 +660,28 @@ class _SubscriptionManagementPageState
               ],
             ),
             const SizedBox(height: 16),
-            ...faqs.map((faq) => Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        faq['q']!,
-                        style: const TextStyle(fontWeight: FontWeight.w600),
+            ...faqs.map(
+              (faq) => Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      faq['q']!,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      faq['a']!,
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 13,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        faq['a']!,
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                )),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -677,10 +699,7 @@ class _SubscriptionManagementPageState
             const SizedBox(height: 16),
             const Text(
               'Unable to Load Plans',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
@@ -693,6 +712,7 @@ class _SubscriptionManagementPageState
               onPressed: () {
                 ref.invalidate(subscriptionPlansProvider);
                 ref.invalidate(userSubscriptionProvider);
+                ref.invalidate(subscriptionSummaryProvider);
               },
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
@@ -711,7 +731,9 @@ class _SubscriptionManagementPageState
     }
 
     // Relay returnPath if present in current URL
-    final returnPath = GoRouterState.of(context).uri.queryParameters['returnPath'];
+    final returnPath = GoRouterState.of(
+      context,
+    ).uri.queryParameters['returnPath'];
     final path = returnPath != null && returnPath.isNotEmpty
         ? '/subscriptions/payment?returnPath=${Uri.encodeComponent(returnPath)}'
         : '/subscriptions/payment';
@@ -720,9 +742,10 @@ class _SubscriptionManagementPageState
 
   void _handleFreePlanSelection(SubscriptionPlan plan) {
     final currentSub = ref.read(userSubscriptionProvider).value;
-    final isDowngrade = currentSub != null && 
-                       currentSub.status == 'ACTIVE' && 
-                       currentSub.plan.tier != 'FREE';
+    final isDowngrade =
+        currentSub != null &&
+        currentSub.status == 'ACTIVE' &&
+        currentSub.plan.tier != 'FREE';
 
     if (isDowngrade) {
       final endDateStr = DateFormat('MMMM d, yyyy').format(currentSub.endDate);
@@ -758,29 +781,34 @@ class _SubscriptionManagementPageState
       );
     } else {
       // Immediate switch or sign up
-       _processFreeSwitch(plan);
+      _processFreeSwitch(plan);
     }
   }
 
   Future<void> _processFreeSwitch(SubscriptionPlan plan) async {
     try {
       final repo = ref.read(subscriptionRepositoryProvider);
-      
+
       // Show loading indicator
       if (mounted) {
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (context) => const Center(child: CircularProgressIndicator()),
+          builder: (context) =>
+              const Center(child: CircularProgressIndicator()),
         );
       }
 
       await repo.subscribeToFreePlan(plan.id);
-      
+
       if (mounted) Navigator.of(context).pop(); // Dismiss loading
 
       ref.invalidate(userSubscriptionProvider);
-      ref.invalidate(subscriptionPlansProvider); // Refresh plans to update "Current" badge
+      ref.invalidate(
+        subscriptionPlansProvider,
+      ); // Refresh plans to update "Current" badge
+      ref.invalidate(subscriptionSummaryProvider);
+      ref.invalidate(canAddWorkerProvider);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -804,8 +832,20 @@ class _SubscriptionManagementPageState
   }
 
   String _formatShortDate(DateTime date) {
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return '${months[date.month - 1]} ${date.day}';
   }
 

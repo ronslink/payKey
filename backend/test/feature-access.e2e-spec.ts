@@ -86,26 +86,26 @@ describe('Feature Access E2E', () => {
       expect(res.body).toHaveProperty('isActive');
     });
 
-    it('should get upgrade benefits for PROFESSIONAL tier', async () => {
+    it('should get upgrade benefits for GOLD tier', async () => {
       const res = await request(app.getHttpServer())
-        .get('/features/upgrade-benefits/professional')
+        .get('/features/upgrade-benefits/gold')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
       expect(res.body).toHaveProperty('targetTier');
-      expect(res.body.targetTier).toBe('PROFESSIONAL');
+      expect(res.body.targetTier).toBe('GOLD');
       expect(res.body).toHaveProperty('newFeatures');
       expect(res.body).toHaveProperty('allTierFeatures');
     });
 
-    it('should get upgrade benefits for ENTERPRISE tier', async () => {
+    it('should get upgrade benefits for PLATINUM tier', async () => {
       const res = await request(app.getHttpServer())
-        .get('/features/upgrade-benefits/enterprise')
+        .get('/features/upgrade-benefits/platinum')
         .set('Authorization', `Bearer ${authToken}`)
         .expect(200);
 
       expect(res.body).toHaveProperty('targetTier');
-      expect(res.body.targetTier).toBe('ENTERPRISE');
+      expect(res.body.targetTier).toBe('PLATINUM');
     });
 
     it('should check if user can add worker', async () => {

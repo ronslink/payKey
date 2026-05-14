@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UsersService } from '../users/users.service';
@@ -15,9 +15,11 @@ import {
   getLowestTierForFeature,
   getFeaturesForTier,
   getUpgradeFeatures,
-  TIER_LIMITS,
+  getTierLimit,
+  normalizeSubscriptionTier,
 } from './feature-access.config';
 import { TRIAL_PERIOD_DAYS } from './subscription-plans.config';
+import { WorkersService } from '../workers/workers.service';
 
 export interface FeatureAccessResult {
   /** Whether the user has full access to this feature */
@@ -56,6 +58,8 @@ export class FeatureAccessService {
     private usersService: UsersService,
     @InjectRepository(Subscription)
     private subscriptionRepository: Repository<Subscription>,
+    @Inject(forwardRef(() => WorkersService))
+    private workersService: WorkersService,
   ) {}
 
   /**
@@ -87,12 +91,8 @@ export class FeatureAccessService {
     }
 
     const subscription = await this.getCurrentSubscription(userId);
-    let userTier = (subscription?.tier || user.tier || 'FREE') as string;
-    userTier = userTier.toUpperCase(); // Normalize
-    const hasDirectAccess = tierHasFeature(
-      userTier as SubscriptionTier,
-      featureKey,
-    );
+    const userTier = normalizeSubscriptionTier(subscription?.tier || user.tier);
+    const hasDirectAccess = tierHasFeature(userTier, featureKey);
 
     if (hasDirectAccess) {
       return {
@@ -192,13 +192,12 @@ export class FeatureAccessService {
     }
 
     const subscription = await this.getCurrentSubscription(userId);
-    let tier = (subscription?.tier || user.tier || 'FREE') as string;
-    tier = tier.toUpperCase(); // Normalize to handle case mismatch
-    const activeTier = tier as SubscriptionTier;
+    const activeTier = normalizeSubscriptionTier(
+      subscription?.tier || user.tier,
+    );
     const trialStatus = this.calculateTrialStatus(user.createdAt);
 
-    // Get worker count (would need WorkersService injection)
-    const currentWorkerCount = 0; // TODO: Inject WorkersService
+    const currentWorkerCount = await this.workersService.getWorkerCount(userId);
 
     // Categorize features
     const accessibleFeatures: FeatureDefinition[] = [];
@@ -219,7 +218,7 @@ export class FeatureAccessService {
       tier: activeTier,
       isTrialActive: trialStatus.isActive,
       trialDaysRemaining: trialStatus.daysRemaining,
-      workerLimit: TIER_LIMITS[activeTier].workerLimit,
+      workerLimit: getTierLimit(activeTier).workerLimit,
       currentWorkerCount,
       accessibleFeatures,
       previewFeatures,
@@ -261,15 +260,13 @@ export class FeatureAccessService {
     }
 
     const subscription = await this.getCurrentSubscription(userId);
-    const tier = (subscription?.tier ||
-      user.tier ||
-      'FREE') as SubscriptionTier;
-    const limit = TIER_LIMITS[tier].workerLimit;
+    const tier = normalizeSubscriptionTier(subscription?.tier || user.tier);
+    const limit = getTierLimit(tier).workerLimit;
     const trialStatus = this.calculateTrialStatus(user.createdAt);
 
     // During trial, allow up to PLATINUM limit
     if (trialStatus.isActive) {
-      const trialLimit = TIER_LIMITS.PLATINUM.workerLimit;
+      const trialLimit = getTierLimit('PLATINUM').workerLimit;
       return {
         canAdd: currentWorkerCount < trialLimit,
         currentLimit: trialLimit,
@@ -288,7 +285,7 @@ export class FeatureAccessService {
         currentLimit: limit,
         currentCount: currentWorkerCount,
         upgradeMessage: nextTier
-          ? `Upgrade to ${nextTier} to add up to ${TIER_LIMITS[nextTier].workerLimit} workers.`
+          ? `Upgrade to ${nextTier} to add up to ${getTierLimit(nextTier).workerLimit} workers.`
           : 'Maximum worker limit reached.',
       };
     }

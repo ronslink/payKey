@@ -93,12 +93,13 @@ export class FeatureAccessController {
    */
   @Get('can-add-worker')
   async canAddWorker(@Request() req: any) {
-    // TODO: Get actual worker count from WorkersService
-    const currentWorkerCount = 0; // Placeholder - inject WorkersService
+    const summary = await this.featureAccessService.getSubscriptionSummary(
+      req.user.userId,
+    );
 
     return this.featureAccessService.canAddWorker(
       req.user.userId,
-      currentWorkerCount,
+      summary.currentWorkerCount,
     );
   }
 
@@ -211,7 +212,7 @@ export class FeatureAccessController {
   async getPropertiesData(@Request() req: any) {
     const access = await this.featureAccessService.checkFeatureAccess(
       req.user.userId,
-      'multi_property',
+      'property_management',
     );
 
     if (!access.hasAccess) {

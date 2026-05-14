@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../providers/subscription_provider.dart';
+import '../providers/feature_access_provider.dart';
 import '../providers/subscription_payment_history_provider.dart';
 import '../../data/models/subscription_model.dart';
 import '../../data/models/subscription_payment_record.dart';
@@ -23,6 +24,7 @@ class _SubscriptionDetailsPageState
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.invalidate(userSubscriptionProvider);
+      ref.invalidate(subscriptionSummaryProvider);
       ref
           .read(subscriptionPaymentHistoryProvider.notifier)
           .loadUserSubscriptionPaymentHistory();
@@ -43,6 +45,7 @@ class _SubscriptionDetailsPageState
             icon: const Icon(Icons.refresh),
             onPressed: () {
               ref.invalidate(userSubscriptionProvider);
+              ref.invalidate(subscriptionSummaryProvider);
               ref
                   .read(subscriptionPaymentHistoryProvider.notifier)
                   .loadUserSubscriptionPaymentHistory();
@@ -54,6 +57,7 @@ class _SubscriptionDetailsPageState
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(userSubscriptionProvider);
+          ref.invalidate(subscriptionSummaryProvider);
           await ref
               .read(subscriptionPaymentHistoryProvider.notifier)
               .loadUserSubscriptionPaymentHistory();
@@ -85,8 +89,9 @@ class _SubscriptionDetailsPageState
 
               // Quick Actions
               userSubscriptionAsync.when(
-                data: (sub) =>
-                    sub != null ? _buildQuickActions(context, sub) : const SizedBox.shrink(),
+                data: (sub) => sub != null
+                    ? _buildQuickActions(context, sub)
+                    : const SizedBox.shrink(),
                 loading: () => const SizedBox.shrink(),
                 error: (_, _) => const SizedBox.shrink(),
               ),
@@ -130,19 +135,13 @@ class _SubscriptionDetailsPageState
             const SizedBox(height: 20),
             const Text(
               'No Active Subscription',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
               'Subscribe to a plan to unlock premium features and manage your team more effectively.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                height: 1.5,
-              ),
+              style: TextStyle(color: Colors.grey.shade600, height: 1.5),
             ),
             const SizedBox(height: 24),
             SizedBox(
@@ -165,7 +164,10 @@ class _SubscriptionDetailsPageState
     );
   }
 
-  Widget _buildSubscriptionCard(BuildContext context, Subscription subscription) {
+  Widget _buildSubscriptionCard(
+    BuildContext context,
+    Subscription subscription,
+  ) {
     final isActive = subscription.status.toLowerCase() == 'active';
     final statusColor = isActive ? Colors.green : Colors.orange;
     final planColor = _getPlanColor(subscription.plan.tier);
@@ -197,14 +199,15 @@ class _SubscriptionDetailsPageState
                     children: [
                       Text(
                         subscription.plan.name,
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 4),
                       Container(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: statusColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
@@ -213,7 +216,9 @@ class _SubscriptionDetailsPageState
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              isActive ? Icons.check_circle : Icons.pause_circle,
+                              isActive
+                                  ? Icons.check_circle
+                                  : Icons.pause_circle,
                               color: statusColor,
                               size: 14,
                             ),
@@ -259,27 +264,27 @@ class _SubscriptionDetailsPageState
                       final difference = subscription.endDate.difference(now);
                       final days = difference.inDays;
                       final hours = difference.inHours;
-                      
+
                       String displayValue;
                       Color displayColor;
-                      
+
                       if (difference.isNegative) {
                         displayValue = 'Expired';
                         displayColor = Colors.red;
                       } else if (days == 0) {
-                         // Less than 24 hours left
-                         if (hours > 0) {
-                           displayValue = '$hours Hrs';
-                           displayColor = Colors.orange;
-                         } else {
-                           displayValue = '< 1 Hr';
-                           displayColor = Colors.red;
-                         }
+                        // Less than 24 hours left
+                        if (hours > 0) {
+                          displayValue = '$hours Hrs';
+                          displayColor = Colors.orange;
+                        } else {
+                          displayValue = '< 1 Hr';
+                          displayColor = Colors.red;
+                        }
                       } else {
                         displayValue = '$days';
                         displayColor = days < 7 ? Colors.orange : Colors.green;
                       }
-                      
+
                       return _buildStatCard(
                         context,
                         'Days Left',
@@ -287,7 +292,7 @@ class _SubscriptionDetailsPageState
                         Icons.timer,
                         displayColor,
                       );
-                    }
+                    },
                   ),
                 ),
               ],
@@ -325,13 +330,25 @@ class _SubscriptionDetailsPageState
 
             // Subscription Details
             _buildDetailRow(
-                'Plan', subscription.plan.tier.toUpperCase(), planColor),
-            _buildDetailRow('Amount Paid',
-                '${subscription.currency} ${subscription.amountPaid}', null),
-            _buildDetailRow('Start Date',
-                DateFormat('MMMM d, yyyy').format(subscription.startDate), null),
-            _buildDetailRow('Renewal Date',
-                DateFormat('MMMM d, yyyy').format(subscription.endDate), null),
+              'Plan',
+              subscription.plan.tier.toUpperCase(),
+              planColor,
+            ),
+            _buildDetailRow(
+              'Amount Paid',
+              '${subscription.currency} ${subscription.amountPaid}',
+              null,
+            ),
+            _buildDetailRow(
+              'Start Date',
+              DateFormat('MMMM d, yyyy').format(subscription.startDate),
+              null,
+            ),
+            _buildDetailRow(
+              'Renewal Date',
+              DateFormat('MMMM d, yyyy').format(subscription.endDate),
+              null,
+            ),
 
             if (subscription.cancelledAt != null) ...[
               const SizedBox(height: 8),
@@ -362,7 +379,12 @@ class _SubscriptionDetailsPageState
   }
 
   Widget _buildStatCard(
-      BuildContext context, String label, String value, IconData icon, Color color) {
+    BuildContext context,
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -385,10 +407,7 @@ class _SubscriptionDetailsPageState
           const SizedBox(height: 4),
           Text(
             label,
-            style: TextStyle(
-              color: Colors.grey.shade600,
-              fontSize: 11,
-            ),
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 11),
           ),
         ],
       ),
@@ -401,16 +420,10 @@ class _SubscriptionDetailsPageState
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: TextStyle(color: Colors.grey.shade600),
-          ),
+          Text(label, style: TextStyle(color: Colors.grey.shade600)),
           Text(
             value,
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: valueColor,
-            ),
+            style: TextStyle(fontWeight: FontWeight.w600, color: valueColor),
           ),
         ],
       ),
@@ -430,10 +443,7 @@ class _SubscriptionDetailsPageState
                 const SizedBox(width: 8),
                 const Text(
                   'Quick Actions',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
               ],
             ),
@@ -467,7 +477,9 @@ class _SubscriptionDetailsPageState
                 Expanded(
                   child: _buildActionButton(
                     context,
-                    subscription.autoRenew ? 'Cancel Auto-Renew' : 'Enable Auto-Renew',
+                    subscription.autoRenew
+                        ? 'Cancel Auto-Renew'
+                        : 'Enable Auto-Renew',
                     subscription.autoRenew ? Icons.cancel : Icons.autorenew,
                     subscription.autoRenew ? Colors.orange : Colors.green,
                     () => _toggleAutoRenew(context, subscription),
@@ -491,8 +503,13 @@ class _SubscriptionDetailsPageState
     );
   }
 
-  Widget _buildActionButton(BuildContext context, String label, IconData icon,
-      Color color, VoidCallback onTap) {
+  Widget _buildActionButton(
+    BuildContext context,
+    String label,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -523,7 +540,9 @@ class _SubscriptionDetailsPageState
   }
 
   Widget _buildPaymentHistorySection(
-      BuildContext context, AsyncValue<List<SubscriptionPaymentRecord>> historyAsync) {
+    BuildContext context,
+    AsyncValue<List<SubscriptionPaymentRecord>> historyAsync,
+  ) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -537,10 +556,7 @@ class _SubscriptionDetailsPageState
                 const Expanded(
                   child: Text(
                     'Payment History',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                 ),
                 TextButton(
@@ -563,8 +579,11 @@ class _SubscriptionDetailsPageState
                     ),
                     child: Column(
                       children: [
-                        Icon(Icons.receipt_long,
-                            size: 40, color: Colors.grey.shade400),
+                        Icon(
+                          Icons.receipt_long,
+                          size: 40,
+                          color: Colors.grey.shade400,
+                        ),
                         const SizedBox(height: 12),
                         Text(
                           'No payments yet',
@@ -612,7 +631,10 @@ class _SubscriptionDetailsPageState
     );
   }
 
-  Widget _buildPaymentItem(BuildContext context, SubscriptionPaymentRecord payment) {
+  Widget _buildPaymentItem(
+    BuildContext context,
+    SubscriptionPaymentRecord payment,
+  ) {
     final isCompleted = payment.status == 'COMPLETED';
     final statusColor = isCompleted ? Colors.green : Colors.orange;
     final currencyFormat = NumberFormat('#,##0.00');
@@ -731,10 +753,7 @@ class _SubscriptionDetailsPageState
               '• Payment is processed securely via Stripe/M-Pesa\n'
               '• You can cancel or change plans at any time\n'
               '• Need help? Contact support 24/7',
-              style: TextStyle(
-                color: Colors.blue.shade700,
-                height: 1.6,
-              ),
+              style: TextStyle(color: Colors.blue.shade700, height: 1.6),
             ),
           ],
         ),
@@ -766,7 +785,10 @@ class _SubscriptionDetailsPageState
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () => ref.invalidate(userSubscriptionProvider),
+              onPressed: () {
+                ref.invalidate(userSubscriptionProvider);
+                ref.invalidate(subscriptionSummaryProvider);
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red.shade600,
                 foregroundColor: Colors.white,
@@ -817,7 +839,9 @@ class _SubscriptionDetailsPageState
               Text('Enable Auto-Renew?'),
             ],
           ),
-          content: const Text('Your subscription will automatically renew each month.'),
+          content: const Text(
+            'Your subscription will automatically renew each month.',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -868,9 +892,13 @@ class _SubscriptionDetailsPageState
             TextField(
               controller: reasonController,
               decoration: const InputDecoration(
-                hintText: 'e.g., Too expensive, Switching to another service...',
+                hintText:
+                    'e.g., Too expensive, Switching to another service...',
                 border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
               ),
               maxLines: 2,
             ),
@@ -885,27 +913,44 @@ class _SubscriptionDetailsPageState
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
               Navigator.of(context).pop();
-              _performToggle(context, subscription, false, reasonController.text);
+              _performToggle(
+                context,
+                subscription,
+                false,
+                reasonController.text,
+              );
             },
-            child: const Text('Confirm Cancellation', style: TextStyle(color: Colors.white)),
+            child: const Text(
+              'Confirm Cancellation',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
     ).then((_) => reasonController.dispose());
   }
 
-  Future<void> _performToggle(BuildContext context, Subscription subscription, bool newValue, String? reason) async {
+  Future<void> _performToggle(
+    BuildContext context,
+    Subscription subscription,
+    bool newValue,
+    String? reason,
+  ) async {
     try {
       final repo = ref.read(subscriptionRepositoryProvider);
       await repo.toggleAutoRenew(newValue, reason: reason);
       ref.invalidate(userSubscriptionProvider);
+      ref.invalidate(subscriptionSummaryProvider);
+      ref.invalidate(canAddWorkerProvider);
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(newValue
-                ? 'Auto-renewal enabled'
-                : 'Auto-renewal disabled. Access continues until end of billing period.'),
+            content: Text(
+              newValue
+                  ? 'Auto-renewal enabled'
+                  : 'Auto-renewal disabled. Access continues until end of billing period.',
+            ),
             backgroundColor: newValue ? Colors.green : Colors.orange,
           ),
         );

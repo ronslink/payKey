@@ -4,7 +4,9 @@ import '../../../../core/network/api_service.dart';
 import '../models/subscription_model.dart';
 import '../models/subscription_payment_record.dart';
 
-final subscriptionRepositoryProvider = Provider((ref) => SubscriptionRepository());
+final subscriptionRepositoryProvider = Provider(
+  (ref) => SubscriptionRepository(),
+);
 
 class SubscriptionRepository {
   final ApiService _apiService = ApiService();
@@ -12,33 +14,39 @@ class SubscriptionRepository {
   Future<List<SubscriptionPlan>> getSubscriptionPlans() async {
     try {
       final response = await _apiService.getSubscriptionPlans();
-      
+
       // Handle different response types more robustly
       if (response.data == null) {
         return [];
       }
-      
+
       List<dynamic> dataList;
       if (response.data is List) {
         dataList = response.data as List;
-      } else if (response.data is Map<String, dynamic> && (response.data as Map<String, dynamic>).containsKey('data')) {
+      } else if (response.data is Map<String, dynamic> &&
+          (response.data as Map<String, dynamic>).containsKey('data')) {
         final data = response.data as Map<String, dynamic>;
         dataList = data['data'] is List ? data['data'] as List : [data['data']];
       } else {
         // Try to convert single object to list
         dataList = [response.data];
       }
-      
+
       return dataList.map((json) {
         try {
           if (json is Map<String, dynamic>) {
             return SubscriptionPlan(
-              id: json['id']?.toString() ?? json['tier']?.toString() ?? 'unknown',
+              id:
+                  json['id']?.toString() ??
+                  json['tier']?.toString() ??
+                  'unknown',
               tier: json['tier']?.toString() ?? 'unknown',
               name: json['name']?.toString() ?? 'Unknown Plan',
               description: json['description']?.toString() ?? '',
-              priceUSD: double.tryParse(json['price_usd']?.toString() ?? '0') ?? 0.0,
-              priceKES: double.tryParse(json['price_kes']?.toString() ?? '0') ?? 0.0,
+              priceUSD:
+                  double.tryParse(json['price_usd']?.toString() ?? '0') ?? 0.0,
+              priceKES:
+                  double.tryParse(json['price_kes']?.toString() ?? '0') ?? 0.0,
               workerLimit: json['worker_limit'] ?? 0,
               features: _extractFeaturesFromJson(json['features']),
               isPopular: _isPopularPlan(json['tier']?.toString()),
@@ -48,12 +56,19 @@ class SubscriptionRepository {
             // Handle other map types
             final mapJson = json as Map<String, dynamic>;
             return SubscriptionPlan(
-              id: mapJson['id']?.toString() ?? mapJson['tier']?.toString() ?? 'unknown',
+              id:
+                  mapJson['id']?.toString() ??
+                  mapJson['tier']?.toString() ??
+                  'unknown',
               tier: mapJson['tier']?.toString() ?? 'unknown',
               name: mapJson['name']?.toString() ?? 'Unknown Plan',
               description: mapJson['description']?.toString() ?? '',
-              priceUSD: double.tryParse(mapJson['price_usd']?.toString() ?? '0') ?? 0.0,
-              priceKES: double.tryParse(mapJson['price_kes']?.toString() ?? '0') ?? 0.0,
+              priceUSD:
+                  double.tryParse(mapJson['price_usd']?.toString() ?? '0') ??
+                  0.0,
+              priceKES:
+                  double.tryParse(mapJson['price_kes']?.toString() ?? '0') ??
+                  0.0,
               workerLimit: mapJson['worker_limit'] ?? 0,
               features: _extractFeaturesFromJson(mapJson['features']),
               isPopular: _isPopularPlan(mapJson['tier']?.toString()),
@@ -100,17 +115,15 @@ class SubscriptionRepository {
     try {
       final response = await _apiService.getUserSubscription();
       if (response.data == null) return null;
-      
+
       if (response.data is Map<String, dynamic>) {
         final json = response.data as Map<String, dynamic>;
-        
+
         // Convert API response to Subscription format - Backend structure is simpler than expected
         return _mapJsonToSubscription(json);
       }
-      
-      return null;
-      
 
+      return null;
     } on DioException catch (e) {
       throw Exception(_apiService.getErrorMessage(e));
     } catch (e) {
@@ -124,11 +137,11 @@ class SubscriptionRepository {
       case 'FREE':
         return 1;
       case 'BASIC':
-        return 10;
+        return 5;
       case 'GOLD':
-        return 50;
+        return 10;
       case 'PLATINUM':
-        return 999;
+        return 20;
       default:
         return 1;
     }
@@ -137,13 +150,44 @@ class SubscriptionRepository {
   List<String> _getFeaturesForTier(String? tier) {
     switch (tier?.toUpperCase()) {
       case 'FREE':
-        return ['Up to 1 worker', 'Basic payroll'];
+        return [
+          'Up to 1 worker',
+          'Basic worker management',
+          'Automatic tax calculations',
+        ];
       case 'BASIC':
-        return ['Up to 10 workers', 'Basic payroll', 'Time tracking', 'Tax management'];
+        return [
+          'Up to 5 workers',
+          'Automatic tax calculations',
+          'M-Pesa payments',
+          'P9 Tax Cards',
+        ];
       case 'GOLD':
-        return ['Up to 50 workers', 'Advanced payroll', 'Time tracking', 'Tax management', 'Multiple properties'];
+        return [
+          'Up to 10 workers',
+          'Automatic tax calculations',
+          'M-Pesa payments',
+          'P9 Tax Cards',
+          'Advanced reporting',
+          'Accounting exports',
+          'Priority support',
+          'Excel worker import',
+        ];
       case 'PLATINUM':
-        return ['Unlimited workers', 'Premium payroll', 'Time tracking', 'Tax management', 'Multiple properties', 'Priority support'];
+        return [
+          'Up to 20 workers',
+          'Automatic tax calculations',
+          'M-Pesa payments',
+          'Leave tracking',
+          'Time tracking (clock in/out)',
+          'Geofencing',
+          'Advanced reporting',
+          'Accounting exports',
+          'Priority support',
+          'Automatic tax payments to KRA',
+          'Multi-property management',
+          'Excel worker import',
+        ];
       default:
         return ['Basic features'];
     }
@@ -161,29 +205,43 @@ class SubscriptionRepository {
             case 'up_to_10_workers':
               features.add('Up to 10 workers');
               break;
-            case 'up_to_50_workers':
-              features.add('Up to 50 workers');
+            case 'up_to_5_workers':
+              features.add('Up to 5 workers');
               break;
-            case 'unlimited_workers':
-              features.add('Unlimited workers');
+            case 'up_to_20_workers':
+              features.add('Up to 20 workers');
+              break;
+            case 'mpesa_payments':
+              features.add('M-Pesa payments');
+              break;
+            case 'p9_tax_cards':
+              features.add('P9 Tax Cards');
+              break;
+            case 'advanced_reporting':
+              features.add('Advanced reporting');
+              break;
+            case 'accounting_exports':
+              features.add('Accounting exports');
               break;
             case 'automatic_tax_calculations':
               features.add('Automatic tax calculations');
               break;
-            case 'payroll_reports':
-              features.add('Payroll reports');
+            case 'basic_worker_management':
+              features.add('Basic worker management');
               break;
             case 'time_tracking':
               features.add('Time tracking');
               break;
-            case 'multiple_properties':
-              features.add('Multiple properties');
+            case 'multi_property_management':
+              features.add('Multi-property management');
               break;
             case 'priority_support':
               features.add('Priority support');
               break;
             default:
-              features.add(key.replaceAll('_', ' ').replaceAll('up to', 'Up to'));
+              features.add(
+                key.replaceAll('_', ' ').replaceAll('up to', 'Up to'),
+              );
           }
         }
       });
@@ -202,23 +260,24 @@ class SubscriptionRepository {
     try {
       // Try to get subscription payment history
       final response = await _apiService.getSubscriptionPaymentHistory();
-      
+
       // Handle different response types more robustly
       if (response.data == null) {
         return [];
       }
-      
+
       List<dynamic> dataList;
       if (response.data is List) {
         dataList = response.data as List;
-      } else if (response.data is Map<String, dynamic> && (response.data as Map<String, dynamic>).containsKey('data')) {
+      } else if (response.data is Map<String, dynamic> &&
+          (response.data as Map<String, dynamic>).containsKey('data')) {
         final data = response.data as Map<String, dynamic>;
         dataList = data['data'] is List ? data['data'] as List : [data['data']];
       } else {
         // Try to convert single object to list
         dataList = [response.data];
       }
-      
+
       return dataList.map((json) {
         try {
           if (json is Map<String, dynamic>) {
@@ -232,11 +291,19 @@ class SubscriptionRepository {
               paymentMethod: json['paymentMethod']?.toString() ?? 'card',
               provider: json['paymentProvider']?.toString() ?? 'stripe',
               providerTransactionId: json['transactionId']?.toString() ?? '',
-              processedAt: json['paidDate']?.toString() != null ? DateTime.tryParse(json['paidDate'].toString()) : null,
-              failureReason: json['status']?.toString() == 'FAILED' ? 'Payment failed' : null,
+              processedAt: json['paidDate']?.toString() != null
+                  ? DateTime.tryParse(json['paidDate'].toString())
+                  : null,
+              failureReason: json['status']?.toString() == 'FAILED'
+                  ? 'Payment failed'
+                  : null,
               metadata: json['metadata'],
-              createdAt: json['createdAt']?.toString() != null ? DateTime.tryParse(json['createdAt'].toString()) : null,
-              updatedAt: json['updatedAt']?.toString() != null ? DateTime.tryParse(json['updatedAt'].toString()) : null,
+              createdAt: json['createdAt']?.toString() != null
+                  ? DateTime.tryParse(json['createdAt'].toString())
+                  : null,
+              updatedAt: json['updatedAt']?.toString() != null
+                  ? DateTime.tryParse(json['updatedAt'].toString())
+                  : null,
             );
           } else if (json is Map) {
             // Handle other map types
@@ -245,17 +312,26 @@ class SubscriptionRepository {
               id: mapJson['id']?.toString() ?? 'unknown',
               subscriptionId: mapJson['subscriptionId']?.toString() ?? '',
               userId: mapJson['userId']?.toString() ?? '',
-              amount: double.tryParse(mapJson['amount']?.toString() ?? '0') ?? 0.0,
+              amount:
+                  double.tryParse(mapJson['amount']?.toString() ?? '0') ?? 0.0,
               currency: mapJson['currency']?.toString() ?? 'USD',
               status: mapJson['status']?.toString() ?? 'pending',
               paymentMethod: mapJson['paymentMethod']?.toString() ?? 'card',
               provider: mapJson['paymentProvider']?.toString() ?? 'stripe',
               providerTransactionId: mapJson['transactionId']?.toString() ?? '',
-              processedAt: mapJson['paidDate']?.toString() != null ? DateTime.tryParse(mapJson['paidDate'].toString()) : null,
-              failureReason: mapJson['status']?.toString() == 'FAILED' ? 'Payment failed' : null,
+              processedAt: mapJson['paidDate']?.toString() != null
+                  ? DateTime.tryParse(mapJson['paidDate'].toString())
+                  : null,
+              failureReason: mapJson['status']?.toString() == 'FAILED'
+                  ? 'Payment failed'
+                  : null,
               metadata: mapJson['metadata'],
-              createdAt: mapJson['createdAt']?.toString() != null ? DateTime.tryParse(mapJson['createdAt'].toString()) : null,
-              updatedAt: mapJson['updatedAt']?.toString() != null ? DateTime.tryParse(mapJson['updatedAt'].toString()) : null,
+              createdAt: mapJson['createdAt']?.toString() != null
+                  ? DateTime.tryParse(mapJson['createdAt'].toString())
+                  : null,
+              updatedAt: mapJson['updatedAt']?.toString() != null
+                  ? DateTime.tryParse(mapJson['updatedAt'].toString())
+                  : null,
             );
           } else {
             // Fallback for unexpected types
@@ -316,26 +392,33 @@ class SubscriptionRepository {
     String? endDate,
   }) async {
     final payments = await getSubscriptionPayments();
-    return payments.map((payment) => SubscriptionPaymentRecord(
-      id: payment.id,
-      subscriptionId: payment.subscriptionId,
-      userId: payment.userId,
-      amount: payment.amount,
-      currency: payment.currency,
-      status: payment.status,
-      paymentMethod: payment.paymentMethod,
-      provider: payment.provider,
-      providerTransactionId: payment.providerTransactionId,
-      processedAt: payment.processedAt ?? DateTime.now(),
-      failureReason: payment.failureReason,
-      metadata: payment.metadata,
-      createdAt: payment.createdAt ?? DateTime.now(),
-      updatedAt: payment.updatedAt ?? DateTime.now(),
-    )).toList();
+    return payments
+        .map(
+          (payment) => SubscriptionPaymentRecord(
+            id: payment.id,
+            subscriptionId: payment.subscriptionId,
+            userId: payment.userId,
+            amount: payment.amount,
+            currency: payment.currency,
+            status: payment.status,
+            paymentMethod: payment.paymentMethod,
+            provider: payment.provider,
+            providerTransactionId: payment.providerTransactionId,
+            processedAt: payment.processedAt ?? DateTime.now(),
+            failureReason: payment.failureReason,
+            metadata: payment.metadata,
+            createdAt: payment.createdAt ?? DateTime.now(),
+            updatedAt: payment.updatedAt ?? DateTime.now(),
+          ),
+        )
+        .toList();
   }
+
   Future<String> subscribeWithStripe(String planId) async {
     try {
-      final response = await _apiService.subscriptions.subscribeWithStripe(planId);
+      final response = await _apiService.subscriptions.subscribeWithStripe(
+        planId,
+      );
       final data = response.data;
       if (data is Map && data.containsKey('checkoutUrl')) {
         return data['checkoutUrl'].toString();
@@ -350,7 +433,7 @@ class SubscriptionRepository {
 
   /// Initiate M-Pesa STK Push for subscription payment
   Future<MpesaSubscriptionResult> subscribeWithMpesa(
-    String planId, 
+    String planId,
     String phoneNumber, {
     String billingPeriod = 'monthly',
   }) async {
@@ -363,7 +446,7 @@ class SubscriptionRepository {
           'billingPeriod': billingPeriod,
         },
       );
-      
+
       final data = response.data;
       if (data is Map<String, dynamic>) {
         return MpesaSubscriptionResult(
@@ -396,7 +479,7 @@ class SubscriptionRepository {
           'paymentMethod': 'BANK',
         },
       );
-      
+
       final data = response.data;
       if (data is Map<String, dynamic>) {
         String? processingInfo;
@@ -404,9 +487,11 @@ class SubscriptionRepository {
           final info = data['processingInfo'] as Map<String, dynamic>;
           processingInfo = info['estimatedTime']?.toString();
         }
-        
+
         return BankSubscriptionResult(
-          success: data['success'] ?? true, // Default to true if fields missing but call succeeded
+          success:
+              data['success'] ??
+              true, // Default to true if fields missing but call succeeded
           message: data['message']?.toString() ?? 'Bank transfer initiated',
           checkoutUrl: data['checkoutUrl']?.toString() ?? '',
           reference: data['reference']?.toString(),
@@ -428,7 +513,7 @@ class SubscriptionRepository {
       final response = await _apiService.dio.get(
         '/subscriptions/mpesa-payment-status/$paymentId',
       );
-      
+
       final data = response.data;
       if (data is Map<String, dynamic>) {
         return MpesaPaymentStatus(
@@ -436,7 +521,9 @@ class SubscriptionRepository {
           status: data['status']?.toString() ?? 'PENDING',
           amount: double.tryParse(data['amount']?.toString() ?? '0') ?? 0,
           currency: data['currency']?.toString() ?? 'KES',
-          paidDate: data['paidDate'] != null ? DateTime.tryParse(data['paidDate'].toString()) : null,
+          paidDate: data['paidDate'] != null
+              ? DateTime.tryParse(data['paidDate'].toString())
+              : null,
         );
       }
       throw Exception('Invalid response from server');
@@ -447,15 +534,11 @@ class SubscriptionRepository {
     }
   }
 
-
   Future<Subscription> toggleAutoRenew(bool enable, {String? reason}) async {
     try {
       final response = await _apiService.dio.post(
         '/subscriptions/auto-renew',
-        data: {
-          'enable': enable,
-          if (reason != null) 'reason': reason,
-        },
+        data: {'enable': enable, if (reason != null) 'reason': reason},
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -474,25 +557,23 @@ class SubscriptionRepository {
     try {
       final response = await _apiService.dio.post(
         '/subscriptions/subscribe',
-        data: {
-          'planId': planId,
-        },
+        data: {'planId': planId},
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         // Response might be the subscription directly or { success, message, subscription }
         final data = response.data;
         if (data is Map<String, dynamic>) {
-             if (data.containsKey('subscription')) {
-                 return _mapJsonToSubscription(data['subscription']);
-             }
-             // Or if it's the subscription object itself (based on backend logic line 566)
-             try {
-                return _mapJsonToSubscription(data);
-             } catch (_) {
-                 // Might be a message response
-                 throw Exception(data['message'] ?? 'Subscription updated');
-             }
+          if (data.containsKey('subscription')) {
+            return _mapJsonToSubscription(data['subscription']);
+          }
+          // Or if it's the subscription object itself (based on backend logic line 566)
+          try {
+            return _mapJsonToSubscription(data);
+          } catch (_) {
+            // Might be a message response
+            throw Exception(data['message'] ?? 'Subscription updated');
+          }
         }
       }
       throw Exception('Failed to update subscription');
@@ -509,8 +590,12 @@ class SubscriptionRepository {
       plan: SubscriptionPlan(
         id: json['tier']?.toString() ?? 'unknown',
         tier: json['tier']?.toString() ?? 'unknown',
-        name: json['planName']?.toString() ?? json['tier']?.toString() ?? 'Unknown Plan',
-        description: '${json['tier']?.toString() ?? 'Unknown'} subscription plan',
+        name:
+            json['planName']?.toString() ??
+            json['tier']?.toString() ??
+            'Unknown Plan',
+        description:
+            '${json['tier']?.toString() ?? 'Unknown'} subscription plan',
         priceUSD: double.tryParse(json['amount']?.toString() ?? '0') ?? 0.0,
         priceKES: 0.0,
         workerLimit: _getWorkerLimitForTier(json['tier']?.toString()),
@@ -519,22 +604,33 @@ class SubscriptionRepository {
         isActive: json['status']?.toString() == 'ACTIVE',
       ),
       status: json['status']?.toString() ?? 'inactive',
-      startDate: DateTime.tryParse(json['startDate']?.toString() ?? '') ?? DateTime.now(),
+      startDate:
+          DateTime.tryParse(json['startDate']?.toString() ?? '') ??
+          DateTime.now(),
       endDate: json['endDate'] != null && json['endDate'].toString() != 'null'
           ? DateTime.tryParse(json['endDate'].toString()) ?? DateTime.now()
           : DateTime.now(),
       amountPaid: double.tryParse(json['amount']?.toString() ?? '0') ?? 0.0,
       currency: json['currency']?.toString() ?? 'USD',
-      autoRenew: json['autoRenewal'] == true || json['autoRenew'] == true || json['nextBillingDate'] != null, 
-      cancelledAt: json['status']?.toString() == 'CANCELLED' ? DateTime.tryParse(json['updatedAt']?.toString() ?? '') : null,
+      autoRenew:
+          json['autoRenewal'] == true ||
+          json['autoRenew'] == true ||
+          json['nextBillingDate'] != null,
+      cancelledAt: json['status']?.toString() == 'CANCELLED'
+          ? DateTime.tryParse(json['updatedAt']?.toString() ?? '')
+          : null,
       cancellationReason: null,
       metadata: {
         'notes': json['notes']?.toString(),
         'stripeSubscriptionId': json['stripeSubscriptionId']?.toString(),
         'stripePriceId': json['stripePriceId']?.toString(),
       },
-      createdAt: json['createdAt']?.toString() != null ? DateTime.tryParse(json['createdAt'].toString()) : null,
-      updatedAt: json['updatedAt']?.toString() != null ? DateTime.tryParse(json['updatedAt'].toString()) : null,
+      createdAt: json['createdAt']?.toString() != null
+          ? DateTime.tryParse(json['createdAt'].toString())
+          : null,
+      updatedAt: json['updatedAt']?.toString() != null
+          ? DateTime.tryParse(json['updatedAt'].toString())
+          : null,
     );
   }
 }
