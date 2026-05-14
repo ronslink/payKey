@@ -29,13 +29,6 @@ export default function HomeShowcase() {
                 poster="/payroll-management-screen.png"
               >
                 <source src="/paydome-payroll-user-guide.mp4" type="video/mp4" />
-                <track
-                  src="/paydome-payroll-user-guide.vtt"
-                  kind="subtitles"
-                  srcLang="en"
-                  label="English"
-                  default
-                />
               </video>
             </div>
             {/* Floating notification */}
