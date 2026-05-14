@@ -2,27 +2,6 @@ import { Check, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Link } from 'react-router-dom'
 
-const productScreens = [
-  {
-    src: '/payroll-management-screen.png',
-    alt: 'Paydome payroll management screen showing pay periods and payroll actions',
-    label: 'Payroll',
-    accent: 'from-violet-500/30 to-blue-500/20',
-  },
-  {
-    src: '/tax-management-screen.png',
-    alt: 'Paydome tax management screen showing compliance status and tax calendar',
-    label: 'Tax',
-    accent: 'from-blue-500/30 to-cyan-500/20',
-  },
-  {
-    src: '/finance-overview-screen.png',
-    alt: 'Paydome finance overview screen showing gross pay, deductions, and exports',
-    label: 'Finance',
-    accent: 'from-emerald-500/30 to-teal-500/20',
-  },
-]
-
 const highlights = [
   'Send salary via M-Pesa in seconds',
   'Auto SHIF, NSSF & PAYE deductions',
@@ -39,32 +18,25 @@ export default function HomeShowcase() {
       
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-          {/* Left - Product screenshots */}
+          {/* Left - User guide video */}
           <div className="relative order-2 lg:order-1">
             <div className="absolute -inset-5 bg-gradient-to-r from-emerald-500/15 via-cyan-500/10 to-violet-500/15 rounded-2xl blur-2xl" />
-            <div className="relative rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:p-6 shadow-2xl overflow-hidden">
-              <div className="absolute inset-x-8 bottom-0 h-32 bg-emerald-500/10 blur-[70px]" />
-              <div className="relative grid grid-cols-3 gap-3 sm:gap-4 items-end">
-                {productScreens.map((screen, index) => (
-                  <div
-                    key={screen.label}
-                    className={`group relative ${index === 1 ? 'translate-y-0' : 'translate-y-6'} transition-transform duration-300 hover:-translate-y-1`}
-                  >
-                    <div className={`absolute -inset-2 bg-gradient-to-br ${screen.accent} rounded-[1.75rem] blur-xl opacity-70 group-hover:opacity-100 transition-opacity`} />
-                    <div className="relative rounded-[1.4rem] sm:rounded-[1.8rem] overflow-hidden border border-white/15 bg-slate-950 shadow-2xl">
-                      <img
-                        src={screen.src}
-                        alt={screen.alt}
-                        className="w-full h-auto block"
-                        loading="lazy"
-                      />
-                    </div>
-                    <div className="absolute left-1/2 -translate-x-1/2 -bottom-3 rounded-full border border-white/10 bg-[#0D1525]/95 px-3 py-1 text-[10px] font-semibold text-white shadow-lg">
-                      {screen.label}
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <div className="relative rounded-2xl border border-white/10 bg-white/[0.03] p-3 shadow-2xl overflow-hidden">
+              <video
+                className="block w-full rounded-xl bg-slate-950"
+                controls
+                preload="metadata"
+                poster="/payroll-management-screen.png"
+              >
+                <source src="/paydome-payroll-user-guide.mp4" type="video/mp4" />
+                <track
+                  src="/paydome-payroll-user-guide.vtt"
+                  kind="subtitles"
+                  srcLang="en"
+                  label="English"
+                  default
+                />
+              </video>
             </div>
             {/* Floating notification */}
             <div className="absolute -bottom-4 -right-2 sm:-right-4 bg-[#0D1525]/95 backdrop-blur-xl border border-emerald-500/20 rounded-xl p-4 shadow-xl">
@@ -73,8 +45,8 @@ export default function HomeShowcase() {
                   <Check className="w-4 h-4 text-emerald-400" />
                 </div>
                 <div>
-                  <div className="text-sm font-semibold text-white">Payroll ready</div>
-                  <div className="text-xs text-slate-400">Tax and finance records included</div>
+                  <div className="text-sm font-semibold text-white">User guide included</div>
+                  <div className="text-xs text-slate-400">Watch payroll setup step by step</div>
                 </div>
               </div>
             </div>

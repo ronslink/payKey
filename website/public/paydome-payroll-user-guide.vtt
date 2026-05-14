@@ -1,0 +1,75 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:09.741
+Welcome to the Paydome walkthrough. To get started, sign up for the application. During this step, we’ll collect the information needed for payroll.
+
+2
+00:00:09.741 --> 00:00:29.327
+Once your identification information has been entered, you can log into the application and continue. After onboarding is complete, you’ll arrive at the main screen, where several options are available. Properties, time tracking, and leave management require higher subscription levels and are not included in the free version.
+
+3
+00:00:29.327 --> 00:00:47.752
+This calendar shows when different KRA, NSSF, Schiff, and housing submissions are due. It helps you stay compliant and know exactly when that information needs to be submitted. The history section shows previous filing and payroll transactions.
+
+4
+00:00:47.752 --> 00:01:01.115
+Here, you’ll also find a calculator that shows how much an employee will earn, along with a clear breakdown of the amount. This section is informational only. There is also a support area where you can submit tickets.
+
+5
+00:01:01.115 --> 00:01:12.760
+Next, let’s create an employee. Click Add and enter the employee’s information, including date of birth and region. Here, you’ll also enter the KRA number.
+
+6
+00:01:12.760 --> 00:01:25.752
+To pay a specific salary, in this case twenty-five thousand exactly, toggle Specify Target Net Pay. This will show how much needs to be paid to reach that amount. You can also enter an amount for transport.
+
+7
+00:01:25.752 --> 00:01:41.484
+Under Advance Benefits and Deductions, there are several options you can provide for the employee, including Advance or Housing. Under Payment Details, you can choose the type of transfer to perform. M-PESA and bank transfers are handled through our provider partner, Intersend.
+
+8
+00:01:41.484 --> 00:02:00.281
+Cash payments are also available, so here I’ll select Cash. After adding the employee, you can return to the employee’s dialog. There, you’ll have the option to upload documents related to the employee, including a contract, ID information, certificates, tax documents, and other documents.
+
+9
+00:02:00.281 --> 00:02:09.000
+Now let’s move into payroll. If you want to run payroll, you have two options. You can run it on a regular cadence based on your pay cycle.
+
+10
+00:02:09.000 --> 00:02:23.617
+To do that, pay periods must first be initialized. This is done automatically for a year, specifically the current year. Once that’s complete, you can open Run Payroll, and your employee will already appear there.
+
+11
+00:02:23.617 --> 00:02:34.844
+If you have more than one employee, they will all appear here, and you can choose which employees to pay. In this example, we’ll pay Julia. This payroll is for the full month.
+
+12
+00:02:34.844 --> 00:02:55.452
+You can also enter a prorated amount of hours if the employee started in the middle of the month, for example. You’ll also see other options here, including non-cash benefits, totals, deductions, overtime hours, and tax. Within the time tracking application on the employee portal, employees can also enter time.
+
+13
+00:02:55.452 --> 00:03:13.227
+That time can then flow into this screen if there are overtime hours, for example. From here, we’ll run the payroll. If this were a M-PESA payment or a bank payment, the transaction would go through our provider, Intersend, allowing you to make the M-PESA payment or bank payment through Intersend.
+
+14
+00:03:13.227 --> 00:03:29.145
+Here, we’re going to Cash Disbursement. For this employee, we selected a target of exactly twenty-five thousand. This is the breakdown of the tax obligations deducted from that pay. Since this is a cash payment, the employee receives cash.
+
+15
+00:03:29.145 --> 00:03:46.688
+There is nothing to transmit, so we can complete the payroll process here. The system will process the payroll and record the information in the application. Once complete, you can return to the home screen and see that the last payroll has been updated to twenty-five thousand.
+
+16
+00:03:46.688 --> 00:03:58.705
+Under the Finance portal, the next step is to submit this tax filing. At the moment, this is done manually. Once the subscription level is changed, the tax filing can be completed there.
+
+17
+00:03:58.705 --> 00:04:10.954
+Reports and Financial is also a gated feature. Once it is available, you can easily run reports. Since we ran January’s payroll, we can pull the information for the payroll we just processed.
+
+18
+00:04:10.954 --> 00:04:18.977
+This screen shows a summary. You can also open the employee’s payslip, which will appear on the screen. That concludes our walkthrough.
+
+
