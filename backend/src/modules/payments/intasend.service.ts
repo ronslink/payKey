@@ -29,10 +29,7 @@ export class IntaSendService {
       ? 'https://payment.intasend.com/api'
       : 'https://sandbox.intasend.com/api';
 
-    this.hostUrl =
-      this.configService.get('INTASEND_HOST_URL') ||
-      this.configService.get('FRONTEND_URL') ||
-      'https://paydome.co';
+    this.hostUrl = this.resolveHostUrl();
 
     if (this.isLive) {
       this.publishableKey =
@@ -90,6 +87,19 @@ export class IntaSendService {
       );
       this.webhookSecret = this.secretKey;
     }
+  }
+
+  private resolveHostUrl(): string {
+    const configuredHost =
+      this.configService.get('INTASEND_HOST_URL') ||
+      this.configService.get('WEBSITE_URL') ||
+      this.configService.get('FRONTEND_URL');
+
+    if (configuredHost && !configuredHost.includes('api.paydome.co')) {
+      return configuredHost.replace(/\/$/, '');
+    }
+
+    return 'https://paydome.co';
   }
 
   verifyWebhookSignature(
