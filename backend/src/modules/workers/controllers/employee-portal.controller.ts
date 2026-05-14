@@ -24,6 +24,21 @@ export class EmployeePortalController {
     private readonly featureAccessService: FeatureAccessService,
   ) {}
 
+  private async assertFullFeatureAccess(
+    userId: string,
+    featureKey: string,
+    message: string,
+  ) {
+    const featureAccess = await this.featureAccessService.checkFeatureAccess(
+      userId,
+      featureKey,
+    );
+
+    if (!featureAccess.hasAccess || featureAccess.isPreview) {
+      throw new ForbiddenException(message);
+    }
+  }
+
   // ============================================================
   // PUBLIC ENDPOINTS (No Auth Required)
   // ============================================================
@@ -60,18 +75,11 @@ export class EmployeePortalController {
     @Request() req: any,
     @Param('workerId') workerId: string,
   ) {
-    // Employee portal is a Platinum-only feature
-    // We also block trial/preview users — generating a real invite is an action, not a preview
-    const featureAccess = await this.featureAccessService.checkFeatureAccess(
+    await this.assertFullFeatureAccess(
       req.user.userId,
       'employee_portal',
+      'Employee portal invitations require a Platinum subscription.',
     );
-
-    if (!featureAccess.hasAccess || featureAccess.isPreview) {
-      throw new ForbiddenException(
-        'Employee portal invitations require a Platinum subscription.',
-      );
-    }
 
     return this.employeePortalService.generateInviteCode(
       workerId,
@@ -87,17 +95,11 @@ export class EmployeePortalController {
     @Request() req: any,
     @Param('workerId') workerId: string,
   ) {
-    // Status check also gated — non-subscribers shouldn’t see portal invite state
-    const featureAccess = await this.featureAccessService.checkFeatureAccess(
+    await this.assertFullFeatureAccess(
       req.user.userId,
       'employee_portal',
+      'Employee portal requires a Platinum subscription.',
     );
-
-    if (!featureAccess.hasAccess) {
-      throw new ForbiddenException(
-        'Employee portal requires a Platinum subscription.',
-      );
-    }
 
     return this.employeePortalService.checkInviteStatus(
       workerId,
@@ -114,6 +116,12 @@ export class EmployeePortalController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get employee profile and worker info' })
   async getMyProfile(@Request() req: any) {
+    await this.assertFullFeatureAccess(
+      req.user.employerId,
+      'employee_portal',
+      'Employee portal access requires your employer to have a Platinum subscription.',
+    );
+
     const worker = await this.employeePortalService.getWorkerProfile(
       req.user.workerId,
     );
@@ -138,20 +146,20 @@ export class EmployeePortalController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
-    summary: 'Get worker assigned property (Gold/Platinum only)',
+    summary: 'Get worker assigned property (Platinum only)',
   })
   async getMyProperty(@Request() req: any) {
-    // Check if employer has Gold/Platinum tier (geofencing feature)
-    const featureAccess = await this.featureAccessService.checkFeatureAccess(
+    await this.assertFullFeatureAccess(
       req.user.employerId,
-      'geofencing',
+      'employee_portal',
+      'Employee portal access requires your employer to have a Platinum subscription.',
     );
 
-    if (!featureAccess.hasAccess) {
-      throw new ForbiddenException(
-        'Property details require Gold or Platinum subscription',
-      );
-    }
+    await this.assertFullFeatureAccess(
+      req.user.employerId,
+      'geofencing',
+      'Property details require your employer to have a Platinum subscription.',
+    );
 
     return this.employeePortalService.getWorkerProperty(req.user.workerId);
   }
@@ -161,20 +169,20 @@ export class EmployeePortalController {
   @ApiBearerAuth()
   @ApiOperation({
     summary:
-      'Get all employer properties for clock-in selection (Gold/Platinum only)',
+      'Get all employer properties for clock-in selection (Platinum only)',
   })
   async getEmployerProperties(@Request() req: any) {
-    // Check if employer has Gold/Platinum tier (geofencing feature)
-    const featureAccess = await this.featureAccessService.checkFeatureAccess(
+    await this.assertFullFeatureAccess(
       req.user.employerId,
-      'geofencing',
+      'employee_portal',
+      'Employee portal access requires your employer to have a Platinum subscription.',
     );
 
-    if (!featureAccess.hasAccess) {
-      throw new ForbiddenException(
-        'Multi-property selection requires Gold or Platinum subscription',
-      );
-    }
+    await this.assertFullFeatureAccess(
+      req.user.employerId,
+      'geofencing',
+      'Multi-property selection requires your employer to have a Platinum subscription.',
+    );
 
     return this.employeePortalService.getEmployerProperties(
       req.user.employerId,
@@ -186,6 +194,12 @@ export class EmployeePortalController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get employee leave balance' })
   async getMyLeaveBalance(@Request() req: any) {
+    await this.assertFullFeatureAccess(
+      req.user.employerId,
+      'employee_portal',
+      'Employee portal access requires your employer to have a Platinum subscription.',
+    );
+
     // Employee can only see their own balance
     return this.leaveManagementService.getLeaveBalance(
       req.user.workerId,
@@ -198,6 +212,12 @@ export class EmployeePortalController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get employee leave requests' })
   async getMyLeaveRequests(@Request() req: any) {
+    await this.assertFullFeatureAccess(
+      req.user.employerId,
+      'employee_portal',
+      'Employee portal access requires your employer to have a Platinum subscription.',
+    );
+
     return this.leaveManagementService.getLeaveRequestsForWorker(
       req.user.employerId,
       req.user.workerId,
@@ -218,6 +238,12 @@ export class EmployeePortalController {
       reason?: string;
     },
   ) {
+    await this.assertFullFeatureAccess(
+      req.user.employerId,
+      'employee_portal',
+      'Employee portal access requires your employer to have a Platinum subscription.',
+    );
+
     return this.leaveManagementService.createLeaveRequest(
       req.user.employerId, // Employer's userId for ownership
       req.user.workerId, // Employee's workerId
@@ -240,6 +266,12 @@ export class EmployeePortalController {
     @Request() req: any,
     @Param('requestId') requestId: string,
   ) {
+    await this.assertFullFeatureAccess(
+      req.user.employerId,
+      'employee_portal',
+      'Employee portal access requires your employer to have a Platinum subscription.',
+    );
+
     return this.leaveManagementService.cancelLeaveRequest(
       req.user.employerId,
       requestId,
@@ -261,6 +293,12 @@ export class EmployeePortalController {
       mpesaNumber?: string;
     },
   ) {
+    await this.assertFullFeatureAccess(
+      req.user.employerId,
+      'employee_portal',
+      'Employee portal access requires your employer to have a Platinum subscription.',
+    );
+
     return this.employeePortalService.updatePaymentDetails(
       req.user.workerId,
       body,
