@@ -143,15 +143,12 @@ export class PayrollProcessor extends WorkerHost {
       return this.rescheduleOrGiveUp(job, 'IntaSend API error');
     }
 
-    // 3. Determine final status from IntaSend response
-    // IntaSend B2C status can be: 'Pending', 'Processing', 'Completed', 'Failed', etc.
-    const batchStatus =
-      intaSendStatus?.file_status || intaSendStatus?.status || 'unknown';
+    // 3. Determine final status from IntaSend response.
+    // Prefer itemized transaction statuses when IntaSend returns them; a
+    // completed batch can still contain failed beneficiary transactions.
+    const payoutStatus = this.resolvePayoutStatus(intaSendStatus);
 
-    if (
-      batchStatus.toLowerCase() === 'completed' ||
-      batchStatus.toLowerCase() === 'successful'
-    ) {
+    if (payoutStatus === TransactionStatus.SUCCESS) {
       // Update records to 'paid'
       await this.payrollRecordRepository.update(
         { id: In(recordIds), paymentStatus: 'processing' },
@@ -173,10 +170,7 @@ export class PayrollProcessor extends WorkerHost {
         trackingId,
         updatedCount: pendingRecords.length,
       };
-    } else if (
-      batchStatus.toLowerCase() === 'failed' ||
-      batchStatus.toLowerCase() === 'cancelled'
-    ) {
+    } else if (payoutStatus === TransactionStatus.FAILED) {
       // Update records to 'failed'
       await this.payrollRecordRepository.update(
         { id: In(recordIds), paymentStatus: 'processing' },
@@ -193,15 +187,114 @@ export class PayrollProcessor extends WorkerHost {
         status: 'failed',
         message: 'Payout failed according to IntaSend',
         trackingId,
-        intaSendStatus: batchStatus,
+        intaSendStatus,
+      };
+    } else if (payoutStatus === TransactionStatus.MANUAL_INTERVENTION) {
+      await this.payrollRecordRepository.update(
+        { id: In(recordIds), paymentStatus: 'processing' },
+        { paymentStatus: 'manual_check' },
+      );
+
+      await this.transactionRepository.update(
+        { providerRef: trackingId },
+        { status: TransactionStatus.MANUAL_INTERVENTION },
+      );
+
+      this.logger.warn(
+        `Payout ${trackingId} requires manual review due to mixed or uncertain IntaSend item statuses`,
+      );
+      return {
+        status: 'manual_review',
+        message: 'Payout requires manual review based on IntaSend status',
+        trackingId,
+        intaSendStatus,
       };
     } else {
       // Still processing - reschedule another check
       return this.rescheduleOrGiveUp(
         job,
-        `IntaSend status still: ${batchStatus}`,
+        `IntaSend status still: ${intaSendStatus?.file_status || intaSendStatus?.status || 'unknown'}`,
       );
     }
+  }
+
+  private resolvePayoutStatus(intaSendStatus: any): TransactionStatus {
+    const itemStatuses: TransactionStatus[] = Array.isArray(
+      intaSendStatus?.transactions,
+    )
+      ? (intaSendStatus.transactions as any[]).map(
+          (item: any): TransactionStatus =>
+            this.mapIntaSendStatus(
+              item.status || item.state || item.status_code,
+            ),
+        )
+      : [];
+
+    if (itemStatuses.length > 0) {
+      const allSucceeded = itemStatuses.every(
+        (status: TransactionStatus) => status === TransactionStatus.SUCCESS,
+      );
+      const allFailed = itemStatuses.every(
+        (status: TransactionStatus) => status === TransactionStatus.FAILED,
+      );
+      const hasSuccess = itemStatuses.includes(TransactionStatus.SUCCESS);
+      const hasFailure = itemStatuses.includes(TransactionStatus.FAILED);
+      const hasPending = itemStatuses.includes(TransactionStatus.PENDING);
+
+      if (allSucceeded) return TransactionStatus.SUCCESS;
+      if (allFailed) return TransactionStatus.FAILED;
+      if (hasFailure) return TransactionStatus.MANUAL_INTERVENTION;
+      if (hasSuccess && hasPending) return TransactionStatus.PENDING;
+    }
+
+    return this.mapIntaSendStatus(
+      intaSendStatus?.file_status ||
+        intaSendStatus?.status ||
+        intaSendStatus?.status_code,
+    );
+  }
+
+  private mapIntaSendStatus(status: unknown): TransactionStatus {
+    const normalized = String(status || '')
+      .trim()
+      .toUpperCase()
+      .replace(/[\s_-]/g, '');
+
+    if (
+      [
+        'BC100',
+        'COMPLETE',
+        'COMPLETED',
+        'SENT',
+        'SUCCESS',
+        'SUCCESSFUL',
+        'TS100',
+      ].includes(normalized)
+    ) {
+      return TransactionStatus.SUCCESS;
+    }
+
+    if (
+      [
+        'BE111',
+        'BF102',
+        'CANCELED',
+        'CANCELLED',
+        'DECLINED',
+        'FAILED',
+        'TF103',
+        'TF106',
+        'TC108',
+      ].includes(normalized)
+    ) {
+      return TransactionStatus.FAILED;
+    }
+
+    if (normalized === 'TF105' || normalized === 'TH107') {
+      return TransactionStatus.MANUAL_INTERVENTION;
+    }
+
+    return TransactionStatus.PENDING;
   }
 
   /**

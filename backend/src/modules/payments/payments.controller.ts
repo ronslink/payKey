@@ -169,6 +169,18 @@ export class PaymentsController {
       remarks: string;
     },
   ) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new BadRequestException(
+        'Direct B2C payouts are disabled in production. Use payroll finalization.',
+      );
+    }
+
+    if (!body.phoneNumber || !body.amount || Number(body.amount) <= 0) {
+      throw new BadRequestException(
+        'phoneNumber and positive amount are required',
+      );
+    }
+
     // Ensure user has a working wallet
     const walletId = await this._ensureWallet(req.user.userId);
 
@@ -330,7 +342,19 @@ export class PaymentsController {
   }
 
   @Get('intasend/status/:trackingId')
-  async checkPayoutStatus(@Param('trackingId') trackingId: string) {
+  @UseGuards(JwtAuthGuard)
+  async checkPayoutStatus(
+    @Request() req: AuthenticatedRequest,
+    @Param('trackingId') trackingId: string,
+  ) {
+    const transaction = await this.transactionsRepository.findOne({
+      where: { userId: req.user.userId, providerRef: trackingId },
+    });
+
+    if (!transaction) {
+      throw new UnauthorizedException('Payment reference not found');
+    }
+
     const status = await this.intaSendService.checkPayoutStatus(trackingId);
     return status;
   }
@@ -496,14 +520,18 @@ export class PaymentsController {
         return { status: 'ignored', reason: 'Transaction not found' };
       }
 
-      // 2. Idempotency Check (Check first one)
+      // 2. Idempotency Check
       const firstTx = transactions[0];
-      if (
-        firstTx.status === TransactionStatus.SUCCESS ||
-        firstTx.status === TransactionStatus.FAILED ||
-        (firstTx.status === TransactionStatus.CLEARING &&
-          body.clearing_status === 'CLEARING')
-      ) {
+      const hasOpenTransactions = transactions.some(
+        (tx) =>
+          !this.isFinalTransactionStatus(tx.status) &&
+          !(
+            tx.status === TransactionStatus.CLEARING &&
+            body.clearing_status === 'CLEARING'
+          ),
+      );
+
+      if (!hasOpenTransactions) {
         console.log(
           `🔹 Idempotency: Transaction(s) ${firstTx.providerRef} already final. Skipping.`,
         );
@@ -511,38 +539,56 @@ export class PaymentsController {
       }
 
       // 3. Determine New Status
-      let newStatus = TransactionStatus.PENDING;
-      const { clearing_status } = body;
-
-      // Normalize state to uppercase — IntaSend sends 'Completed' for B2C payouts
-      // but 'COMPLETE' for STK deposits. Handle all variants case-insensitively.
-      const stateUpper = (state || '').toUpperCase();
-      if (stateUpper === 'COMPLETE' || stateUpper === 'COMPLETED') {
-        if (clearing_status === 'CLEARING') {
-          newStatus = TransactionStatus.CLEARING;
-        } else {
-          newStatus = TransactionStatus.SUCCESS;
-        }
-      } else if (stateUpper === 'FAILED' || stateUpper === 'CANCELLED') {
-        newStatus = TransactionStatus.FAILED;
-      }
+      const batchStatus = this.resolveIntaSendWebhookStatus(body, state);
+      let notificationStatus = TransactionStatus.PENDING;
+      let updatedCount = 0;
 
       // 4. Update ALL matching transactions
       for (const tx of transactions) {
         const previousStatus = tx.status;
+        if (
+          this.isFinalTransactionStatus(previousStatus) ||
+          (previousStatus === TransactionStatus.CLEARING &&
+            body.clearing_status === 'CLEARING')
+        ) {
+          continue;
+        }
+
+        const itemizedStatus = this.resolveIntaSendItemStatusForTransaction(
+          tx,
+          body.transactions,
+        );
+        const newStatus = itemizedStatus || batchStatus;
+
+        if (
+          previousStatus === TransactionStatus.CLEARING &&
+          newStatus === TransactionStatus.PENDING
+        ) {
+          continue;
+        }
+
         tx.status = newStatus;
+        notificationStatus = this.preferNotificationStatus(
+          notificationStatus,
+          newStatus,
+        );
 
         // Detect payment method from IntaSend provider field
-        const provider = body.provider as string | undefined;
+        const provider = (body.provider || body.transactions?.[0]?.provider) as
+          | string
+          | undefined;
         if (provider && !tx.paymentMethod) {
           switch (provider.toUpperCase()) {
             case 'M-PESA':
+            case 'MPESA':
+            case 'MPESA-B2C':
               tx.paymentMethod = PaymentMethodType.MPESA_STK;
               break;
             case 'CARD-PAYMENT':
               tx.paymentMethod = PaymentMethodType.CARD;
               break;
             case 'BANK-PAYMENT':
+            case 'PESALINK':
               tx.paymentMethod = PaymentMethodType.PESALINK;
               break;
             default:
@@ -592,15 +638,7 @@ export class PaymentsController {
           tx.metadata?.payrollRecordId
         ) {
           const payrollRecordId = tx.metadata.payrollRecordId;
-          let paymentStatus: string;
-
-          if (newStatus === TransactionStatus.SUCCESS) {
-            paymentStatus = 'paid';
-          } else if (newStatus === TransactionStatus.FAILED) {
-            paymentStatus = 'failed';
-          } else {
-            paymentStatus = 'processing';
-          }
+          const paymentStatus = this.toPayrollPaymentStatus(newStatus);
 
           await manager.update(PayrollRecord, payrollRecordId, {
             paymentStatus,
@@ -612,12 +650,17 @@ export class PaymentsController {
             `📊 PayrollRecord ${payrollRecordId} updated to ${paymentStatus}`,
           );
         }
+
+        updatedCount++;
       }
 
       await manager.save(Transaction, transactions);
 
       // 6. Send Push Notifications for status updates
-      if (newStatus !== TransactionStatus.PENDING) {
+      if (
+        notificationStatus !== TransactionStatus.PENDING &&
+        notificationStatus !== TransactionStatus.MANUAL_INTERVENTION
+      ) {
         const userId = firstTx.userId;
         const deviceToken = await this.deviceTokenRepository.findOne({
           where: { userId, isActive: true },
@@ -634,17 +677,21 @@ export class PaymentsController {
             deviceToken.token,
             workerName,
             amount,
-            newStatus as 'PENDING' | 'CLEARING' | 'SUCCESS' | 'FAILED',
+            notificationStatus as 'CLEARING' | 'SUCCESS' | 'FAILED',
             transactionType,
           );
-          console.log(`📱 Push notification sent for ${newStatus}`);
+          console.log(`📱 Push notification sent for ${notificationStatus}`);
         }
       }
 
       // 7. Subscription Logic (Legacy/Single handling)
-      if (firstTx.metadata?.subscriptionPaymentId) {
+      if (
+        firstTx.metadata?.subscriptionPaymentId &&
+        (firstTx.status === TransactionStatus.SUCCESS ||
+          firstTx.status === TransactionStatus.FAILED)
+      ) {
         const subPaymentId = firstTx.metadata.subscriptionPaymentId;
-        const isSuccess = newStatus === TransactionStatus.SUCCESS;
+        const isSuccess = firstTx.status === TransactionStatus.SUCCESS;
         const status = isSuccess
           ? PaymentStatus.COMPLETED
           : PaymentStatus.FAILED;
@@ -679,9 +726,194 @@ export class PaymentsController {
 
       return {
         status: 'success',
-        updated: transactions.length,
+        updated: updatedCount,
         challenge: body.challenge, // Echo challenge if present (required by IntaSend)
       };
     });
+  }
+
+  private isFinalTransactionStatus(status: TransactionStatus): boolean {
+    return (
+      status === TransactionStatus.SUCCESS ||
+      status === TransactionStatus.FAILED ||
+      status === TransactionStatus.MANUAL_INTERVENTION
+    );
+  }
+
+  private resolveIntaSendWebhookStatus(
+    body: any,
+    state: unknown,
+  ): TransactionStatus {
+    const stateStatus = this.mapIntaSendStatusToTransactionStatus(
+      state || body.status || body.state || body.status_code,
+    );
+
+    if (
+      stateStatus === TransactionStatus.SUCCESS &&
+      String(body.clearing_status || '').toUpperCase() === 'CLEARING'
+    ) {
+      return TransactionStatus.CLEARING;
+    }
+
+    const itemStatuses: TransactionStatus[] = Array.isArray(body.transactions)
+      ? (body.transactions as any[]).map(
+          (item: any): TransactionStatus =>
+            this.mapIntaSendStatusToTransactionStatus(
+              item.status || item.state || item.status_code,
+            ),
+        )
+      : [];
+
+    if (itemStatuses.length === 0) {
+      return stateStatus;
+    }
+
+    const allSucceeded = itemStatuses.every(
+      (status: TransactionStatus) => status === TransactionStatus.SUCCESS,
+    );
+    const allFailed = itemStatuses.every(
+      (status: TransactionStatus) => status === TransactionStatus.FAILED,
+    );
+    const hasSuccess = itemStatuses.includes(TransactionStatus.SUCCESS);
+    const hasFailure = itemStatuses.includes(TransactionStatus.FAILED);
+    const hasPending = itemStatuses.includes(TransactionStatus.PENDING);
+
+    if (allSucceeded) return TransactionStatus.SUCCESS;
+    if (allFailed) return TransactionStatus.FAILED;
+    if (hasSuccess && hasFailure) return TransactionStatus.MANUAL_INTERVENTION;
+    if (
+      hasFailure ||
+      (hasPending && stateStatus === TransactionStatus.SUCCESS)
+    ) {
+      return TransactionStatus.MANUAL_INTERVENTION;
+    }
+
+    return stateStatus;
+  }
+
+  private resolveIntaSendItemStatusForTransaction(
+    tx: Transaction,
+    items: any,
+  ): TransactionStatus | null {
+    if (!Array.isArray(items) || items.length === 0) {
+      return null;
+    }
+
+    const txAccount = this.normalizeAccount(
+      tx.recipientPhone || tx.accountReference || tx.metadata?.recipientAccount,
+    );
+    const txAmount = Number(tx.amount);
+
+    const matches = items.filter((item) => {
+      const itemAmount = Number(item.amount);
+      if (
+        !Number.isFinite(itemAmount) ||
+        Math.abs(itemAmount - txAmount) > 0.01
+      ) {
+        return false;
+      }
+
+      const itemAccount = this.normalizeAccount(
+        item.account || item.account_reference,
+      );
+
+      if (!txAccount || !itemAccount) {
+        return false;
+      }
+
+      return this.accountsMatch(txAccount, itemAccount);
+    });
+
+    if (matches.length !== 1) {
+      return null;
+    }
+
+    return this.mapIntaSendStatusToTransactionStatus(
+      matches[0].status || matches[0].state || matches[0].status_code,
+    );
+  }
+
+  private mapIntaSendStatusToTransactionStatus(
+    status: unknown,
+  ): TransactionStatus {
+    const normalized = String(status || '')
+      .trim()
+      .toUpperCase()
+      .replace(/[\s_-]/g, '');
+
+    if (
+      [
+        'AVAILABLE',
+        'BC100',
+        'COMPLETE',
+        'COMPLETED',
+        'SENT',
+        'SUCCESS',
+        'SUCCESSFUL',
+        'TS100',
+      ].includes(normalized)
+    ) {
+      return TransactionStatus.SUCCESS;
+    }
+
+    if (
+      [
+        'BE111',
+        'BF102',
+        'CANCELED',
+        'CANCELLED',
+        'DECLINED',
+        'FAILED',
+        'TF103',
+        'TF106',
+        'TC108',
+      ].includes(normalized)
+    ) {
+      return TransactionStatus.FAILED;
+    }
+
+    if (normalized === 'CLEARING') {
+      return TransactionStatus.CLEARING;
+    }
+
+    if (normalized === 'TF105' || normalized === 'TH107') {
+      return TransactionStatus.MANUAL_INTERVENTION;
+    }
+
+    return TransactionStatus.PENDING;
+  }
+
+  private toPayrollPaymentStatus(status: TransactionStatus): string {
+    if (status === TransactionStatus.SUCCESS) return 'paid';
+    if (status === TransactionStatus.FAILED) return 'failed';
+    if (status === TransactionStatus.MANUAL_INTERVENTION) return 'manual_check';
+    return 'processing';
+  }
+
+  private preferNotificationStatus(
+    current: TransactionStatus,
+    next: TransactionStatus,
+  ): TransactionStatus {
+    const priority: Record<TransactionStatus, number> = {
+      [TransactionStatus.PENDING]: 0,
+      [TransactionStatus.CLEARING]: 1,
+      [TransactionStatus.SUCCESS]: 2,
+      [TransactionStatus.FAILED]: 3,
+      [TransactionStatus.MANUAL_INTERVENTION]: 4,
+    };
+
+    return priority[next] > priority[current] ? next : current;
+  }
+
+  private normalizeAccount(account: unknown): string {
+    return String(account || '').replace(/[^\d]/g, '');
+  }
+
+  private accountsMatch(left: string, right: string): boolean {
+    if (left === right) return true;
+    const shortestLength = Math.min(left.length, right.length);
+    return (
+      shortestLength >= 7 && (left.endsWith(right) || right.endsWith(left))
+    );
   }
 }

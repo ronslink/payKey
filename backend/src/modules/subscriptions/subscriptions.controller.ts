@@ -654,6 +654,8 @@ export class SubscriptionsController {
         user.firstName || 'User',
         user.lastName || '',
         reference,
+        undefined,
+        { method: 'PESALINK', comment: 'Paydome subscription payment' },
       );
 
       // Create or update subscription (PENDING until payment confirmed)
@@ -846,6 +848,8 @@ export class SubscriptionsController {
         user.firstName || 'Valued',
         user.lastName || 'Customer',
         reference,
+        undefined,
+        { method: 'PESALINK', comment: 'Paydome subscription payment' },
       );
 
       // Return Checkout Info

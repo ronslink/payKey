@@ -17,14 +17,16 @@ The `PayrollPaymentService` handles the disbursement of funds to workers after a
 *   **Wallet Source**: Funds are deducted from the **Employer's IntaSend Wallet**.
     *   *Critical*: The `wallet_id` of the employer is explicitly passed to `IntaSendService.sendToBank`.
     *   If `wallet_id` is missing, IntaSend may default to the master account or fail if sub-wallets are enforced.
+*   **Approval Mode**: Requests set `requires_approval: 'NO'` so approved payroll can move straight through IntaSend without a second dashboard approval step.
 *   **Batching**: Requests are batched (default size: 10) to avoid timeouts and ensure reliable processing.
 *   **Flow**:
     1.  Validate worker bank details (`bankAccount`, `bankCode`).
     2.  Deduct total batch amount from Employer's local `walletBalance`.
     3.  Create PENDING `Transaction` records.
     4.  Initiate IntaSend API call.
-    5.  Update records to `processing` (or `paid` in Sandbox).
-    6.  **Error Handling**: If the API call fails, funds are refunded to the Employer's wallet and transactions are marked `FAILED`.
+    5.  Update records to `processing` while IntaSend settles the batch.
+    6.  Reconcile webhook or status-polling results. Itemized IntaSend failures move records to `failed` or `manual_check` instead of blindly marking the whole batch paid.
+    7.  **Error Handling**: If the API call fails immediately, funds are refunded to the Employer's wallet and transactions are marked `FAILED`.
 
 ## 2. Stripe Top-Ups & FX Logic
 

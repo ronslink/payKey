@@ -14,6 +14,8 @@ INTASEND_PUBLISHABLE_KEY_TEST=ISPubKeyTest_...
 INTASEND_SECRET_KEY_TEST=ISSecretKeyTest_...
 INTASEND_IS_LIVE=true
 INTASEND_SIMULATE=true
+INTASEND_HOST_URL=https://paydome.co
+INTASEND_CHALLENGE=your-dashboard-webhook-challenge
 
 # M-Pesa Direct (if used)
 MPESA_CONSUMER_KEY=your-key
@@ -28,8 +30,8 @@ MPESA_CALLBACK_URL=http://localhost:3000/payments/callback
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/payments/initiate-stk` | STK Push for wallet top-up |
-| POST | `/payments/send-b2c` | B2C Payout (single or bulk) |
-| GET | `/payments/intasend/status/:trackingId` | Check payout status |
+| POST | `/payments/send-b2c` | Development-only direct B2C payout helper |
+| GET | `/payments/intasend/status/:trackingId` | Authenticated payout status check |
 | POST | `/payments/intasend/webhook` | IntaSend webhook handler |
 | GET | `/payments/unified/wallet` | Get wallet balance |
 
@@ -58,6 +60,11 @@ intaSendService.sendMoney([
 ]);
 ```
 
+Production payroll payouts should go through payroll finalization, not the legacy
+`/payments/send-b2c` helper. Payroll finalization debits the local wallet ledger,
+creates transaction records, sends the IntaSend batch, and then reconciles webhook
+or status-polling results back to each payroll record.
+
 ## Sandbox vs Production
 | Mode | Phone Number | Amount | Keys |
 |------|--------------|--------|------|
@@ -75,13 +82,14 @@ intaSendService.sendMoney([
 
 ## Current Configuration Status
 - ✅ IntaSend integration working
-- ✅ STK push for wallet top-up
-- ✅ B2C payouts with bulk support
+- ✅ STK push for wallet top-up with `wallet_id`, `currency`, `host`, and API reference
+- ✅ M-Pesa B2C and PesaLink payouts with bulk support
 - ✅ Transaction tracking
 - ✅ Sandbox mode for testing
-- ✅ Webhook signature verification
+- ✅ Webhook challenge verification with signature fallback
 - ✅ Payout status checking
 - ✅ Idempotent webhook handling
+- ✅ Itemized send-money status handling for partial payout failures
 - ✅ Payment status push notifications
 - ✅ Per-worker status API endpoint
 
@@ -90,7 +98,7 @@ intaSendService.sendMoney([
 - ✅ **Payout Status Check** - [`checkPayoutStatus()`](backend/src/modules/payments/intasend.service.ts:249) endpoint added at `/payments/intasend/status/:trackingId`
 - ✅ **Idempotent Webhooks** - Webhook handler checks existing status before processing
 - ✅ **Bulk Transaction Matching** - Webhook now finds ALL transactions matching `invoice_id` or `tracking_id`
-- ✅ **Backward Compatibility** - Legacy `/payments/send-b2c` still works with single transactions
+- ✅ **Production Safety** - Legacy `/payments/send-b2c` is disabled in production; payroll finalization owns real payouts
 - ✅ **Payment Status Notifications** - Push notifications sent on status changes (CLEARING, SUCCESS, FAILED). See [PAYMENT_STATUS.md](./PAYMENT_STATUS.md)
 - ✅ **Working Wallets** - Each employer has a segregated IntaSend sub-account (`intasend_wallet_id`)
 

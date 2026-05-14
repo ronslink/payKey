@@ -15,6 +15,7 @@ export class IntaSendService {
   private readonly secretKey: string;
   private readonly webhookSecret: string;
   private readonly isLive: boolean;
+  private readonly hostUrl: string;
 
   constructor(
     private configService: ConfigService,
@@ -27,6 +28,11 @@ export class IntaSendService {
     this.baseUrl = this.isLive
       ? 'https://payment.intasend.com/api'
       : 'https://sandbox.intasend.com/api';
+
+    this.hostUrl =
+      this.configService.get('INTASEND_HOST_URL') ||
+      this.configService.get('FRONTEND_URL') ||
+      'https://paydome.co';
 
     if (this.isLive) {
       this.publishableKey =
@@ -246,15 +252,20 @@ export class IntaSendService {
         this.httpService.post(
           url,
           {
+            public_key: this.publishableKey,
             phone_number: effectivePhone,
-            email: 'noreply@paykey.com', // Required by IntaSend sometimes
+            email: 'noreply@paydome.co',
             amount: amount,
+            currency: 'KES',
             api_ref: apiRef,
+            host: this.hostUrl,
+            narrative: 'Paydome wallet top-up',
             wallet_id: walletId,
           },
           {
             headers: {
-              Authorization: `Bearer ${this.secretKey}`, // Backend uses Secret Key matching Mobile impl
+              Authorization: `Bearer ${this.secretKey}`,
+              'Content-Type': 'application/json',
             },
           },
         ),
@@ -600,9 +611,12 @@ export class IntaSendService {
     );
 
     const formattedTransactions = transactions.map((t) => ({
-      name: t.name,
-      account: t.account,
-      bank_code: t.bankCode,
+      name: (t.name || 'Worker')
+        .replace(/[^a-zA-Z0-9 _-]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim(),
+      account: String(t.account).replace(/[^\d]/g, ''),
+      bank_code: String(t.bankCode),
       amount: t.amount,
       narrative: t.narrative || 'Salary Payment',
     }));
@@ -616,10 +630,12 @@ export class IntaSendService {
             currency: 'KES',
             transactions: formattedTransactions,
             wallet_id: walletId,
+            requires_approval: 'NO',
           },
           {
             headers: {
               Authorization: `Bearer ${this.secretKey}`,
+              'Content-Type': 'application/json',
             },
           },
         ),
@@ -645,43 +661,60 @@ export class IntaSendService {
     lastName: string,
     reference: string,
     walletId?: string,
+    options: {
+      method?: 'M-PESA' | 'PESALINK' | 'CARD-PAYMENT';
+      redirectUrl?: string;
+      comment?: string;
+    } = {},
   ) {
-    // Docs: https://developers.intasend.com/docs/working-wallets/collect-payments/#initiate-collection
     const url = `${this.baseUrl}/v1/checkout/`;
 
     // Sanitize names to prevent "No special characters are allowed" errors from IntaSend
-    const cleanFirstName = (firstName || 'User')
-      .replace(/[^a-zA-Z0-9 _-]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim() || 'User';
-      
-    const cleanLastName = (lastName || 'User')
-      .replace(/[^a-zA-Z0-9 _-]/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim() || 'User';
+    const cleanFirstName =
+      (firstName || 'User')
+        .replace(/[^a-zA-Z0-9 _-]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim() || 'User';
+
+    const cleanLastName =
+      (lastName || 'User')
+        .replace(/[^a-zA-Z0-9 _-]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim() || 'User';
 
     try {
+      const payload: Record<string, any> = {
+        public_key: this.publishableKey,
+        amount: amount,
+        currency: 'KES',
+        email: email,
+        first_name: cleanFirstName,
+        last_name: cleanLastName,
+        api_ref: reference,
+        host: this.hostUrl,
+        channel: 'WEBSITE',
+        redirect_url:
+          options.redirectUrl ||
+          `${this.hostUrl.replace(/\/$/, '')}/payment/success`,
+        comment: options.comment || 'Paydome payment',
+        mobile_tarrif: 'BUSINESS-PAYS',
+        card_tarrif: 'BUSINESS-PAYS',
+        bank_tarrif: 'BUSINESS-PAYS',
+        wallet_id: walletId,
+      };
+
+      if (options.method) {
+        payload.method = options.method;
+      }
+
       const response = await lastValueFrom(
-        this.httpService.post(
-          url,
-          {
-            public_key: this.publishableKey,
-            amount: amount,
-            currency: 'KES',
-            email: email,
-            first_name: cleanFirstName,
-            last_name: cleanLastName,
-            api_ref: reference,
-            redirect_url: 'https://paydome.co/payment/success', // Or mobile deep link
-            method: 'M-PESA-STK-PUSH,CARD-PAYMENT,BANK-PAYMENT', // Enable PesaLink (BANK-PAYMENT)
-            wallet_id: walletId,
+        this.httpService.post(url, payload, {
+          headers: {
+            Authorization: `Bearer ${this.secretKey}`,
+            'X-IntaSend-Public-API-Key': this.publishableKey,
+            'Content-Type': 'application/json',
           },
-          {
-            headers: {
-              Authorization: `Bearer ${this.secretKey}`,
-            },
-          },
-        ),
+        }),
       );
       this.logger.log('Checkout URL created:', response.data);
       return response.data; // Expected: { url: "...", signature: "...", ... }

@@ -159,7 +159,7 @@ lib/
 
 ### Payments
 *   `POST /payments/initiate-stk`: STK Push for wallet top-up
-*   `POST /payments/send-b2c`: B2C Payout (single or bulk)
+*   `POST /payments/send-b2c`: Development-only direct B2C payout helper
 *   `GET /payments/intasend/status/:trackingId`: Check payout status
 *   `POST /payments/intasend/webhook`: IntaSend webhook handler
 *   `GET /payments/unified/wallet`: Get wallet balance
