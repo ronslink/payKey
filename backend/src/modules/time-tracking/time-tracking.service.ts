@@ -62,8 +62,8 @@ export class TimeTrackingService {
     // Logic: If Employer is PLATINUM AND Property has Coordinates -> Validate
     if (
       worker.user?.tier === 'PLATINUM' &&
-      activeProperty?.latitude &&
-      activeProperty?.longitude
+      activeProperty?.latitude != null &&
+      activeProperty?.longitude != null
     ) {
       if (!location) {
         throw new BadRequestException(
@@ -99,20 +99,17 @@ export class TimeTrackingService {
     return this.timeEntryRepository.save(entry);
   }
 
-  private validateGeofence(
-    worker: Worker,
+  private calculateDistanceMeters(
+    origin: { latitude: number; longitude: number },
     location: { lat: number; lng: number },
-  ) {
-    const { latitude, longitude, geofenceRadius } = worker.property;
-
-    // Haversine Formula
+  ): number {
     const R = 6371e3; // Earth radius in meters
     const lat1 = (Number(location.lat) * Math.PI) / 180;
-    const lat2 = (Number(latitude) * Math.PI) / 180;
+    const lat2 = (Number(origin.latitude) * Math.PI) / 180;
     const deltaLat =
-      ((Number(latitude) - Number(location.lat)) * Math.PI) / 180;
+      ((Number(origin.latitude) - Number(location.lat)) * Math.PI) / 180;
     const deltaLng =
-      ((Number(longitude) - Number(location.lng)) * Math.PI) / 180;
+      ((Number(origin.longitude) - Number(location.lng)) * Math.PI) / 180;
 
     const a =
       Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
@@ -122,7 +119,19 @@ export class TimeTrackingService {
         Math.sin(deltaLng / 2);
 
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = R * c; // in meters
+    return R * c;
+  }
+
+  private validateGeofence(
+    worker: Worker,
+    location: { lat: number; lng: number },
+  ) {
+    const { latitude, longitude, geofenceRadius } = worker.property;
+
+    const distance = this.calculateDistanceMeters(
+      { latitude: Number(latitude), longitude: Number(longitude) },
+      location,
+    );
 
     if (distance > (geofenceRadius || 100)) {
       throw new BadRequestException(
@@ -139,26 +148,15 @@ export class TimeTrackingService {
     },
     location: { lat: number; lng: number },
   ) {
-    if (!property.latitude || !property.longitude) return;
+    if (property.latitude == null || property.longitude == null) return;
 
-    // Haversine Formula
-    const R = 6371e3; // Earth radius in meters
-    const lat1 = (Number(location.lat) * Math.PI) / 180;
-    const lat2 = (Number(property.latitude) * Math.PI) / 180;
-    const deltaLat =
-      ((Number(property.latitude) - Number(location.lat)) * Math.PI) / 180;
-    const deltaLng =
-      ((Number(property.longitude) - Number(location.lng)) * Math.PI) / 180;
-
-    const a =
-      Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
-      Math.cos(lat1) *
-        Math.cos(lat2) *
-        Math.sin(deltaLng / 2) *
-        Math.sin(deltaLng / 2);
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = R * c; // in meters
+    const distance = this.calculateDistanceMeters(
+      {
+        latitude: Number(property.latitude),
+        longitude: Number(property.longitude),
+      },
+      location,
+    );
 
     if (distance > (property.geofenceRadius || 100)) {
       throw new BadRequestException(
@@ -234,6 +232,23 @@ export class TimeTrackingService {
 
     if (!entry) {
       throw new BadRequestException('Worker is not clocked in');
+    }
+
+    if (entry.property?.latitude != null && entry.property?.longitude != null) {
+      const distance = this.calculateDistanceMeters(
+        {
+          latitude: Number(entry.property.latitude),
+          longitude: Number(entry.property.longitude),
+        },
+        location,
+      );
+      const radius = entry.property.geofenceRadius || 100;
+
+      if (distance <= radius) {
+        throw new BadRequestException(
+          `Auto clock-out rejected: worker is still within the property geofence (${Math.round(distance)}m of ${radius}m allowed).`,
+        );
+      }
     }
 
     const clockOut = new Date();

@@ -8,6 +8,7 @@ import {
   Query,
   UseGuards,
   Request,
+  ForbiddenException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PlatinumGuard } from '../auth/platinum.guard';
@@ -21,6 +22,20 @@ import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 export class TimeTrackingController {
   constructor(private readonly timeTrackingService: TimeTrackingService) {}
 
+  private assertWorkerCanAccess(req: any, workerId: string) {
+    if (req.user.role === 'WORKER' && req.user.workerId !== workerId) {
+      throw new ForbiddenException(
+        'Workers can only access their own time tracking',
+      );
+    }
+  }
+
+  private parseLocation(body: { lat?: number; lng?: number }) {
+    return typeof body.lat === 'number' && typeof body.lng === 'number'
+      ? { lat: body.lat, lng: body.lng }
+      : undefined;
+  }
+
   @Post('clock-in/:workerId')
   @ApiOperation({ summary: 'Clock in a worker' })
   async clockIn(
@@ -28,18 +43,14 @@ export class TimeTrackingController {
     @Param('workerId') workerId: string,
     @Body() body: { lat?: number; lng?: number; propertyId?: string },
   ) {
-    const location =
-      body.lat && body.lng ? { lat: body.lat, lng: body.lng } : undefined;
+    const location = this.parseLocation(body);
 
     // Determine context based on role
     const isWorker = req.user.role === 'WORKER';
     const ownerId = isWorker ? req.user.employerId : req.user.userId;
     const recorderId = req.user.userId;
 
-    // Security check: Worker can only clock themselves in
-    if (isWorker && req.user.workerId !== workerId) {
-      // Ideally throw Forbidden, but for now strict check
-    }
+    this.assertWorkerCanAccess(req, workerId);
 
     return this.timeTrackingService.clockIn(
       workerId,
@@ -63,13 +74,14 @@ export class TimeTrackingController {
       lng?: number;
     },
   ) {
-    const location =
-      body.lat && body.lng ? { lat: body.lat, lng: body.lng } : undefined;
+    const location = this.parseLocation(body);
 
     // Determine context based on role
     const isWorker = req.user.role === 'WORKER';
     const ownerId = isWorker ? req.user.employerId : req.user.userId;
     const recorderId = req.user.userId;
+
+    this.assertWorkerCanAccess(req, workerId);
 
     return this.timeTrackingService.clockOut(workerId, ownerId, recorderId, {
       breakMinutes: body.breakMinutes,
@@ -89,6 +101,8 @@ export class TimeTrackingController {
     const ownerId = isWorker ? req.user.employerId : req.user.userId;
     const recorderId = req.user.userId;
 
+    this.assertWorkerCanAccess(req, workerId);
+
     return this.timeTrackingService.autoClockOut(
       workerId,
       ownerId,
@@ -102,6 +116,8 @@ export class TimeTrackingController {
   async getStatus(@Request() req: any, @Param('workerId') workerId: string) {
     const isWorker = req.user.role === 'WORKER';
     const ownerId = isWorker ? req.user.employerId : req.user.userId;
+
+    this.assertWorkerCanAccess(req, workerId);
 
     return this.timeTrackingService.getStatus(workerId, ownerId);
   }
@@ -120,9 +136,14 @@ export class TimeTrackingController {
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
   ) {
+    const isWorker = req.user.role === 'WORKER';
+    const ownerId = isWorker ? req.user.employerId : req.user.userId;
+
+    this.assertWorkerCanAccess(req, workerId);
+
     return this.timeTrackingService.getEntriesForWorker(
       workerId,
-      req.user.userId,
+      ownerId,
       new Date(startDate),
       new Date(endDate),
     );

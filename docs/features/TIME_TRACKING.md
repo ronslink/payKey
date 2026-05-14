@@ -34,6 +34,8 @@ Clock in/out time tracking for hourly workers with location support.
 ## Current Configuration Status
 - ✅ Clock in/out
 - ✅ Location capture
+- ✅ Property geofence validation on clock-in
+- ✅ Employee app geofence monitoring with server-validated auto clock-out
 - ✅ Hours calculation
 - ✅ Integration with payroll (hourly workers)
 
