@@ -67,7 +67,8 @@ jobs:
 
             echo "🌐 Pulling and deploying website..."
             docker compose --env-file .env -f deploy/docker-compose.website.yml pull website
-            docker compose --env-file .env -f deploy/docker-compose.website.yml up -d --force-recreate website
+            docker compose --env-file .env -f deploy/docker-compose.website.yml down --remove-orphans
+            docker compose --env-file .env -f deploy/docker-compose.website.yml up -d website
 
             echo "🧹 Cleaning up old images..."
             docker image prune -f
