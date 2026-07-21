@@ -18,8 +18,8 @@ export class IntaSendService {
   private readonly hostUrl: string;
 
   constructor(
-    private configService: ConfigService,
-    private httpService: HttpService,
+    private readonly configService: ConfigService,
+    private readonly httpService: HttpService,
   ) {
     this.isLive =
       this.configService.get('INTASEND_IS_LIVE') === 'true' ||

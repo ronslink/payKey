@@ -20,8 +20,8 @@ export class TaxConfigService implements OnModuleInit {
 
   constructor(
     @InjectRepository(TaxConfig)
-    private taxConfigRepository: Repository<TaxConfig>,
-    @Optional() @Inject(CACHE_MANAGER) private cacheManager?: Cache,
+    private readonly taxConfigRepository: Repository<TaxConfig>,
+    @Optional() @Inject(CACHE_MANAGER) private readonly cacheManager?: Cache,
   ) {}
 
   /**

@@ -58,19 +58,19 @@ export class SubscriptionsController {
 
   constructor(
     @InjectRepository(Subscription)
-    private subscriptionRepository: Repository<Subscription>,
+    private readonly subscriptionRepository: Repository<Subscription>,
     @InjectRepository(SubscriptionPayment)
-    private subscriptionPaymentRepository: Repository<SubscriptionPayment>,
+    private readonly subscriptionPaymentRepository: Repository<SubscriptionPayment>,
     @InjectRepository(Campaign)
-    private campaignRepository: Repository<Campaign>,
+    private readonly campaignRepository: Repository<Campaign>,
     @InjectRepository(PromotionalItem)
-    private promoRepository: Repository<PromotionalItem>,
-    private usersService: UsersService,
-    private intaSendService: IntaSendService,
-    private stripeService: StripeService,
+    private readonly promoRepository: Repository<PromotionalItem>,
+    private readonly usersService: UsersService,
+    private readonly intaSendService: IntaSendService,
+    private readonly stripeService: StripeService,
     @InjectRepository(Transaction)
-    private transactionRepository: Repository<Transaction>,
-    private workersService: WorkersService,
+    private readonly transactionRepository: Repository<Transaction>,
+    private readonly workersService: WorkersService,
   ) {}
 
   /**
@@ -585,18 +585,19 @@ export class SubscriptionsController {
           : newNote;
       }
 
-      updatedSubscription = await this.subscriptionRepository.save(
-        subscription,
-      );
+      updatedSubscription =
+        await this.subscriptionRepository.save(subscription);
     }
+
+    const message = body.enable
+      ? subscription.stripeSubscriptionId
+        ? 'Auto-renewal enabled. Stripe will continue billing this subscription automatically.'
+        : 'Auto-renewal enabled. For IntaSend plans, PayDome will create a secure payment request and notify you at renewal time.'
+      : 'Auto-renewal disabled. Your plan will remain active until the end of the billing period.';
 
     return {
       success: true,
-      message: body.enable
-        ? subscription.stripeSubscriptionId
-          ? 'Auto-renewal enabled. Stripe will continue billing this subscription automatically.'
-          : 'Auto-renewal enabled. For IntaSend plans, PayDome will create a secure payment request and notify you at renewal time.'
-        : 'Auto-renewal disabled. Your plan will remain active until the end of the billing period.',
+      message,
       subscription: {
         ...updatedSubscription,
         autoRenew: updatedSubscription.autoRenewal,

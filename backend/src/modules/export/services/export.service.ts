@@ -32,16 +32,16 @@ export class ExportService {
   private readonly exportsDir = path.join(process.cwd(), 'exports');
 
   private csvCell(value: string): string {
-    return `"${value.replace(/"/g, '""')}"`;
+    return `"${value.replaceAll('"', '""')}"`;
   }
 
   constructor(
     @InjectRepository(Export)
-    private exportRepository: Repository<Export>,
+    private readonly exportRepository: Repository<Export>,
     @InjectRepository(Transaction)
-    private transactionRepository: Repository<Transaction>,
+    private readonly transactionRepository: Repository<Transaction>,
     @InjectRepository(PayrollRecord) // Injected for robust data fetching
-    private payrollRecordRepository: Repository<PayrollRecord>,
+    private readonly payrollRecordRepository: Repository<PayrollRecord>,
   ) {
     // Ensure exports directory exists
     if (!fs.existsSync(this.exportsDir)) {

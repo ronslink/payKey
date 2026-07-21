@@ -37,12 +37,12 @@ export interface JournalEntrySet {
 export class AccountingExportService {
   constructor(
     @InjectRepository(PayrollRecord)
-    private payrollRecordRepository: Repository<PayrollRecord>,
+    private readonly payrollRecordRepository: Repository<PayrollRecord>,
     @InjectRepository(AccountMapping)
-    private accountMappingRepository: Repository<AccountMapping>,
+    private readonly accountMappingRepository: Repository<AccountMapping>,
     @InjectRepository(AccountingExport)
-    private accountingExportRepository: Repository<AccountingExport>,
-    private activitiesService: ActivitiesService,
+    private readonly accountingExportRepository: Repository<AccountingExport>,
+    private readonly activitiesService: ActivitiesService,
   ) {}
 
   async generateJournalEntries(

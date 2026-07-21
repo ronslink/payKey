@@ -25,7 +25,12 @@ export default function LoadingScreen({
           return 100;
         }
         // Accelerate towards end
-        const increment = prev < 60 ? 2 : prev < 85 ? 3 : 5;
+        let increment = 5;
+        if (prev < 60) {
+          increment = 2;
+        } else if (prev < 85) {
+          increment = 3;
+        }
         return Math.min(prev + increment, 100);
       });
     }, 40);

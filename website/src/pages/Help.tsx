@@ -206,6 +206,7 @@ export default function Help() {
                       className="border border-white/5 rounded-lg overflow-hidden"
                     >
                       <button
+                        type="button"
                         className="w-full flex items-center justify-between p-4 text-left hover:bg-white/[0.02] transition-colors"
                         onClick={() => toggleItem(key)}
                       >

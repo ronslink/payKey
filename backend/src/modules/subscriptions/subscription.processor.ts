@@ -354,67 +354,15 @@ export class SubscriptionProcessor extends WorkerHost {
     user: User,
     amount: number,
   ) {
-    const now = new Date();
-    subscription.status = SubscriptionStatus.EXPIRED;
-    subscription.endDate = now;
-    subscription.nextBillingDate = null;
-    subscription.gracePeriodEndDate = null;
-    subscription.notes = subscription.notes
-      ? `${subscription.notes}\nSubscription expired for unpaid renewal on ${now.toISOString()}`
-      : `Subscription expired for unpaid renewal on ${now.toISOString()}`;
-    await this.subscriptionRepository.save(subscription);
-
-    const nextMonth = new Date(now);
-    nextMonth.setMonth(nextMonth.getMonth() + 1);
-
-    await this.subscriptionRepository.save(
-      this.subscriptionRepository.create({
-        userId: user.id,
-        tier: SubscriptionTier.FREE,
-        status: SubscriptionStatus.ACTIVE,
-        startDate: now,
-        billingPeriod: 'monthly',
-        nextBillingDate: nextMonth,
-        endDate: nextMonth,
-        autoRenewal: false,
-      }),
-    );
-
-    await this.userRepository.update({ id: user.id }, { tier: 'FREE' as any });
-
-    await this.paymentRepository.save(
-      this.paymentRepository.create({
-        subscriptionId: subscription.id,
-        userId: subscription.userId,
-        amount,
-        currency: 'KES',
-        status: PaymentStatus.FAILED,
-        paymentMethod: PaymentMethod.BANK_TRANSFER,
-        billingPeriod: subscription.billingPeriod || 'monthly',
-        periodStart: now,
-        periodEnd: now,
-        dueDate: now,
-        paymentProvider: 'INTASEND',
-        paidDate: undefined,
-        notes: 'Subscription expired after unpaid renewal grace period',
-        metadata: {
-          renewal: true,
-          expiredAfterGrace: true,
-          tier: subscription.tier,
-        },
-      }),
-    );
-
-    await this.notifyUser(
-      user.id,
-      'Subscription renewal was not completed. Your account has been moved to the Free tier.',
-      'Subscription Expired',
-    );
-
-    return {
-      status: 'downgraded',
+    return this.downgradeExpiredSubscription(subscription, user, amount, {
+      subscriptionNote: 'Subscription expired for unpaid renewal',
+      paymentNote: 'Subscription expired after unpaid renewal grace period',
+      paymentMetadata: { expiredAfterGrace: true },
+      notificationMessage:
+        'Subscription renewal was not completed. Your account has been moved to the Free tier.',
+      notificationTitle: 'Subscription Expired',
       reason: 'renewal_unpaid_after_grace',
-    };
+    });
   }
 
   private async expireNonRenewingSubscription(
@@ -422,14 +370,39 @@ export class SubscriptionProcessor extends WorkerHost {
     user: User,
     amount: number,
   ) {
+    return this.downgradeExpiredSubscription(subscription, user, amount, {
+      subscriptionNote: 'Subscription ended with auto-renewal disabled',
+      paymentNote: 'Subscription ended because auto-renewal was disabled',
+      paymentMetadata: { autoRenewalDisabled: true },
+      notificationMessage:
+        'Your subscription has ended because auto-renewal was disabled. Your account has been moved to the Free tier.',
+      notificationTitle: 'Subscription Ended',
+      reason: 'auto_renewal_disabled',
+    });
+  }
+
+  private async downgradeExpiredSubscription(
+    subscription: Subscription,
+    user: User,
+    amount: number,
+    details: {
+      subscriptionNote: string;
+      paymentNote: string;
+      paymentMetadata: Record<string, boolean>;
+      notificationMessage: string;
+      notificationTitle: string;
+      reason: string;
+    },
+  ) {
     const now = new Date();
     subscription.status = SubscriptionStatus.EXPIRED;
     subscription.endDate = now;
     subscription.nextBillingDate = null;
     subscription.gracePeriodEndDate = null;
+    const datedNote = `${details.subscriptionNote} on ${now.toISOString()}`;
     subscription.notes = subscription.notes
-      ? `${subscription.notes}\nSubscription ended with auto-renewal disabled on ${now.toISOString()}`
-      : `Subscription ended with auto-renewal disabled on ${now.toISOString()}`;
+      ? `${subscription.notes}\n${datedNote}`
+      : datedNote;
     await this.subscriptionRepository.save(subscription);
 
     const nextMonth = new Date(now);
@@ -463,10 +436,10 @@ export class SubscriptionProcessor extends WorkerHost {
         periodEnd: now,
         dueDate: now,
         paymentProvider: 'INTASEND',
-        notes: 'Subscription ended because auto-renewal was disabled',
+        notes: details.paymentNote,
         metadata: {
           renewal: true,
-          autoRenewalDisabled: true,
+          ...details.paymentMetadata,
           tier: subscription.tier,
         },
       }),
@@ -474,13 +447,13 @@ export class SubscriptionProcessor extends WorkerHost {
 
     await this.notifyUser(
       user.id,
-      'Your subscription has ended because auto-renewal was disabled. Your account has been moved to the Free tier.',
-      'Subscription Ended',
+      details.notificationMessage,
+      details.notificationTitle,
     );
 
     return {
       status: 'downgraded',
-      reason: 'auto_renewal_disabled',
+      reason: details.reason,
     };
   }
 

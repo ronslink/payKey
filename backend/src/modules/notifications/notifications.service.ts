@@ -43,8 +43,8 @@ export class NotificationsService implements OnModuleInit {
   private firebaseInitialized = false;
 
   constructor(
-    private configService: ConfigService,
-    private httpService: HttpService,
+    private readonly configService: ConfigService,
+    private readonly httpService: HttpService,
   ) {}
 
   onModuleInit() {
@@ -560,7 +560,9 @@ export class NotificationsService implements OnModuleInit {
     dueDate?: Date,
   ): Promise<{ success: boolean; error?: string }> {
     if (!fcmToken) {
-      this.logger.warn('No FCM token for subscription payment due notification');
+      this.logger.warn(
+        'No FCM token for subscription payment due notification',
+      );
       return { success: false, error: 'No FCM token' };
     }
 

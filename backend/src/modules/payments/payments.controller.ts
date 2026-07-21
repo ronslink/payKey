@@ -58,24 +58,24 @@ export class PaymentsController {
   private readonly logger = new Logger(PaymentsController.name);
 
   constructor(
-    private dataSource: DataSource,
+    private readonly dataSource: DataSource,
     @InjectRepository(Transaction)
-    private transactionsRepository: Repository<Transaction>,
+    private readonly transactionsRepository: Repository<Transaction>,
     @InjectRepository(User)
-    private usersRepository: Repository<User>,
+    private readonly usersRepository: Repository<User>,
     @InjectRepository(PayrollRecord)
-    private payrollRecordRepository: Repository<PayrollRecord>,
+    private readonly payrollRecordRepository: Repository<PayrollRecord>,
     @InjectRepository(PayPeriod)
-    private payPeriodRepository: Repository<PayPeriod>,
+    private readonly payPeriodRepository: Repository<PayPeriod>,
     @InjectRepository(SubscriptionPayment)
-    private subscriptionPaymentRepository: Repository<SubscriptionPayment>,
+    private readonly subscriptionPaymentRepository: Repository<SubscriptionPayment>,
     @InjectRepository(Subscription)
-    private subscriptionRepository: Repository<Subscription>,
+    private readonly subscriptionRepository: Repository<Subscription>,
     @InjectRepository(DeviceToken)
-    private deviceTokenRepository: Repository<DeviceToken>,
-    private intaSendService: IntaSendService,
-    private stripeService: StripeService,
-    private notificationsService: NotificationsService,
+    private readonly deviceTokenRepository: Repository<DeviceToken>,
+    private readonly intaSendService: IntaSendService,
+    private readonly stripeService: StripeService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /**

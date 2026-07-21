@@ -27,15 +27,15 @@ export class PayrollPaymentService {
 
   constructor(
     @InjectRepository(Transaction)
-    private transactionRepository: Repository<Transaction>,
-    private intaSendService: IntaSendService,
+    private readonly transactionRepository: Repository<Transaction>,
+    private readonly intaSendService: IntaSendService,
     @InjectRepository(PayrollRecord)
-    private payrollRecordRepository: Repository<PayrollRecord>,
+    private readonly payrollRecordRepository: Repository<PayrollRecord>,
     @InjectRepository(User)
-    private usersRepository: Repository<User>,
-    private configService: ConfigService,
+    private readonly usersRepository: Repository<User>,
+    private readonly configService: ConfigService,
     @InjectQueue('payroll-processing')
-    private payrollQueue: Queue,
+    private readonly payrollQueue: Queue,
   ) {}
 
   /**

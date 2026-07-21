@@ -36,20 +36,20 @@ export class ReportsService {
 
   constructor(
     @InjectRepository(Worker)
-    private workersRepository: Repository<Worker>,
+    private readonly workersRepository: Repository<Worker>,
     @InjectRepository(Transaction)
-    private transactionsRepository: Repository<Transaction>,
+    private readonly transactionsRepository: Repository<Transaction>,
     @InjectRepository(LeaveRequest)
-    private leaveRequestRepository: Repository<LeaveRequest>,
+    private readonly leaveRequestRepository: Repository<LeaveRequest>,
     @InjectRepository(User)
-    private usersRepository: Repository<User>,
+    private readonly usersRepository: Repository<User>,
     @InjectRepository(PayrollRecord)
-    private payrollRecordRepository: Repository<PayrollRecord>,
+    private readonly payrollRecordRepository: Repository<PayrollRecord>,
     @InjectRepository(PayPeriod)
-    private payPeriodRepository: Repository<PayPeriod>,
+    private readonly payPeriodRepository: Repository<PayPeriod>,
     @InjectRepository(TaxSubmission)
-    private taxSubmissionRepository: Repository<TaxSubmission>,
-    @Optional() @Inject(CACHE_MANAGER) private cacheManager?: Cache,
+    private readonly taxSubmissionRepository: Repository<TaxSubmission>,
+    @Optional() @Inject(CACHE_MANAGER) private readonly cacheManager?: Cache,
   ) {}
 
   async getMonthlyPayrollReport(userId: string, year: number, month: number) {

@@ -7,43 +7,69 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+interface Plan {
+  name: string;
+  description: string;
+  price: string;
+  yearlyPrice: string;
+  period: string;
+  features: string[];
+  cta: string;
+  highlighted: boolean;
+}
+
+const definePlan = (
+  name: string,
+  description: string,
+  price: string,
+  yearlyPrice: string,
+  features: string[],
+  cta: string,
+  highlighted = false,
+): Plan => ({
+  name,
+  description,
+  price,
+  yearlyPrice,
+  period: "/month",
+  features,
+  cta,
+  highlighted,
+});
+
 const plans = [
-  {
-    name: "Free",
-    description: "Start with one worker and core payroll tools",
-    price: "0",
-    yearlyPrice: "0",
-    period: "/month",
-    features: [
+  definePlan(
+    "Free",
+    "Start with one worker and core payroll tools",
+    "0",
+    "0",
+    [
       "Up to 1 worker",
       "Basic worker management",
       "Automatic tax calculations",
     ],
-    cta: "Get Started",
-    highlighted: false,
-  },
-  {
-    name: "Basic",
-    description: "For households ready to pay through Paydome",
-    price: "1,300",
-    yearlyPrice: "13,000",
-    period: "/month",
-    features: [
+    "Get Started",
+  ),
+  definePlan(
+    "Basic",
+    "For households ready to pay through Paydome",
+    "1,300",
+    "13,000",
+    [
       "Up to 5 workers",
       "Automatic tax calculations",
       "M-Pesa payments",
       "P9 supporting summaries",
     ],
-    cta: "Start Free Trial",
-    highlighted: true,
-  },
-  {
-    name: "Gold",
-    description: "For larger households that need reporting and imports",
-    price: "3,900",
-    yearlyPrice: "39,000",
-    period: "/month",
-    features: [
+    "Start Free Trial",
+    true,
+  ),
+  definePlan(
+    "Gold",
+    "For larger households that need reporting and imports",
+    "3,900",
+    "39,000",
+    [
       "Up to 10 workers",
       "Automatic tax calculations",
       "M-Pesa payments",
@@ -53,16 +79,14 @@ const plans = [
       "Priority support",
       "Excel worker import",
     ],
-    cta: "Start Free Trial",
-    highlighted: false,
-  },
-  {
-    name: "Platinum",
-    description: "For multi-property households and advanced operations",
-    price: "6,500",
-    yearlyPrice: "65,000",
-    period: "/month",
-    features: [
+    "Start Free Trial",
+  ),
+  definePlan(
+    "Platinum",
+    "For multi-property households and advanced operations",
+    "6,500",
+    "65,000",
+    [
       "Up to 20 workers",
       "Automatic tax calculations",
       "M-Pesa payments",
@@ -76,9 +100,8 @@ const plans = [
       "Multi-property management",
       "Excel worker import",
     ],
-    cta: "Start Free Trial",
-    highlighted: false,
-  },
+    "Start Free Trial",
+  ),
 ];
 
 const faqItems = [

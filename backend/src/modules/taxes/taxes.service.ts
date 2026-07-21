@@ -32,14 +32,14 @@ import { ActivityType } from '../activities/entities/activity.entity';
 export class TaxesService {
   constructor(
     @InjectRepository(TaxTable)
-    private taxTableRepository: Repository<TaxTable>,
+    private readonly taxTableRepository: Repository<TaxTable>,
     @InjectRepository(TaxSubmission)
-    private taxSubmissionRepository: Repository<TaxSubmission>,
+    private readonly taxSubmissionRepository: Repository<TaxSubmission>,
     @InjectRepository(PayrollRecord)
-    private payrollRecordRepository: Repository<PayrollRecord>,
-    private taxConfigService: TaxConfigService,
-    private usersService: UsersService,
-    private activitiesService: ActivitiesService,
+    private readonly payrollRecordRepository: Repository<PayrollRecord>,
+    private readonly taxConfigService: TaxConfigService,
+    private readonly usersService: UsersService,
+    private readonly activitiesService: ActivitiesService,
   ) {}
 
   async createTaxTable(data: Partial<TaxTable>): Promise<TaxTable> {
