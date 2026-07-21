@@ -1,7 +1,5 @@
-
 import 'package:flutter/material.dart';
 import '../../../../core/theme/pay_colors.dart';
-
 
 class TopupSelectionSheet extends StatefulWidget {
   final double defaultAmount;
@@ -27,10 +25,7 @@ class TopupSelectionSheet extends StatefulWidget {
     required Function(double amount) onStripeConfirm,
     String? defaultPhone,
   }) {
-
-    final defaultAmount = shortfall > 0
-        ? shortfall.ceilToDouble()
-        : 1000.0;
+    final defaultAmount = shortfall > 0 ? shortfall.ceilToDouble() : 1000.0;
 
     return showModalBottomSheet(
       context: context,
@@ -50,7 +45,8 @@ class TopupSelectionSheet extends StatefulWidget {
   State<TopupSelectionSheet> createState() => _TopupSelectionSheetState();
 }
 
-class _TopupSelectionSheetState extends State<TopupSelectionSheet> with SingleTickerProviderStateMixin {
+class _TopupSelectionSheetState extends State<TopupSelectionSheet>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   late final TextEditingController _amountController;
   late final TextEditingController _phoneController;
@@ -75,25 +71,15 @@ class _TopupSelectionSheetState extends State<TopupSelectionSheet> with SingleTi
     super.dispose();
   }
 
-  double get _enteredAmount => double.tryParse(_amountController.text) ?? widget.defaultAmount;
- 
-  // Fee Calculation Logic
-  // M-Pesa/IntaSend charges ~3% for collection.
-  // To ensure wallet receives the requested amount, we gross up.
-  // Formula: Total = Net / (1 - 0.03)
-  double get _processingFee => _calculateGrossAmount(_enteredAmount) - _enteredAmount;
-  double get _totalPayable => _calculateGrossAmount(_enteredAmount);
-
-  double _calculateGrossAmount(double net) {
-    // 3% Fee
-    double raw = net / 0.97;
-    return double.parse(raw.toStringAsFixed(2));
-  }
+  double get _enteredAmount =>
+      double.tryParse(_amountController.text) ?? widget.defaultAmount;
 
   void _handleConfirm() {
     Navigator.of(context).pop();
-    final amount = _totalPayable; // Pass total payable so wallet receives net
-    
+    // Request the exact top-up amount. The provider checkout is authoritative
+    // for any fee that applies to the merchant's negotiated tariff.
+    final amount = _enteredAmount;
+
     if (_tabController.index == 0) {
       widget.onMpesaConfirm(amount, _phoneController.text);
     } else if (_tabController.index == 1) {
@@ -146,18 +132,19 @@ class _TopupSelectionSheetState extends State<TopupSelectionSheet> with SingleTi
               Tab(text: 'Checkout'),
               Tab(text: 'Global/SEPA'),
             ],
-            onTap: (_) => setState(() {}), // Rebuild to update fee wording if needed
+            onTap: (_) => setState(() {}),
           ),
           const SizedBox(height: 24),
           _buildAmountField(),
           const SizedBox(height: 16),
-          _buildFeeBreakdown(), // New Breakdown Section
+          _buildFeeNotice(),
           const SizedBox(height: 24),
           SizedBox(
             height: 100, // Fixed height for tab content
             child: TabBarView(
               controller: _tabController,
-              physics: const NeverScrollableScrollPhysics(), // Disable swipe to avoid confusion
+              physics:
+                  const NeverScrollableScrollPhysics(), // Disable swipe to avoid confusion
               children: [
                 _buildPhoneField(),
                 _buildCheckoutInfo(),
@@ -178,7 +165,7 @@ class _TopupSelectionSheetState extends State<TopupSelectionSheet> with SingleTi
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Amount to Receive (Net)',
+          'Wallet Top-up Amount',
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
@@ -210,11 +197,7 @@ class _TopupSelectionSheetState extends State<TopupSelectionSheet> with SingleTi
     );
   }
 
-  Widget _buildFeeBreakdown() {
-    // Only show fee for M-Pesa/Checkout (IntaSend)
-    // Stripe might have different fees, but let's assume consistent gross-up policy or hide for Stripe if unknown.
-    // For this plan, we focus on M-Pesa.
-    
+  Widget _buildFeeNotice() {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -222,35 +205,20 @@ class _TopupSelectionSheetState extends State<TopupSelectionSheet> with SingleTi
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: context.borderMuted),
       ),
-      child: Column(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _feeRow('Processing Fee (3%)', _processingFee),
-          const Divider(height: 16),
-          _feeRow('Total to Pay', _totalPayable, isTotal: true),
+          Icon(Icons.info_outline, size: 18, color: context.iconDefault),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'You are adding KES ${_enteredAmount.toStringAsFixed(2)}. '
+              'Any provider fee will be shown before you confirm payment.',
+              style: TextStyle(color: context.textSecondary, fontSize: 13),
+            ),
+          ),
         ],
       ),
-    );
-  }
-
-  Widget _feeRow(String label, double amount, {bool isTotal = false}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: isTotal ? context.textPrimary : context.textSecondary,
-            fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-        Text(
-          'KES ${amount.toStringAsFixed(2)}',
-          style: TextStyle(
-            fontWeight: isTotal ? FontWeight.bold : FontWeight.w500,
-            fontSize: isTotal ? 16 : 14,
-          ),
-        ),
-      ],
     );
   }
 
@@ -287,23 +255,23 @@ class _TopupSelectionSheetState extends State<TopupSelectionSheet> with SingleTi
   }
 
   Widget _buildCheckoutInfo() {
-     return Center(
-       child: Text(
-         'You will be redirected to complete payment via Card or PesaLink.',
-         textAlign: TextAlign.center,
-         style: TextStyle(color: context.textSecondary),
-       ),
-     );
+    return Center(
+      child: Text(
+        'You will be redirected to complete payment via Card or PesaLink.',
+        textAlign: TextAlign.center,
+        style: TextStyle(color: context.textSecondary),
+      ),
+    );
   }
 
   Widget _buildStripeInfo() {
-     return Center(
-       child: Text(
-         'Pay with Card, SEPA, or Apple/Google Pay via Stripe.',
-         textAlign: TextAlign.center,
-         style: TextStyle(color: context.textSecondary),
-       ),
-     );
+    return Center(
+      child: Text(
+        'Pay with Card, SEPA, or Apple/Google Pay via Stripe.',
+        textAlign: TextAlign.center,
+        style: TextStyle(color: context.textSecondary),
+      ),
+    );
   }
 
   Widget _buildConfirmButton() {
@@ -319,8 +287,12 @@ class _TopupSelectionSheetState extends State<TopupSelectionSheet> with SingleTi
           ),
         ),
         child: Text(
-          'Pay KES ${_totalPayable.toStringAsFixed(0)}',
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+          'Add KES ${_enteredAmount.toStringAsFixed(0)}',
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
       ),
     );

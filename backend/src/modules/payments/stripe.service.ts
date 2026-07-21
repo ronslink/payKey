@@ -35,20 +35,20 @@ export class StripeService {
   private stripe: Stripe | null = null;
 
   constructor(
-    private configService: ConfigService,
+    private readonly configService: ConfigService,
     @InjectRepository(Subscription)
-    private subscriptionRepository: Repository<Subscription>,
+    private readonly subscriptionRepository: Repository<Subscription>,
     @InjectRepository(SubscriptionPayment)
-    private paymentRepository: Repository<SubscriptionPayment>,
+    private readonly paymentRepository: Repository<SubscriptionPayment>,
     @InjectRepository(User)
-    private userRepository: Repository<User>,
+    private readonly userRepository: Repository<User>,
     @InjectRepository(Transaction)
-    private transactionRepository: Repository<Transaction>,
-    private exchangeRateService: ExchangeRateService,
-    private notificationsService: NotificationsService,
+    private readonly transactionRepository: Repository<Transaction>,
+    private readonly exchangeRateService: ExchangeRateService,
+    private readonly notificationsService: NotificationsService,
     @InjectRepository(DeviceToken)
-    private deviceTokenRepository: Repository<DeviceToken>,
-    private systemConfigService: SystemConfigService,
+    private readonly deviceTokenRepository: Repository<DeviceToken>,
+    private readonly systemConfigService: SystemConfigService,
   ) {
     const secretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
     if (!secretKey) {
@@ -382,6 +382,7 @@ export class StripeService {
           await this.handlePaymentIntentSucceeded(event.data.object);
           break;
         case 'invoice.payment_succeeded':
+        case 'invoice.paid':
           await this.handlePaymentSucceeded(event.data.object);
           break;
         case 'invoice.payment_failed':
@@ -652,8 +653,42 @@ export class StripeService {
           break;
       }
 
+      subscription.autoRenewal = !stripeSubscription.cancel_at_period_end;
+      subscription.endDate = stripeSubscription.cancel_at_period_end
+        ? new Date(stripeSubscription.current_period_end * 1000)
+        : subscription.endDate;
       await this.subscriptionRepository.save(subscription);
     }
+  }
+
+  async setCancelAtPeriodEnd(
+    userId: string,
+    cancelAtPeriodEnd: boolean,
+  ): Promise<Subscription> {
+    const stripe = this.ensureStripeConfigured();
+
+    const subscription = await this.subscriptionRepository.findOne({
+      where: { userId, status: SubscriptionStatus.ACTIVE },
+    });
+
+    if (!subscription?.stripeSubscriptionId) {
+      throw new NotFoundException('Active Stripe subscription not found');
+    }
+
+    const stripeSubscription = await stripe.subscriptions.update(
+      subscription.stripeSubscriptionId,
+      {
+        cancel_at_period_end: cancelAtPeriodEnd,
+      },
+    );
+
+    subscription.autoRenewal = !stripeSubscription.cancel_at_period_end;
+    subscription.endDate = stripeSubscription.cancel_at_period_end
+      ? new Date(stripeSubscription.current_period_end * 1000)
+      : null;
+    await this.subscriptionRepository.save(subscription);
+
+    return subscription;
   }
 
   /**

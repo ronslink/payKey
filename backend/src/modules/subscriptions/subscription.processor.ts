@@ -13,10 +13,20 @@ import {
   PaymentStatus,
   PaymentMethod,
 } from './entities/subscription-payment.entity';
-import { User, UserTier } from '../users/entities/user.entity';
+import { User } from '../users/entities/user.entity';
 import { SUBSCRIPTION_PLANS } from './subscription-plans.config';
-import { NotificationsService } from '../notifications/notifications.service';
+import {
+  NotificationType,
+  NotificationsService,
+} from '../notifications/notifications.service';
 import { DeviceToken } from '../notifications/entities/device-token.entity';
+import { IntaSendService } from '../payments/intasend.service';
+import {
+  PaymentMethodType,
+  Transaction,
+  TransactionStatus,
+  TransactionType,
+} from '../payments/entities/transaction.entity';
 
 @Processor('subscriptions')
 export class SubscriptionProcessor extends WorkerHost {
@@ -27,10 +37,13 @@ export class SubscriptionProcessor extends WorkerHost {
     private readonly subscriptionRepository: Repository<Subscription>,
     @InjectRepository(SubscriptionPayment)
     private readonly paymentRepository: Repository<SubscriptionPayment>,
+    @InjectRepository(Transaction)
+    private readonly transactionRepository: Repository<Transaction>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     @InjectRepository(DeviceToken)
     private readonly deviceTokenRepository: Repository<DeviceToken>,
+    private readonly intaSendService: IntaSendService,
     private readonly notificationsService: NotificationsService,
   ) {
     super();
@@ -58,9 +71,12 @@ export class SubscriptionProcessor extends WorkerHost {
       return;
     }
 
-    if (subscription.status !== SubscriptionStatus.ACTIVE) {
+    if (
+      subscription.status !== SubscriptionStatus.ACTIVE &&
+      subscription.status !== SubscriptionStatus.PAST_DUE
+    ) {
       this.logger.warn(
-        `Subscription ${subscriptionId} is not active. Skipping renewal.`,
+        `Subscription ${subscriptionId} is not active or past due. Skipping renewal.`,
       );
       return;
     }
@@ -96,90 +112,61 @@ export class SubscriptionProcessor extends WorkerHost {
       return { status: 'renewed', type: 'free' };
     }
 
-    // Check Wallet Balance
     const user = await this.userRepository.findOne({
       where: { id: subscription.userId },
     });
     if (!user) return; // Should not happen
 
-    if (Number(user.walletBalance) >= amount) {
-      // SUCCESS: Deduct & Renew
-      await this.userRepository.decrement(
-        { id: user.id },
-        'walletBalance',
-        amount,
-      );
-
-      this.extendSubscriptionDates(subscription, isYearly);
-      await this.subscriptionRepository.save(subscription);
-
-      // Record Payment
-      await this.createPaymentRecord(
-        subscription,
-        amount,
-        PaymentStatus.COMPLETED,
-      );
-
-      this.logger.log(
-        `Renewed subscription ${subscriptionId} for user ${user.id}`,
-      );
-      await this.notifyUser(
-        user.id,
-        `Your ${plan.name} subscription has been successfully renewed.`,
-        'Subscription Renewed',
-      );
-
-      return { status: 'renewed', amount };
-    } else {
-      // FAILURE: Insufficient Funds - DOWNGRADE TO FREE
-      const now = new Date();
-
-      // 1. Mark current paid subscription as EXPIRED
-      subscription.status = SubscriptionStatus.EXPIRED;
-      subscription.endDate = now;
-      await this.subscriptionRepository.save(subscription);
-
-      // 2. Downgrade User to FREE (Wait, SubscriptionTier vs UserTier mismatch)
-      await this.userRepository.update(
-        { id: user.id },
-        { tier: UserTier.FREE },
-      );
-
-      // 3. Create new FREE Subscription
-      const nextMonth = new Date(now);
-      nextMonth.setMonth(nextMonth.getMonth() + 1);
-
-      const freeSubscription = this.subscriptionRepository.create({
-        userId: user.id,
-        tier: SubscriptionTier.FREE,
-        status: SubscriptionStatus.ACTIVE,
-        startDate: now,
-        billingPeriod: 'monthly',
-        nextBillingDate: nextMonth,
-        endDate: nextMonth,
-      });
-      await this.subscriptionRepository.save(freeSubscription);
-
-      // Record Failed Payment (for visibility)
-      await this.createPaymentRecord(
-        subscription,
-        amount,
-        PaymentStatus.FAILED,
-        'Insufficient wallet balance - Downgraded to FREE',
-      );
-
-      this.logger.warn(
-        `Downgraded user ${user.id} to FREE due to failed renewal (Insufficient Funds)`,
-      );
-
-      await this.notifyUser(
-        user.id,
-        `Subscription renewal failed due to insufficient funds. Your account has been downgraded to the Free tier.`,
-        'Subscription Expired',
-      );
-
-      return { status: 'downgraded', reason: 'insufficient_funds' };
+    if (this.isGracePeriodExpired(subscription)) {
+      return this.expireUnpaidRenewal(subscription, user, amount);
     }
+
+    if (
+      subscription.status === SubscriptionStatus.ACTIVE &&
+      subscription.autoRenewal === false
+    ) {
+      return this.expireNonRenewingSubscription(subscription, user, amount);
+    }
+
+    const existingPendingRenewal = await this.findPendingRenewalPayment(
+      subscription.id,
+    );
+
+    if (existingPendingRenewal) {
+      this.logger.log(
+        `Renewal payment ${existingPendingRenewal.id} already pending for subscription ${subscription.id}`,
+      );
+      return {
+        status: 'awaiting_payment',
+        paymentId: existingPendingRenewal.id,
+        checkoutUrl: existingPendingRenewal.metadata?.checkoutUrl,
+      };
+    }
+
+    const renewalRequest = await this.createIntaSendRenewalRequest(
+      subscription,
+      user,
+      amount,
+      isYearly,
+    );
+
+    this.logger.log(
+      `Created IntaSend renewal payment ${renewalRequest.payment.id} for subscription ${subscription.id}`,
+    );
+
+    await this.notifyPaymentDue(
+      user,
+      amount,
+      renewalRequest.checkoutUrl,
+      renewalRequest.payment.dueDate,
+    );
+
+    return {
+      status: 'awaiting_payment',
+      amount,
+      paymentId: renewalRequest.payment.id,
+      checkoutUrl: renewalRequest.checkoutUrl,
+    };
   }
 
   private extendSubscriptionDates(
@@ -240,6 +227,236 @@ export class SubscriptionProcessor extends WorkerHost {
     return this.paymentRepository.save(payment);
   }
 
+  private async findPendingRenewalPayment(subscriptionId: string) {
+    const pendingPayments = await this.paymentRepository.find({
+      where: {
+        subscriptionId,
+        status: PaymentStatus.PENDING,
+        paymentProvider: 'INTASEND',
+      },
+      order: { createdAt: 'DESC' },
+      take: 5,
+    });
+
+    return pendingPayments.find((payment) => payment.metadata?.renewal);
+  }
+
+  private async createIntaSendRenewalRequest(
+    subscription: Subscription,
+    user: User,
+    amount: number,
+    isYearly: boolean,
+  ) {
+    const now = new Date();
+    const periodStart = subscription.nextBillingDate
+      ? new Date(subscription.nextBillingDate)
+      : now;
+    const periodEnd = this.calculatePeriodEnd(periodStart, isYearly);
+    const reference = `SUB-RENEW-${subscription.userId}-${subscription.tier}-${subscription.billingPeriod}-${Date.now()}`;
+
+    const checkoutResult = await this.intaSendService.createCheckoutUrl(
+      amount,
+      user.email,
+      user.firstName || 'User',
+      user.lastName || '',
+      reference,
+      undefined,
+      { method: 'PESALINK', comment: 'Paydome subscription renewal' },
+    );
+
+    const payment = await this.paymentRepository.save(
+      this.paymentRepository.create({
+        subscriptionId: subscription.id,
+        userId: subscription.userId,
+        amount,
+        currency: 'KES',
+        status: PaymentStatus.PENDING,
+        paymentMethod: PaymentMethod.BANK_TRANSFER,
+        billingPeriod: subscription.billingPeriod || 'monthly',
+        periodStart,
+        periodEnd,
+        dueDate: now,
+        paymentProvider: 'INTASEND',
+        transactionId: reference,
+        metadata: {
+          renewal: true,
+          tier: subscription.tier,
+          reference,
+          checkoutUrl: checkoutResult.url,
+        },
+      }),
+    );
+
+    const checkoutProviderRef =
+      checkoutResult.invoice?.invoice_id ||
+      checkoutResult.invoice_id ||
+      checkoutResult.id ||
+      reference;
+
+    await this.transactionRepository.save(
+      this.transactionRepository.create({
+        userId: subscription.userId,
+        amount,
+        currency: 'KES',
+        type: TransactionType.SUBSCRIPTION,
+        status: TransactionStatus.PENDING,
+        provider: 'INTASEND',
+        providerRef: checkoutProviderRef,
+        paymentMethod: PaymentMethodType.PESALINK,
+        accountReference: reference,
+        metadata: {
+          subscriptionPaymentId: payment.id,
+          renewal: true,
+          planId: subscription.tier,
+          billingPeriod: subscription.billingPeriod,
+          reference,
+          checkoutProviderRef,
+          checkoutUrl: checkoutResult.url,
+        },
+      }),
+    );
+
+    const gracePeriodEnd = new Date(now);
+    gracePeriodEnd.setDate(gracePeriodEnd.getDate() + 7);
+    subscription.status = SubscriptionStatus.PAST_DUE;
+    subscription.gracePeriodEndDate = gracePeriodEnd;
+    subscription.notes = subscription.notes
+      ? `${subscription.notes}\nRenewal payment requested on ${now.toISOString()}`
+      : `Renewal payment requested on ${now.toISOString()}`;
+    await this.subscriptionRepository.save(subscription);
+
+    return {
+      payment,
+      checkoutUrl: checkoutResult.url,
+    };
+  }
+
+  private calculatePeriodEnd(periodStart: Date, isYearly: boolean) {
+    const periodEnd = new Date(periodStart);
+    if (isYearly) {
+      periodEnd.setFullYear(periodEnd.getFullYear() + 1);
+    } else {
+      periodEnd.setMonth(periodEnd.getMonth() + 1);
+    }
+    return periodEnd;
+  }
+
+  private isGracePeriodExpired(subscription: Subscription) {
+    return (
+      subscription.status === SubscriptionStatus.PAST_DUE &&
+      !!subscription.gracePeriodEndDate &&
+      new Date(subscription.gracePeriodEndDate) <= new Date()
+    );
+  }
+
+  private async expireUnpaidRenewal(
+    subscription: Subscription,
+    user: User,
+    amount: number,
+  ) {
+    return this.downgradeExpiredSubscription(subscription, user, amount, {
+      subscriptionNote: 'Subscription expired for unpaid renewal',
+      paymentNote: 'Subscription expired after unpaid renewal grace period',
+      paymentMetadata: { expiredAfterGrace: true },
+      notificationMessage:
+        'Subscription renewal was not completed. Your account has been moved to the Free tier.',
+      notificationTitle: 'Subscription Expired',
+      reason: 'renewal_unpaid_after_grace',
+    });
+  }
+
+  private async expireNonRenewingSubscription(
+    subscription: Subscription,
+    user: User,
+    amount: number,
+  ) {
+    return this.downgradeExpiredSubscription(subscription, user, amount, {
+      subscriptionNote: 'Subscription ended with auto-renewal disabled',
+      paymentNote: 'Subscription ended because auto-renewal was disabled',
+      paymentMetadata: { autoRenewalDisabled: true },
+      notificationMessage:
+        'Your subscription has ended because auto-renewal was disabled. Your account has been moved to the Free tier.',
+      notificationTitle: 'Subscription Ended',
+      reason: 'auto_renewal_disabled',
+    });
+  }
+
+  private async downgradeExpiredSubscription(
+    subscription: Subscription,
+    user: User,
+    amount: number,
+    details: {
+      subscriptionNote: string;
+      paymentNote: string;
+      paymentMetadata: Record<string, boolean>;
+      notificationMessage: string;
+      notificationTitle: string;
+      reason: string;
+    },
+  ) {
+    const now = new Date();
+    subscription.status = SubscriptionStatus.EXPIRED;
+    subscription.endDate = now;
+    subscription.nextBillingDate = null;
+    subscription.gracePeriodEndDate = null;
+    const datedNote = `${details.subscriptionNote} on ${now.toISOString()}`;
+    subscription.notes = subscription.notes
+      ? `${subscription.notes}\n${datedNote}`
+      : datedNote;
+    await this.subscriptionRepository.save(subscription);
+
+    const nextMonth = new Date(now);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
+
+    await this.subscriptionRepository.save(
+      this.subscriptionRepository.create({
+        userId: user.id,
+        tier: SubscriptionTier.FREE,
+        status: SubscriptionStatus.ACTIVE,
+        startDate: now,
+        billingPeriod: 'monthly',
+        nextBillingDate: nextMonth,
+        endDate: nextMonth,
+        autoRenewal: false,
+      }),
+    );
+
+    await this.userRepository.update({ id: user.id }, { tier: 'FREE' as any });
+
+    await this.paymentRepository.save(
+      this.paymentRepository.create({
+        subscriptionId: subscription.id,
+        userId: subscription.userId,
+        amount,
+        currency: 'KES',
+        status: PaymentStatus.FAILED,
+        paymentMethod: PaymentMethod.BANK_TRANSFER,
+        billingPeriod: subscription.billingPeriod || 'monthly',
+        periodStart: now,
+        periodEnd: now,
+        dueDate: now,
+        paymentProvider: 'INTASEND',
+        notes: details.paymentNote,
+        metadata: {
+          renewal: true,
+          ...details.paymentMetadata,
+          tier: subscription.tier,
+        },
+      }),
+    );
+
+    await this.notifyUser(
+      user.id,
+      details.notificationMessage,
+      details.notificationTitle,
+    );
+
+    return {
+      status: 'downgraded',
+      reason: details.reason,
+    };
+  }
+
   private async notifyUser(userId: string, message: string, title: string) {
     const token = await this.deviceTokenRepository.findOne({
       where: { userId, isActive: true },
@@ -256,6 +473,51 @@ export class SubscriptionProcessor extends WorkerHost {
           'SUBSCRIPTION',
         )
         .catch((e) => this.logger.error('Failed to notify', e));
+    }
+  }
+
+  private async notifyPaymentDue(
+    user: User,
+    amount: number,
+    checkoutUrl: string,
+    dueDate?: Date,
+  ) {
+    const token = await this.deviceTokenRepository.findOne({
+      where: { userId: user.id, isActive: true },
+      order: { lastUsedAt: 'DESC' },
+    });
+
+    if (token?.token) {
+      this.notificationsService
+        .sendSubscriptionPaymentDueNotification(
+          token.token,
+          amount,
+          checkoutUrl,
+          dueDate,
+        )
+        .catch((e) => this.logger.error('Failed to notify payment due', e));
+    }
+
+    if (user.email) {
+      this.notificationsService
+        .sendNotification({
+          recipientEmail: user.email,
+          subject: 'PayDome subscription payment due',
+          message:
+            `Your PayDome subscription renewal payment of KES ${amount.toFixed(0)} is due.` +
+            ` Pay securely here: ${checkoutUrl}`,
+          type: NotificationType.EMAIL,
+          priority: 'HIGH',
+          metadata: {
+            type: 'SUBSCRIPTION_PAYMENT_DUE',
+            amount,
+            checkoutUrl,
+            dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
+          },
+        })
+        .catch((e) =>
+          this.logger.error('Failed to send renewal payment email', e),
+        );
     }
   }
 }

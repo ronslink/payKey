@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../payments/presentation/providers/payments_provider.dart';
 import '../../data/models/subscription_model.dart';
 import '../providers/subscription_provider.dart';
+import '../../../../core/config/app_environment.dart';
 
 class PricingPage extends ConsumerStatefulWidget {
   const PricingPage({super.key});
@@ -125,6 +126,8 @@ class _PricingPageState extends ConsumerState<PricingPage> {
     );
     final isFreeTier = plan.tier == 'free';
     final isPopular = plan.isPopular;
+    final checkoutUnavailable =
+        !isFreeTier && !AppEnvironment.canUseExternalSubscriptionCheckout;
 
     return Container(
       margin: const EdgeInsets.only(left: 16, right: 16, top: 24, bottom: 8),
@@ -246,7 +249,7 @@ class _PricingPageState extends ConsumerState<PricingPage> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: isCurrentPlan
+                    onPressed: isCurrentPlan || checkoutUnavailable
                         ? null
                         : () => _handleSelectPlan(plan),
                     style: ElevatedButton.styleFrom(
@@ -266,6 +269,8 @@ class _PricingPageState extends ConsumerState<PricingPage> {
                     child: Text(
                       isCurrentPlan
                           ? 'Current Plan'
+                          : checkoutUnavailable
+                          ? 'Plan changes unavailable in app'
                           : isFreeTier
                           ? 'Get Started Free'
                           : 'Upgrade to ${plan.tier}',
@@ -348,7 +353,7 @@ class _PricingPageState extends ConsumerState<PricingPage> {
       case 'time_tracking':
         return 'Time tracking';
       case 'automatic_tax_payments':
-        return 'Automatic tax payments to KRA';
+        return 'Statutory contribution schedules';
       case 'finance_software_integration':
         return 'Finance software integration';
       case 'property_management':
@@ -364,6 +369,10 @@ class _PricingPageState extends ConsumerState<PricingPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Free plan selected successfully!')),
       );
+      return;
+    }
+
+    if (!AppEnvironment.canUseExternalSubscriptionCheckout) {
       return;
     }
 

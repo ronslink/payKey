@@ -6,6 +6,7 @@ import '../../data/repositories/subscription_repository.dart';
 import '../../data/models/subscription_model.dart';
 import '../providers/subscription_provider.dart';
 import '../providers/feature_access_provider.dart';
+import '../../../../core/config/app_environment.dart';
 
 class SubscriptionManagementPage extends ConsumerStatefulWidget {
   const SubscriptionManagementPage({super.key});
@@ -352,6 +353,9 @@ class _SubscriptionManagementPageState
     final isCurrentPlan = currentSub?.plan.tier == plan.tier;
     final color = _getPlanColor(plan.tier);
     final isPopular = plan.isPopular;
+    final isPaidPlan = plan.priceUSD > 0 || plan.priceKES > 0;
+    final checkoutUnavailable =
+        isPaidPlan && !AppEnvironment.canUseExternalSubscriptionCheckout;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -459,37 +463,48 @@ class _SubscriptionManagementPageState
 
                 const SizedBox(height: 24),
 
-                // Price
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '\$${plan.priceUSD.toStringAsFixed(0)}',
-                      style: const TextStyle(
-                        fontSize: 42,
-                        fontWeight: FontWeight.w800,
-                        height: 1,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Text(
-                        '/month',
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontWeight: FontWeight.w500,
+                // Store builds show plan capabilities without steering users
+                // to an external digital-subscription purchase.
+                if (!checkoutUnavailable)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '\$${plan.priceUSD.toStringAsFixed(0)}',
+                        style: const TextStyle(
+                          fontSize: 42,
+                          fontWeight: FontWeight.w800,
+                          height: 1,
                         ),
                       ),
+                      const SizedBox(width: 4),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          '/month',
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                if (!checkoutUnavailable) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    '≈ KES ${plan.priceKES.toInt()}',
+                    style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                  ),
+                ] else
+                  Text(
+                    'Paid plan',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w600,
                     ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '≈ KES ${plan.priceKES.toInt()}',
-                  style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
-                ),
+                  ),
 
                 const SizedBox(height: 24),
                 const Divider(),
@@ -527,7 +542,9 @@ class _SubscriptionManagementPageState
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: isCurrentPlan ? null : () => _selectPlan(plan),
+                    onPressed: isCurrentPlan || checkoutUnavailable
+                        ? null
+                        : () => _selectPlan(plan),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: isPopular ? color : Colors.white,
                       foregroundColor: isPopular ? Colors.white : color,
@@ -543,6 +560,8 @@ class _SubscriptionManagementPageState
                     child: Text(
                       isCurrentPlan
                           ? 'Current Plan'
+                          : checkoutUnavailable
+                          ? 'Plan changes unavailable in app'
                           : (plan.tier == 'FREE'
                                 ? 'Get Started Free'
                                 : 'Start 14-Day Trial'),
@@ -727,6 +746,10 @@ class _SubscriptionManagementPageState
     // Intercept Free/Zero-cost plans
     if (plan.tier == 'FREE' || plan.priceUSD == 0) {
       _handleFreePlanSelection(plan);
+      return;
+    }
+
+    if (!AppEnvironment.canUseExternalSubscriptionCheckout) {
       return;
     }
 

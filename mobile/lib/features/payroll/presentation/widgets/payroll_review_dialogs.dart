@@ -20,24 +20,25 @@ class PayrollHelpDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Text('About Payroll Calculations (2024)'),
+      title: const Text('About Payroll Calculations'),
       content: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
             _buildSection(
-              'NSSF (2024 Rates)',
-              '• Tier I: 6% of first KES 7,000\n'
-                  '• Tier II: 6% of KES 7,001 - 36,000',
+              'NSSF (Year 4, from February 2026)',
+              '• Tier I: 6% of the first KES 9,000\n'
+                  '• Tier II: 6% of earnings above KES 9,000 up to KES 108,000\n'
+                  '• Maximum employee contribution: KES 6,480',
             ),
             _buildSection(
-              'NHIF/SHIF',
-              'Based on gross salary brackets (KES 150 - 1,700/month)',
+              'SHIF',
+              '2.75% of gross salary, with a KES 300 minimum and no maximum.',
             ),
             _buildSection(
               'Housing Levy',
-              '1.5% of gross salary (effective March 2024)',
+              '1.5% of gross salary for the employee. The employer contributes an equal amount.',
             ),
             _buildSection(
               'PAYE Tax Bands',
@@ -46,7 +47,12 @@ class PayrollHelpDialog extends StatelessWidget {
                   '• 32,334 - 500,000: 30%\n'
                   '• 500,001 - 800,000: 32.5%\n'
                   '• Above 800,000: 35%\n'
-                  '• Personal Relief: KES 2,400/month',
+                  '• Personal Relief: KES 2,400/month\n'
+                  '• NSSF, SHIF and employee Housing Levy reduce taxable pay',
+            ),
+            _buildSection(
+              'Always current',
+              'Final deductions are calculated securely by Paydome using the rates effective for the payroll date.',
             ),
           ],
         ),
@@ -276,7 +282,10 @@ class PaymentResultDialog extends StatelessWidget {
                   dense: true,
                   visualDensity: VisualDensity.compact,
                   title: Text(item.workerName),
-                  subtitle: Text(item.error ?? 'Unknown error', style: const TextStyle(fontSize: 11)),
+                  subtitle: Text(
+                    item.error ?? 'Unknown error',
+                    style: const TextStyle(fontSize: 11),
+                  ),
                   leading: const Icon(Icons.error, color: Colors.red, size: 16),
                 );
               },

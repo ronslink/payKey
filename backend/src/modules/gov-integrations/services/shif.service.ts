@@ -77,9 +77,9 @@ export class ShifService {
       totalContribution += shif;
 
       sheet.addRow({
-        idNumber: worker?.idNumber || 'N/A',
-        name: worker?.name || 'Unknown',
-        shifNumber: worker?.nhifNumber || 'N/A', // NHIF number transitions to SHIF
+        idNumber: worker?.idNumber || '',
+        name: worker?.name || '',
+        shifNumber: worker?.nhifNumber || '', // Legacy database field stores SHIF number
         grossSalary: Number(record.grossSalary || 0),
         contribution: shif,
         phone: worker?.phoneNumber || '',

@@ -12,6 +12,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   Repository,
+  In,
   IsNull,
   LessThanOrEqual,
   MoreThanOrEqual,
@@ -20,6 +21,7 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import {
   Subscription,
+  RenewalMethod,
   SubscriptionStatus,
   SubscriptionTier,
 } from './entities/subscription.entity';
@@ -43,6 +45,7 @@ import { IntaSendService } from '../payments/intasend.service';
 import { StripeService } from '../payments/stripe.service';
 import {
   Transaction,
+  PaymentMethodType,
   TransactionStatus,
   TransactionType,
 } from '../payments/entities/transaction.entity';
@@ -55,19 +58,19 @@ export class SubscriptionsController {
 
   constructor(
     @InjectRepository(Subscription)
-    private subscriptionRepository: Repository<Subscription>,
+    private readonly subscriptionRepository: Repository<Subscription>,
     @InjectRepository(SubscriptionPayment)
-    private subscriptionPaymentRepository: Repository<SubscriptionPayment>,
+    private readonly subscriptionPaymentRepository: Repository<SubscriptionPayment>,
     @InjectRepository(Campaign)
-    private campaignRepository: Repository<Campaign>,
+    private readonly campaignRepository: Repository<Campaign>,
     @InjectRepository(PromotionalItem)
-    private promoRepository: Repository<PromotionalItem>,
-    private usersService: UsersService,
-    private intaSendService: IntaSendService,
-    private stripeService: StripeService,
+    private readonly promoRepository: Repository<PromotionalItem>,
+    private readonly usersService: UsersService,
+    private readonly intaSendService: IntaSendService,
+    private readonly stripeService: StripeService,
     @InjectRepository(Transaction)
-    private transactionRepository: Repository<Transaction>,
-    private workersService: WorkersService,
+    private readonly transactionRepository: Repository<Transaction>,
+    private readonly workersService: WorkersService,
   ) {}
 
   /**
@@ -471,10 +474,14 @@ export class SubscriptionsController {
     const subscription = await this.subscriptionRepository.findOne({
       where: {
         userId: req.user.userId,
-        status: SubscriptionStatus.ACTIVE,
+        status: In([SubscriptionStatus.ACTIVE, SubscriptionStatus.PAST_DUE]),
       },
       relations: ['user'],
+      order: { updatedAt: 'DESC' },
     });
+    const pendingPayment = await this.getPendingSubscriptionPayment(
+      req.user.userId,
+    );
 
     // Return free tier if no active subscription found
     if (!subscription) {
@@ -493,6 +500,12 @@ export class SubscriptionsController {
         endDate: null,
         user: userData,
         autoRenew: false,
+        autoRenewalAvailable: true,
+        autoRenewalMode: RenewalMethod.NOTIFICATION,
+        autoRenewalDescription:
+          'Auto-renewal creates a secure payment request when your plan renews.',
+        paymentDue: !!pendingPayment,
+        pendingPayment,
       };
     }
 
@@ -502,46 +515,97 @@ export class SubscriptionsController {
       planName:
         SUBSCRIPTION_PLANS.find((p) => p.tier === subscription.tier)?.name ||
         'Unknown Plan',
+      autoRenewalAvailable: true,
+      autoRenewalMode: subscription.renewalMethod,
+      autoRenewalDescription: subscription.stripeSubscriptionId
+        ? 'Stripe subscriptions renew automatically using the saved billing method.'
+        : 'Auto-renewal creates a secure IntaSend payment request and notifies you when your plan renews.',
+      paymentDue: !!pendingPayment,
+      pendingPayment,
+    };
+  }
+
+  @Get('pending-payment')
+  async getPendingPayment(@Request() req: any) {
+    const pendingPayment = await this.getPendingSubscriptionPayment(
+      req.user.userId,
+    );
+
+    return {
+      hasPendingPayment: !!pendingPayment,
+      pendingPayment,
     };
   }
 
   @Post('auto-renew')
   async toggleAutoRenewal(
     @Request() req: any,
-    @Body() body: { enable: boolean; reason?: string },
+    @Body()
+    body: {
+      enable: boolean;
+      reason?: string;
+      renewalMethod?: RenewalMethod;
+    },
   ) {
     const subscription = await this.subscriptionRepository.findOne({
-      where: {
-        userId: req.user.userId,
-        status: SubscriptionStatus.ACTIVE,
-      },
+      where: [
+        {
+          userId: req.user.userId,
+          status: SubscriptionStatus.ACTIVE,
+        },
+        {
+          userId: req.user.userId,
+          status: SubscriptionStatus.PAST_DUE,
+        },
+      ],
+      order: { updatedAt: 'DESC' },
     });
 
     if (!subscription) {
       throw new Error('No active subscription found');
     }
 
-    subscription.autoRenewal = body.enable;
+    let updatedSubscription: Subscription;
 
-    if (!body.enable && body.reason) {
-      const dateStr = new Date().toISOString().split('T')[0];
-      const newNote = `[Cancellation Reason: ${body.reason} - ${dateStr}]`;
-      subscription.notes = subscription.notes
-        ? `${subscription.notes}\n${newNote}`
-        : newNote;
+    if (subscription.stripeSubscriptionId) {
+      updatedSubscription = await this.stripeService.setCancelAtPeriodEnd(
+        req.user.userId,
+        !body.enable,
+      );
+    } else {
+      subscription.autoRenewal = body.enable;
+      subscription.renewalMethod =
+        body.renewalMethod || RenewalMethod.NOTIFICATION;
+
+      if (!body.enable && body.reason) {
+        const dateStr = new Date().toISOString().split('T')[0];
+        const newNote = `[Cancellation Reason: ${body.reason} - ${dateStr}]`;
+        subscription.notes = subscription.notes
+          ? `${subscription.notes}\n${newNote}`
+          : newNote;
+      }
+
+      updatedSubscription =
+        await this.subscriptionRepository.save(subscription);
     }
 
-    const updatedSubscription =
-      await this.subscriptionRepository.save(subscription);
+    const message = body.enable
+      ? subscription.stripeSubscriptionId
+        ? 'Auto-renewal enabled. Stripe will continue billing this subscription automatically.'
+        : 'Auto-renewal enabled. For IntaSend plans, PayDome will create a secure payment request and notify you at renewal time.'
+      : 'Auto-renewal disabled. Your plan will remain active until the end of the billing period.';
 
     return {
       success: true,
-      message: body.enable
-        ? 'Auto-renewal enabled'
-        : 'Auto-renewal disabled. Your plan will remain active until the end of the billing period.',
+      message,
       subscription: {
         ...updatedSubscription,
         autoRenew: updatedSubscription.autoRenewal,
+        autoRenewalAvailable: true,
+        autoRenewalMode: updatedSubscription.renewalMethod,
+        autoRenewalDescription: updatedSubscription.stripeSubscriptionId
+          ? 'Stripe subscriptions renew automatically using the saved billing method.'
+          : 'Auto-renewal creates a secure IntaSend payment request and notifies you when your plan renews.',
         planName:
           SUBSCRIPTION_PLANS.find((p) => p.tier === updatedSubscription.tier)
             ?.name || 'Unknown Plan',
@@ -701,7 +765,35 @@ export class SubscriptionsController {
           checkoutUrl: checkoutResult.url,
         },
       });
-      await this.subscriptionPaymentRepository.save(payment);
+      const savedPayment =
+        await this.subscriptionPaymentRepository.save(payment);
+
+      const checkoutProviderRef =
+        checkoutResult.invoice?.invoice_id ||
+        checkoutResult.invoice_id ||
+        checkoutResult.id ||
+        reference;
+
+      const transaction = this.transactionRepository.create({
+        userId: req.user.userId,
+        amount: amountToCharge,
+        currency: 'KES',
+        type: TransactionType.SUBSCRIPTION,
+        status: TransactionStatus.PENDING,
+        provider: 'INTASEND',
+        providerRef: checkoutProviderRef,
+        paymentMethod: PaymentMethodType.PESALINK,
+        accountReference: reference,
+        metadata: {
+          subscriptionPaymentId: savedPayment.id,
+          planId: plan.tier,
+          billingPeriod,
+          reference,
+          checkoutProviderRef,
+          checkoutUrl: checkoutResult.url,
+        },
+      });
+      await this.transactionRepository.save(transaction);
 
       return {
         success: true,
@@ -936,6 +1028,38 @@ export class SubscriptionsController {
 
     // Return empty array if no payments found
     return payments || [];
+  }
+
+  private async getPendingSubscriptionPayment(userId: string) {
+    const payment = await this.subscriptionPaymentRepository.findOne({
+      where: {
+        userId,
+        status: PaymentStatus.PENDING,
+        paymentProvider: 'INTASEND',
+      },
+      order: { createdAt: 'DESC' },
+    });
+
+    if (!payment) {
+      return null;
+    }
+
+    return {
+      id: payment.id,
+      subscriptionId: payment.subscriptionId,
+      amount: Number(payment.amount),
+      currency: payment.currency,
+      status: payment.status,
+      paymentMethod: payment.paymentMethod,
+      billingPeriod: payment.billingPeriod,
+      dueDate: payment.dueDate,
+      periodStart: payment.periodStart,
+      periodEnd: payment.periodEnd,
+      checkoutUrl: payment.metadata?.checkoutUrl || null,
+      reference: payment.metadata?.reference || payment.transactionId,
+      isRenewal: !!payment.metadata?.renewal,
+      createdAt: payment.createdAt,
+    };
   }
 
   // ============================================================================

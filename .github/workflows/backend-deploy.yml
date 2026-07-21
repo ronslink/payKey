@@ -6,12 +6,10 @@ name: Backend Deploy (No Tests)
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'backend/**'
-      - 'deploy/docker-compose.backend.yml'
-      - 'deploy/docker-compose.infra.yml'
+
+concurrency:
+  group: production-backend
+  cancel-in-progress: false
 
 env:
   NODE_VERSION: '20'

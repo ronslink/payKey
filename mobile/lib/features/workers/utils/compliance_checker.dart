@@ -16,10 +16,10 @@ class ComplianceStatus {
   /// Get human-readable description of issues
   String? get issueDescription {
     if (!hasNssf && !hasNhif) {
-      return 'Missing NSSF & NHIF';
+      return 'Missing NSSF & SHIF';
     }
     if (!hasNssf) return 'Missing NSSF';
-    if (!hasNhif) return 'Missing NHIF';
+    if (!hasNhif) return 'Missing SHIF';
     return null;
   }
 

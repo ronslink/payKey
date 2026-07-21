@@ -141,7 +141,7 @@ export class ReportsController {
 
     res.set({
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="P9_${year}.pdf"`,
+      'Content-Disposition': `attachment; filename="P9_SUPPORT_${year}.pdf"`,
     });
 
     return new StreamableFile(buffer);

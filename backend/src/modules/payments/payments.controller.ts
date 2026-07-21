@@ -28,6 +28,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, DataSource } from 'typeorm';
 import {
   SubscriptionPayment,
+  PaymentMethod,
   PaymentStatus,
 } from '../subscriptions/entities/subscription-payment.entity';
 import {
@@ -57,24 +58,24 @@ export class PaymentsController {
   private readonly logger = new Logger(PaymentsController.name);
 
   constructor(
-    private dataSource: DataSource,
+    private readonly dataSource: DataSource,
     @InjectRepository(Transaction)
-    private transactionsRepository: Repository<Transaction>,
+    private readonly transactionsRepository: Repository<Transaction>,
     @InjectRepository(User)
-    private usersRepository: Repository<User>,
+    private readonly usersRepository: Repository<User>,
     @InjectRepository(PayrollRecord)
-    private payrollRecordRepository: Repository<PayrollRecord>,
+    private readonly payrollRecordRepository: Repository<PayrollRecord>,
     @InjectRepository(PayPeriod)
-    private payPeriodRepository: Repository<PayPeriod>,
+    private readonly payPeriodRepository: Repository<PayPeriod>,
     @InjectRepository(SubscriptionPayment)
-    private subscriptionPaymentRepository: Repository<SubscriptionPayment>,
+    private readonly subscriptionPaymentRepository: Repository<SubscriptionPayment>,
     @InjectRepository(Subscription)
-    private subscriptionRepository: Repository<Subscription>,
+    private readonly subscriptionRepository: Repository<Subscription>,
     @InjectRepository(DeviceToken)
-    private deviceTokenRepository: Repository<DeviceToken>,
-    private intaSendService: IntaSendService,
-    private stripeService: StripeService,
-    private notificationsService: NotificationsService,
+    private readonly deviceTokenRepository: Repository<DeviceToken>,
+    private readonly intaSendService: IntaSendService,
+    private readonly stripeService: StripeService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -483,14 +484,10 @@ export class PaymentsController {
 
     // 1. Transaction Wrapper for Idempotency
     return await this.dataSource.transaction(async (manager) => {
-      // Find Transactions with Pessimistic Lock
-      // We search for ANY transaction matching:
-      // - providerRef == invoice_id
-      // - providerRef == tracking_id
-      // - id == api_ref (Use Transaction ID as matching key)
-      const searchCriteria: any[] = [
-        ...(invoice_id ? [{ providerRef: invoice_id }] : []),
-        ...(tracking_id ? [{ providerRef: tracking_id }] : []),
+      // Prefer our own IntaSend api_ref/accountReference. Provider refs are
+      // useful fallback identifiers, but api_ref is the app-owned checkout key.
+      const appReferenceCriteria: any[] = [
+        ...(api_ref ? [{ accountReference: api_ref }] : []),
       ];
 
       // Only add api_ref if it looks like a UUID (to avoid matching random strings against ID)
@@ -500,18 +497,39 @@ export class PaymentsController {
           api_ref,
         )
       ) {
-        searchCriteria.push({ id: api_ref });
+        appReferenceCriteria.push({ id: api_ref });
       }
+
+      const providerReferenceCriteria: any[] = [
+        ...(invoice_id ? [{ providerRef: invoice_id }] : []),
+        ...(tracking_id ? [{ providerRef: tracking_id }] : []),
+      ];
+
+      const searchCriteria =
+        appReferenceCriteria.length > 0
+          ? appReferenceCriteria
+          : providerReferenceCriteria;
 
       if (searchCriteria.length === 0) {
         console.warn('⚠️ No valid search criteria found for webhook');
         return { status: 'ignored', reason: 'No identifiers found' };
       }
 
-      const transactions = await manager.find(Transaction, {
+      let transactions = await manager.find(Transaction, {
         where: searchCriteria,
         lock: { mode: 'pessimistic_write' }, // Lock the rows to prevent double webhook execution
       });
+
+      if (
+        transactions.length === 0 &&
+        appReferenceCriteria.length > 0 &&
+        providerReferenceCriteria.length > 0
+      ) {
+        transactions = await manager.find(Transaction, {
+          where: providerReferenceCriteria,
+          lock: { mode: 'pessimistic_write' },
+        });
+      }
 
       if (transactions.length === 0) {
         console.warn(
@@ -577,23 +595,10 @@ export class PaymentsController {
         const provider = (body.provider || body.transactions?.[0]?.provider) as
           | string
           | undefined;
-        if (provider && !tx.paymentMethod) {
-          switch (provider.toUpperCase()) {
-            case 'M-PESA':
-            case 'MPESA':
-            case 'MPESA-B2C':
-              tx.paymentMethod = PaymentMethodType.MPESA_STK;
-              break;
-            case 'CARD-PAYMENT':
-              tx.paymentMethod = PaymentMethodType.CARD;
-              break;
-            case 'BANK-PAYMENT':
-            case 'PESALINK':
-              tx.paymentMethod = PaymentMethodType.PESALINK;
-              break;
-            default:
-              tx.paymentMethod = PaymentMethodType.UNKNOWN;
-          }
+        const detectedPaymentMethod =
+          this.paymentMethodFromIntaSendProvider(provider);
+        if (detectedPaymentMethod) {
+          tx.paymentMethod = detectedPaymentMethod;
         }
 
         tx.metadata = {
@@ -699,6 +704,9 @@ export class PaymentsController {
         await manager.update(SubscriptionPayment, subPaymentId, {
           status,
           transactionId: invoice_id || tracking_id,
+          paymentMethod: this.toSubscriptionPaymentMethod(
+            firstTx.paymentMethod,
+          ),
           paidDate: isSuccess ? new Date() : undefined,
         });
 
@@ -712,6 +720,15 @@ export class PaymentsController {
             });
             if (subscription) {
               subscription.status = SubscriptionStatus.ACTIVE;
+              subscription.billingPeriod =
+                payment.billingPeriod || subscription.billingPeriod;
+              subscription.amount = Number(payment.amount);
+              subscription.lockedPrice = Number(payment.amount);
+              subscription.startDate =
+                subscription.startDate || payment.periodStart || new Date();
+              subscription.endDate = payment.periodEnd;
+              subscription.nextBillingDate = payment.periodEnd;
+              subscription.gracePeriodEndDate = null;
               await manager.save(Subscription, subscription);
               await manager.update(User, payment.userId, {
                 tier: subscription.tier as any,
@@ -890,6 +907,41 @@ export class PaymentsController {
     return 'processing';
   }
 
+  private paymentMethodFromIntaSendProvider(
+    provider?: string,
+  ): PaymentMethodType | null {
+    switch ((provider || '').toUpperCase()) {
+      case 'M-PESA':
+      case 'MPESA':
+      case 'MPESA-B2C':
+        return PaymentMethodType.MPESA_STK;
+      case 'CARD-PAYMENT':
+        return PaymentMethodType.CARD;
+      case 'BANK-PAYMENT':
+      case 'PESALINK':
+        return PaymentMethodType.PESALINK;
+      default:
+        return provider ? PaymentMethodType.UNKNOWN : null;
+    }
+  }
+
+  private toSubscriptionPaymentMethod(
+    paymentMethod: PaymentMethodType,
+  ): PaymentMethod | PaymentMethodType | string {
+    switch (paymentMethod) {
+      case PaymentMethodType.CARD:
+        return PaymentMethod.CREDIT_CARD;
+      case PaymentMethodType.MPESA_STK:
+        return PaymentMethod.MPESA;
+      case PaymentMethodType.PESALINK:
+        return PaymentMethod.BANK_TRANSFER;
+      case PaymentMethodType.WALLET:
+        return PaymentMethod.WALLET;
+      default:
+        return paymentMethod || 'Unknown';
+    }
+  }
+
   private preferNotificationStatus(
     current: TransactionStatus,
     next: TransactionStatus,
@@ -915,5 +967,58 @@ export class PaymentsController {
     return (
       shortestLength >= 7 && (left.endsWith(right) || right.endsWith(left))
     );
+  }
+}
+
+@Controller('webhooks')
+export class IntaSendWebhooksController {
+  private readonly paymentsController: PaymentsController;
+
+  constructor(
+    dataSource: DataSource,
+    @InjectRepository(Transaction)
+    transactionsRepository: Repository<Transaction>,
+    @InjectRepository(User)
+    usersRepository: Repository<User>,
+    @InjectRepository(PayrollRecord)
+    payrollRecordRepository: Repository<PayrollRecord>,
+    @InjectRepository(PayPeriod)
+    payPeriodRepository: Repository<PayPeriod>,
+    @InjectRepository(SubscriptionPayment)
+    subscriptionPaymentRepository: Repository<SubscriptionPayment>,
+    @InjectRepository(Subscription)
+    subscriptionRepository: Repository<Subscription>,
+    @InjectRepository(DeviceToken)
+    deviceTokenRepository: Repository<DeviceToken>,
+    intaSendService: IntaSendService,
+    stripeService: StripeService,
+    notificationsService: NotificationsService,
+  ) {
+    this.paymentsController = new PaymentsController(
+      dataSource,
+      transactionsRepository,
+      usersRepository,
+      payrollRecordRepository,
+      payPeriodRepository,
+      subscriptionPaymentRepository,
+      subscriptionRepository,
+      deviceTokenRepository,
+      intaSendService,
+      stripeService,
+      notificationsService,
+    );
+  }
+
+  /**
+   * IntaSend Webhook Alias (Matches IntaSend Dashboard Config)
+   * The dashboard currently points at /webhooks/intasend.
+   */
+  @Post('intasend')
+  async handleIntaSendWebhookAlias(
+    @Headers('X-IntaSend-Signature') signature: string,
+    @Body() body: any,
+    @Req() req: RawBodyRequest<any>,
+  ) {
+    return this.paymentsController.handleIntaSendWebhook(req, signature, body);
   }
 }

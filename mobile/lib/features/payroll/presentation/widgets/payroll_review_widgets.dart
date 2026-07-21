@@ -8,7 +8,8 @@ import 'payment_status_badge.dart';
 final _currencyFormatter = NumberFormat('#,###');
 
 /// Format amount as KES currency string
-String formatKes(double amount) => 'KES ${_currencyFormatter.format(amount.abs())}';
+String formatKes(double amount) =>
+    'KES ${_currencyFormatter.format(amount.abs())}';
 
 // =============================================================================
 // SUMMARY CARD
@@ -35,10 +36,7 @@ class PayrollSummaryCard extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            primaryColor,
-            primaryColor.withValues(alpha: 0.85),
-          ],
+          colors: [primaryColor, primaryColor.withValues(alpha: 0.85)],
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
@@ -90,7 +88,10 @@ class PayrollSummaryCard extends StatelessWidget {
         const SizedBox(height: 8),
         _SummaryRow(label: 'Non-Cash Benefits', amount: totals.nonCashBenefits),
         const SizedBox(height: 8),
-        _SummaryRow(label: 'Tax Exempt Allowances', amount: totals.taxExemptAllowances),
+        _SummaryRow(
+          label: 'Tax Exempt Allowances',
+          amount: totals.taxExemptAllowances,
+        ),
         const SizedBox(height: 8),
         _SummaryRow(
           label: 'NSSF Contribution',
@@ -99,7 +100,7 @@ class PayrollSummaryCard extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         _SummaryRow(
-          label: 'NHIF/SHIF Contribution',
+          label: 'SHIF Contribution',
           amount: totals.nhifContribution,
           isDeduction: true,
         ),
@@ -110,11 +111,7 @@ class PayrollSummaryCard extends StatelessWidget {
           isDeduction: true,
         ),
         const SizedBox(height: 8),
-        _SummaryRow(
-          label: 'PAYE Tax',
-          amount: totals.paye,
-          isDeduction: true,
-        ),
+        _SummaryRow(label: 'PAYE Tax', amount: totals.paye, isDeduction: true),
       ],
     );
   }
@@ -294,10 +291,7 @@ class WorkerBreakdownCard extends StatelessWidget {
       children: [
         Row(
           children: [
-            Text(
-              name,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
+            Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
             if (paymentStatus != null) ...[
               const SizedBox(width: 8),
               PaymentStatusBadge(status: paymentStatus!, compact: true),
@@ -351,7 +345,7 @@ class WorkerBreakdownCard extends StatelessWidget {
           isDeduction: true,
         ),
         _BreakdownRow(
-          label: 'NHIF/SHIF',
+          label: 'SHIF',
           amount: breakdown.nhifContribution,
           isDeduction: true,
         ),

@@ -37,12 +37,12 @@ export interface JournalEntrySet {
 export class AccountingExportService {
   constructor(
     @InjectRepository(PayrollRecord)
-    private payrollRecordRepository: Repository<PayrollRecord>,
+    private readonly payrollRecordRepository: Repository<PayrollRecord>,
     @InjectRepository(AccountMapping)
-    private accountMappingRepository: Repository<AccountMapping>,
+    private readonly accountMappingRepository: Repository<AccountMapping>,
     @InjectRepository(AccountingExport)
-    private accountingExportRepository: Repository<AccountingExport>,
-    private activitiesService: ActivitiesService,
+    private readonly accountingExportRepository: Repository<AccountingExport>,
+    private readonly activitiesService: ActivitiesService,
   ) {}
 
   async generateJournalEntries(
@@ -110,7 +110,7 @@ export class AccountingExportService {
       });
     }
 
-    // Credit: NHIF Payable
+    // Credit: SHIF Payable (legacy internal category key: NHIF_LIABILITY)
     if (totals.totalNhif > 0) {
       entries.push({
         date,
@@ -118,7 +118,7 @@ export class AccountingExportService {
         accountName: mappings.NHIF_LIABILITY.accountName,
         debit: 0,
         credit: totals.totalNhif,
-        description: `${description} - NHIF`,
+        description: `${description} - SHIF`,
       });
     }
 
@@ -309,7 +309,7 @@ export class AccountingExportService {
       },
       [AccountCategory.NHIF_LIABILITY]: {
         accountCode: '2130',
-        accountName: 'NHIF Payable',
+        accountName: 'SHIF Payable',
       },
       [AccountCategory.HOUSING_LEVY_LIABILITY]: {
         accountCode: '2140',

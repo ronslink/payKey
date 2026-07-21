@@ -1,7 +1,7 @@
 import '../../data/models/payroll_model.dart';
 
 /// Represents a complete payroll breakdown for a single worker
-/// 
+///
 /// Contains all earnings, statutory deductions, and net pay calculation.
 /// Immutable for easy testing and caching.
 class PayrollBreakdown {
@@ -31,8 +31,8 @@ class PayrollBreakdown {
     required this.netSalary,
   });
 
-  /// Total statutory deductions (NSSF + NHIF + Housing Levy + PAYE)
-  double get statutoryDeductions => 
+  /// Total statutory deductions (NSSF + SHIF + Housing Levy + PAYE)
+  double get statutoryDeductions =>
       nssfContribution + nhifContribution + housingLevy + paye;
 
   /// Total all deductions including other deductions
@@ -43,17 +43,17 @@ class PayrollBreakdown {
 
   /// Create an empty breakdown (for error states)
   const PayrollBreakdown.empty()
-      : grossSalary = 0,
-        nssfContribution = 0,
-        nhifContribution = 0,
-        housingLevy = 0,
-        taxableIncome = 0,
-        paye = 0,
-        otherDeductions = 0,
-        otherEarnings = 0,
-        nonCashBenefits = 0,
-        taxExemptAllowances = 0,
-        netSalary = 0;
+    : grossSalary = 0,
+      nssfContribution = 0,
+      nhifContribution = 0,
+      housingLevy = 0,
+      taxableIncome = 0,
+      paye = 0,
+      otherDeductions = 0,
+      otherEarnings = 0,
+      nonCashBenefits = 0,
+      taxExemptAllowances = 0,
+      netSalary = 0;
 
   /// Creates a breakdown from a backend calculation.
   factory PayrollBreakdown.fromCalculation(PayrollCalculation calc) {
@@ -64,7 +64,7 @@ class PayrollBreakdown {
       housingLevy: calc.taxBreakdown.housingLevy,
       // Backend doesn't explicitly send taxable income, usually Gross - NSSF
       // But we just use it for display if needed.
-      taxableIncome: calc.grossSalary - calc.taxBreakdown.nssf, 
+      taxableIncome: calc.grossSalary - calc.taxBreakdown.nssf,
       paye: calc.taxBreakdown.paye,
       otherDeductions: calc.otherDeductions,
       otherEarnings: calc.otherEarnings + calc.bonuses,

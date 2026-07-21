@@ -8,7 +8,7 @@ part 'payroll_model.g.dart';
 // =============================================================================
 
 /// Represents the breakdown of statutory deductions for a payroll calculation.
-/// 
+///
 /// All values are in KES (Kenyan Shillings).
 @freezed
 abstract class TaxBreakdown with _$TaxBreakdown {
@@ -18,7 +18,7 @@ abstract class TaxBreakdown with _$TaxBreakdown {
     /// National Social Security Fund contribution
     required double nssf,
 
-    /// National Hospital Insurance Fund contribution
+    /// Social Health Insurance Fund contribution (legacy wire key: nhif)
     required double nhif,
 
     /// Affordable Housing Levy (1.5% of gross salary)
@@ -27,7 +27,7 @@ abstract class TaxBreakdown with _$TaxBreakdown {
     /// Pay As You Earn tax
     required double paye,
 
-    /// Sum of all deductions (nssf + nhif + housingLevy + paye)
+    /// Sum of all deductions (NSSF + SHIF + housing levy + PAYE)
     required double totalDeductions,
   }) = _TaxBreakdown;
 
@@ -36,12 +36,12 @@ abstract class TaxBreakdown with _$TaxBreakdown {
 
   /// Creates an empty tax breakdown with all values set to zero.
   factory TaxBreakdown.zero() => const TaxBreakdown(
-        nssf: 0,
-        nhif: 0,
-        housingLevy: 0,
-        paye: 0,
-        totalDeductions: 0,
-      );
+    nssf: 0,
+    nhif: 0,
+    housingLevy: 0,
+    paye: 0,
+    totalDeductions: 0,
+  );
 
   /// Returns true if all deduction values are zero.
   bool get isEmpty => totalDeductions == 0;
@@ -58,11 +58,11 @@ abstract class TaxBreakdown with _$TaxBreakdown {
 
   /// Returns a map of deduction labels to their values.
   Map<String, double> toDisplayMap() => {
-        'NSSF': nssf,
-        'NHIF': nhif,
-        'Housing Levy': housingLevy,
-        'PAYE': paye,
-      };
+    'NSSF': nssf,
+    'SHIF': nhif,
+    'Housing Levy': housingLevy,
+    'PAYE': paye,
+  };
 }
 
 // =============================================================================
@@ -77,13 +77,19 @@ abstract class PayrollStatus {
   static const String processed = 'processed';
   static const String paid = 'paid';
 
-  static const List<String> values = [draft, pending, approved, processed, paid];
+  static const List<String> values = [
+    draft,
+    pending,
+    approved,
+    processed,
+    paid,
+  ];
 
   static bool isValid(String status) => values.contains(status);
 }
 
 /// Represents a single worker's payroll calculation for a pay period.
-/// 
+///
 /// Contains gross earnings, deductions breakdown, and net pay.
 @freezed
 abstract class PayrollCalculation with _$PayrollCalculation {
@@ -158,16 +164,16 @@ abstract class PayrollCalculation with _$PayrollCalculation {
 
   /// Returns a summary map suitable for display.
   Map<String, double> toEarningsSummary() => {
-        'Basic Salary': grossSalary,
-        if (bonuses > 0) 'Bonuses': bonuses,
-        if (otherEarnings > 0) 'Other Earnings': otherEarnings,
-      };
+    'Basic Salary': grossSalary,
+    if (bonuses > 0) 'Bonuses': bonuses,
+    if (otherEarnings > 0) 'Other Earnings': otherEarnings,
+  };
 
   /// Returns a summary map of all deductions.
   Map<String, double> toDeductionsSummary() => {
-        ...taxBreakdown.toDisplayMap(),
-        if (otherDeductions > 0) 'Other Deductions': otherDeductions,
-      };
+    ...taxBreakdown.toDisplayMap(),
+    if (otherDeductions > 0) 'Other Deductions': otherDeductions,
+  };
 }
 
 // =============================================================================
@@ -222,14 +228,16 @@ abstract class PayrollSummary with _$PayrollSummary {
 
   /// Creates an empty summary with no calculations.
   factory PayrollSummary.empty() => const PayrollSummary(
-        calculations: [],
-        totalGross: 0,
-        totalDeductions: 0,
-        totalNet: 0,
-      );
+    calculations: [],
+    totalGross: 0,
+    totalDeductions: 0,
+    totalNet: 0,
+  );
 
   /// Creates a summary by aggregating a list of calculations.
-  factory PayrollSummary.fromCalculations(List<PayrollCalculation> calculations) {
+  factory PayrollSummary.fromCalculations(
+    List<PayrollCalculation> calculations,
+  ) {
     if (calculations.isEmpty) return PayrollSummary.empty();
 
     final totalGross = calculations.fold<double>(
@@ -292,9 +300,15 @@ abstract class PayrollSummary with _$PayrollSummary {
     return TaxBreakdown(
       nssf: calculations.fold(0, (sum, c) => sum + c.taxBreakdown.nssf),
       nhif: calculations.fold(0, (sum, c) => sum + c.taxBreakdown.nhif),
-      housingLevy: calculations.fold(0, (sum, c) => sum + c.taxBreakdown.housingLevy),
+      housingLevy: calculations.fold(
+        0,
+        (sum, c) => sum + c.taxBreakdown.housingLevy,
+      ),
       paye: calculations.fold(0, (sum, c) => sum + c.taxBreakdown.paye),
-      totalDeductions: calculations.fold(0, (sum, c) => sum + c.taxBreakdown.totalDeductions),
+      totalDeductions: calculations.fold(
+        0,
+        (sum, c) => sum + c.taxBreakdown.totalDeductions,
+      ),
     );
   }
 
@@ -390,7 +404,7 @@ class FundVerificationResult {
 // =============================================================================
 
 /// Response from initiating payroll processing.
-/// 
+///
 /// When backend uses async queue processing, this contains the jobId
 /// that can be used to poll for status updates.
 class PayrollProcessResponse {
@@ -470,7 +484,7 @@ abstract class PayrollProcessingResult with _$PayrollProcessingResult {
 
   /// Total number of workers processed
   int get totalCount => successCount + failureCount;
-  
+
   /// Backward consistency alias
   int get totalProcessed => totalCount;
 }
@@ -499,7 +513,6 @@ class WorkerPaymentResult {
 
   Map<String, dynamic> toJson() => _$WorkerPaymentResultToJson(this);
 }
-
 
 /// Preview data for a payslip (without PDF).
 class PayslipPreview {
@@ -541,10 +554,7 @@ class PayslipPreview {
   static Map<String, double> _parseDoubleMap(dynamic data) {
     if (data is! Map) return {};
     return data.map(
-      (key, value) => MapEntry(
-        key as String,
-        (value as num?)?.toDouble() ?? 0,
-      ),
+      (key, value) => MapEntry(key as String, (value as num?)?.toDouble() ?? 0),
     );
   }
 }
@@ -656,7 +666,8 @@ class JobStatusResult {
   }
 
   /// Returns true if the job is still running
-  bool get isActive => status == 'active' || status == 'waiting' || status == 'delayed';
+  bool get isActive =>
+      status == 'active' || status == 'waiting' || status == 'delayed';
 
   /// Returns true if the job completed successfully
   bool get isCompleted => status == 'completed';

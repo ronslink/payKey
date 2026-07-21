@@ -83,9 +83,9 @@ export class NssfService {
       totalEmployerContrib += employerNssf;
 
       sheet.addRow({
-        nssfNumber: worker?.nssfNumber || 'N/A',
-        idNumber: worker?.idNumber || 'N/A',
-        name: worker?.name || 'Unknown',
+        nssfNumber: worker?.nssfNumber || '',
+        idNumber: worker?.idNumber || '',
+        name: worker?.name || '',
         grossSalary: Number(record.grossSalary || 0),
         employeeContrib: employeeNssf,
         employerContrib: employerNssf,

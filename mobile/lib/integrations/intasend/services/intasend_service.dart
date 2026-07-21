@@ -71,33 +71,6 @@ class IntaSendService {
     }
   }
 
-  /// Verify funds for payroll
-  Future<FundVerification> verifyFundsForPayroll({
-    required List<WorkerPayout> workers,
-  }) async {
-    final wallet = await getWalletBalance();
-
-    // Calculate total including the backend IntaSend payout fee estimate.
-    final totalRequired = workers.fold<double>(0, (sum, w) {
-      final fee = _calculatePayoutFee(w.amount);
-      return sum + w.amount + fee;
-    });
-
-    return FundVerification.check(
-      requiredAmount: totalRequired,
-      wallet: wallet,
-      workerCount: workers.length,
-    );
-  }
-
-  /// Calculate IntaSend payout fee (mirrors backend PayrollPaymentService).
-  /// < 200 KES = 10, 200-1000 KES = 20, > 1000 KES = 100.
-  double _calculatePayoutFee(double amount) {
-    if (amount < 200) return 10;
-    if (amount <= 1000) return 20;
-    return 100;
-  }
-
   // ===========================================================================
   // STK PUSH (Collection)
   // ===========================================================================

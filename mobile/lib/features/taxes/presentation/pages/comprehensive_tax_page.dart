@@ -11,7 +11,8 @@ class ComprehensiveTaxPage extends ConsumerStatefulWidget {
   const ComprehensiveTaxPage({super.key});
 
   @override
-  ConsumerState<ComprehensiveTaxPage> createState() => _ComprehensiveTaxPageState();
+  ConsumerState<ComprehensiveTaxPage> createState() =>
+      _ComprehensiveTaxPageState();
 }
 
 class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
@@ -41,9 +42,7 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
       body: Column(
         children: [
           _buildTabBar(),
-          Expanded(
-            child: _buildTabContent(),
-          ),
+          Expanded(child: _buildTabContent()),
         ],
       ),
     );
@@ -78,15 +77,9 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
       ),
       child: Row(
         children: [
-          Expanded(
-            child: _buildTabButton(0, 'Filing'),
-          ),
-          Expanded(
-            child: _buildTabButton(1, 'History'),
-          ),
-          Expanded(
-            child: _buildTabButton(2, 'Calculator'),
-          ),
+          Expanded(child: _buildTabButton(0, 'Filing')),
+          Expanded(child: _buildTabButton(1, 'History')),
+          Expanded(child: _buildTabButton(2, 'Calculator')),
         ],
       ),
     );
@@ -129,7 +122,7 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
           const SizedBox(height: 20),
           _buildTaxCalendar(),
           const SizedBox(height: 24),
-          
+
           // Filing Status Header
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -147,7 +140,7 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
             ],
           ),
           const SizedBox(height: 12),
-          
+
           // Monthly Summaries List
           summariesAsync.when(
             data: (summaries) {
@@ -158,7 +151,8 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: summaries.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 12),
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 12),
                 itemBuilder: (context, index) {
                   final summary = summaries[index];
                   return _buildMonthlyFilingCard(summary);
@@ -177,7 +171,10 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
                 color: Colors.red[50],
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Text('Error loading: $error', style: const TextStyle(color: Colors.red)),
+              child: Text(
+                'Error loading: $error',
+                style: const TextStyle(color: Colors.red),
+              ),
             ),
           ),
         ],
@@ -197,7 +194,11 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
           const SizedBox(height: 16),
           Text(
             'No tax submissions yet',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey[600]),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[600],
+            ),
           ),
           const SizedBox(height: 8),
           Text(
@@ -213,7 +214,7 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
   Widget _buildMonthlyFilingCard(MonthlyTaxSummary summary) {
     final isFiled = summary.status == 'FILED';
     final formatter = NumberFormat('#,##0.00');
-    
+
     return Container(
       decoration: _buildCardDecoration(),
       child: Padding(
@@ -230,7 +231,10 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
                   children: [
                     Text(
                       '${summary.monthName} ${summary.year}',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     Text(
                       '${summary.submissions.length} pay periods',
@@ -239,10 +243,13 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
                   ],
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
-                    color: isFiled 
-                        ? Colors.green.withValues(alpha: 0.1) 
+                    color: isFiled
+                        ? Colors.green.withValues(alpha: 0.1)
                         : Colors.orange.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -258,26 +265,33 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
               ],
             ),
             const SizedBox(height: 16),
-            
+
             // Tax breakdown
             _buildTaxLine('PAYE', summary.totalPaye, formatter),
             _buildTaxLine('NSSF', summary.totalNssf, formatter),
             _buildTaxLine('SHIF', summary.totalNhif, formatter),
             _buildTaxLine('Housing Levy', summary.totalHousingLevy, formatter),
             const Divider(height: 20),
-            
+
             // Total
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Total Tax', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text(
+                  'Total Tax',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 Text(
                   'KES ${formatter.format(summary.totalTax)}',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.blue),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.blue,
+                  ),
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 16),
             Row(
               children: [
@@ -321,7 +335,10 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: TextStyle(color: Colors.grey[700])),
-          Text('KES ${formatter.format(amount)}', style: const TextStyle(fontWeight: FontWeight.w500)),
+          Text(
+            'KES ${formatter.format(amount)}',
+            style: const TextStyle(fontWeight: FontWeight.w500),
+          ),
         ],
       ),
     );
@@ -335,8 +352,10 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
 
     return summariesAsync.when(
       data: (summaries) {
-        final filedSummaries = summaries.where((s) => s.status == 'FILED').toList();
-        
+        final filedSummaries = summaries
+            .where((s) => s.status == 'FILED')
+            .toList();
+
         if (filedSummaries.isEmpty) {
           return Center(
             child: Column(
@@ -346,7 +365,11 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
                 const SizedBox(height: 16),
                 Text(
                   'No filed returns yet',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey[600]),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[600],
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -357,7 +380,7 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
             ),
           );
         }
-        
+
         return ListView.separated(
           padding: const EdgeInsets.all(16),
           itemCount: filedSummaries.length,
@@ -375,7 +398,7 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
 
   Widget _buildHistoryCard(MonthlyTaxSummary summary) {
     final formatter = NumberFormat('#,##0.00');
-    
+
     return Container(
       decoration: _buildCardDecoration(),
       padding: const EdgeInsets.all(16),
@@ -414,7 +437,11 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
             ),
             child: const Text(
               'FILED',
-              style: TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: Colors.green,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -427,9 +454,7 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildTaxCalculationCard(),
-        ],
+        children: [_buildTaxCalculationCard()],
       ),
     );
   }
@@ -453,9 +478,13 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
         break;
       }
     }
-    
+
     // If all passed for this month, show first of next month (simplified visual)
-    final deadlineDate = DateTime(now.year, now.month, nextDeadline['day'] as int);
+    final deadlineDate = DateTime(
+      now.year,
+      now.month,
+      nextDeadline['day'] as int,
+    );
     final daysLeft = deadlineDate.difference(now).inDays;
     final isUrgent = daysLeft <= 3 && daysLeft >= 0;
 
@@ -473,11 +502,16 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: isUrgent ? Colors.red[50] : Colors.blue[50],
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: isUrgent ? Colors.red[200]! : Colors.blue[200]!),
+                  border: Border.all(
+                    color: isUrgent ? Colors.red[200]! : Colors.blue[200]!,
+                  ),
                 ),
                 child: Text(
                   DateFormat('MMMM yyyy').format(now),
@@ -497,7 +531,9 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: isUrgent ? Colors.red.withValues(alpha: 0.1) : const Color(0xFF111827),
+                  color: isUrgent
+                      ? Colors.red.withValues(alpha: 0.1)
+                      : const Color(0xFF111827),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -529,7 +565,10 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
                   children: [
                     Text(
                       'Next Deadline: ${nextDeadline['title']}',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -538,9 +577,11 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      daysLeft == 0 
-                        ? 'Due Today!' 
-                        : (daysLeft < 0 ? 'Overdue' : '$daysLeft days remaining'),
+                      daysLeft == 0
+                          ? 'Due Today!'
+                          : (daysLeft < 0
+                                ? 'Overdue'
+                                : '$daysLeft days remaining'),
                       style: TextStyle(
                         color: isUrgent ? Colors.red : Colors.green,
                         fontWeight: FontWeight.w600,
@@ -576,7 +617,7 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
 
   Widget _buildComplianceCard() {
     final taxNotifier = ref.watch(taxNotifierProvider.notifier);
-    
+
     return FutureBuilder<Map<String, dynamic>>(
       future: taxNotifier.getComplianceStatus(),
       builder: (context, snapshot) {
@@ -600,7 +641,11 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
                       color: Colors.green.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.verified_user, color: Colors.green, size: 20),
+                    child: const Icon(
+                      Icons.verified_user,
+                      color: Colors.green,
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   const Text(
@@ -633,16 +678,22 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: isCompliant ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
+            color: isCompliant
+                ? const Color(0xFFDCFCE7)
+                : const Color(0xFFFEE2E2),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: isCompliant ? const Color(0xFF22C55E) : const Color(0xFFEF4444),
+              color: isCompliant
+                  ? const Color(0xFF22C55E)
+                  : const Color(0xFFEF4444),
               width: 2,
             ),
           ),
           child: Icon(
             isCompliant ? Icons.check : Icons.priority_high,
-            color: isCompliant ? const Color(0xFF15803D) : const Color(0xFFB91C1C),
+            color: isCompliant
+                ? const Color(0xFF15803D)
+                : const Color(0xFFB91C1C),
             size: 24,
           ),
         ),
@@ -658,12 +709,6 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
       ],
     );
   }
-
-
-
-
-
-
 
   Widget _buildTaxCalculationCard() {
     return Container(
@@ -697,7 +742,9 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
             decoration: InputDecoration(
               labelText: 'Annual Gross Income',
               prefixText: 'KES ',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               filled: true,
               fillColor: Colors.grey[50],
             ),
@@ -711,7 +758,9 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
                 backgroundColor: const Color(0xFF111827),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: const Text(
                 'Calculate Breakdown',
@@ -724,12 +773,10 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
     );
   }
 
-
-
   // ---------------------------------------------------------------------------
   // LOGIC
   // ---------------------------------------------------------------------------
-  
+
   void _calculateTax() async {
     final income = double.tryParse(_salaryController.text) ?? 0;
     if (income <= 0) {
@@ -738,13 +785,15 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
     }
 
     try {
-      final taxCalculation = await ref.read(taxSubmissionProvider.notifier).calculateTax(income, 0);
-      
+      final taxCalculation = await ref
+          .read(taxSubmissionProvider.notifier)
+          .calculateTax(income, 0);
+
       // Constants for estimation
-      final nssf = income * 0.06; 
-      final shif = income * 0.0275; 
-      final housingLevy = income * 0.015; 
-      
+      final nssf = income * 0.06;
+      final shif = income * 0.0275;
+      final housingLevy = income * 0.015;
+
       double taxDue = 0;
       double totalDeductions = nssf + shif + housingLevy;
 
@@ -756,22 +805,28 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
         // Fallback simplified
         taxDue = (income - totalDeductions) * 0.3;
       }
-      
-      if (!mounted) return;
-      _showCalculationResult(income, nssf, shif, housingLevy, taxDue, totalDeductions);
 
+      if (!mounted) return;
+      _showCalculationResult(
+        income,
+        nssf,
+        shif,
+        housingLevy,
+        taxDue,
+        totalDeductions,
+      );
     } catch (e) {
       _showSnack('Failed to calculate tax: $e', isError: true);
     }
   }
 
   void _showCalculationResult(
-    double income, 
-    double nssf, 
-    double shif, 
-    double housingLevy, 
-    double taxDue, 
-    double totalDeductions
+    double income,
+    double nssf,
+    double shif,
+    double housingLevy,
+    double taxDue,
+    double totalDeductions,
   ) {
     showModalBottomSheet(
       context: context,
@@ -791,73 +846,101 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-            Center(
-              child: Container(
-                width: 40, 
-                height: 4, 
-                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text('Tax Breakdown', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            _buildResultRow('Gross Income', income, isBold: true),
-            const Divider(height: 32),
-            _buildResultRow('NSSF Contribution', nssf),
-            _buildResultRow('SHIF (Health)', shif),
-            _buildResultRow('Housing Levy', housingLevy),
-            _buildResultRow('Total Deductions', totalDeductions, color: Colors.red),
-            const Divider(height: 32),
-            _buildResultRow('Taxable Income', income - totalDeductions),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF111827),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Net Pay (Est)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  Text(
-                    'KES ${NumberFormat('#,##0').format(income - totalDeductions - taxDue)}',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18),
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.grey[200],
-                  foregroundColor: Colors.black,
-                  elevation: 0,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                child: const Text('Close'),
               ),
-            ),
-          ],
+              const SizedBox(height: 24),
+              const Text(
+                'Tax Breakdown',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              _buildResultRow('Gross Income', income, isBold: true),
+              const Divider(height: 32),
+              _buildResultRow('NSSF Contribution', nssf),
+              _buildResultRow('SHIF (Health)', shif),
+              _buildResultRow('Housing Levy', housingLevy),
+              _buildResultRow(
+                'Total Deductions',
+                totalDeductions,
+                color: Colors.red,
+              ),
+              const Divider(height: 32),
+              _buildResultRow('Taxable Income', income - totalDeductions),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF111827),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Net Pay (Est)',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'KES ${NumberFormat('#,##0').format(income - totalDeductions - taxDue)}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey[200],
+                    foregroundColor: Colors.black,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: const Text('Close'),
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildResultRow(String label, double amount, {bool isBold = false, Color? color}) {
+  Widget _buildResultRow(
+    String label,
+    double amount, {
+    bool isBold = false,
+    Color? color,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(
-            fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
-            color: Colors.grey[800],
-          )),
+          Text(
+            label,
+            style: TextStyle(
+              fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
+              color: Colors.grey[800],
+            ),
+          ),
           Text(
             'KES ${NumberFormat('#,##0').format(amount)}',
             style: TextStyle(
@@ -869,8 +952,6 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
       ),
     );
   }
-
-
 
   // ==========================================================================
   // FILING DIALOGS
@@ -910,22 +991,22 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
             ),
             const SizedBox(height: 20),
             _buildDownloadOption(
-              'KRA P10 Return',
-              'Submit to iTax portal',
+              'PAYE Supporting Schedule',
+              'Use with the current KRA/iTax return',
               Icons.description_outlined,
               Colors.blue,
               () => _downloadStatutoryReturn('KRA_P10_CSV', summary),
             ),
             _buildDownloadOption(
-              'NSSF Return',
-              'Submit to NSSF self-service',
+              'NSSF Contribution Schedule',
+              'Review before filing through NSSF',
               Icons.table_chart_outlined,
               Colors.green,
               () => _downloadStatutoryReturn('NSSF_RETURN_EXCEL', summary),
             ),
             _buildDownloadOption(
-              'SHIF Return',
-              'Submit to SHA portal',
+              'SHIF Contribution Schedule',
+              'Review before filing through SHA',
               Icons.health_and_safety_outlined,
               Colors.teal,
               () => _downloadStatutoryReturn('SHIF_RETURN_EXCEL', summary),
@@ -937,7 +1018,13 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
     );
   }
 
-  Widget _buildDownloadOption(String title, String subtitle, IconData icon, Color color, VoidCallback onTap) {
+  Widget _buildDownloadOption(
+    String title,
+    String subtitle,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
     return ListTile(
       onTap: () {
         Navigator.pop(context);
@@ -953,15 +1040,21 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
         child: Icon(icon, color: color),
       ),
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-      subtitle: Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+      subtitle: Text(
+        subtitle,
+        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+      ),
       trailing: const Icon(Icons.download, color: Colors.grey),
     );
   }
 
-  Future<void> _downloadStatutoryReturn(String exportType, MonthlyTaxSummary summary) async {
+  Future<void> _downloadStatutoryReturn(
+    String exportType,
+    MonthlyTaxSummary summary,
+  ) async {
     try {
       _showSnack('Generating ${exportType.replaceAll('_', ' ')}...');
-      
+
       final bytes = await ref
           .read(monthlyTaxSummariesProvider.notifier)
           .downloadReturn(exportType, summary.year, summary.month);
@@ -1004,7 +1097,11 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
                 color: Colors.green.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.verified_user, color: Colors.green, size: 20),
+              child: const Icon(
+                Icons.verified_user,
+                color: Colors.green,
+                size: 20,
+              ),
             ),
             const SizedBox(width: 12),
             const Text('Confirm Filing'),
@@ -1040,7 +1137,7 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
               ),
             ),
             const SizedBox(height: 12),
-            _buildFilingCheckItem('KRA P10 Return'),
+            _buildFilingCheckItem('Official KRA PAYE return'),
             _buildFilingCheckItem('NSSF Return'),
             _buildFilingCheckItem('SHIF Return'),
             _buildFilingCheckItem('Housing Levy'),

@@ -36,11 +36,15 @@ class PayPeriodRepository {
     return _executeRequest(
       operation: 'fetch pay periods',
       request: () async {
-        final response = await _apiService.payPeriods.getAll(queryParams: {'limit': 100});
+        final response = await _apiService.payPeriods.getAll(
+          queryParams: {'limit': 100},
+        );
         final periods = _parsePayPeriodList(response.data);
         debugPrint('PayPeriodRepository: Fetched ${periods.length} periods.');
         if (periods.isNotEmpty) {
-           debugPrint('PayPeriodRepository: First=${periods.first.name} (${periods.first.startDate}), Last=${periods.last.name} (${periods.last.startDate})');
+          debugPrint(
+            'PayPeriodRepository: First=${periods.first.name} (${periods.first.startDate}), Last=${periods.last.name} (${periods.last.startDate})',
+          );
         }
         return periods;
       },
@@ -68,14 +72,17 @@ class PayPeriodRepository {
       operation: 'fetch pay period',
       request: () async {
         final response = await _apiService.payPeriods.getById(payPeriodId);
-        final jsonMap = _normalizePayPeriodJson(response.data as Map<String, dynamic>);
+        final jsonMap = _normalizePayPeriodJson(
+          response.data as Map<String, dynamic>,
+        );
         return PayPeriod.fromJson(jsonMap);
       },
     );
   }
 
   /// Alias for [getPayPeriod] for backward compatibility.
-  Future<PayPeriod> getPayPeriodById(String payPeriodId) => getPayPeriod(payPeriodId);
+  Future<PayPeriod> getPayPeriodById(String payPeriodId) =>
+      getPayPeriod(payPeriodId);
 
   /// Fetch the current active pay period(s).
   ///
@@ -103,8 +110,12 @@ class PayPeriodRepository {
     return _executeRequest(
       operation: 'fetch pay period statistics',
       request: () async {
-        final response = await _apiService.payPeriods.getStatistics(payPeriodId);
-        return PayPeriodStatistics.fromJson(response.data as Map<String, dynamic>);
+        final response = await _apiService.payPeriods.getStatistics(
+          payPeriodId,
+        );
+        return PayPeriodStatistics.fromJson(
+          response.data as Map<String, dynamic>,
+        );
       },
     );
   }
@@ -121,7 +132,9 @@ class PayPeriodRepository {
         final response = await _apiService.payPeriods.create(
           _buildCreatePayload(request),
         );
-        final jsonMap = _normalizePayPeriodJson(response.data as Map<String, dynamic>);
+        final jsonMap = _normalizePayPeriodJson(
+          response.data as Map<String, dynamic>,
+        );
         return PayPeriod.fromJson(jsonMap);
       },
     );
@@ -141,7 +154,9 @@ class PayPeriodRepository {
           payPeriodId,
           _buildUpdatePayload(request),
         );
-        final jsonMap = _normalizePayPeriodJson(response.data as Map<String, dynamic>);
+        final jsonMap = _normalizePayPeriodJson(
+          response.data as Map<String, dynamic>,
+        );
         return PayPeriod.fromJson(jsonMap);
       },
     );
@@ -231,10 +246,8 @@ class PayPeriodRepository {
   Future<void> generatePayslips(String payPeriodId) async {
     return _executeRequest(
       operation: 'generate payslips',
-      request: () => _apiService.post(
-        '/payroll/payslips/generate/$payPeriodId',
-        data: {},
-      ),
+      request: () =>
+          _apiService.post('/payroll/payslips/generate/$payPeriodId', data: {}),
     );
   }
 
@@ -288,9 +301,11 @@ class PayPeriodRepository {
   Map<String, dynamic> _buildUpdatePayload(UpdatePayPeriodRequest request) {
     return {
       if (request.name != null) 'name': request.name,
-      if (request.startDate != null) 'startDate': _formatDate(request.startDate!),
+      if (request.startDate != null)
+        'startDate': _formatDate(request.startDate!),
       if (request.endDate != null) 'endDate': _formatDate(request.endDate!),
-      if (request.frequency != null) 'frequency': request.frequency!.name.toUpperCase(),
+      if (request.frequency != null)
+        'frequency': request.frequency!.name.toUpperCase(),
       if (request.status != null) 'status': request.status!.name.toUpperCase(),
       if (request.notes != null) 'notes': request.notes,
     };
@@ -340,12 +355,12 @@ class PayPeriodRepository {
   /// Handles frequency case normalization and other data cleanup
   Map<String, dynamic> _normalizePayPeriodJson(dynamic json) {
     final jsonMap = Map<String, dynamic>.from(json as Map);
-    
+
     // Fix frequency case issue - convert to uppercase
     if (jsonMap['frequency'] is String) {
       jsonMap['frequency'] = jsonMap['frequency'].toString().toUpperCase();
     }
-    
+
     // Handle other potential data normalization here if needed
     return jsonMap;
   }
@@ -452,21 +467,21 @@ class PayPeriodStatistics {
 
   /// Convert to map for display.
   Map<String, dynamic> toDisplayMap() => {
-        'totalWorkers': totalWorkers,
-        'processedPayments': processedPayments,
-        'pendingPayments': pendingPayments,
-        'totalGrossAmount': totalGrossAmount,
-        'totalNetAmount': totalNetAmount,
-        'totalTaxAmount': totalTaxAmount,
-        if (taxSummary != null)
-          'taxSummary': {
-            'paye': taxSummary!.paye,
-            'nhif': taxSummary!.nhif,
-            'nssf': taxSummary!.nssf,
-            'housingLevy': taxSummary!.housingLevy,
-            'total': taxSummary!.total,
-          },
-      };
+    'totalWorkers': totalWorkers,
+    'processedPayments': processedPayments,
+    'pendingPayments': pendingPayments,
+    'totalGrossAmount': totalGrossAmount,
+    'totalNetAmount': totalNetAmount,
+    'totalTaxAmount': totalTaxAmount,
+    if (taxSummary != null)
+      'taxSummary': {
+        'paye': taxSummary!.paye,
+        'nhif': taxSummary!.nhif,
+        'nssf': taxSummary!.nssf,
+        'housingLevy': taxSummary!.housingLevy,
+        'total': taxSummary!.total,
+      },
+  };
 
   static int _toInt(dynamic value) {
     if (value == null) return 0;
@@ -520,11 +535,11 @@ class TaxSummary {
 
   /// Convert to map for display.
   Map<String, double> toDisplayMap() => {
-        'PAYE': paye,
-        'NHIF': nhif,
-        'NSSF': nssf,
-        'Housing Levy': housingLevy,
-      };
+    'PAYE': paye,
+    'SHIF': nhif,
+    'NSSF': nssf,
+    'Housing Levy': housingLevy,
+  };
 
   static double _toDouble(dynamic value) {
     if (value == null) return 0.0;
@@ -578,7 +593,8 @@ extension PayPeriodListExtensions on List<PayPeriod> {
   PayPeriod? findByDate(DateTime date) {
     try {
       return firstWhere(
-        (p) => date.isAfter(p.startDate.subtract(const Duration(days: 1))) &&
+        (p) =>
+            date.isAfter(p.startDate.subtract(const Duration(days: 1))) &&
             date.isBefore(p.endDate.add(const Duration(days: 1))),
       );
     } catch (_) {

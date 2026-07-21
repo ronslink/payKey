@@ -1,24 +1,24 @@
-import { Check, ArrowRight, Play } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Link } from 'react-router-dom'
-import { useState } from 'react'
+import { Check, ArrowRight, Play } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
+import { useState } from "react";
 
 const highlights = [
-  'Send salary via M-Pesa in seconds',
-  'Auto SHIF, NSSF & PAYE deductions',
-  'KRA-compliant payslips via SMS/WhatsApp',
-  'Scheduled recurring payments',
-  'Payment reminders so you never forget',
-  'Complete records for tax season',
-]
+  "Send salary via M-Pesa in seconds",
+  "Auto SHIF, NSSF & PAYE deductions",
+  "Clear, itemized payslips and reports",
+  "Scheduled recurring payments",
+  "Payment reminders so you never forget",
+  "Complete records for tax season",
+];
 
 export default function HomeShowcase() {
-  const [isGuidePlaying, setIsGuidePlaying] = useState(false)
+  const [isGuidePlaying, setIsGuidePlaying] = useState(false);
 
   return (
     <section className="relative py-24 overflow-hidden">
       <div className="absolute top-1/2 right-0 w-[500px] h-[500px] bg-emerald-500/5 rounded-full blur-[120px] pointer-events-none -translate-y-1/2" />
-      
+
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           {/* Left - User guide video */}
@@ -44,10 +44,14 @@ export default function HomeShowcase() {
                 preload="metadata"
                 poster="/payroll-management-screen.png"
               >
-                <source src="/paydome-payroll-user-guide.mp4" type="video/mp4" />
+                <source
+                  src="/paydome-payroll-user-guide.mp4"
+                  type="video/mp4"
+                />
               </video>
               <p className="px-1 pt-3 text-xs text-slate-400">
-                Click play to watch the payroll walkthrough directly in your browser.
+                Click play to watch the payroll walkthrough directly in your
+                browser.
               </p>
             </div>
             {/* Floating notification */}
@@ -57,8 +61,12 @@ export default function HomeShowcase() {
                   <Check className="w-4 h-4 text-emerald-400" />
                 </div>
                 <div>
-                  <div className="text-sm font-semibold text-white">User guide included</div>
-                  <div className="text-xs text-slate-400">Watch payroll setup step by step</div>
+                  <div className="text-sm font-semibold text-white">
+                    User guide included
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    Watch payroll setup step by step
+                  </div>
                 </div>
               </div>
             </div>
@@ -70,13 +78,14 @@ export default function HomeShowcase() {
               How It Works
             </div>
             <h2 className="text-3xl sm:text-4xl font-bold text-white mb-6 leading-tight">
-              Pay your house help,{' '}
+              Pay your house help,{" "}
               <span className="text-gradient">gardener & driver</span> with ease
             </h2>
             <p className="text-lg text-slate-400 mb-8 leading-relaxed">
-              Whether you have one worker or a full household staff, Paydome makes paying salaries 
-              simple, professional, and compliant. Your staff gets paid on time, every time — 
-              straight to their M-Pesa.
+              Whether you have one worker or a full household staff, Paydome
+              makes paying salaries simple and professional. Calculate payroll,
+              review the records, and send approved payments straight to your
+              workers' M-Pesa accounts.
             </p>
 
             {/* Highlights */}
@@ -101,5 +110,5 @@ export default function HomeShowcase() {
         </div>
       </div>
     </section>
-  )
+  );
 }

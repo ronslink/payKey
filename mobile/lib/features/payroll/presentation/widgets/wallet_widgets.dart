@@ -24,10 +24,7 @@ class WalletBalanceCard extends StatelessWidget {
         isSufficient: _isSufficient,
       ),
       child: Column(
-        children: [
-          _buildHeader(context),
-          _buildCostBreakdown(context),
-        ],
+        children: [_buildHeader(context), _buildCostBreakdown(context)],
       ),
     );
   }
@@ -57,10 +54,7 @@ class WalletBalanceCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             verification.formattedBalance,
-            style: const TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
           ),
           if (!_isSufficient) _buildShortfallBadge(),
         ],
@@ -113,7 +107,11 @@ class WalletBalanceCard extends StatelessWidget {
   Widget _buildSufficientStatus() {
     return const Row(
       children: [
-        Icon(Icons.check_circle, color: PayrollConfirmTheme.successGreen, size: 20),
+        Icon(
+          Icons.check_circle,
+          color: PayrollConfirmTheme.successGreen,
+          size: 20,
+        ),
         SizedBox(width: 8),
         Expanded(
           child: Text(
@@ -142,15 +140,17 @@ class WalletBalanceCard extends StatelessWidget {
             ),
           ),
         ),
-        TextButton(
-          onPressed: onTopUp,
-          child: const Text('Top Up'),
-        ),
+        TextButton(onPressed: onTopUp, child: const Text('Top Up')),
       ],
     );
   }
 
-  Widget _buildRow(BuildContext context, String label, String value, {bool isBold = false}) {
+  Widget _buildRow(
+    BuildContext context,
+    String label,
+    String value, {
+    bool isBold = false,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -177,10 +177,7 @@ class WalletBalanceCard extends StatelessWidget {
 class PayrollSummaryCard extends StatelessWidget {
   final int workerCount;
 
-  const PayrollSummaryCard({
-    super.key,
-    required this.workerCount,
-  });
+  const PayrollSummaryCard({super.key, required this.workerCount});
 
   @override
   Widget build(BuildContext context) {
@@ -207,7 +204,7 @@ class PayrollSummaryCard extends StatelessWidget {
             const SizedBox(height: 8),
             const Text('• Net Pay Transfers (M-Pesa)'),
             const Text('• Tax Remittance (KRA)'),
-            const Text('• Statutory Deductions (NSSF/NHIF)'),
+            const Text('• Statutory Deductions (NSSF/SHIF)'),
           ],
         ),
       ),
@@ -235,10 +232,7 @@ class PayrollSummaryCard extends StatelessWidget {
 class PayrollErrorBanner extends StatelessWidget {
   final String error;
 
-  const PayrollErrorBanner({
-    super.key,
-    required this.error,
-  });
+  const PayrollErrorBanner({super.key, required this.error});
 
   @override
   Widget build(BuildContext context) {
@@ -249,7 +243,10 @@ class PayrollErrorBanner extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            const Icon(Icons.error_outline, color: PayrollConfirmTheme.errorRed),
+            const Icon(
+              Icons.error_outline,
+              color: PayrollConfirmTheme.errorRed,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -329,7 +326,9 @@ class ConfirmPayButton extends StatelessWidget {
           onPressed: canProceed ? onPressed : null,
           style: PayrollConfirmTheme.primaryButtonStyle(context),
           child: Text(
-            canProceed ? 'Confirm & Pay $formattedAmount' : 'Insufficient Funds',
+            canProceed
+                ? 'Confirm & Pay $formattedAmount'
+                : 'Insufficient Funds',
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ),

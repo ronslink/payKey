@@ -43,8 +43,8 @@ export class NotificationsService implements OnModuleInit {
   private firebaseInitialized = false;
 
   constructor(
-    private configService: ConfigService,
-    private httpService: HttpService,
+    private readonly configService: ConfigService,
+    private readonly httpService: HttpService,
   ) {}
 
   onModuleInit() {
@@ -547,6 +547,39 @@ export class NotificationsService implements OnModuleInit {
         amount: amount.toString(),
         workerName,
         transactionType,
+      },
+    });
+
+    return { success: result.success, error: result.error };
+  }
+
+  async sendSubscriptionPaymentDueNotification(
+    fcmToken: string | undefined,
+    amount: number,
+    checkoutUrl: string,
+    dueDate?: Date,
+  ): Promise<{ success: boolean; error?: string }> {
+    if (!fcmToken) {
+      this.logger.warn(
+        'No FCM token for subscription payment due notification',
+      );
+      return { success: false, error: 'No FCM token' };
+    }
+
+    const dueText = dueDate
+      ? ` Due by ${new Date(dueDate).toDateString()}.`
+      : '';
+
+    const result = await this.sendPushToDevice({
+      token: fcmToken,
+      title: 'Subscription Payment Due',
+      body: `Your PayDome subscription renewal is ready. Amount: KES ${amount.toFixed(0)}.${dueText}`,
+      data: {
+        type: 'SUBSCRIPTION_PAYMENT_DUE',
+        amount: amount.toString(),
+        checkoutUrl,
+        dueDate: dueDate ? new Date(dueDate).toISOString() : '',
+        transactionType: 'SUBSCRIPTION',
       },
     });
 

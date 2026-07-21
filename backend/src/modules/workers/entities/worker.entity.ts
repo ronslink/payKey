@@ -174,6 +174,14 @@ export class Worker {
     default: 0,
     transformer: decimalTransformer,
   })
+  postRetirementMedicalContribution: number;
+
+  @Column('decimal', {
+    precision: 12,
+    scale: 2,
+    default: 0,
+    transformer: decimalTransformer,
+  })
   lifeInsurancePremium: number;
 
   @Column('decimal', {

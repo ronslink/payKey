@@ -118,7 +118,7 @@ describe('PayPeriodsService', () => {
         BadRequestException,
       );
       await expect(service.create(dto as any, 'user-1')).rejects.toThrow(
-        'Start date must be before end date',
+        'Start date must be before or equal to end date',
       );
     });
 
@@ -199,6 +199,7 @@ describe('PayPeriodsService', () => {
       payPeriodRepo.findOne.mockResolvedValue({
         ...mockPayPeriod,
         status: PayPeriodStatus.COMPLETED,
+        isOffCycle: true,
       });
 
       await expect(service.remove('period-1')).rejects.toThrow(
@@ -210,6 +211,7 @@ describe('PayPeriodsService', () => {
       payPeriodRepo.findOne.mockResolvedValue({
         ...mockPayPeriod,
         status: PayPeriodStatus.DRAFT,
+        isOffCycle: true,
       });
       payrollRecordRepo.count.mockResolvedValue(5); // Has records
 
@@ -218,10 +220,11 @@ describe('PayPeriodsService', () => {
       );
     });
 
-    it('should allow deletion of DRAFT period with no records', async () => {
+    it('should allow deletion of off-cycle DRAFT period with no records', async () => {
       payPeriodRepo.findOne.mockResolvedValue({
         ...mockPayPeriod,
         status: PayPeriodStatus.DRAFT,
+        isOffCycle: true,
       });
       payrollRecordRepo.count.mockResolvedValue(0);
 

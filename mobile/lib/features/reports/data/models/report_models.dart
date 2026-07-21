@@ -1,4 +1,3 @@
-
 class PayrollSummaryReport {
   final ReportPayPeriod payPeriod;
   final ReportTotals totals;
@@ -48,7 +47,11 @@ class ReportPayPeriod {
   final String startDate;
   final String endDate;
 
-  ReportPayPeriod({required this.id, required this.startDate, required this.endDate});
+  ReportPayPeriod({
+    required this.id,
+    required this.startDate,
+    required this.endDate,
+  });
 
   factory ReportPayPeriod.fromJson(Map<String, dynamic> json) {
     return ReportPayPeriod(
@@ -113,7 +116,9 @@ class PayrollRecordSummary {
 
   factory PayrollRecordSummary.fromJson(Map<String, dynamic> json) {
     return PayrollRecordSummary(
-      id: json['id'] ?? '', // Default to empty string if missing (backwards compat)
+      id:
+          json['id'] ??
+          '', // Default to empty string if missing (backwards compat)
       workerName: json['workerName'],
       workerId: json['workerId'],
       grossPay: (json['grossPay'] as num).toDouble(),
@@ -178,7 +183,7 @@ class StatutoryEmployeeRecord {
   }
 }
 
-/// P9 Report - Kenya P9A Tax Deduction Card
+/// Payroll tax deduction data used for a P9 supporting summary.
 class P9Report {
   final String workerId;
   final String workerName;
@@ -199,7 +204,8 @@ class P9Report {
       workerId: json['workerId'] ?? '',
       workerName: json['workerName'] ?? 'Unknown',
       kraPin: json['kraPin'] ?? '',
-      months: (json['months'] as List?)
+      months:
+          (json['months'] as List?)
               ?.map((e) => P9MonthData.fromJson(e))
               .toList() ??
           [],
@@ -225,11 +231,15 @@ class P9MonthData {
   final double valueOfQuarters;
   final double grossPay;
   final double contribution; // NSSF
+  final double housingLevy;
+  final double shif;
+  final double postRetirementMedical;
   final double ownerOccupiedInterest;
   final double retirementContribution;
   final double taxablePay;
   final double taxCharged;
   final double relief;
+  final double insuranceRelief;
   final double paye;
 
   P9MonthData({
@@ -239,11 +249,15 @@ class P9MonthData {
     required this.valueOfQuarters,
     required this.grossPay,
     required this.contribution,
+    required this.housingLevy,
+    required this.shif,
+    required this.postRetirementMedical,
     required this.ownerOccupiedInterest,
     required this.retirementContribution,
     required this.taxablePay,
     required this.taxCharged,
     required this.relief,
+    required this.insuranceRelief,
     required this.paye,
   });
 
@@ -255,6 +269,10 @@ class P9MonthData {
       valueOfQuarters: (json['valueOfQuarters'] as num?)?.toDouble() ?? 0,
       grossPay: (json['grossPay'] as num?)?.toDouble() ?? 0,
       contribution: (json['contribution'] as num?)?.toDouble() ?? 0,
+      housingLevy: (json['housingLevy'] as num?)?.toDouble() ?? 0,
+      shif: (json['shif'] as num?)?.toDouble() ?? 0,
+      postRetirementMedical:
+          (json['postRetirementMedical'] as num?)?.toDouble() ?? 0,
       ownerOccupiedInterest:
           (json['ownerOccupiedInterest'] as num?)?.toDouble() ?? 0,
       retirementContribution:
@@ -262,22 +280,43 @@ class P9MonthData {
       taxablePay: (json['taxablePay'] as num?)?.toDouble() ?? 0,
       taxCharged: (json['taxCharged'] as num?)?.toDouble() ?? 0,
       relief: (json['relief'] as num?)?.toDouble() ?? 0,
+      insuranceRelief: (json['insuranceRelief'] as num?)?.toDouble() ?? 0,
       paye: (json['paye'] as num?)?.toDouble() ?? 0,
     );
   }
 
   String get monthName {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return months[(month - 1) % 12];
   }
 
   String get fullMonthName {
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
     return months[(month - 1) % 12];
   }

@@ -148,7 +148,7 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
     if (!_isNetPayTarget || _employmentType != 'FIXED') return;
 
     if (_debounce?.isActive ?? false) _debounce!.cancel();
-    
+
     final text = _controllers.salary.text.trim();
     if (text.isEmpty) {
       setState(() {
@@ -168,12 +168,12 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
     }
 
     setState(() => _isCalculatingGross = true);
-    
+
     _debounce = Timer(const Duration(milliseconds: 600), () async {
       try {
         final api = ref.read(apiServiceProvider);
         final response = await api.taxes.calculateGrossFromNet(targetNet);
-        
+
         if (mounted) {
           setState(() {
             _calculatedGross = (response.data['grossSalary'] as num).toDouble();
@@ -205,17 +205,16 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
       final notifier = ref.read(workersProvider.notifier);
 
       if (widget.isEditing) {
-        await notifier.updateWorker(
-          widget.worker!.id,
-          _buildUpdateRequest(),
-        );
+        await notifier.updateWorker(widget.worker!.id, _buildUpdateRequest());
       } else {
         await notifier.createWorker(_buildCreateRequest());
       }
 
       if (mounted) {
         _showSuccess(
-          widget.isEditing ? 'Worker updated successfully' : 'Worker added successfully',
+          widget.isEditing
+              ? 'Worker updated successfully'
+              : 'Worker added successfully',
         );
         _navigateBack();
       }
@@ -238,12 +237,15 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
       loading: () => null,
       error: (_, __) => null,
     );
-    
+
     return CreateWorkerRequest(
       name: _controllers.name.trimmedText,
       phoneNumber: _controllers.phone.trimmedText,
-      salaryGross: _employmentType == 'FIXED' && _isNetPayTarget && _calculatedGross != null 
-          ? _calculatedGross! 
+      salaryGross:
+          _employmentType == 'FIXED' &&
+              _isNetPayTarget &&
+              _calculatedGross != null
+          ? _calculatedGross!
           : _controllers.salary.doubleValue,
       startDate: _startDate,
       email: _controllers.email.nullableText,
@@ -264,10 +266,12 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
       notes: _controllers.notes.nullableText,
       emergencyContactName: _controllers.emergencyName.nullableText,
       emergencyContactPhone: _controllers.emergencyPhone.nullableText,
-      emergencyContactRelationship: _controllers.emergencyRelationship.nullableText,
+      emergencyContactRelationship:
+          _controllers.emergencyRelationship.nullableText,
       pensionContribution: _controllers.pensionContribution.doubleValue,
       mortgageInterest: _controllers.mortgageInterest.doubleValue,
-      hospContribution: _controllers.hospContribution.doubleValue,
+      postRetirementMedicalContribution:
+          _controllers.postRetirementMedicalContribution.doubleValue,
       lifeInsurancePremium: _controllers.lifeInsurancePremium.doubleValue,
       nonCashBenefits: _controllers.nonCashBenefits.doubleValue,
       nonTaxableAllowance: _controllers.nonTaxableAllowance.doubleValue,
@@ -282,8 +286,11 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
     return UpdateWorkerRequest(
       name: _controllers.name.trimmedText,
       phoneNumber: _controllers.phone.trimmedText,
-      salaryGross: _employmentType == 'FIXED' && _isNetPayTarget && _calculatedGross != null 
-          ? _calculatedGross! 
+      salaryGross:
+          _employmentType == 'FIXED' &&
+              _isNetPayTarget &&
+              _calculatedGross != null
+          ? _calculatedGross!
           : _controllers.salary.doubleValue,
       startDate: _startDate,
       email: _controllers.email.nullableText,
@@ -299,7 +306,8 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
       nonCashBenefits: _controllers.nonCashBenefits.doubleValue,
       nonTaxableAllowance: _controllers.nonTaxableAllowance.doubleValue,
       mortgageInterest: _controllers.mortgageInterest.doubleValue,
-      hospContribution: _controllers.hospContribution.doubleValue,
+      postRetirementMedicalContribution:
+          _controllers.postRetirementMedicalContribution.doubleValue,
       lifeInsurancePremium: _controllers.lifeInsurancePremium.doubleValue,
       hasDisabilityExemption: _hasDisabilityExemption,
       paymentFrequency: _paymentFrequency.value,
@@ -311,7 +319,8 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
       notes: _controllers.notes.nullableText,
       emergencyContactName: _controllers.emergencyName.nullableText,
       emergencyContactPhone: _controllers.emergencyPhone.nullableText,
-      emergencyContactRelationship: _controllers.emergencyRelationship.nullableText,
+      emergencyContactRelationship:
+          _controllers.emergencyRelationship.nullableText,
       dateOfBirth: _dateOfBirth,
       propertyId: _selectedPropertyId,
     );
@@ -350,8 +359,9 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
     // Fetch data for Property Dropdown
     final subscriptionAsync = ref.watch(userSubscriptionProvider);
     final propertiesAsync = ref.watch(propertiesProvider);
-    
-    final isPlatinum = subscriptionAsync.value?.plan.name.toUpperCase() == 'PLATINUM';
+
+    final isPlatinum =
+        subscriptionAsync.value?.plan.name.toUpperCase() == 'PLATINUM';
     final properties = propertiesAsync.value ?? [];
 
     return Scaffold(
@@ -367,7 +377,8 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
               _PersonalInfoSection(
                 controllers: _controllers,
                 dateOfBirth: _dateOfBirth,
-                onDateOfBirthChanged: (date) => setState(() => _dateOfBirth = date),
+                onDateOfBirthChanged: (date) =>
+                    setState(() => _dateOfBirth = date),
               ),
               const SizedBox(height: 24),
               _EmergencyContactSection(controllers: _controllers),
@@ -379,9 +390,11 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
                 startDate: _startDate,
                 onStartDateChanged: (date) => setState(() => _startDate = date),
                 employmentType: _employmentType,
-                onEmploymentTypeChanged: (type) => setState(() => _employmentType = type),
+                onEmploymentTypeChanged: (type) =>
+                    setState(() => _employmentType = type),
                 selectedPropertyId: _selectedPropertyId,
-                onPropertyIdChanged: (id) => setState(() => _selectedPropertyId = id),
+                onPropertyIdChanged: (id) =>
+                    setState(() => _selectedPropertyId = id),
                 properties: properties,
                 showPropertySelector: isPlatinum,
                 isNetPayTarget: _isNetPayTarget,
@@ -404,14 +417,16 @@ class _WorkerFormPageState extends ConsumerState<WorkerFormPage> {
               _AdvancedBenefitsSection(
                 controllers: _controllers,
                 hasDisabilityExemption: _hasDisabilityExemption,
-                onDisabilityChanged: (val) => setState(() => _hasDisabilityExemption = val),
+                onDisabilityChanged: (val) =>
+                    setState(() => _hasDisabilityExemption = val),
               ),
               const SizedBox(height: 24),
               _PaymentDetailsSection(
                 controllers: _controllers,
                 paymentFrequency: _paymentFrequency,
                 paymentMethod: _paymentMethod,
-                onFrequencyChanged: (v) => setState(() => _paymentFrequency = v),
+                onFrequencyChanged: (v) =>
+                    setState(() => _paymentFrequency = v),
                 onMethodChanged: (v) => setState(() => _paymentMethod = v),
               ),
               const SizedBox(height: 24),
@@ -473,7 +488,7 @@ class _WorkerFormControllers {
   // Advanced Benefits & Reliefs
   final pensionContribution = TextEditingController();
   final mortgageInterest = TextEditingController();
-  final hospContribution = TextEditingController();
+  final postRetirementMedicalContribution = TextEditingController();
   final lifeInsurancePremium = TextEditingController();
   final nonCashBenefits = TextEditingController();
   final nonTaxableAllowance = TextEditingController();
@@ -509,12 +524,25 @@ class _WorkerFormControllers {
     housingAllowance.text = worker.housingAllowance.toString();
     transportAllowance.text = worker.transportAllowance.toString();
 
-    pensionContribution.text = worker.pensionContribution > 0 ? worker.pensionContribution.toString() : '';
-    mortgageInterest.text = worker.mortgageInterest > 0 ? worker.mortgageInterest.toString() : '';
-    hospContribution.text = worker.hospContribution > 0 ? worker.hospContribution.toString() : '';
-    lifeInsurancePremium.text = worker.lifeInsurancePremium > 0 ? worker.lifeInsurancePremium.toString() : '';
-    nonCashBenefits.text = worker.nonCashBenefits > 0 ? worker.nonCashBenefits.toString() : '';
-    nonTaxableAllowance.text = worker.nonTaxableAllowance > 0 ? worker.nonTaxableAllowance.toString() : '';
+    pensionContribution.text = worker.pensionContribution > 0
+        ? worker.pensionContribution.toString()
+        : '';
+    mortgageInterest.text = worker.mortgageInterest > 0
+        ? worker.mortgageInterest.toString()
+        : '';
+    postRetirementMedicalContribution.text =
+        worker.postRetirementMedicalContribution > 0
+        ? worker.postRetirementMedicalContribution.toString()
+        : '';
+    lifeInsurancePremium.text = worker.lifeInsurancePremium > 0
+        ? worker.lifeInsurancePremium.toString()
+        : '';
+    nonCashBenefits.text = worker.nonCashBenefits > 0
+        ? worker.nonCashBenefits.toString()
+        : '';
+    nonTaxableAllowance.text = worker.nonTaxableAllowance > 0
+        ? worker.nonTaxableAllowance.toString()
+        : '';
     hasDisabilityExemption = worker.hasDisabilityExemption;
 
     mpesaNumber.text = worker.mpesaNumber ?? '';
@@ -523,7 +551,7 @@ class _WorkerFormControllers {
     bankAccount.text = worker.bankAccount ?? '';
 
     notes.text = worker.notes ?? '';
-    
+
     emergencyName.text = worker.emergencyContactName ?? '';
     emergencyPhone.text = worker.emergencyContactPhone ?? '';
     emergencyRelationship.text = worker.emergencyContactRelationship ?? '';
@@ -542,10 +570,10 @@ class _WorkerFormControllers {
     salary.dispose();
     housingAllowance.dispose();
     transportAllowance.dispose();
-    
+
     pensionContribution.dispose();
     mortgageInterest.dispose();
-    hospContribution.dispose();
+    postRetirementMedicalContribution.dispose();
     lifeInsurancePremium.dispose();
     nonCashBenefits.dispose();
     nonTaxableAllowance.dispose();
@@ -642,7 +670,7 @@ class _PersonalInfoSection extends StatelessWidget {
     final displayText = dateOfBirth != null
         ? '${dateOfBirth!.day}/${dateOfBirth!.month}/${dateOfBirth!.year}'
         : 'Select date of birth';
-    
+
     final ageText = _age != null ? ' (Age: $_age)' : '';
     final isUnderAge = _age != null && _age! < 13;
 
@@ -659,14 +687,16 @@ class _PersonalInfoSection extends StatelessWidget {
               filled: true,
               fillColor: _AppColors.background(context),
               suffixIcon: const Icon(Icons.calendar_today),
-              errorText: isUnderAge 
-                  ? 'Worker must be at least 13 years old (Kenya Labor Law)' 
+              errorText: isUnderAge
+                  ? 'Worker must be at least 13 years old (Kenya Labor Law)'
                   : null,
             ),
             child: Text(
               displayText,
               style: TextStyle(
-                color: dateOfBirth == null ? Colors.grey : _AppColors.textPrimary(context),
+                color: dateOfBirth == null
+                    ? Colors.grey
+                    : _AppColors.textPrimary(context),
               ),
             ),
           ),
@@ -747,7 +777,8 @@ class _StatutoryDetailsSection extends StatelessWidget {
           textCapitalization: TextCapitalization.characters,
           inputFormatters: [_UpperCaseTextFormatter()],
           validator: (value) {
-            if (value == null || value.trim().isEmpty) return null; // Optional for workers
+            if (value == null || value.trim().isEmpty)
+              return null; // Optional for workers
             final kraRegex = RegExp(r'^[A-Z]\d{9}[A-Z]$');
             if (!kraRegex.hasMatch(value.trim().toUpperCase())) {
               return 'Invalid format. Expected: A123456789B';
@@ -762,8 +793,8 @@ class _StatutoryDetailsSection extends StatelessWidget {
         ),
         _FormTextField(
           controller: controllers.nhif,
-          label: 'NHIF Number',
-          hint: 'Enter NHIF Number',
+          label: 'SHIF Number',
+          hint: 'Enter SHIF Number',
         ),
       ],
     );
@@ -807,7 +838,11 @@ class _AdvancedBenefitsSection extends StatelessWidget {
           ),
           iconColor: Theme.of(context).colorScheme.onSurface,
           collapsedIconColor: Theme.of(context).colorScheme.onSurface,
-          childrenPadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+          childrenPadding: const EdgeInsets.only(
+            left: 16,
+            right: 16,
+            bottom: 16,
+          ),
           children: [
             _FormTextField(
               controller: controllers.pensionContribution,
@@ -834,8 +869,8 @@ class _AdvancedBenefitsSection extends StatelessWidget {
               keyboardType: TextInputType.number,
             ),
             _FormTextField(
-              controller: controllers.hospContribution,
-              label: 'HOSP Contribution',
+              controller: controllers.postRetirementMedicalContribution,
+              label: 'Post-Retirement Medical Fund Contribution',
               hint: 'e.g. 2000',
               keyboardType: TextInputType.number,
             ),
@@ -874,7 +909,7 @@ class _EmploymentDetailsSection extends StatelessWidget {
   final ValueChanged<String?> onPropertyIdChanged;
   final List<dynamic> properties; // Using dynamic or PropertyModel if available
   final bool showPropertySelector;
-  
+
   final bool isNetPayTarget;
   final ValueChanged<bool> onNetPayTargetChanged;
   final bool isCalculatingGross;
@@ -906,7 +941,7 @@ class _EmploymentDetailsSection extends StatelessWidget {
           label: 'Job Title',
           hint: 'e.g. Housekeeper, Gardener',
         ),
-        
+
         // Property Selector (Platinum Only)
         if (showPropertySelector) ...[
           DropdownButtonFormField<String>(
@@ -922,10 +957,10 @@ class _EmploymentDetailsSection extends StatelessWidget {
                 value: null,
                 child: Text('All Properties (Global)'),
               ),
-              ...properties.map((p) => DropdownMenuItem<String>(
-                value: p.id,
-                child: Text(p.name),
-              )),
+              ...properties.map(
+                (p) =>
+                    DropdownMenuItem<String>(value: p.id, child: Text(p.name)),
+              ),
             ],
             onChanged: (value) => onPropertyIdChanged(value),
           ),
@@ -984,7 +1019,10 @@ class _EmploymentDetailsSection extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Specify Target Net Pay', style: TextStyle(fontWeight: FontWeight.w500)),
+              const Text(
+                'Specify Target Net Pay',
+                style: TextStyle(fontWeight: FontWeight.w500),
+              ),
               Switch(
                 value: isNetPayTarget,
                 onChanged: onNetPayTargetChanged,
@@ -997,12 +1035,14 @@ class _EmploymentDetailsSection extends StatelessWidget {
 
         _FormTextField(
           controller: controllers.salary,
-          label: (employmentType == 'FIXED' && isNetPayTarget) ? 'Target Net Pay (KES)' : 'Basic Salary (KES)',
+          label: (employmentType == 'FIXED' && isNetPayTarget)
+              ? 'Target Net Pay (KES)'
+              : 'Basic Salary (KES)',
           hint: '0.00',
           keyboardType: TextInputType.number,
           isRequired: true,
         ),
-        
+
         if (employmentType == 'FIXED' && isNetPayTarget) ...[
           Padding(
             padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
@@ -1019,22 +1059,27 @@ class _EmploymentDetailsSection extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    isCalculatingGross 
+                    isCalculatingGross
                         ? 'Calculating required gross salary...'
-                        : calculatedGross != null 
-                            ? 'Calculated Required Gross: ${calculatedGross!.toStringAsFixed(2)} KES'
-                            : 'Enter target net pay to calculate gross salary',
+                        : calculatedGross != null
+                        ? 'Calculated Required Gross: ${calculatedGross!.toStringAsFixed(2)} KES'
+                        : 'Enter target net pay to calculate gross salary',
                     style: TextStyle(
-                      color: calculatedGross != null ? _AppColors.success : Colors.grey[700],
+                      color: calculatedGross != null
+                          ? _AppColors.success
+                          : Colors.grey[700],
                       fontSize: 13,
-                      fontWeight: calculatedGross != null ? FontWeight.w500 : FontWeight.normal,
+                      fontWeight: calculatedGross != null
+                          ? FontWeight.w500
+                          : FontWeight.normal,
                     ),
                   ),
                 ),
               ],
             ),
           ),
-        ] else const SizedBox(height: 8),
+        ] else
+          const SizedBox(height: 8),
         Row(
           children: [
             Expanded(
@@ -1099,10 +1144,7 @@ class _PaymentDetailsSection extends StatelessWidget {
           itemLabel: (e) => e.label,
           onChanged: onMethodChanged,
         ),
-        _PaymentMethodFields(
-          method: paymentMethod,
-          controllers: controllers,
-        ),
+        _PaymentMethodFields(method: paymentMethod, controllers: controllers),
       ],
     );
   }
@@ -1112,20 +1154,17 @@ class _PaymentMethodFields extends ConsumerWidget {
   final PaymentMethod method;
   final _WorkerFormControllers controllers;
 
-  const _PaymentMethodFields({
-    required this.method,
-    required this.controllers,
-  });
+  const _PaymentMethodFields({required this.method, required this.controllers});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return switch (method) {
       PaymentMethod.mpesa => _FormTextField(
-          controller: controllers.mpesaNumber,
-          label: 'M-Pesa Number',
-          hint: 'Enter M-Pesa number',
-          keyboardType: TextInputType.phone,
-        ),
+        controller: controllers.mpesaNumber,
+        label: 'M-Pesa Number',
+        hint: 'Enter M-Pesa number',
+        keyboardType: TextInputType.phone,
+      ),
       PaymentMethod.bank => _BankPaymentFields(controllers: controllers),
       PaymentMethod.cash => const SizedBox.shrink(),
     };
@@ -1147,9 +1186,10 @@ class _BankPaymentFields extends ConsumerWidget {
           data: (banks) {
             // Ensure the current value exists in the list (or is null/empty)
             final currentCode = controllers.bankCode.text;
-            final isValid = currentCode.isNotEmpty && 
+            final isValid =
+                currentCode.isNotEmpty &&
                 banks.any((b) => b['bank_code'].toString() == currentCode);
-            
+
             return DropdownButtonFormField<String>(
               key: ValueKey('bank_${isValid ? currentCode : "null"}'),
               initialValue: isValid ? currentCode : null,
@@ -1175,7 +1215,8 @@ class _BankPaymentFields extends ConsumerWidget {
                     (b) => b['bank_code'].toString() == val,
                     orElse: () => {},
                   );
-                  controllers.bankName.text = bank['bank_name']?.toString() ?? '';
+                  controllers.bankName.text =
+                      bank['bank_name']?.toString() ?? '';
                 }
               },
               hint: const Text('Select Bank'),
@@ -1239,10 +1280,7 @@ class _FormSection extends StatelessWidget {
   final String title;
   final List<Widget> children;
 
-  const _FormSection({
-    required this.title,
-    required this.children,
-  });
+  const _FormSection({required this.title, required this.children});
 
   @override
   Widget build(BuildContext context) {
@@ -1304,8 +1342,10 @@ class _FormTextField extends StatelessWidget {
   final int maxLines;
   final int? maxLength;
   final TextCapitalization textCapitalization;
+
   /// Optional input formatters (e.g. uppercase)
   final List<TextInputFormatter>? inputFormatters;
+
   /// Optional custom validator — composed on top of the required check.
   final String? Function(String?)? validator;
 
@@ -1347,9 +1387,7 @@ class _FormTextField extends StatelessWidget {
           color: Theme.of(context).colorScheme.onSurfaceVariant,
           fontWeight: FontWeight.w500,
         ),
-        hintStyle: TextStyle(
-          color: Theme.of(context).hintColor,
-        ),
+        hintStyle: TextStyle(color: Theme.of(context).hintColor),
       ),
       validator: _buildValidator(),
     );
@@ -1407,10 +1445,10 @@ class _FormDropdown<T> extends StatelessWidget {
         fillColor: _AppColors.background(context),
       ),
       items: items
-          .map((item) => DropdownMenuItem<T>(
-                value: item,
-                child: Text(itemLabel(item)),
-              ))
+          .map(
+            (item) =>
+                DropdownMenuItem<T>(value: item, child: Text(itemLabel(item))),
+          )
           .toList(),
       onChanged: (v) {
         if (v != null) onChanged(v);
@@ -1442,9 +1480,7 @@ class _SubmitButton extends StatelessWidget {
         backgroundColor: _AppColors.primary,
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         elevation: 0,
       ),
       child: isSaving
@@ -1458,10 +1494,7 @@ class _SubmitButton extends StatelessWidget {
             )
           : Text(
               isEditing ? 'Update Worker' : 'Add Worker',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
     );
   }

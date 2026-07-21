@@ -32,7 +32,12 @@ export class KraService {
   }
 
   /**
-   * Generate P10 Excel file in KRA format for a pay period
+   * Generate a PAYE supporting worksheet for a pay period.
+   *
+   * KRA's simplified PAYE return must be obtained from iTax. This workbook is
+   * an audit/supporting schedule and is deliberately not represented as an
+   * upload-ready KRA template. The method/type names remain for API and
+   * database compatibility with existing clients.
    */
   async generateP10Excel(
     payPeriodId: string,
@@ -59,41 +64,44 @@ export class KraService {
 
       console.log(`[KRA Export] Found ${records.length} records`);
 
-      // Create workbook
+      // Create a supporting workbook, not an iTax upload template.
       const workbook = new ExcelJS.Workbook();
-      const sheet = workbook.addWorksheet('P10_Data');
+      const readme = workbook.addWorksheet('Read_Me');
+      readme.addRows([
+        ['PAYE Supporting Schedule'],
+        [
+          'This workbook is not an iTax upload template. Use the current simplified PAYE return obtained from KRA/iTax for filing.',
+        ],
+        [
+          'Review employee declarations and supporting documents before using these records to prepare a return.',
+        ],
+      ]);
+      readme.getColumn(1).width = 120;
+      readme.getRow(1).font = { bold: true, size: 14 };
 
-      // Add headers (KRA P10 format - Standard iTax Monthly Return)
+      const sheet = workbook.addWorksheet('PAYE_Support');
+
+      // Current payroll values used to support preparation of the official
+      // simplified PAYE return.
       sheet.columns = [
-        { header: 'PIN', key: 'pin', width: 15 },
+        { header: 'Employee PIN', key: 'pin', width: 15 },
         { header: 'Employee Name', key: 'name', width: 30 },
-        { header: 'Residential Status', key: 'residentialStatus', width: 15 },
-        { header: 'Type of Employee', key: 'employeeType', width: 20 },
-        { header: 'Basic Salary', key: 'basicSalary', width: 15 },
-        { header: 'Housing Allowance', key: 'housingAllowance', width: 15 },
-        { header: 'Transport Allowance', key: 'transportAllowance', width: 15 },
-        { header: 'Leave Pay', key: 'leavePay', width: 12 },
-        { header: 'Overtime', key: 'overtime', width: 12 },
-        { header: 'Directors Fees', key: 'directorsFees', width: 15 },
-        { header: 'Lump Sum Payments', key: 'lumpSum', width: 15 },
-        { header: 'Other Allowances', key: 'otherAllowances', width: 15 },
+        { header: 'Cash Gross Pay', key: 'cashGrossPay', width: 18 },
+        { header: 'Non-Cash Benefits', key: 'nonCashBenefits', width: 18 },
         { header: 'Total Gross Pay', key: 'grossPay', width: 15 },
-        { header: 'Defined Benefit', key: 'definedBenefit', width: 15 },
-        {
-          header: 'Defined Contribution',
-          key: 'definedContribution',
-          width: 15,
-        },
+        { header: 'NSSF', key: 'nssf', width: 12 },
+        { header: 'Employee Pension', key: 'pension', width: 18 },
+        { header: 'Affordable Housing Levy', key: 'housingLevy', width: 22 },
+        { header: 'SHIF', key: 'shif', width: 12 },
+        { header: 'Post-Retirement Medical Fund', key: 'prmf', width: 28 },
         { header: 'Mortgage Interest', key: 'mortgageInterest', width: 15 },
-        { header: 'HOSP', key: 'hosp', width: 12 },
-        { header: 'Amount of Benefit', key: 'benefitAmount', width: 15 },
-        { header: 'Value of Quarters', key: 'quarters', width: 15 },
-        { header: 'Owner Occupied Interest', key: 'ownerInterest', width: 20 },
-        { header: 'Taxable Pay', key: 'taxablePay', width: 15 },
-        { header: 'Tax Payable', key: 'taxPayable', width: 15 },
-        { header: 'Personal Relief', key: 'personalRelief', width: 15 },
-        { header: 'Insurance Relief', key: 'insuranceRelief', width: 15 },
-        { header: 'PAYE Tax', key: 'payeTax', width: 12 },
+        { header: 'PAYE', key: 'paye', width: 12 },
+        {
+          header: 'Total Statutory Deductions',
+          key: 'totalStatutoryDeductions',
+          width: 26,
+        },
+        { header: 'Net Pay', key: 'netPay', width: 15 },
       ];
 
       // Style header row
@@ -109,57 +117,52 @@ export class KraService {
       for (const record of records) {
         const worker = record.worker;
 
-        // Safe Number conversion with log for debugging
-        const grossSalary = Number(record.grossSalary);
-        const basicSalary = grossSalary; // MVP: Assuming basic = gross
+        const cashGrossPay =
+          Number(record.grossSalary || 0) +
+          Number(record.bonuses || 0) +
+          Number(record.otherEarnings || 0) +
+          Number(record.overtimePay || 0);
+        const nonCashBenefits = Number(record.nonCashBenefits || 0);
+        const totalGrossPay = cashGrossPay + nonCashBenefits;
 
         const taxBreakdown = record.taxBreakdown || {};
         const paye = Number(taxBreakdown.paye || record.taxAmount || 0);
         const nssf = Number(taxBreakdown.nssf || 0);
-        const shif = Number(taxBreakdown.nhif || taxBreakdown.shif || 0); // Handle SHIF/NHIF mapping
+        const shif = Number(taxBreakdown.nhif || taxBreakdown.shif || 0);
         const housingLevy = Number(taxBreakdown.housingLevy || 0);
+        const totalStatutoryDeductions = Number(
+          taxBreakdown.totalDeductions || 0,
+        );
 
         totalPaye += paye;
 
-        // Debug log if value is 0 unexpectedly
-        if (grossSalary === 0) {
+        if (cashGrossPay === 0) {
           console.warn(
             `[KRA Export] Warning: Gross Salary is 0 for worker ${worker?.name} (ID: ${record.workerId})`,
           );
         }
 
         sheet.addRow({
-          pin: worker?.kraPin || 'A000000000Z',
-          name: worker?.name || 'Unknown',
-          residentialStatus: 'Resident',
-          employeeType: 'Primary Employee',
-          basicSalary: basicSalary,
-          housingAllowance: Number(worker?.housingAllowance || 0),
-          transportAllowance: Number(worker?.transportAllowance || 0),
-          leavePay: 0,
-          overtime: Number(record.overtimePay || 0),
-          directorsFees: 0,
-          lumpSum: 0,
-          otherAllowances: Number(record.otherEarnings || 0),
-          grossPay: grossSalary,
-          definedBenefit: 0,
-          definedContribution: nssf,
-          mortgageInterest: 0,
-          hosp: 0,
-          benefitAmount: 0,
-          quarters: 0,
-          ownerInterest: 0,
-          taxablePay: Math.max(0, grossSalary - nssf), // Taxable Pay = Gross - NSSF (Allowable)
-          taxPayable: paye + 2400, // Approx (PAYE + Relief)
-          personalRelief: 2400,
-          insuranceRelief: shif * 0.15, // 15% of SHIF usually
-          payeTax: paye,
+          pin: worker?.kraPin || '',
+          name: worker?.name || '',
+          cashGrossPay,
+          nonCashBenefits,
+          grossPay: totalGrossPay,
+          nssf,
+          pension: Number(worker?.pensionContribution || 0),
+          housingLevy,
+          shif,
+          prmf: Number(worker?.postRetirementMedicalContribution || 0),
+          mortgageInterest: Number(worker?.mortgageInterest || 0),
+          paye,
+          totalStatutoryDeductions,
+          netPay: Number(record.netSalary || 0),
         });
       }
 
       // Generate filename
       const timestamp = new Date().toISOString().split('T')[0];
-      const fileName = `KRA_P10_${payPeriodId.substring(0, 8)}_${timestamp}.xlsx`;
+      const fileName = `PAYE_SUPPORTING_SCHEDULE_${payPeriodId.substring(0, 8)}_${timestamp}.xlsx`;
 
       // Ensure output directory exists (using fs directly here in case ensureOutputDir has issues)
       if (!fs.existsSync(this.outputDir)) {

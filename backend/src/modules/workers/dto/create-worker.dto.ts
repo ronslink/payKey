@@ -106,6 +106,10 @@ export class CreateWorkerDto {
 
   @IsNumber()
   @IsOptional()
+  postRetirementMedicalContribution?: number;
+
+  @IsNumber()
+  @IsOptional()
   lifeInsurancePremium?: number;
 
   @IsNumber()

@@ -15,6 +15,10 @@ on:
     paths:
       - 'backend/**'
 
+concurrency:
+  group: ${{ github.ref == 'refs/heads/main' && 'production-backend' || format('backend-ci-{0}', github.ref) }}
+  cancel-in-progress: false
+
 env:
   NODE_VERSION: '20'
 
@@ -79,7 +83,7 @@ jobs:
           cache-dependency-path: backend/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Install PostgreSQL client
         run: |
@@ -129,7 +133,6 @@ jobs:
 
       - name: Unit tests
         run: npm run test
-        continue-on-error: true
 
       - name: Sync database schema
         run: npm run typeorm:schema:sync
@@ -295,35 +298,46 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
 
-            # ── 5. Stop only the containers being redeployed ──────────────────
-            # Do NOT use --remove-orphans — each service lives in its own
-            # compose file and would be incorrectly flagged as an orphan.
-            docker rm -f paykey_backend_prod 2>/dev/null || true
-            docker rm -f paykey_redis_prod   2>/dev/null || true
+            # ── 5. Ensure shared infrastructure is available ───────────────────
             docker network create paykey-network-prod 2>/dev/null || true
-
-            # ── 6. Pull new image then bring up services ──────────────────────
             docker compose --env-file .env -f deploy/docker-compose.infra.yml up -d
+
+            # ── 6. Pull the new image and migrate before replacing live code ──
             docker compose --env-file .env -f deploy/docker-compose.backend.yml pull backend
+            if ! docker compose --env-file .env -f deploy/docker-compose.backend.yml \
+              run --rm --no-deps backend npm run typeorm:migration:run:prod; then
+              echo "❌ Migration failed — the live backend was not replaced."
+              exit 1
+            fi
+
             docker compose --env-file .env -f deploy/docker-compose.backend.yml up -d \
               --force-recreate backend
 
-            sleep 15
-            docker logs --tail 50 paykey_backend_prod
-
-            # ── 6. Run migrations ─────────────────────────────────────────────
-            if ! docker exec paykey_backend_prod npm run typeorm:migration:run:prod; then
-              echo "❌ Migration failed — dumping container logs:"
+            # ── 7. Require the new API to become healthy ───────────────────────
+            healthy=0
+            for attempt in $(seq 1 18); do
+              if docker exec paykey_backend_prod \
+                wget -q --spider http://127.0.0.1:3000/api; then
+                healthy=1
+                break
+              fi
+              sleep 5
+            done
+            if [ "$healthy" -ne 1 ]; then
+              echo "❌ Backend failed its post-deploy health check."
               docker logs --tail 100 paykey_backend_prod
               exit 1
             fi
 
-            # ── 7. Ensure admin and website are still up ──────────────────────
-            # Explicitly remove first so --force-recreate never hits a name conflict
-            docker rm -f paykey_admin_prod    2>/dev/null || true
-            docker rm -f paydome_website_prod 2>/dev/null || true
-            docker compose --env-file .env -f deploy/docker-compose.admin.yml   up -d --force-recreate admin
-            docker compose --env-file .env -f deploy/docker-compose.website.yml up -d --force-recreate website
+            echo "📜 Recent backend logs:"
+            docker logs --tail 50 paykey_backend_prod
+
+            # Admin and website have independent deployment workflows.
+            echo "📊 Running application containers:"
+            docker ps --format "table {{.Names}}\t{{.Status}}" \
+              --filter name=paykey_backend_prod \
+              --filter name=paykey_admin_prod \
+              --filter name=paydome_website_prod
 
             # ── 8. Post-deploy cleanup and summary ────────────────────────────
             docker image prune -f

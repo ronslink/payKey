@@ -31,13 +31,17 @@ interface ExportRecord {
 export class ExportService {
   private readonly exportsDir = path.join(process.cwd(), 'exports');
 
+  private csvCell(value: string): string {
+    return `"${value.replaceAll('"', '""')}"`;
+  }
+
   constructor(
     @InjectRepository(Export)
-    private exportRepository: Repository<Export>,
+    private readonly exportRepository: Repository<Export>,
     @InjectRepository(Transaction)
-    private transactionRepository: Repository<Transaction>,
+    private readonly transactionRepository: Repository<Transaction>,
     @InjectRepository(PayrollRecord) // Injected for robust data fetching
-    private payrollRecordRepository: Repository<PayrollRecord>,
+    private readonly payrollRecordRepository: Repository<PayrollRecord>,
   ) {
     // Ensure exports directory exists
     if (!fs.existsSync(this.exportsDir)) {
@@ -192,8 +196,11 @@ export class ExportService {
   }
 
   /**
-   * Generate KRA P10 CSV Format
-   * Based on standard KRA iTax CSV columns
+   * Generate a PAYE supporting schedule.
+   *
+   * This intentionally does not imitate KRA's upload template. KRA requires
+   * employers to use the current simplified PAYE return obtained from iTax.
+   * The legacy enum/method name is retained for API and database compatibility.
    */
   async generateKRA_P10_CSV(
     userId: string,
@@ -202,95 +209,57 @@ export class ExportService {
   ): Promise<string> {
     const records = await this.getPayrollData(userId, startDate, endDate);
 
-    // KRA P10 CSV Layout (approximate standard)
-    // PIN of Employee, Name of Employee, Residential Status, Type of Employee, Basic Salary, House Allowance, Transport Allowance, Overtime Allowance, Directors Fee, Leave Pay, Overtime, Total Cash Pay, Value of Car Benefit, Other Non-Cash Benefits, Total Non-Cash Pay, Global Income, Type of Housing, Rent of House, Computed Rent, Rent Recovered, Net Value of Housing, Total Gross Pay, 30% of Cash Pay, Actual Contribution, Permissible Limit, Mortgage Interest, Deposit on Home Ownership, Amount of Benefit, Taxable Pay, Tax Payable, Personal Relief, Insurance Relief, PAYE Tax
-
     let csv =
-      'PIN of Employee,Name of Employee,Residential Status,Type of Employee,Basic Salary,House Allowance,Transport Allowance,Overtime Allowance,other Allowances,Total Cash Pay,Car Benefit,Other Non Cash Benefits,Total Non Cash Pay,Total Gross Pay,Actual Contribution,Morgage Interest,Taxable Pay,Tax Payable,Personal Relief,Insurance Relief,PAYE Tax\n';
+      'Employee PIN,Employee Name,Gross Pay,NSSF,SHIF,Affordable Housing Levy,PAYE,Total Statutory Deductions,Net Pay\n';
 
-    for (const r of records) {
-      // Fetch employee PIN from worker details
-      const pin = r.workerPin || 'A000000000Z'; // Fallback to placeholder only if missing
-      const name = r.workerName || 'Unknown';
-      const resStatus = 'Resident';
-      const empType = 'Primary Employee';
-
-      // Defensive casting to ensure all values are numbers
-      const basic = Number(r.grossSalary) || 0;
-      const houseAllow = 0;
-      const transportAllow = 0;
-      const overtime = 0;
-      const otherAllow = 0;
-
-      const totalCash =
-        basic + houseAllow + transportAllow + overtime + otherAllow;
-
-      const carBen = 0;
-      const otherNonCash = 0;
-      const totalNonCash = carBen + otherNonCash;
-
-      const totalGross = totalCash + totalNonCash;
-
-      const actualContrib = Number(r.nssf) || 0; // Pension contribution
-      const mortgage = 0;
-
-      // Taxable Pay is usually Gross - NSSF (Allowable Deduction)
-      const taxable = Math.max(0, totalGross - actualContrib);
-
-      const paye = Number(r.paye) || 0;
-      const relief = 2400; // Personal Relief
-      const taxPayable = paye + relief;
-      const insRelief = (Number(r.shif) || 0) * 0.15;
-
-      csv += `${pin},"${name}",${resStatus},${empType},`;
-      csv += `${basic.toFixed(2)},${houseAllow.toFixed(2)},${transportAllow.toFixed(2)},${overtime.toFixed(2)},${otherAllow.toFixed(2)},`;
-      csv += `${totalCash.toFixed(2)},${carBen.toFixed(2)},${otherNonCash.toFixed(2)},${totalNonCash.toFixed(2)},`;
-      csv += `${totalGross.toFixed(2)},${actualContrib.toFixed(2)},${mortgage.toFixed(2)},`;
-      csv += `${taxable.toFixed(2)},${taxPayable.toFixed(2)},${relief.toFixed(2)},${insRelief.toFixed(2)},${paye.toFixed(2)}\n`;
+    for (const record of records) {
+      csv += [
+        this.csvCell(record.workerPin || ''),
+        this.csvCell(record.workerName || ''),
+        record.grossSalary.toFixed(2),
+        record.nssf.toFixed(2),
+        record.shif.toFixed(2),
+        record.housingLevy.toFixed(2),
+        record.paye.toFixed(2),
+        record.totalDeductions.toFixed(2),
+        record.netPay.toFixed(2),
+      ].join(',');
+      csv += '\n';
     }
 
-    // Calculate and add totals row
-    let totalBasic = 0,
-      totalHouseAllow = 0,
-      totalTransportAllow = 0,
-      totalOvertime = 0,
-      totalOtherAllow = 0;
-    let totalCashPay = 0,
-      totalCarBen = 0,
-      totalOtherNonCash = 0,
-      totalNonCash = 0;
-    let totalGrossPay = 0,
-      totalContrib = 0,
-      totalMortgage = 0,
-      totalTaxable = 0;
-    let totalTaxPayable = 0,
-      totalRelief = 0,
-      totalInsRelief = 0,
-      totalPaye = 0;
+    const totals = records.reduce(
+      (sum, record) => ({
+        grossSalary: sum.grossSalary + record.grossSalary,
+        nssf: sum.nssf + record.nssf,
+        shif: sum.shif + record.shif,
+        housingLevy: sum.housingLevy + record.housingLevy,
+        paye: sum.paye + record.paye,
+        totalDeductions: sum.totalDeductions + record.totalDeductions,
+        netPay: sum.netPay + record.netPay,
+      }),
+      {
+        grossSalary: 0,
+        nssf: 0,
+        shif: 0,
+        housingLevy: 0,
+        paye: 0,
+        totalDeductions: 0,
+        netPay: 0,
+      },
+    );
 
-    for (const r of records) {
-      const basic = Number(r.grossSalary) || 0;
-      const nssf = Number(r.nssf) || 0;
-      const shif = Number(r.shif) || 0;
-      const paye = Number(r.paye) || 0;
-
-      totalBasic += basic;
-      totalCashPay += basic;
-      totalGrossPay += basic;
-      totalContrib += nssf;
-      totalTaxable += Math.max(0, basic - nssf);
-      totalTaxPayable += paye + 2400;
-      totalRelief += 2400;
-      totalInsRelief += shif * 0.15;
-      totalPaye += paye;
-    }
-
-    // Add totals row with 'TOTAL' as the name
-    csv += `TOTAL,TOTALS,Resident,Primary Employee,`;
-    csv += `${totalBasic.toFixed(2)},${totalHouseAllow.toFixed(2)},${totalTransportAllow.toFixed(2)},${totalOvertime.toFixed(2)},${totalOtherAllow.toFixed(2)},`;
-    csv += `${totalCashPay.toFixed(2)},${totalCarBen.toFixed(2)},${totalOtherNonCash.toFixed(2)},${totalNonCash.toFixed(2)},`;
-    csv += `${totalGrossPay.toFixed(2)},${totalContrib.toFixed(2)},${totalMortgage.toFixed(2)},`;
-    csv += `${totalTaxable.toFixed(2)},${totalTaxPayable.toFixed(2)},${totalRelief.toFixed(2)},${totalInsRelief.toFixed(2)},${totalPaye.toFixed(2)}\n`;
+    csv += [
+      this.csvCell(''),
+      this.csvCell('TOTAL'),
+      totals.grossSalary.toFixed(2),
+      totals.nssf.toFixed(2),
+      totals.shif.toFixed(2),
+      totals.housingLevy.toFixed(2),
+      totals.paye.toFixed(2),
+      totals.totalDeductions.toFixed(2),
+      totals.netPay.toFixed(2),
+    ].join(',');
+    csv += '\n';
 
     return csv;
   }
@@ -316,9 +285,9 @@ export class ExportService {
       const otherNames = nameParts.slice(1).join(' ') || surname;
 
       const empId = r.workerId.substring(0, 8); // Fake payroll number from ID
-      const idNo = r.workerIdNo || '000000';
-      const kraPin = r.workerPin || 'A000000000Z';
-      const nssfNo = r.workerNssf || '000000';
+      const idNo = r.workerIdNo || '';
+      const kraPin = r.workerPin || '';
+      const nssfNo = r.workerNssf || '';
 
       csv += `${empId},"${surname}","${otherNames}",${idNo},${kraPin},${nssfNo},${r.grossSalary.toFixed(2)},0.00\n`;
     }
@@ -344,7 +313,7 @@ export class ExportService {
       const nameParts = r.workerName.split(' ');
       const lastName = nameParts[nameParts.length - 1] || '';
       const firstName = nameParts[0] || '';
-      const idNo = r.workerIdNo || '000000';
+      const idNo = r.workerIdNo || '';
 
       csv += `${r.workerId.substring(0, 8)},"${lastName}","${firstName}",${idNo},${r.grossSalary.toFixed(2)},${r.shif.toFixed(2)}\n`;
     }

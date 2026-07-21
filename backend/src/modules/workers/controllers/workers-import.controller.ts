@@ -55,7 +55,7 @@ export class WorkersImportController {
       { header: 'ID Number', key: 'idNumber', width: 15 },
       { header: 'KRA PIN', key: 'kraPin', width: 15 },
       { header: 'NSSF Number', key: 'nssfNumber', width: 15 },
-      { header: 'NHIF Number', key: 'nhifNumber', width: 15 },
+      { header: 'SHIF Number', key: 'nhifNumber', width: 15 },
       { header: 'Payment Method', key: 'paymentMethod', width: 20 },
       { header: 'Payment Frequency', key: 'paymentFrequency', width: 20 },
       { header: 'M-Pesa Number', key: 'mpesaNumber', width: 20 },
@@ -294,7 +294,7 @@ export class WorkersImportController {
       const idNumber = getVal(row, ['id number', 'national id']);
       const kraPin = getVal(row, ['kra', 'pin']);
       const nssf = getVal(row, ['nssf']);
-      const nhif = getVal(row, ['nhif']);
+      const nhif = getVal(row, ['shif', 'nhif']);
       const jobTitle = getVal(row, ['job', 'title']);
       const empType = getVal(row, ['employment', 'type']).toUpperCase();
       const startDate = getVal(row, ['start date']);

@@ -36,8 +36,8 @@ export class MockDataService {
           grossPay: worker.baseSalary,
           netPay: Math.round(worker.baseSalary * 0.85),
           paye: Math.round(worker.baseSalary * 0.1),
-          nssf: Math.min(1080, Math.round(worker.baseSalary * 0.06)),
-          nhif: this.calculateNhif(worker.baseSalary),
+          nssf: Math.min(6480, Math.round(worker.baseSalary * 0.06)),
+          nhif: this.calculateShif(worker.baseSalary),
         })),
         paymentsByMethod: [
           { method: 'M-Pesa', count: 4, total: 329800 },
@@ -262,7 +262,7 @@ export class MockDataService {
     return {
       isMock: true,
       mockNotice:
-        'This is sample P9 data. Upgrade to Basic to generate real P9 tax cards for your workers.',
+        'This is sample P9 data. Upgrade to Basic to generate payroll tax deduction summaries for your workers.',
       data: {
         year,
         workers: workers.map((worker) => ({
@@ -374,24 +374,9 @@ export class MockDataService {
     return months;
   }
 
-  private calculateNhif(grossSalary: number): number {
-    if (grossSalary <= 5999) return 150;
-    if (grossSalary <= 7999) return 300;
-    if (grossSalary <= 11999) return 400;
-    if (grossSalary <= 14999) return 500;
-    if (grossSalary <= 19999) return 600;
-    if (grossSalary <= 24999) return 750;
-    if (grossSalary <= 29999) return 850;
-    if (grossSalary <= 34999) return 900;
-    if (grossSalary <= 39999) return 950;
-    if (grossSalary <= 44999) return 1000;
-    if (grossSalary <= 49999) return 1100;
-    if (grossSalary <= 59999) return 1200;
-    if (grossSalary <= 69999) return 1300;
-    if (grossSalary <= 79999) return 1400;
-    if (grossSalary <= 89999) return 1500;
-    if (grossSalary <= 99999) return 1600;
-    return 1700;
+  private calculateShif(grossSalary: number): number {
+    if (grossSalary <= 0) return 0;
+    return Math.max(300, Math.round(grossSalary * 0.0275));
   }
 
   private randomTime(hourStart: number, hourEnd: number): string {
