@@ -330,7 +330,7 @@ export class ExcelImportService {
       },
       {
         'Employee Import Instructions':
-          '  - nhifNumber: NHIF/SHIF registration number',
+          '  - nhifNumber: SHIF registration number (legacy API field name)',
       },
       { 'Employee Import Instructions': '  - jobTitle: Job title or position' },
       {

@@ -13,8 +13,19 @@ import {
   PayrollStatus,
 } from '../payroll/entities/payroll-record.entity';
 import { TaxConfigService } from '../tax-config/services/tax-config.service';
-import { TaxType } from '../tax-config/entities/tax-config.entity';
+import { TaxConfig, TaxType } from '../tax-config/entities/tax-config.entity';
 import { ActivitiesService } from '../activities/activities.service';
+
+interface PayeCalculation {
+  paye: number;
+  taxablePay: number;
+  taxCharged: number;
+  personalReliefApplied: number;
+  insuranceReliefApplied: number;
+  allowablePensionDeduction: number;
+  allowableMortgageInterest: number;
+  allowablePostRetirementMedicalContribution: number;
+}
 import { ActivityType } from '../activities/entities/activity.entity';
 
 @Injectable()
@@ -75,24 +86,44 @@ export class TaxesService {
       date,
     );
 
-    let totalNssf = 0;
-
-    // Calculate Tier 1
-    if (tier1Config && tier1Config.configuration.tiers) {
-      const tier1 = tier1Config.configuration.tiers[0];
-      const tier1Limit = tier1.salaryTo || 8000; // Handle null case
-      totalNssf += Math.min(grossSalary, tier1Limit) * tier1.rate;
+    if (!tier1Config || !tier2Config) {
+      throw new NotFoundException(
+        `NSSF tax configuration not found for date ${date.toISOString()}`,
+      );
     }
 
-    // Calculate Tier 2
-    if (tier2Config && tier2Config.configuration.tiers) {
-      const tier2 = tier2Config.configuration.tiers[0];
-      if (grossSalary > 8000) {
-        const tier2Limit = tier2.salaryTo || 72000; // Handle null case
-        const tier2From = tier2.salaryFrom || 8001; // Handle null case
-        totalNssf +=
-          Math.min(grossSalary - 8000, tier2Limit - tier2From) * tier2.rate;
-      }
+    return this.calculateNSSFWithConfigs(grossSalary, tier1Config, tier2Config);
+  }
+
+  /**
+   * Calculate employee NSSF from the effective-dated Tier I and Tier II rows.
+   * Tier II starts at the Tier I upper earnings limit. This also handles older
+   * rows that represented the next shilling as salaryFrom (for example 8,001)
+   * without introducing a one-shilling gap in the band width.
+   */
+  private calculateNSSFWithConfigs(
+    grossSalary: number,
+    tier1Config: TaxConfig | null,
+    tier2Config: TaxConfig | null,
+  ): number {
+    if (grossSalary <= 0) return 0;
+
+    const tier1 = tier1Config?.configuration?.tiers?.[0];
+    const tier2 = tier2Config?.configuration?.tiers?.[0];
+    let totalNssf = 0;
+
+    if (tier1) {
+      const lower = Number(tier1.salaryFrom ?? 0);
+      const upper = Number(tier1.salaryTo ?? grossSalary);
+      const pensionable = Math.max(0, Math.min(grossSalary, upper) - lower);
+      totalNssf += pensionable * Number(tier1.rate);
+    }
+
+    if (tier2) {
+      const lower = Number(tier1?.salaryTo ?? tier2.salaryFrom ?? 0);
+      const upper = Number(tier2.salaryTo ?? grossSalary);
+      const pensionable = Math.max(0, Math.min(grossSalary, upper) - lower);
+      totalNssf += pensionable * Number(tier2.rate);
     }
 
     return Math.round(totalNssf * 100) / 100;
@@ -106,16 +137,17 @@ export class TaxesService {
     grossSalary: number,
     nssf: number,
     shif: number,
+    housingLevy: number,
     date: Date,
     options: {
       pensionContribution?: number;
       nonCashBenefits?: number;
       mortgageInterest?: number;
-      hospContribution?: number;
+      postRetirementMedicalContribution?: number;
       lifeInsurancePremium?: number;
       hasDisabilityExemption?: boolean;
     } = {},
-  ): Promise<number> {
+  ): Promise<PayeCalculation> {
     const payeConfig = await this.taxConfigService.getActiveTaxConfig(
       TaxType.PAYE,
       date,
@@ -125,23 +157,52 @@ export class TaxesService {
       pensionContribution = 0,
       nonCashBenefits = 0,
       mortgageInterest = 0,
-      hospContribution = 0,
+      postRetirementMedicalContribution = 0,
       lifeInsurancePremium = 0,
       hasDisabilityExemption = false,
     } = options;
 
     if (payeConfig && payeConfig.configuration.brackets) {
-      const maxPension = payeConfig.configuration.maxAllowablePension ?? payeConfig.configuration.maxPensionContribution ?? 20000;
-      const disabilityAmount = payeConfig.configuration.disabilityExemptionAmount ?? 150000;
-      const maxMortgage = payeConfig.configuration.maxMortgageInterest ?? 300000;
-      const maxHosp = payeConfig.configuration.maxHospContribution ?? 8000;
+      const maxPension =
+        payeConfig.configuration.maxAllowablePension ??
+        payeConfig.configuration.maxPensionContribution ??
+        30000;
+      const disabilityAmount =
+        payeConfig.configuration.disabilityExemptionAmount ?? 150000;
+      const maxMortgage = payeConfig.configuration.maxMortgageInterest ?? 30000;
+      const maxPostRetirementMedical =
+        payeConfig.configuration.maxPostRetirementMedicalContribution ?? 15000;
+      const nonCashBenefitThreshold =
+        payeConfig.configuration.nonCashBenefitExemptionThreshold ?? 5000;
 
       // Combined NSSF + Pension is capped for tax deduction purposes
-      const allowablePensionDeduction = Math.min(nssf + pensionContribution, maxPension);
-      const allowableMortgage = Math.min(mortgageInterest, maxMortgage);
-      const allowableHosp = Math.min(hospContribution, maxHosp);
-      
-      let taxableIncome = grossSalary + nonCashBenefits - allowablePensionDeduction - allowableMortgage - allowableHosp;
+      const allowablePensionDeduction = Math.min(
+        Math.max(0, nssf + pensionContribution),
+        maxPension,
+      );
+      const allowableMortgage = Math.min(
+        Math.max(0, mortgageInterest),
+        maxMortgage,
+      );
+      const allowablePostRetirementMedical = Math.min(
+        Math.max(0, postRetirementMedicalContribution),
+        maxPostRetirementMedical,
+      );
+      const taxableNonCashBenefits =
+        nonCashBenefits >= nonCashBenefitThreshold ? nonCashBenefits : 0;
+
+      // SHIF and the employee Affordable Housing Levy are allowable PAYE
+      // deductions. Non-cash benefits are added exactly once for PAYE only.
+      let taxableIncome = Math.max(
+        0,
+        grossSalary +
+          taxableNonCashBenefits -
+          allowablePensionDeduction -
+          shif -
+          housingLevy -
+          allowableMortgage -
+          allowablePostRetirementMedical,
+      );
 
       // Disability Exemption: first X amount is tax-free
       if (hasDisabilityExemption) {
@@ -166,20 +227,43 @@ export class TaxesService {
       }
 
       const personalRelief = payeConfig.configuration.personalRelief ?? 2400;
-      
-      // Insurance relief: 15% of (SHIF + Life Insurance), capped
+
+      // SHIF replaced NHIF and is an allowable deduction, not an insurance
+      // relief premium. Only qualifying declared insurance premiums are used.
       const reliefRate = payeConfig.configuration.insuranceRelief ?? 0.15;
       const maxRelief = payeConfig.configuration.maxInsuranceRelief ?? 5000;
-      const totalInsurancePremiums = shif + lifeInsurancePremium;
-      const insuranceRelief = Math.min(totalInsurancePremiums * reliefRate, maxRelief);
-      
-      const paye = Math.max(0, tax - personalRelief - insuranceRelief);
-      return Math.round(paye * 100) / 100;
+      const insuranceRelief = Math.min(
+        Math.max(0, lifeInsurancePremium) * reliefRate,
+        maxRelief,
+      );
+
+      const personalReliefApplied = Math.min(personalRelief, tax);
+      const insuranceReliefApplied = Math.min(
+        insuranceRelief,
+        Math.max(0, tax - personalReliefApplied),
+      );
+      const paye = Math.max(
+        0,
+        tax - personalReliefApplied - insuranceReliefApplied,
+      );
+
+      return {
+        paye: Math.round(paye * 100) / 100,
+        taxablePay: Math.round(taxableIncome * 100) / 100,
+        taxCharged: Math.round(tax * 100) / 100,
+        personalReliefApplied: Math.round(personalReliefApplied * 100) / 100,
+        insuranceReliefApplied: Math.round(insuranceReliefApplied * 100) / 100,
+        allowablePensionDeduction:
+          Math.round(allowablePensionDeduction * 100) / 100,
+        allowableMortgageInterest: Math.round(allowableMortgage * 100) / 100,
+        allowablePostRetirementMedicalContribution:
+          Math.round(allowablePostRetirementMedical * 100) / 100,
+      };
     }
 
-    // Fallback calculation using existing method
-    const table = await this.getTaxTable(date);
-    return this.calculatePAYE(grossSalary, nssf, table);
+    throw new NotFoundException(
+      `PAYE tax configuration not found for date ${date.toISOString()}`,
+    );
   }
 
   /**
@@ -194,6 +278,8 @@ export class TaxesService {
       TaxType.SHIF,
       date,
     );
+
+    if (grossSalary <= 0) return 0;
 
     if (shifConfig && shifConfig.configuration.percentage !== undefined) {
       // Percentage is stored as whole number (e.g., 2.75 for 2.75%), so divide by 100
@@ -236,41 +322,6 @@ export class TaxesService {
   }
 
   /**
-   * Calculate PAYE (Pay As You Earn)
-   * Tax bands (monthly):
-   * - 0 - 24,000: 10%
-   * - 24,001 - 32,333: 25%
-   * - 32,334+: 30%
-   * Personal relief: KES 2,400/month
-   */
-  private calculatePAYE(
-    grossSalary: number,
-    nssf: number,
-    table: TaxTable,
-  ): number {
-    const taxableIncome = grossSalary - nssf;
-    let tax = 0;
-    let remainingIncome = taxableIncome;
-    let previousLimit = 0;
-
-    for (const band of table.payeBands) {
-      if (remainingIncome <= 0) break;
-
-      const taxableAmount =
-        band.limit === Infinity
-          ? remainingIncome
-          : Math.min(remainingIncome, band.limit - previousLimit);
-
-      tax += taxableAmount * band.rate;
-      remainingIncome -= taxableAmount;
-      previousLimit = band.limit;
-    }
-
-    const paye = Math.max(0, tax - Number(table.personalRelief));
-    return Math.round(paye * 100) / 100;
-  }
-
-  /**
    * Calculate all taxes for a given gross salary
    * Using TaxConfigService for current Kenya tax rates
    */
@@ -281,24 +332,27 @@ export class TaxesService {
       pensionContribution?: number;
       nonCashBenefits?: number;
       mortgageInterest?: number;
-      hospContribution?: number;
+      postRetirementMedicalContribution?: number;
       lifeInsurancePremium?: number;
       hasDisabilityExemption?: boolean;
     } = {},
   ): Promise<TaxBreakdown> {
-    const totalGross = grossSalary + (options.nonCashBenefits || 0);
-
-    // Calculate NSSF first (needed for PAYE calculation)
-    const nssf = await this.calculateNSSF(totalGross, date);
-
-    // Calculate SHIF before PAYE — SHIF drives the insurance relief deduction
-    const shif = await this.calculateSHIF(totalGross, date);
-
-    // Calculate remaining components (PAYE now receives shif for insurance relief)
-    const [housingLevy, paye] = await Promise.all([
-      this.calculateHousingLevy(totalGross, date),
-      this.calculatePAYEFromConfig(totalGross, nssf, shif, date, options),
+    // Statutory contributions apply to cash gross pay. Non-cash benefits are
+    // added only to taxable employment income inside the PAYE calculation.
+    const [nssf, shif, housingLevy] = await Promise.all([
+      this.calculateNSSF(grossSalary, date),
+      this.calculateSHIF(grossSalary, date),
+      this.calculateHousingLevy(grossSalary, date),
     ]);
+    const payeCalculation = await this.calculatePAYEFromConfig(
+      grossSalary,
+      nssf,
+      shif,
+      housingLevy,
+      date,
+      options,
+    );
+    const paye = payeCalculation.paye;
 
     const totalDeductions = nssf + shif + housingLevy + paye;
 
@@ -308,6 +362,14 @@ export class TaxesService {
       housingLevy,
       paye,
       totalDeductions: Math.round(totalDeductions * 100) / 100,
+      taxablePay: payeCalculation.taxablePay,
+      taxCharged: payeCalculation.taxCharged,
+      personalReliefApplied: payeCalculation.personalReliefApplied,
+      insuranceReliefApplied: payeCalculation.insuranceReliefApplied,
+      allowablePensionDeduction: payeCalculation.allowablePensionDeduction,
+      allowableMortgageInterest: payeCalculation.allowableMortgageInterest,
+      allowablePostRetirementMedicalContribution:
+        payeCalculation.allowablePostRetirementMedicalContribution,
     };
   }
 
@@ -347,30 +409,46 @@ export class TaxesService {
         this.taxConfigService.getActiveTaxConfig(TaxType.PAYE, date),
       ]);
 
+    if (
+      !tier1Config ||
+      !tier2Config ||
+      !shifConfig ||
+      !housingConfig ||
+      !payeConfig
+    ) {
+      throw new NotFoundException(
+        `Incomplete tax configuration for date ${date.toISOString()}`,
+      );
+    }
+
     // ── Pure synchronous tax calculation using pre-fetched configs ───────────
     const calcTaxesSync = (grossSalary: number): number => {
-      // NSSF
-      let nssf = 0;
-      if (tier1Config?.configuration?.tiers) {
-        const t1 = tier1Config.configuration.tiers[0];
-        const t1Limit = t1.salaryTo || 8000;
-        nssf += Math.min(grossSalary, t1Limit) * t1.rate;
-      }
-      if (tier2Config?.configuration?.tiers && grossSalary > 8000) {
-        const t2 = tier2Config.configuration.tiers[0];
-        const t2Limit = t2.salaryTo || 72000;
-        const t2From = t2.salaryFrom || 8001;
-        nssf += Math.min(grossSalary - 8000, t2Limit - t2From) * t2.rate;
-      }
-      nssf = Math.round(nssf * 100) / 100;
+      const nssf = this.calculateNSSFWithConfigs(
+        grossSalary,
+        tier1Config,
+        tier2Config,
+      );
 
-      // SHIF — must be calculated before PAYE (used in insurance relief)
+      // SHIF must be calculated before PAYE because it is an allowable
+      // deduction from taxable employment income.
       let shif = 0;
-      if (shifConfig?.configuration?.percentage !== undefined) {
+      if (
+        grossSalary > 0 &&
+        shifConfig?.configuration?.percentage !== undefined
+      ) {
         const shifAmount =
           grossSalary * (shifConfig.configuration.percentage / 100);
         const minAmount = shifConfig.configuration.minAmount || 0;
         shif = Math.round(Math.max(shifAmount, minAmount) * 100) / 100;
+      }
+
+      // Housing Levy (employee portion)
+      let housingLevy = 0;
+      if (housingConfig?.configuration?.percentage !== undefined) {
+        housingLevy =
+          Math.round(
+            grossSalary * (housingConfig.configuration.percentage / 100) * 100,
+          ) / 100;
       }
 
       // PAYE
@@ -382,11 +460,27 @@ export class TaxesService {
           hasDisabilityExemption = false,
         } = options;
 
-        const maxPension = payeConfig.configuration.maxAllowablePension ?? 20000;
-        const disabilityAmount = payeConfig.configuration.disabilityExemptionAmount ?? 150000;
+        const maxPension =
+          payeConfig.configuration.maxAllowablePension ?? 30000;
+        const nonCashBenefitThreshold =
+          payeConfig.configuration.nonCashBenefitExemptionThreshold ?? 5000;
+        const disabilityAmount =
+          payeConfig.configuration.disabilityExemptionAmount ?? 150000;
 
-        const allowablePensionDeduction = Math.min(nssf + pensionContribution, maxPension);
-        let taxableIncome = grossSalary + nonCashBenefits - allowablePensionDeduction;
+        const allowablePensionDeduction = Math.min(
+          Math.max(0, nssf + pensionContribution),
+          maxPension,
+        );
+        const taxableNonCashBenefits =
+          nonCashBenefits >= nonCashBenefitThreshold ? nonCashBenefits : 0;
+        let taxableIncome = Math.max(
+          0,
+          grossSalary +
+            taxableNonCashBenefits -
+            allowablePensionDeduction -
+            shif -
+            housingLevy,
+        );
 
         if (hasDisabilityExemption) {
           taxableIncome = Math.max(0, taxableIncome - disabilityAmount);
@@ -406,21 +500,7 @@ export class TaxesService {
           prevLimit = bracket.to || prevLimit;
         }
         const relief = payeConfig.configuration.personalRelief || 2400;
-        // Insurance relief: 15% of SHIF, capped at KES 5,000
-        const insuranceRelief = Math.min(
-          shif * (payeConfig.configuration.insuranceRelief || 0.15),
-          payeConfig.configuration.maxInsuranceRelief || 5000,
-        );
-        paye = Math.round(Math.max(0, tax - relief - insuranceRelief) * 100) / 100;
-      }
-
-      // Housing Levy
-      let housingLevy = 0;
-      if (housingConfig?.configuration?.percentage !== undefined) {
-        housingLevy =
-          Math.round(
-            grossSalary * (housingConfig.configuration.percentage / 100) * 100,
-          ) / 100;
+        paye = Math.round(Math.max(0, tax - relief) * 100) / 100;
       }
 
       return Math.round((nssf + paye + shif + housingLevy) * 100) / 100;

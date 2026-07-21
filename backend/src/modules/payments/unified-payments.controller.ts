@@ -288,11 +288,8 @@ export class UnifiedPaymentsController {
       // 2. Generate Checkout URL
       // Use transaction ID as API Ref for reconciliation
       // Docs: https://developers.intasend.com/docs/working-wallets/collect-payments/#initiate-collection
-      // Fetch user's wallet ID to ensure funds go to their specific wallet
-      const user = await this.usersRepository.findOne({
-        where: { id: userId },
-        select: ['intasendWalletId'],
-      });
+      // Ensure funds go to the user's own working wallet.
+      const walletId = await this.ensureWorkingWallet(userId);
 
       const result = await this.intaSendService.createCheckoutUrl(
         amount,
@@ -300,7 +297,7 @@ export class UnifiedPaymentsController {
         name?.split(' ')[0] || 'User',
         name?.split(' ').slice(1).join(' ') || 'Name',
         transaction.id,
-        user?.intasendWalletId,
+        walletId,
       );
 
       // 3. Update Transaction with Provider Ref
@@ -308,7 +305,7 @@ export class UnifiedPaymentsController {
       const checkoutId = result.id || transaction.id;
 
       transaction.providerRef = checkoutId;
-      transaction.walletId = user?.intasendWalletId || undefined; // Track which wallet was used
+      transaction.walletId = walletId;
       transaction.metadata = {
         ...transaction.metadata,
         intaSendResponse: result,
@@ -432,17 +429,14 @@ export class UnifiedPaymentsController {
       // 2. Initiate IntaSend STK Push
       // Use transaction ID as API Ref for reconciliation
       // Docs: https://developers.intasend.com/docs/working-wallets/collect-payments/#mpesa-stk-push
-      // Fetch user's wallet ID
-      const user = await this.usersRepository.findOne({
-        where: { id: userId },
-        select: ['intasendWalletId'],
-      });
+      // Ensure funds go to the user's own working wallet.
+      const walletId = await this.ensureWorkingWallet(userId);
 
       const result = await this.intaSendService.initiateStkPush(
         phoneNumber,
         amount,
         transaction.id,
-        user?.intasendWalletId,
+        walletId,
       );
 
       // 3. Update Transaction with Provider Ref (Invoice ID)
@@ -452,7 +446,7 @@ export class UnifiedPaymentsController {
       const invoiceId = result.invoice?.invoice_id || result.id || 'PENDING';
 
       transaction.providerRef = invoiceId;
-      transaction.walletId = user?.intasendWalletId || undefined; // Track which wallet was used
+      transaction.walletId = walletId;
       transaction.metadata = {
         ...transaction.metadata,
         intaSendResponse: result,
@@ -566,6 +560,48 @@ export class UnifiedPaymentsController {
   // ==========================================================================
   // Private Helper Methods
   // ==========================================================================
+
+  private async ensureWorkingWallet(userId: string): Promise<string> {
+    const user = await this.usersRepository.findOne({
+      where: { id: userId },
+      select: [
+        'id',
+        'email',
+        'firstName',
+        'lastName',
+        'businessName',
+        'intasendWalletId',
+      ],
+    });
+
+    if (!user) {
+      throw new HttpException('User not found', HttpStatus.NOT_FOUND);
+    }
+
+    if (user.intasendWalletId) {
+      return user.intasendWalletId;
+    }
+
+    const label =
+      user.businessName ||
+      `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
+      user.email ||
+      `User ${user.id}`;
+
+    const wallet = await this.intaSendService.createWallet('KES', label);
+    if (!wallet?.wallet_id) {
+      throw new HttpException(
+        'Failed to initialize wallet',
+        HttpStatus.BAD_GATEWAY,
+      );
+    }
+
+    await this.usersRepository.update(userId, {
+      intasendWalletId: wallet.wallet_id,
+    });
+
+    return wallet.wallet_id;
+  }
 
   private async getTransactionStats(userId: string): Promise<TransactionStats> {
     const stats = await this.transactionRepository

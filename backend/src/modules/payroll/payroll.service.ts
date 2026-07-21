@@ -982,13 +982,17 @@ export class PayrollService {
       0,
     );
 
-    // Estimate IntaSend B2C payout fees per NON-CASH worker only
-    // Fee tiers: <200 = KES 10, 200-1000 = KES 20, >1000 = KES 100
+    // Use the same configurable provider fee model used when the payout is
+    // created. This keeps the funding check and transaction audit in sync.
     const estimatedFees = nonCashRecords.reduce((sum, r) => {
       const net = parseFloat(String(r.netSalary)) || 0;
-      if (net < 200) return sum + 10;
-      if (net <= 1000) return sum + 20;
-      return sum + 100;
+      return (
+        sum +
+        this.payrollPaymentService.estimatePayoutFee(
+          net,
+          r.worker?.paymentMethod || PaymentMethod.MPESA,
+        )
+      );
     }, 0);
 
     const totalRequired = totalNetPay + estimatedFees;
@@ -1423,7 +1427,9 @@ export class PayrollService {
         ? this.parseNumber(worker.pensionContribution)
         : 0,
       mortgageInterest: worker ? this.parseNumber(worker.mortgageInterest) : 0,
-      hospContribution: worker ? this.parseNumber(worker.hospContribution) : 0,
+      postRetirementMedicalContribution: worker
+        ? this.parseNumber(worker.postRetirementMedicalContribution)
+        : 0,
       hasDisabilityExemption: worker ? worker.hasDisabilityExemption : false,
       lifeInsurancePremium: worker
         ? this.parseNumber(worker.lifeInsurancePremium)

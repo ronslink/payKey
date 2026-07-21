@@ -111,23 +111,55 @@ export class PayrollPaymentService {
   }
 
   private get MPESA_LIMIT(): number {
-    return this.configService.get<number>('MPESA_LIMIT', 250000);
+    return Number(this.configService.get('MPESA_LIMIT') || 250000);
   }
 
   /**
-   * Calculate IntaSend B2C/Payout fee (confirmed tiered structure).
-   * < 200 KES  → KES 10
-   * 200–1000   → KES 20
-   * > 1000     → KES 100
+   * Estimate provider fees for the wallet-funding check and UI breakdown.
+   * Contract-specific flat fees can be configured without a code release.
+   * The defaults mirror IntaSend's public pricing as of July 2026.
    */
-  private calculatePayoutFee(amount: number): number {
-    if (amount < 200) return 10;
-    if (amount <= 1000) return 20;
-    return 100;
+  estimatePayoutFee(
+    amount: number,
+    paymentMethod: PaymentMethod | string = PaymentMethod.MPESA,
+  ): number {
+    if (amount <= 0 || paymentMethod === PaymentMethod.CASH) return 0;
+
+    if (paymentMethod === PaymentMethod.BANK) {
+      return this.calculateBankPayoutFee(amount);
+    }
+
+    let totalFee = 0;
+    let remainingAmount = amount;
+    while (remainingAmount > 0) {
+      const chunk = Math.min(remainingAmount, this.MPESA_LIMIT);
+      totalFee += this.calculateMobilePayoutFee(chunk);
+      remainingAmount -= chunk;
+    }
+
+    return totalFee;
   }
-  // PesaLink fee estimation (using safe upper bound or similar logic)
-  // Often ranges KES 30-100. Using flat 50 for now as safe estimate.
-  private readonly BANK_PAYOUT_FEE = 50;
+
+  private calculateMobilePayoutFee(_amount: number): number {
+    return Number(
+      this.configService.get('INTASEND_MPESA_PAYOUT_FEE_FLAT') || 100,
+    );
+  }
+
+  private calculateBankPayoutFee(amount: number): number {
+    const configuredFlatFee = this.configService.get(
+      'INTASEND_BANK_PAYOUT_FEE_FLAT',
+    );
+    if (configuredFlatFee !== undefined && configuredFlatFee !== '') {
+      return Number(configuredFlatFee);
+    }
+
+    if (amount <= 10000) return 100;
+    if (amount <= 50000) return 150;
+    if (amount <= 100000) return 200;
+    if (amount <= 500000) return 400;
+    return 500;
+  }
 
   private async processMobileBatch(records: PayrollRecord[]) {
     if (records.length === 0) return [];
@@ -205,7 +237,7 @@ export class PayrollPaymentService {
           });
 
           // Calculate Fee for this transaction chunk
-          const fee = this.calculatePayoutFee(currentAmount);
+          const fee = this.calculateMobilePayoutFee(currentAmount);
           totalBatchFees += fee;
 
           // Create Transaction Entity
@@ -491,8 +523,7 @@ export class PayrollPaymentService {
         narrative: 'Salary Payment',
       });
 
-      // Calculate Fee (Flat bank fee for now)
-      const fee = this.BANK_PAYOUT_FEE;
+      const fee = this.calculateBankPayoutFee(amount);
       totalBatchFees += fee;
 
       // Create Transaction Entity

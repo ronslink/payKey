@@ -160,14 +160,14 @@ class SubscriptionRepository {
           'Up to 5 workers',
           'Automatic tax calculations',
           'M-Pesa payments',
-          'P9 Tax Cards',
+          'P9 Supporting Summaries',
         ];
       case 'GOLD':
         return [
           'Up to 10 workers',
           'Automatic tax calculations',
           'M-Pesa payments',
-          'P9 Tax Cards',
+          'P9 Supporting Summaries',
           'Advanced reporting',
           'Accounting exports',
           'Priority support',
@@ -184,7 +184,7 @@ class SubscriptionRepository {
           'Advanced reporting',
           'Accounting exports',
           'Priority support',
-          'Automatic tax payments to KRA',
+          'Statutory contribution schedules',
           'Multi-property management',
           'Excel worker import',
         ];
@@ -215,7 +215,7 @@ class SubscriptionRepository {
               features.add('M-Pesa payments');
               break;
             case 'p9_tax_cards':
-              features.add('P9 Tax Cards');
+              features.add('P9 Supporting Summaries');
               break;
             case 'advanced_reporting':
               features.add('Advanced reporting');

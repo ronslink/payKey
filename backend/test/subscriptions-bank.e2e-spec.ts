@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
+import { DataSource } from 'typeorm';
 import {
   TestHelpers,
   createTestHelpers,
@@ -9,6 +10,17 @@ import {
 } from './helpers/test-helpers';
 import { SubscriptionPlan } from './types/test-types';
 import { IntaSendService } from '../src/modules/payments/intasend.service';
+import { SubscriptionPayment } from '../src/modules/subscriptions/entities/subscription-payment.entity';
+import {
+  Subscription,
+  SubscriptionStatus,
+} from '../src/modules/subscriptions/entities/subscription.entity';
+import {
+  Transaction,
+  TransactionStatus,
+  TransactionType,
+} from '../src/modules/payments/entities/transaction.entity';
+import { User } from '../src/modules/users/entities/user.entity';
 
 /**
  * Bank Subscription E2E Tests
@@ -34,6 +46,7 @@ describe('Bank Subscription Flow E2E', () => {
           id: 'mock-checkout-id',
           signature: 'mock-signature',
         }),
+        verifyWebhookSignature: jest.fn().mockReturnValue(true),
         initiateStkPush: jest.fn().mockResolvedValue({
           invoice: { invoice_id: 'mock-invoice-id' },
           tracking_id: 'mock-tracking-id',
@@ -126,7 +139,91 @@ describe('Bank Subscription Flow E2E', () => {
       // IntaSend URL usually contains 'intasend.com'
       expect(res.body.checkoutUrl).toContain('intasend');
 
-      console.log('Bank Checkout URL:', res.body.checkoutUrl);
+      const dataSource = app.get(DataSource);
+      const payment = await dataSource
+        .getRepository(SubscriptionPayment)
+        .findOne({
+          where: {
+            transactionId: res.body.reference,
+          },
+        });
+
+      expect(payment).toBeDefined();
+      expect(payment?.status).toBe('PENDING');
+      expect(payment?.paymentProvider).toBe('INTASEND');
+
+      const transaction = await dataSource.getRepository(Transaction).findOne({
+        where: {
+          accountReference: res.body.reference,
+        },
+      });
+
+      expect(transaction).toBeDefined();
+      expect(transaction?.type).toBe(TransactionType.SUBSCRIPTION);
+      expect(transaction?.status).toBe(TransactionStatus.PENDING);
+      expect(transaction?.providerRef).toBe('mock-checkout-id');
+      expect(transaction?.metadata?.subscriptionPaymentId).toBe(payment?.id);
+
+      const pendingPaymentRes = await request(app.getHttpServer())
+        .get('/subscriptions/pending-payment')
+        .set('Authorization', `Bearer ${testUser.token}`)
+        .expect(200);
+
+      expect(pendingPaymentRes.body.hasPendingPayment).toBe(true);
+      expect(pendingPaymentRes.body.pendingPayment.checkoutUrl).toBe(
+        res.body.checkoutUrl,
+      );
+      expect(pendingPaymentRes.body.pendingPayment.reference).toBe(
+        res.body.reference,
+      );
+
+      await request(app.getHttpServer())
+        .post('/webhooks/intasend')
+        .send({
+          challenge: 'paykey2026!',
+          invoice_id: 'mock-checkout-id',
+          api_ref: res.body.reference,
+          state: 'COMPLETE',
+          provider: 'PESALINK',
+          currency: 'KES',
+          value: targetPlan.price_kes,
+        })
+        .expect(201);
+
+      const updatedPayment = await dataSource
+        .getRepository(SubscriptionPayment)
+        .findOne({
+          where: {
+            id: payment?.id,
+          },
+        });
+
+      const updatedTransaction = await dataSource
+        .getRepository(Transaction)
+        .findOne({
+          where: {
+            id: transaction?.id,
+          },
+        });
+      const updatedSubscription = await dataSource
+        .getRepository(Subscription)
+        .findOne({
+          where: {
+            id: payment?.subscriptionId,
+          },
+        });
+      const updatedUser = await dataSource.getRepository(User).findOne({
+        where: {
+          id: testUser.userId,
+        },
+      });
+
+      expect(updatedPayment?.status).toBe('COMPLETED');
+      expect(updatedPayment?.paidDate).toBeDefined();
+      expect(updatedTransaction?.status).toBe(TransactionStatus.SUCCESS);
+      expect(updatedSubscription?.status).toBe(SubscriptionStatus.ACTIVE);
+      expect(updatedSubscription?.tier).toBe(targetPlan.tier);
+      expect(updatedUser?.tier).toBe(targetPlan.tier);
     });
   });
 });

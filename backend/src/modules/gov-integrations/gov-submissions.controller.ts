@@ -65,7 +65,7 @@ export class GovSubmissionsController {
   }
 
   /**
-   * Generate KRA P10 Excel file
+   * Generate a PAYE supporting worksheet (not an iTax upload template).
    */
   @Post('kra/generate')
   async generateP10(

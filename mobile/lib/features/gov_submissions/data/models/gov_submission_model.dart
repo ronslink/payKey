@@ -50,7 +50,7 @@ extension GovSubmissionTypeExtension on GovSubmissionType {
   String get displayName {
     switch (this) {
       case GovSubmissionType.kraP10:
-        return 'KRA P10';
+        return 'PAYE Supporting Schedule';
       case GovSubmissionType.shif:
         return 'SHIF';
       case GovSubmissionType.nssf:
@@ -61,7 +61,7 @@ extension GovSubmissionTypeExtension on GovSubmissionType {
   String get description {
     switch (this) {
       case GovSubmissionType.kraP10:
-        return 'Pay As You Earn (PAYE) return for KRA iTax';
+        return 'Payroll records to support the official KRA/iTax PAYE return';
       case GovSubmissionType.shif:
         return 'Social Health Insurance Fund contributions';
       case GovSubmissionType.nssf:
@@ -74,7 +74,7 @@ extension GovSubmissionStatusExtension on GovSubmissionStatus {
   String get displayName {
     switch (this) {
       case GovSubmissionStatus.generated:
-        return 'Ready to Upload';
+        return 'Ready to Review';
       case GovSubmissionStatus.uploaded:
         return 'Uploaded';
       case GovSubmissionStatus.confirmed:

@@ -392,12 +392,110 @@ export class ReportsService {
       },
     };
   }
+
+  private emptyP9Month(month: number) {
+    return {
+      month,
+      basicSalary: 0,
+      benefits: 0,
+      valueOfQuarters: 0,
+      grossPay: 0,
+      contribution: 0,
+      housingLevy: 0,
+      shif: 0,
+      postRetirementMedical: 0,
+      ownerOccupiedInterest: 0,
+      taxablePay: 0,
+      taxCharged: 0,
+      relief: 0,
+      insuranceRelief: 0,
+      paye: 0,
+    };
+  }
+
+  private buildP9Month(record: PayrollRecord) {
+    const tax = record.taxBreakdown || {};
+    const cashPay =
+      Number(record.grossSalary || 0) +
+      Number(record.bonuses || 0) +
+      Number(record.otherEarnings || 0) +
+      Number(record.overtimePay || 0);
+    const benefits = Number(record.nonCashBenefits || 0);
+    const grossPay = cashPay + benefits;
+    const nssf = Number(tax.nssf || 0);
+    const shif = Number(tax.nhif || tax.shif || 0);
+    const housingLevy = Number(tax.housingLevy || 0);
+    const contribution = Number(
+      tax.allowablePensionDeduction ??
+        Math.min(30000, nssf + Number(record.worker?.pensionContribution || 0)),
+    );
+    const postRetirementMedical = Number(
+      tax.allowablePostRetirementMedicalContribution ??
+        Math.min(
+          15000,
+          Number(record.worker?.postRetirementMedicalContribution || 0),
+        ),
+    );
+    const ownerOccupiedInterest = Number(
+      tax.allowableMortgageInterest ??
+        Math.min(30000, Number(record.worker?.mortgageInterest || 0)),
+    );
+    const paye = Number(tax.paye || 0);
+    const relief = Number(tax.personalReliefApplied ?? (paye > 0 ? 2400 : 0));
+    const insuranceRelief = Number(
+      tax.insuranceReliefApplied ??
+        (paye > 0
+          ? Math.min(
+              5000,
+              Number(record.worker?.lifeInsurancePremium || 0) * 0.15,
+            )
+          : 0),
+    );
+    const taxablePay = Number(
+      tax.taxablePay ??
+        Math.max(
+          0,
+          grossPay -
+            contribution -
+            housingLevy -
+            shif -
+            postRetirementMedical -
+            ownerOccupiedInterest,
+        ),
+    );
+
+    return {
+      month: new Date(record.periodStart).getMonth() + 1,
+      basicSalary: cashPay,
+      benefits,
+      valueOfQuarters: 0,
+      grossPay,
+      contribution,
+      housingLevy,
+      shif,
+      postRetirementMedical,
+      ownerOccupiedInterest,
+      taxablePay,
+      taxCharged: Number(tax.taxCharged ?? paye + relief + insuranceRelief),
+      relief,
+      insuranceRelief,
+      paye,
+    };
+  }
+
   async getP9Report(userId: string, year: number, workerId?: string) {
     console.log(
       `Getting P9 report for user ${userId}, year ${year}, worker ${workerId || 'ALL'}`,
     );
     const startDate = new Date(year, 0, 1);
     const endDate = new Date(year, 11, 31, 23, 59, 59);
+    const employer = await this.usersRepository.findOne({
+      where: { id: userId },
+    });
+    const employerName =
+      employer?.businessName ||
+      [employer?.firstName, employer?.lastName].filter(Boolean).join(' ') ||
+      '';
 
     const whereClause: any = {
       userId,
@@ -422,31 +520,18 @@ export class ReportsService {
     // Group by worker
     const workerReports: Record<string, any> = {};
 
-    // Default tax relief (Should ideally come from config snapshot)
-    const PERSONAL_RELIEF = 2400;
-
     for (const record of records) {
       if (!workerReports[record.workerId]) {
         workerReports[record.workerId] = {
+          year,
           workerId: record.workerId,
           workerName: record.worker?.name || 'Unknown',
           kraPin: record.worker?.kraPin || '',
+          employerName,
+          employerPin: employer?.kraPin || '',
           months: Array(12)
             .fill(null)
-            .map((_, i) => ({
-              month: i + 1,
-              basicSalary: 0,
-              benefits: 0,
-              grossPay: 0,
-              contribution: 0, // NSSF
-              taxablePay: 0,
-              taxCharged: 0,
-              relief: 0,
-              paye: 0,
-              valueOfQuarters: 0,
-              ownerOccupiedInterest: 0,
-              retirementContribution: 0,
-            })),
+            .map((_, i) => this.emptyP9Month(i + 1)),
           totals: {
             basicSalary: 0,
             grossPay: 0,
@@ -455,41 +540,17 @@ export class ReportsService {
         };
       }
 
-      const start = new Date(record.periodStart);
-      const monthIndex = start.getMonth(); // 0-11
+      const monthIndex = new Date(record.periodStart).getMonth();
       const report = workerReports[record.workerId];
-
-      const basicSalary = Number(record.grossSalary || 0);
-      const benefits =
-        Number(record.bonuses || 0) + Number(record.otherEarnings || 0);
-      const gross = basicSalary + benefits;
-      const nssf = Number(record.taxBreakdown?.nssf || 0);
-      const paye = Number(record.taxBreakdown?.paye || 0);
-      const taxable = Math.max(0, gross - nssf);
-
-      // Back-calculate Tax Charged (PAYE + Relief) only if PAYE > 0
-      const taxCharged = paye > 0 ? paye + PERSONAL_RELIEF : 0;
+      const monthData = this.buildP9Month(record);
 
       if (report.months[monthIndex]) {
-        report.months[monthIndex] = {
-          month: monthIndex + 1,
-          basicSalary: basicSalary,
-          benefits: benefits,
-          valueOfQuarters: 0,
-          grossPay: gross,
-          contribution: nssf, // Defined Contribution
-          ownerOccupiedInterest: 0,
-          retirementContribution: 0,
-          taxablePay: taxable,
-          taxCharged: taxCharged,
-          relief: paye > 0 ? PERSONAL_RELIEF : 0,
-          paye: paye,
-        };
+        report.months[monthIndex] = monthData;
       }
 
-      report.totals.basicSalary += basicSalary;
-      report.totals.grossPay += gross;
-      report.totals.paye += paye;
+      report.totals.basicSalary += monthData.basicSalary;
+      report.totals.grossPay += monthData.grossPay;
+      report.totals.paye += monthData.paye;
     }
 
     return Object.values(workerReports);
@@ -539,9 +600,16 @@ export class ReportsService {
       { paye: 0, nssf: 0, nhif: 0, housingLevy: 0, totalTax: 0 },
     );
 
+    const employer = await this.usersRepository.findOne({
+      where: { id: userId },
+    });
+
     return {
       year,
-      employerName: 'My Company', // Configurable
+      employerName:
+        employer?.businessName ||
+        [employer?.firstName, employer?.lastName].filter(Boolean).join(' ') ||
+        '',
       monthlyReturns,
       annualTotals,
     };
@@ -566,6 +634,14 @@ export class ReportsService {
       throw new NotFoundException('No worker profile linked to this account');
     }
 
+    const employer = await this.usersRepository.findOne({
+      where: { id: worker.userId },
+    });
+    const employerName =
+      employer?.businessName ||
+      [employer?.firstName, employer?.lastName].filter(Boolean).join(' ') ||
+      '';
+
     const records = await this.payrollRecordRepository.find({
       where: {
         workerId: worker.id,
@@ -576,31 +652,16 @@ export class ReportsService {
       order: { periodStart: 'ASC' },
     });
 
-    // Reuse similar logic to getP9Report but specific to this worker
-    // Default tax relief
-    const PERSONAL_RELIEF = 2400;
-
-    // Initialize standard P9 Report Structure
     const report = {
+      year,
       workerId: worker.id,
       workerName: worker.name,
       kraPin: worker.kraPin || '',
+      employerName,
+      employerPin: employer?.kraPin || '',
       months: Array(12)
         .fill(null)
-        .map((_, i) => ({
-          month: i + 1,
-          basicSalary: 0,
-          benefits: 0,
-          grossPay: 0,
-          contribution: 0,
-          taxablePay: 0,
-          taxCharged: 0,
-          relief: 0,
-          paye: 0,
-          valueOfQuarters: 0,
-          ownerOccupiedInterest: 0,
-          retirementContribution: 0,
-        })),
+        .map((_, i) => this.emptyP9Month(i + 1)),
       totals: {
         basicSalary: 0,
         grossPay: 0,
@@ -609,35 +670,14 @@ export class ReportsService {
     };
 
     for (const record of records) {
-      const start = new Date(record.periodStart);
-      const monthIndex = start.getMonth(); // 0-11
+      const monthIndex = new Date(record.periodStart).getMonth();
+      const monthData = this.buildP9Month(record);
 
-      const basicSalary = Number(record.grossSalary);
-      const benefits = Number(record.bonuses) + Number(record.otherEarnings);
-      const gross = basicSalary + benefits;
-      const nssf = Number(record.taxBreakdown?.nssf || 0);
-      const paye = Number(record.taxBreakdown?.paye || 0);
-      const taxable = Math.max(0, gross - nssf);
-      const taxCharged = paye > 0 ? paye + PERSONAL_RELIEF : 0;
+      report.months[monthIndex] = monthData;
 
-      report.months[monthIndex] = {
-        month: monthIndex + 1,
-        basicSalary: basicSalary,
-        benefits: benefits,
-        valueOfQuarters: 0,
-        grossPay: gross,
-        contribution: nssf,
-        ownerOccupiedInterest: 0,
-        retirementContribution: 0,
-        taxablePay: taxable,
-        taxCharged: taxCharged,
-        relief: paye > 0 ? PERSONAL_RELIEF : 0,
-        paye: paye,
-      };
-
-      report.totals.basicSalary += basicSalary;
-      report.totals.grossPay += gross;
-      report.totals.paye += paye;
+      report.totals.basicSalary += monthData.basicSalary;
+      report.totals.grossPay += monthData.grossPay;
+      report.totals.paye += monthData.paye;
     }
 
     return [report]; // Return as list for consistency
@@ -648,205 +688,129 @@ export class ReportsService {
    */
   async generateP9Pdf(report: any): Promise<Buffer> {
     return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ layout: 'landscape', margin: 30 });
+      const doc = new PDFDocument({
+        layout: 'landscape',
+        size: 'A4',
+        margin: 24,
+      });
       const buffers: Buffer[] = [];
 
       doc.on('data', (buffer: any) => buffers.push(buffer));
       doc.on('end', () => resolve(Buffer.concat(buffers)));
       doc.on('error', (err: any) => reject(err));
 
-      // Header
       doc
         .fontSize(14)
         .font('Helvetica-Bold')
-        .text('KENYA REVENUE AUTHORITY', { align: 'center' });
-      doc.fontSize(12).text('INCOME TAX DEPARTMENT', { align: 'center' });
-      doc.fontSize(16).text('P9A', { align: 'left' });
+        .text('PAYROLL TAX DEDUCTION SUMMARY', { align: 'center' });
+      doc.fontSize(11).text(`P9 supporting schedule — ${report.year || ''}`, {
+        align: 'center',
+      });
       doc
-        .fontSize(12)
-        .text('TAX DEDUCTION CARD YEAR ' + new Date().getFullYear(), {
-          align: 'center',
-        });
+        .font('Helvetica')
+        .fontSize(8)
+        .text(
+          'Supporting record only. Use the current official KRA form and iTax process for filing.',
+          { align: 'center' },
+        );
       doc.moveDown();
 
-      // Details Grid
-      const startX = 30;
+      const startX = 24;
       let y = doc.y;
-
-      doc.fontSize(10).font('Helvetica');
+      doc.fontSize(9);
+      doc.text(`Employer: ${report.employerName || 'Not provided'}`, startX, y);
+      doc.text(`Employee: ${report.workerName || ''}`, startX + 390, y);
+      y += 16;
       doc.text(
-        `Employer's Name: ${report.employerName || 'My Company'}`,
+        `Employer PIN: ${report.employerPin || 'Not provided'}`,
         startX,
         y,
-      ); // TODO: Fetch from config
-      doc.text(`Employee's Main Name: ${report.workerName}`, startX + 300, y);
-      y += 20;
+      );
       doc.text(
-        `Employer's PIN: ${report.employerPin || 'P000000000A'}`,
-        startX,
+        `Employee PIN: ${report.kraPin || 'Not provided'}`,
+        startX + 390,
         y,
-      ); // TODO: Fetch from config
-      doc.text(`Employee's PIN: ${report.kraPin}`, startX + 300, y);
+      );
+      y += 24;
 
-      doc.moveDown(2);
+      const columns = [
+        { label: 'Month', key: 'month', width: 35 },
+        { label: 'Cash Pay', key: 'basicSalary', width: 55 },
+        { label: 'Non-Cash', key: 'benefits', width: 50 },
+        { label: 'Gross', key: 'grossPay', width: 55 },
+        { label: 'Pension', key: 'contribution', width: 50 },
+        { label: 'AHL', key: 'housingLevy', width: 45 },
+        { label: 'SHIF', key: 'shif', width: 45 },
+        { label: 'PRMF', key: 'postRetirementMedical', width: 50 },
+        { label: 'Mortgage', key: 'ownerOccupiedInterest', width: 50 },
+        { label: 'Chargeable', key: 'taxablePay', width: 60 },
+        { label: 'Tax', key: 'taxCharged', width: 50 },
+        { label: 'Personal', key: 'relief', width: 50 },
+        { label: 'Insurance', key: 'insuranceRelief', width: 50 },
+        { label: 'PAYE', key: 'paye', width: 50 },
+      ];
+      const tableWidth = columns.reduce((sum, column) => sum + column.width, 0);
 
-      // Table Headers
-      const colWidths = [40, 60, 60, 60, 70, 70, 60, 70, 70, 70, 70, 70];
-      const headers = [
-        'Month',
-        'Basic\nSalary',
-        'Benefits\nNon-Cash',
-        'Value of\nQuarters',
-        'Total\nGross Pay',
-        'Defined\nContrib.',
-        'Owner\nOcc Int.',
-        'Retirement\nContrib.',
-        'Chargeable\nPay',
-        'Tax\nCharged',
-        'Personal\nRelief',
-        'PAYE Tax',
-      ]; // A to L
-
-      // Draw Header Row
       let x = startX;
-      y = doc.y;
-      const headerHeight = 30;
-
-      doc.font('Helvetica-Bold').fontSize(8);
-
-      headers.forEach((header, i) => {
-        doc.text(header, x, y, { width: colWidths[i], align: 'center' });
-        x += colWidths[i];
+      doc.font('Helvetica-Bold').fontSize(7);
+      columns.forEach((column) => {
+        doc.text(column.label, x, y, {
+          width: column.width,
+          align: 'center',
+        });
+        x += column.width;
       });
-
-      // Draw Lines
       doc
-        .moveTo(startX, y - 5)
-        .lineTo(x, y - 5)
-        .stroke(); // Top
+        .moveTo(startX, y - 4)
+        .lineTo(startX + tableWidth, y - 4)
+        .stroke();
       doc
-        .moveTo(startX, y + headerHeight)
-        .lineTo(x, y + headerHeight)
-        .stroke(); // Bottom
+        .moveTo(startX, y + 16)
+        .lineTo(startX + tableWidth, y + 16)
+        .stroke();
+      y += 22;
 
-      y += headerHeight + 5;
-
-      // Draw Data Rows
-      doc.font('Helvetica').fontSize(9);
+      const drawRow = (monthData: any, isTotal = false) => {
+        let rowX = startX;
+        doc.font(isTotal ? 'Helvetica-Bold' : 'Helvetica').fontSize(7);
+        columns.forEach((column, index) => {
+          const rawValue = monthData[column.key];
+          const value =
+            index === 0 ? rawValue : this.formatMoney(Number(rawValue || 0));
+          doc.text(String(value), rowX, y, {
+            width: column.width,
+            align: index === 0 ? 'center' : 'right',
+          });
+          rowX += column.width;
+        });
+        y += 16;
+      };
 
       report.months.forEach((monthData: any) => {
-        let rowX = startX;
-        // Month Name
-        const monthName = new Date(0, monthData.month - 1).toLocaleString(
-          'default',
-          { month: 'short' },
-        );
-
-        doc.text(monthName, rowX, y, { width: colWidths[0], align: 'center' });
-        rowX += colWidths[0];
-        doc.text(this.formatMoney(monthData.basicSalary), rowX, y, {
-          width: colWidths[1],
-          align: 'right',
+        drawRow({
+          ...monthData,
+          month: new Date(0, monthData.month - 1).toLocaleString('en', {
+            month: 'short',
+          }),
         });
-        rowX += colWidths[1];
-        doc.text(this.formatMoney(monthData.benefits), rowX, y, {
-          width: colWidths[2],
-          align: 'right',
-        });
-        rowX += colWidths[2];
-        doc.text(this.formatMoney(monthData.valueOfQuarters), rowX, y, {
-          width: colWidths[3],
-          align: 'right',
-        });
-        rowX += colWidths[3];
-        doc.text(this.formatMoney(monthData.grossPay), rowX, y, {
-          width: colWidths[4],
-          align: 'right',
-        });
-        rowX += colWidths[4];
-
-        // Defined Contribution (E1) = 30% of A etc.. usually just NSSF here
-        doc.text(this.formatMoney(monthData.contribution), rowX, y, {
-          width: colWidths[5],
-          align: 'right',
-        });
-        rowX += colWidths[5];
-        doc.text(this.formatMoney(monthData.ownerOccupiedInterest), rowX, y, {
-          width: colWidths[6],
-          align: 'right',
-        });
-        rowX += colWidths[6];
-        doc.text(this.formatMoney(monthData.retirementContribution), rowX, y, {
-          width: colWidths[7],
-          align: 'right',
-        });
-        rowX += colWidths[7];
-
-        doc.text(this.formatMoney(monthData.taxablePay), rowX, y, {
-          width: colWidths[8],
-          align: 'right',
-        });
-        rowX += colWidths[8];
-        doc.text(this.formatMoney(monthData.taxCharged), rowX, y, {
-          width: colWidths[9],
-          align: 'right',
-        });
-        rowX += colWidths[9]; // J
-        doc.text(this.formatMoney(monthData.relief), rowX, y, {
-          width: colWidths[10],
-          align: 'right',
-        });
-        rowX += colWidths[10]; // K
-        doc.text(this.formatMoney(monthData.paye), rowX, y, {
-          width: colWidths[11],
-          align: 'right',
-        });
-        rowX += colWidths[11]; // L
-
-        y += 20;
       });
 
-      // Draw Totals Line
-      doc.moveTo(startX, y).lineTo(x, y).stroke();
+      doc
+        .moveTo(startX, y)
+        .lineTo(startX + tableWidth, y)
+        .stroke();
       y += 5;
-
-      // Totals Row
-      doc.font('Helvetica-Bold');
-      doc.text('TOTALS', startX, y, { width: colWidths[0], align: 'center' });
-      let totalX = startX + colWidths[0];
-
-      doc.text(this.formatMoney(report.totals.basicSalary), totalX, y, {
-        width: colWidths[1],
-        align: 'right',
-      });
-      totalX += colWidths[1];
-      // Skip breakdown totals if not calculated, just show key ones
-      totalX += colWidths[2]; // Benefits
-      totalX += colWidths[3]; // Quarters
-      doc.text(this.formatMoney(report.totals.grossPay), totalX, y, {
-        width: colWidths[4],
-        align: 'right',
-      });
-      totalX += colWidths[4];
-
-      // Skip to PAYE
-      totalX =
-        startX +
-        colWidths[0] +
-        colWidths[1] +
-        colWidths[2] +
-        colWidths[3] +
-        colWidths[4] +
-        colWidths[5] +
-        colWidths[6] +
-        colWidths[7] +
-        colWidths[8] +
-        colWidths[9] +
-        colWidths[10];
-      doc.text(this.formatMoney(report.totals.paye), totalX, y, {
-        width: colWidths[11],
-        align: 'right',
-      });
+      const totals = report.months.reduce(
+        (sum: Record<string, number>, monthData: any) => {
+          columns.slice(1).forEach((column) => {
+            sum[column.key] =
+              (sum[column.key] || 0) + Number(monthData[column.key] || 0);
+          });
+          return sum;
+        },
+        { month: 0 },
+      );
+      drawRow({ ...totals, month: 'TOTAL' }, true);
 
       doc.end();
     });
@@ -861,12 +825,12 @@ export class ReportsService {
 
     for (const report of reports) {
       const buffer = await this.generateP9Pdf(report);
-      const filename = `P9_${year}_${report.workerName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+      const filename = `P9_SUPPORT_${year}_${report.workerName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
       archive.append(buffer, { name: filename });
     }
 
     archive.finalize();
-    return { stream: archive, filename: `P9_Returns_${year}.zip` };
+    return { stream: archive, filename: `P9_Supporting_Summaries_${year}.zip` };
   }
 
   /**
@@ -881,6 +845,14 @@ export class ReportsService {
     if (!record) {
       throw new NotFoundException('Payroll record not found');
     }
+
+    const employer = await this.usersRepository.findOne({
+      where: { id: record.userId },
+    });
+    const employerName =
+      employer?.businessName ||
+      [employer?.firstName, employer?.lastName].filter(Boolean).join(' ') ||
+      'Employer';
 
     return new Promise((resolve, reject) => {
       const doc = new PDFDocument({ margin: 50 });
@@ -897,13 +869,10 @@ export class ReportsService {
         .text('PAYSLIP', { align: 'center' });
       doc.moveDown();
 
-      // Company Info (Placeholder)
-      doc.fontSize(12).font('Helvetica-Bold').text('My Company Name');
-      doc
-        .font('Helvetica')
-        .fontSize(10)
-        .text('123 Business Road, Nairobi, Kenya');
-      doc.text('PIN: P000000000A');
+      doc.fontSize(12).font('Helvetica-Bold').text(employerName);
+      doc.font('Helvetica').fontSize(10);
+      if (employer?.address) doc.text(employer.address);
+      if (employer?.kraPin) doc.text(`PIN: ${employer.kraPin}`);
       doc.moveDown();
 
       const y = doc.y;

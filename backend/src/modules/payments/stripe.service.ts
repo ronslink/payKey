@@ -382,6 +382,7 @@ export class StripeService {
           await this.handlePaymentIntentSucceeded(event.data.object);
           break;
         case 'invoice.payment_succeeded':
+        case 'invoice.paid':
           await this.handlePaymentSucceeded(event.data.object);
           break;
         case 'invoice.payment_failed':
@@ -652,8 +653,42 @@ export class StripeService {
           break;
       }
 
+      subscription.autoRenewal = !stripeSubscription.cancel_at_period_end;
+      subscription.endDate = stripeSubscription.cancel_at_period_end
+        ? new Date(stripeSubscription.current_period_end * 1000)
+        : subscription.endDate;
       await this.subscriptionRepository.save(subscription);
     }
+  }
+
+  async setCancelAtPeriodEnd(
+    userId: string,
+    cancelAtPeriodEnd: boolean,
+  ): Promise<Subscription> {
+    const stripe = this.ensureStripeConfigured();
+
+    const subscription = await this.subscriptionRepository.findOne({
+      where: { userId, status: SubscriptionStatus.ACTIVE },
+    });
+
+    if (!subscription?.stripeSubscriptionId) {
+      throw new NotFoundException('Active Stripe subscription not found');
+    }
+
+    const stripeSubscription = await stripe.subscriptions.update(
+      subscription.stripeSubscriptionId,
+      {
+        cancel_at_period_end: cancelAtPeriodEnd,
+      },
+    );
+
+    subscription.autoRenewal = !stripeSubscription.cancel_at_period_end;
+    subscription.endDate = stripeSubscription.cancel_at_period_end
+      ? new Date(stripeSubscription.current_period_end * 1000)
+      : null;
+    await this.subscriptionRepository.save(subscription);
+
+    return subscription;
   }
 
   /**

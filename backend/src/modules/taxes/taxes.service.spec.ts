@@ -15,11 +15,19 @@ describe('TaxesService', () => {
   beforeEach(async () => {
     const mockTaxConfigService = {
       getActiveTaxConfig: jest.fn().mockImplementation((type) => {
-        switch(type) {
+        switch (type) {
           case TaxType.NSSF_TIER1:
-            return { configuration: { tiers: [{ rate: 0.06, salaryTo: 8000 }] } };
+            return {
+              configuration: {
+                tiers: [{ rate: 0.06, salaryFrom: 0, salaryTo: 9000 }],
+              },
+            };
           case TaxType.NSSF_TIER2:
-            return { configuration: { tiers: [{ rate: 0.06, salaryFrom: 8001, salaryTo: 72000 }] } };
+            return {
+              configuration: {
+                tiers: [{ rate: 0.06, salaryFrom: 9000, salaryTo: 108000 }],
+              },
+            };
           case TaxType.SHIF:
             return { configuration: { percentage: 2.75, minAmount: 300 } };
           case TaxType.HOUSING_LEVY:
@@ -28,12 +36,20 @@ describe('TaxesService', () => {
             return {
               configuration: {
                 personalRelief: 2400,
+                insuranceRelief: 0.15,
+                maxInsuranceRelief: 5000,
+                maxAllowablePension: 30000,
+                maxMortgageInterest: 30000,
+                maxPostRetirementMedicalContribution: 15000,
+                nonCashBenefitExemptionThreshold: 5000,
                 brackets: [
                   { to: 24000, rate: 0.1 },
                   { to: 32333, rate: 0.25 },
-                  { to: null, rate: 0.3 }
-                ]
-              }
+                  { to: 500000, rate: 0.3 },
+                  { to: 800000, rate: 0.325 },
+                  { to: null, rate: 0.35 },
+                ],
+              },
             };
           default:
             return null;
@@ -107,14 +123,15 @@ describe('TaxesService', () => {
       expect(result.housingLevy).toBeCloseTo(750, 2);
       // NSSF: Tier 1 (8000*0.06 = 480) + Tier 2 ((50000-8000)*0.06 = 2520) = 3000
       expect(result.nssf).toBeCloseTo(3000, 2);
-      
-      // Taxable Income = 50000 - 3000 = 47000
-      // PAYE: (24000*0.1) + (8333*0.25) + (14667*0.3) = 8883.35
-      // Reliefs: 2400 (Personal) + (1375 * 0.15 = 206.25 Insurance Relief) = 2606.25
-      // Final PAYE = 8883.35 - 2606.25 = 6277.10
-      expect(result.paye).toBeCloseTo(6277.10, 2);
-      
-      expect(result.totalDeductions).toBeCloseTo(3000 + 1375 + 750 + 6277.10, 2);
+
+      // Taxable = 50,000 - 3,000 NSSF - 1,375 SHIF - 750 AHL = 44,875
+      // Tax = 8,245.85; less KES 2,400 personal relief = KES 5,845.85
+      expect(result.paye).toBeCloseTo(5845.85, 2);
+
+      expect(result.totalDeductions).toBeCloseTo(
+        3000 + 1375 + 750 + 5845.85,
+        2,
+      );
     });
 
     it('should calculate net pay correctly', async () => {
@@ -126,16 +143,15 @@ describe('TaxesService', () => {
       expect(netPay).toBeLessThan(grossSalary);
     });
 
-    it('should handle zero salary with minimum SHIF', async () => {
+    it('should not create deductions or negative net pay for zero salary', async () => {
       const taxes = await service.calculateTaxes(0, new Date());
       const netPay = await service.calculateNetPay(0);
 
-      // SHIF has a minimum of 300 KES even at 0 salary
-      expect(taxes.nhif).toBe(300);
+      expect(taxes.nhif).toBe(0);
       expect(taxes.nssf).toBe(0);
       expect(taxes.housingLevy).toBe(0);
       expect(taxes.paye).toBe(0);
-      expect(netPay).toBe(-300); // Net is negative due to min SHIF
+      expect(netPay).toBe(0);
     });
 
     it('should have totalDeductions equal to sum of individual taxes', async () => {
@@ -172,20 +188,50 @@ describe('TaxesService', () => {
       expect(highSalaryTaxes.paye).toBeGreaterThan(lowSalaryTaxes.paye);
     });
 
-    it('should have PAYE reduced by personal and insurance relief', async () => {
-      // For very low income, personal and insurance relief should completely offset PAYE
+    it('should deduct SHIF and AHL from taxable pay', async () => {
       const taxes = await service.calculateTaxes(20000, new Date());
 
       // At 20k gross, PAYE should be 0 due to reliefs
       expect(taxes.paye).toBe(0);
-      
-      // Let's test a case where PAYE is slightly above relief
+
       const taxesAbove = await service.calculateTaxes(30000, new Date());
-      // Taxable = 30000 - 1800 (NSSF) = 28200
-      // PAYE before = (24000*0.1) + (4200*0.25) = 3450
-      // Relief = 2400 + (825*0.15 = 123.75) = 2523.75
-      // Final PAYE = 3450 - 2523.75 = 926.25
-      expect(taxesAbove.paye).toBeCloseTo(926.25, 2);
+      // Taxable = 30,000 - 1,800 NSSF - 825 SHIF - 450 AHL = 26,925
+      // Tax = 3,131.25; less personal relief = 731.25
+      expect(taxesAbove.paye).toBeCloseTo(731.25, 2);
+    });
+
+    it.each([
+      [5000, 300],
+      [9000, 540],
+      [20000, 1200],
+      [108000, 6480],
+      [150000, 6480],
+    ])(
+      'uses 2026 NSSF Year 4 limits for gross salary %s',
+      async (grossSalary, expectedNssf) => {
+        const taxes = await service.calculateTaxes(grossSalary, new Date());
+        expect(taxes.nssf).toBe(expectedNssf);
+      },
+    );
+
+    it('adds non-cash benefits once for PAYE only', async () => {
+      const taxes = await service.calculateTaxes(50000, new Date(), {
+        nonCashBenefits: 10000,
+      });
+
+      expect(taxes.nssf).toBe(3000);
+      expect(taxes.nhif).toBe(1375);
+      expect(taxes.housingLevy).toBe(750);
+      expect(taxes.paye).toBeCloseTo(8845.85, 2);
+    });
+
+    it('applies insurance relief only to a declared qualifying premium', async () => {
+      const withoutPremium = await service.calculateTaxes(50000, new Date());
+      const withPremium = await service.calculateTaxes(50000, new Date(), {
+        lifeInsurancePremium: 1000,
+      });
+
+      expect(withoutPremium.paye - withPremium.paye).toBeCloseTo(150, 2);
     });
   });
 });

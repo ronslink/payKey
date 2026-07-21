@@ -1,91 +1,210 @@
 export default function PrivacyPolicy() {
-    return (
-        <div className="min-h-screen pt-16">
-            <main className="py-16 sm:py-24">
-                <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+  return (
+    <div className="min-h-screen pt-16">
+      <main className="py-16 sm:py-24">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">
+            Privacy Policy
+          </h1>
+          <p className="text-slate-400 mb-12">Last updated: 21 July 2026</p>
 
-                    <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">Privacy Policy</h1>
-                    <p className="text-slate-400 mb-12">Last updated: {new Date().toLocaleDateString()}</p>
+          <div className="flex flex-col gap-10 text-slate-300 leading-relaxed">
+            <section>
+              <h2 className="text-xl font-semibold text-white mb-4">
+                1. Introduction
+              </h2>
+              <p>
+                This notice explains how Paydome collects, uses, shares, and
+                protects personal data when you use our website, mobile
+                application, and payroll services. Paydome is a PayGlobus
+                product, and PayGlobus GmbH is the contact for this notice.
+              </p>
+              <p className="mt-4">
+                Employers may add information about their workers to Paydome.
+                Employers are responsible for having an appropriate basis to
+                provide that information and for keeping it accurate.
+              </p>
+            </section>
 
-                    <div className="flex flex-col gap-10 text-slate-300 leading-relaxed">
+            <section>
+              <h2 className="text-xl font-semibold text-white mb-4">
+                2. Information We Collect
+              </h2>
+              <ul className="list-disc pl-6 flex flex-col gap-2">
+                <li>
+                  <strong className="text-white">
+                    Account and contact data:
+                  </strong>{" "}
+                  names, email addresses, phone numbers, and account settings.
+                </li>
+                <li>
+                  <strong className="text-white">Employment data:</strong>{" "}
+                  employer and worker details, job information, salary,
+                  benefits, deductions, attendance, and payroll records.
+                </li>
+                <li>
+                  <strong className="text-white">Payment data:</strong> payment
+                  method details, account or mobile-money identifiers,
+                  transaction references, status, and amounts. Payment providers
+                  may collect additional information under their own privacy
+                  notices.
+                </li>
+                <li>
+                  <strong className="text-white">
+                    Government identifiers:
+                  </strong>{" "}
+                  information such as KRA PIN, NSSF number, and SHIF number when
+                  you choose to record it.
+                </li>
+                <li>
+                  <strong className="text-white">
+                    Usage and diagnostic data:
+                  </strong>{" "}
+                  device, browser, IP address, logs, crash details, and how you
+                  use the service.
+                </li>
+              </ul>
+            </section>
 
-                        <section>
-                            <h2 className="text-xl font-semibold text-white mb-4">1. Introduction</h2>
-                            <p>
-                                Welcome to Paydome. We are committed to protecting your personal information and your right to privacy.
-                                This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website
-                                or use our mobile application.
-                            </p>
-                            <p className="mt-4">
-                                Paydome is a subsidiary of PayGlobus GmbH. By accessing or using our Service, you signify that you have read, understood,
-                                and agree to our collection, storage, use, and disclosure of your personal information as described in this Privacy Policy.
-                            </p>
-                        </section>
+            <section>
+              <h2 className="text-xl font-semibold text-white mb-4">
+                3. How We Use Information
+              </h2>
+              <ul className="list-disc pl-6 flex flex-col gap-2">
+                <li>Provide, secure, support, and improve Paydome.</li>
+                <li>Manage accounts and authenticate users.</li>
+                <li>
+                  Calculate payroll deductions and produce records that support
+                  employer filing and record-keeping obligations.
+                </li>
+                <li>
+                  Initiate and track payments that a user authorizes through our
+                  payment providers.
+                </li>
+                <li>Respond to support requests and service communications.</li>
+                <li>Detect fraud, abuse, security incidents, and errors.</li>
+                <li>Meet legal, accounting, and regulatory obligations.</li>
+              </ul>
+            </section>
 
-                        <section>
-                            <h2 className="text-xl font-semibold text-white mb-4">2. Information We Collect</h2>
-                            <p>
-                                We collect information that identifies, relates to, describes, references, is capable of being associated with, or could
-                                reasonably be linked, directly or indirectly, with a particular consumer or device ("personal information").
-                            </p>
-                            <ul className="list-disc pl-6 mt-4 flex flex-col gap-2">
-                                <li><strong className="text-white">Personal Identifiers:</strong> Name, email address, phone number, postal address.</li>
-                                <li><strong className="text-white">Employment Data:</strong> Employer details, job role, salary information (for payroll processing).</li>
-                                <li><strong className="text-white">Financial Information:</strong> Bank account details, tax identification numbers.</li>
-                                <li><strong className="text-white">Usage Data:</strong> Information on how you use our website and mobile app, including IP address, browser type, and operating system.</li>
-                            </ul>
-                        </section>
+            <section>
+              <h2 className="text-xl font-semibold text-white mb-4">
+                4. When We Share Information
+              </h2>
+              <p>We may share data only as needed with:</p>
+              <ul className="list-disc pl-6 mt-4 flex flex-col gap-2">
+                <li>
+                  payment providers and financial institutions used to process
+                  or reconcile user-authorized transactions;
+                </li>
+                <li>
+                  hosting, database, authentication, analytics, communications,
+                  and technical-support providers;
+                </li>
+                <li>
+                  professional advisers, auditors, insurers, and authorities
+                  when required to protect rights or comply with law; and
+                </li>
+                <li>
+                  a buyer or successor in connection with a proposed or
+                  completed business transaction, subject to appropriate
+                  safeguards.
+                </li>
+              </ul>
+              <p className="mt-4">
+                We do not sell personal data. We do not authorize service
+                providers to use payroll data for their own marketing.
+              </p>
+            </section>
 
-                        <section>
-                            <h2 className="text-xl font-semibold text-white mb-4">3. How We Use Your Information</h2>
-                            <p>We use the information we collect to:</p>
-                            <ul className="list-disc pl-6 mt-4 flex flex-col gap-2">
-                                <li>Provide, operate, and maintain our payroll services.</li>
-                                <li>Process your transactions and manage your account.</li>
-                                <li>Improve, personalize, and expand our website and services.</li>
-                                <li>Understand and analyze how you use our services.</li>
-                                <li>Communicate with you, either directly or through one of our partners, including for customer service, updates, and marketing.</li>
-                                <li>Process payments and tax filings on your behalf.</li>
-                                <li>Find and prevent fraud.</li>
-                            </ul>
-                        </section>
+            <section>
+              <h2 className="text-xl font-semibold text-white mb-4">
+                5. Retention
+              </h2>
+              <p>
+                We retain account and payroll data while it is needed to provide
+                the service and for applicable legal, tax, accounting, dispute,
+                fraud-prevention, and security requirements. When data is no
+                longer needed, we delete or anonymize it, subject to reasonable
+                backup and legal-hold periods.
+              </p>
+            </section>
 
-                        <section>
-                            <h2 className="text-xl font-semibold text-white mb-4">4. Sharing Your Information</h2>
-                            <p>
-                                We may share your information with third parties in certain situations, including:
-                            </p>
-                            <ul className="list-disc pl-6 mt-4 flex flex-col gap-2">
-                                <li><strong className="text-white">Service Providers:</strong> We may share your data with third-party vendors, service providers, contractors, or agents who perform services for us or on our behalf and require access to such information to do that work.</li>
-                                <li><strong className="text-white">Business Transfers:</strong> We may share or transfer your information in connection with, or during negotiations of, any merger, sale of company assets, financing, or acquisition of all or a portion of our business to another company.</li>
-                                <li><strong className="text-white">Legal Requirements:</strong> We may disclose your information where we are legally required to do so in order to comply with applicable law, governmental requests, a judicial proceeding, court order, or legal process.</li>
-                            </ul>
-                        </section>
+            <section>
+              <h2 className="text-xl font-semibold text-white mb-4">
+                6. International Processing
+              </h2>
+              <p>
+                PayGlobus GmbH and some service providers may process data
+                outside Kenya. Where personal data is transferred
+                internationally, we use safeguards required by applicable
+                data-protection law and limit access to the purposes described
+                in this notice.
+              </p>
+            </section>
 
-                        <section>
-                            <h2 className="text-xl font-semibold text-white mb-4">5. Security of Your Information</h2>
-                            <p>
-                                We use administrative, technical, and physical security measures to help protect your personal information.
-                                While we have taken reasonable steps to secure the personal information you provide to us, please be aware that despite our efforts,
-                                no security measures are perfect or impenetrable, and no method of data transmission can be guaranteed against any interception or other type of misuse.
-                            </p>
-                        </section>
+            <section>
+              <h2 className="text-xl font-semibold text-white mb-4">
+                7. Your Choices and Rights
+              </h2>
+              <p>
+                Subject to applicable law, you may ask to be informed about our
+                use of your data, access it, correct inaccurate data, object to
+                or restrict processing, request deletion, or request a portable
+                copy. Where processing relies on consent, you may withdraw that
+                consent.
+              </p>
+              <p className="mt-4">
+                You can start an account-deletion request on our{" "}
+                <a
+                  href="/deleteme"
+                  className="text-emerald-400 hover:text-emerald-300"
+                >
+                  Delete My Data page
+                </a>{" "}
+                or email us. We may need to verify your identity and may retain
+                limited information where the law requires it.
+              </p>
+            </section>
 
-                        <section>
-                            <h2 className="text-xl font-semibold text-white mb-4">6. Contact Us</h2>
-                            <p>
-                                If you have questions or comments about this Privacy Policy, please contact us at:
-                            </p>
-                            <div className="mt-4 p-6 bg-white/5 rounded-xl border border-white/10">
-                                <p className="font-semibold text-white">Paydome Support</p>
-                                <p className="mt-1">Email: support@paydome.co</p>
-                                <p className="mt-1">Address: PayGlobus GmbH, Lange Str. 13, 71686 Remseck am Neckar, Germany</p>
-                            </div>
-                        </section>
+            <section>
+              <h2 className="text-xl font-semibold text-white mb-4">
+                8. Security
+              </h2>
+              <p>
+                We use administrative, technical, and organizational measures
+                designed to protect personal data. No storage or transmission
+                method is completely secure, so we cannot guarantee absolute
+                security.
+              </p>
+            </section>
 
-                    </div>
-                </div>
-            </main>
+            <section>
+              <h2 className="text-xl font-semibold text-white mb-4">
+                9. Contact Us
+              </h2>
+              <p>Contact us with privacy questions, complaints, or requests:</p>
+              <div className="mt-4 p-6 bg-white/5 rounded-xl border border-white/10">
+                <p className="font-semibold text-white">
+                  Paydome / PayGlobus GmbH
+                </p>
+                <p className="mt-1">
+                  Email:{" "}
+                  <a
+                    href="mailto:support@paydome.co"
+                    className="text-emerald-400 hover:text-emerald-300"
+                  >
+                    support@paydome.co
+                  </a>
+                </p>
+                <p className="mt-1">
+                  Address: Lange Str. 13, 71686 Remseck am Neckar, Germany
+                </p>
+              </div>
+            </section>
+          </div>
         </div>
-    );
+      </main>
+    </div>
+  );
 }

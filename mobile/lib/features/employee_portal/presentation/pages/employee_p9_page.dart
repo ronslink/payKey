@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -70,7 +69,8 @@ class _EmployeeP9PageState extends ConsumerState<EmployeeP9Page> {
   bool _isDownloading = false;
   String? _error;
 
-  List<int> get _availableYears => List.generate(5, (i) => DateTime.now().year - i);
+  List<int> get _availableYears =>
+      List.generate(5, (i) => DateTime.now().year - i);
 
   @override
   void initState() {
@@ -89,10 +89,14 @@ class _EmployeeP9PageState extends ConsumerState<EmployeeP9Page> {
     });
 
     try {
-      final response = await ApiService().employeePortal.getMyP9Report(_selectedYear);
+      final response = await ApiService().employeePortal.getMyP9Report(
+        _selectedYear,
+      );
       if (response.statusCode == 200) {
         final data = response.data;
-        _p9Report = (data is List && data.isNotEmpty) ? P9Report.fromJson(data[0]) : null;
+        _p9Report = (data is List && data.isNotEmpty)
+            ? P9Report.fromJson(data[0])
+            : null;
       } else {
         _error = 'Failed to load P9 report';
       }
@@ -107,16 +111,15 @@ class _EmployeeP9PageState extends ConsumerState<EmployeeP9Page> {
     setState(() => _isDownloading = true);
 
     try {
-      final bytes = await ApiService().employeePortal.downloadMyP9Pdf(_selectedYear);
+      final bytes = await ApiService().employeePortal.downloadMyP9Pdf(
+        _selectedYear,
+      );
 
       if (bytes.isNotEmpty && context.mounted) {
         final filename = 'P9_$_selectedYear.pdf';
-        
-        await DownloadUtils.downloadFile(
-          filename: filename,
-          bytes: bytes,
-        );
-        
+
+        await DownloadUtils.downloadFile(filename: filename, bytes: bytes);
+
         // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -235,7 +238,10 @@ class _YearSelector extends StatelessWidget {
             children: [
               _buildIcon(),
               const SizedBox(width: 16),
-              const Text('Tax Year:', style: TextStyle(fontWeight: FontWeight.w600)),
+              const Text(
+                'Tax Year:',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
               const Spacer(),
               _buildDropdown(),
             ],
@@ -268,10 +274,15 @@ class _YearSelector extends StatelessWidget {
         underline: const SizedBox.shrink(),
         icon: const Icon(Icons.keyboard_arrow_down),
         items: years
-            .map((y) => DropdownMenuItem(
-                  value: y,
-                  child: Text('$y', style: const TextStyle(fontWeight: FontWeight.bold)),
-                ))
+            .map(
+              (y) => DropdownMenuItem(
+                value: y,
+                child: Text(
+                  '$y',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            )
             .toList(),
         onChanged: onChanged,
       ),
@@ -335,7 +346,11 @@ class _NoDataState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.description_outlined, size: 64, color: _P9Colors.greyDisabled),
+            Icon(
+              Icons.description_outlined,
+              size: 64,
+              color: _P9Colors.greyDisabled,
+            ),
             const SizedBox(height: 16),
             const Text(
               'No P9 Data Available',
@@ -436,11 +451,17 @@ class _KraHeaderCard extends StatelessWidget {
                     children: [
                       Text(
                         'KENYA REVENUE AUTHORITY',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
                       ),
                       Text(
-                        'P9A - TAX DEDUCTION CARD',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        'P9 SUPPORTING SUMMARY',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
                     ],
                   ),
@@ -456,7 +477,10 @@ class _KraHeaderCard extends StatelessWidget {
               ),
               child: Text(
                 'Year: $year',
-                style: TextStyle(fontWeight: FontWeight.bold, color: _P9Colors.primaryDarkest),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: _P9Colors.primaryDarkest,
+                ),
               ),
             ),
           ],
@@ -481,7 +505,11 @@ class _EmployeeInfoCard extends StatelessWidget {
             CircleAvatar(
               radius: 28,
               backgroundColor: _P9Colors.primaryMedium,
-              child: Icon(Icons.person, color: _P9Colors.primaryDarker, size: 32),
+              child: Icon(
+                Icons.person,
+                color: _P9Colors.primaryDarker,
+                size: 32,
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -490,7 +518,10 @@ class _EmployeeInfoCard extends StatelessWidget {
                 children: [
                   Text(
                     report.workerName,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -572,9 +603,19 @@ class _StatCard extends StatelessWidget {
               child: Icon(icon, color: color, size: 20),
             ),
             const SizedBox(height: 12),
-            Text(label, style: TextStyle(color: _P9Colors.greyText, fontSize: 12)),
+            Text(
+              label,
+              style: TextStyle(color: _P9Colors.greyText, fontSize: 12),
+            ),
             const SizedBox(height: 4),
-            Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: color)),
+            Text(
+              value,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+                color: color,
+              ),
+            ),
           ],
         ),
       ),
@@ -636,12 +677,15 @@ class _DownloadCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Download P9 PDF',
-          style: TextStyle(fontWeight: FontWeight.bold, color: _P9Colors.primaryDarkest),
+          'Download supporting PDF',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: _P9Colors.primaryDarkest,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
-          'Get your official P9A tax deduction card',
+          'Get your payroll tax deduction summary',
           style: TextStyle(color: _P9Colors.primaryDark, fontSize: 12),
         ),
       ],
@@ -712,7 +756,9 @@ class _MonthCard extends StatelessWidget {
       width: 44,
       height: 44,
       decoration: BoxDecoration(
-        color: (_hasData ? _P9Colors.primary : Colors.grey).withValues(alpha: 0.1),
+        color: (_hasData ? _P9Colors.primary : Colors.grey).withValues(
+          alpha: 0.1,
+        ),
         borderRadius: BorderRadius.circular(_P9Styles.iconRadius),
       ),
       alignment: Alignment.center,
@@ -753,14 +799,31 @@ class _MonthDetails extends StatelessWidget {
       padding: const EdgeInsets.all(_P9Styles.sectionPadding),
       child: Column(
         children: [
-          _DetailRow(label: 'Basic Salary', value: month.basicSalary),
-          _DetailRow(label: 'Benefits', value: month.benefits),
+          _DetailRow(label: 'Cash Pay', value: month.basicSalary),
+          _DetailRow(label: 'Non-Cash Benefits', value: month.benefits),
           _DetailRow(label: 'Gross Pay', value: month.grossPay),
           const Divider(),
-          _DetailRow(label: 'NSSF Contribution', value: month.contribution),
-          _DetailRow(label: 'Taxable Pay', value: month.taxablePay),
+          _DetailRow(
+            label: 'Allowable Pension / NSSF',
+            value: month.contribution,
+          ),
+          _DetailRow(
+            label: 'Affordable Housing Levy',
+            value: month.housingLevy,
+          ),
+          _DetailRow(label: 'SHIF', value: month.shif),
+          _DetailRow(
+            label: 'Post-Retirement Medical Fund',
+            value: month.postRetirementMedical,
+          ),
+          _DetailRow(
+            label: 'Mortgage Interest',
+            value: month.ownerOccupiedInterest,
+          ),
+          _DetailRow(label: 'Chargeable Pay', value: month.taxablePay),
           _DetailRow(label: 'Tax Charged', value: month.taxCharged),
           _DetailRow(label: 'Personal Relief', value: month.relief),
+          _DetailRow(label: 'Insurance Relief', value: month.insuranceRelief),
           const Divider(),
           _DetailRow(label: 'PAYE Payable', value: month.paye, isBold: true),
         ],
@@ -837,7 +900,11 @@ class _AnnualTotalsCard extends StatelessWidget {
             _TotalRow(label: 'Basic Salary', value: totals.basicSalary),
             _TotalRow(label: 'Gross Pay', value: totals.grossPay),
             Divider(color: _P9Colors.primary),
-            _TotalRow(label: 'Total PAYE Deducted', value: totals.paye, isBold: true),
+            _TotalRow(
+              label: 'Total PAYE Deducted',
+              value: totals.paye,
+              isBold: true,
+            ),
           ],
         ),
       ),
@@ -893,7 +960,7 @@ class _InfoCard extends StatelessWidget {
   const _InfoCard();
 
   static const _infoPoints = [
-    'P9A is your Tax Deduction Card from your employer',
+    'This summary is prepared from finalized employer payroll records',
     'Use this form when filing your annual tax returns',
     'The form shows all PAYE deducted during the year',
     'Keep a copy for your records',
@@ -913,8 +980,11 @@ class _InfoCard extends StatelessWidget {
                 Icon(Icons.info_outline, color: _P9Colors.infoDark),
                 const SizedBox(width: 8),
                 Text(
-                  'About P9 Form',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: _P9Colors.infoText),
+                  'About this summary',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: _P9Colors.infoText,
+                  ),
                 ),
               ],
             ),

@@ -2,7 +2,10 @@ import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
-import { PaymentsController } from './payments.controller';
+import {
+  IntaSendWebhooksController,
+  PaymentsController,
+} from './payments.controller';
 import { UnifiedPaymentsController } from './unified-payments.controller';
 import { SubscriptionPaymentsController } from './subscription-payments.controller';
 import { StripeService } from './stripe.service';
@@ -57,6 +60,7 @@ import { ExchangeRateService } from './exchange-rate.service';
   ],
   controllers: [
     PaymentsController,
+    IntaSendWebhooksController,
     UnifiedPaymentsController,
     SubscriptionPaymentsController,
   ],

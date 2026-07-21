@@ -110,7 +110,7 @@ export class AccountingExportService {
       });
     }
 
-    // Credit: NHIF Payable
+    // Credit: SHIF Payable (legacy internal category key: NHIF_LIABILITY)
     if (totals.totalNhif > 0) {
       entries.push({
         date,
@@ -118,7 +118,7 @@ export class AccountingExportService {
         accountName: mappings.NHIF_LIABILITY.accountName,
         debit: 0,
         credit: totals.totalNhif,
-        description: `${description} - NHIF`,
+        description: `${description} - SHIF`,
       });
     }
 
@@ -309,7 +309,7 @@ export class AccountingExportService {
       },
       [AccountCategory.NHIF_LIABILITY]: {
         accountCode: '2130',
-        accountName: 'NHIF Payable',
+        accountName: 'SHIF Payable',
       },
       [AccountCategory.HOUSING_LEVY_LIABILITY]: {
         accountCode: '2140',

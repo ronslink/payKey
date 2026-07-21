@@ -85,8 +85,8 @@ export const FEATURE_ACCESS_MATRIX: FeatureDefinition[] = [
   },
   {
     key: 'statutory_reports',
-    name: 'Statutory Reports (P9, P10)',
-    description: 'KRA statutory tax reports and filings (required by law)',
+    name: 'Statutory Supporting Reports',
+    description: 'Payroll records that support preparation of official returns',
     tiers: ['FREE', 'BASIC', 'GOLD', 'PLATINUM'],
     mockDataAvailable: false, // Statutory reports need real data
     displayOrder: 4.5,
@@ -112,8 +112,8 @@ export const FEATURE_ACCESS_MATRIX: FeatureDefinition[] = [
   },
   {
     key: 'p9_tax_cards',
-    name: 'P9 Tax Cards',
-    description: 'Generate P9 tax cards for workers',
+    name: 'P9 Supporting Summaries',
+    description: 'Generate worker payroll tax deduction summaries',
     tiers: ['BASIC', 'GOLD', 'PLATINUM'],
     mockDataAvailable: true,
     displayOrder: 11,

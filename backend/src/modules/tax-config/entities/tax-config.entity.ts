@@ -60,7 +60,10 @@ export interface TaxConfiguration {
   maxAllowablePension?: number;
   disabilityExemptionAmount?: number;
   maxMortgageInterest?: number;
+  maxPostRetirementMedicalContribution?: number;
+  // Retained for historical configurations only. HOSP is not PRMF.
   maxHospContribution?: number;
+  nonCashBenefitExemptionThreshold?: number;
   maxExemptMeals?: number;
 }
 

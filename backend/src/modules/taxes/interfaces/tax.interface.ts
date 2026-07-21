@@ -4,6 +4,13 @@ export interface TaxBreakdown {
   housingLevy: number;
   paye: number;
   totalDeductions: number;
+  taxablePay?: number;
+  taxCharged?: number;
+  personalReliefApplied?: number;
+  insuranceReliefApplied?: number;
+  allowablePensionDeduction?: number;
+  allowableMortgageInterest?: number;
+  allowablePostRetirementMedicalContribution?: number;
 }
 
 export interface PayrollCalculation {

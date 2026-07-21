@@ -117,7 +117,10 @@ export class TaxConfigService implements OnModuleInit {
   }
 
   /**
-   * Seed initial tax configurations for 2024/2025 (Idempotent)
+   * Seed effective-dated Kenya tax configurations (idempotent).
+   *
+   * Never edit an existing effective-dated row here: production may contain
+   * an accountant-approved override. Add a newer row when legislation changes.
    */
   async seedInitialConfigs(): Promise<void> {
     // Check if table exists before seeding
@@ -161,6 +164,33 @@ export class TaxConfigService implements OnModuleInit {
         },
         paymentDeadline: '9th of following month',
         notes: 'PAYE rates effective July 1, 2023',
+      },
+
+      // PAYE deductions/limits effective from the 2025 year of income
+      {
+        taxType: TaxType.PAYE,
+        rateType: RateType.GRADUATED,
+        effectiveFrom: new Date('2025-01-01'),
+        configuration: {
+          brackets: [
+            { from: 0, to: 24000, rate: 0.1 },
+            { from: 24000, to: 32333, rate: 0.25 },
+            { from: 32333, to: 500000, rate: 0.3 },
+            { from: 500000, to: 800000, rate: 0.325 },
+            { from: 800000, to: null, rate: 0.35 },
+          ],
+          personalRelief: 2400,
+          insuranceRelief: 0.15,
+          maxInsuranceRelief: 5000,
+          maxAllowablePension: 30000,
+          maxMortgageInterest: 30000,
+          maxPostRetirementMedicalContribution: 15000,
+          nonCashBenefitExemptionThreshold: 5000,
+          disabilityExemptionAmount: 150000,
+        },
+        paymentDeadline: '9th of following month',
+        notes:
+          'Current PAYE bands with KES 30,000 monthly pension/mortgage limits, KES 15,000 PRMF limit; SHIF and employee AHL are allowable deductions',
       },
 
       // SHIF - Replaced NHIF October 1, 2024
@@ -215,6 +245,44 @@ export class TaxConfigService implements OnModuleInit {
         paymentDeadline: '9th of following month',
         notes:
           'NSSF Tier II: 6% of KES 8,001-72,000 (max KES 3,840 each party)',
+      },
+
+      // NSSF Year 4 - effective February 2026
+      {
+        taxType: TaxType.NSSF_TIER1,
+        rateType: RateType.TIERED,
+        effectiveFrom: new Date('2026-02-01'),
+        configuration: {
+          tiers: [
+            {
+              name: 'Tier I',
+              salaryFrom: 0,
+              salaryTo: 9000,
+              rate: 0.06,
+            },
+          ],
+        },
+        paymentDeadline: '9th of following month',
+        notes:
+          'NSSF Year 4 Tier I: 6% of first KES 9,000 (max KES 540 each party)',
+      },
+      {
+        taxType: TaxType.NSSF_TIER2,
+        rateType: RateType.TIERED,
+        effectiveFrom: new Date('2026-02-01'),
+        configuration: {
+          tiers: [
+            {
+              name: 'Tier II',
+              salaryFrom: 9000,
+              salaryTo: 108000,
+              rate: 0.06,
+            },
+          ],
+        },
+        paymentDeadline: '9th of following month',
+        notes:
+          'NSSF Year 4 Tier II: 6% of earnings above KES 9,000 up to KES 108,000 (max combined employee contribution KES 6,480)',
       },
 
       // Housing Levy - February 2025 rates

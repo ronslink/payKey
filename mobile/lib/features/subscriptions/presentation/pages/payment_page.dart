@@ -15,6 +15,7 @@ import '../../../profile/data/repositories/profile_repository.dart';
 // However, adding it ensures accessibility.
 import '../../../workers/presentation/providers/workers_provider.dart';
 import '../../../profile/presentation/providers/profile_provider.dart';
+import '../../../../core/config/app_environment.dart';
 
 enum PaymentMethod { stripe, mpesa, bank }
 
@@ -433,6 +434,35 @@ class _PaymentPageState extends ConsumerState<PaymentPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (!AppEnvironment.canUseExternalSubscriptionCheckout) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Subscription')),
+        body: const Center(
+          child: Padding(
+            padding: EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.devices, size: 56, color: Colors.blueGrey),
+                SizedBox(height: 20),
+                Text(
+                  'Plan changes are not available in this app',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 10),
+                Text(
+                  'You can continue using your current Paydome plan and all active features.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.black54),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     // Listen to profile changes to update phone number if not manually edited?
     // Or just pre-fill once if empty.
     ref.listen(profileProvider, (previous, next) {

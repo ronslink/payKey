@@ -33,6 +33,8 @@ _WorkerModel _$WorkerModelFromJson(Map<String, dynamic> json) => _WorkerModel(
   pensionContribution: (json['pensionContribution'] as num?)?.toDouble() ?? 0.0,
   mortgageInterest: (json['mortgageInterest'] as num?)?.toDouble() ?? 0.0,
   hospContribution: (json['hospContribution'] as num?)?.toDouble() ?? 0.0,
+  postRetirementMedicalContribution:
+      (json['postRetirementMedicalContribution'] as num?)?.toDouble() ?? 0.0,
   lifeInsurancePremium:
       (json['lifeInsurancePremium'] as num?)?.toDouble() ?? 0.0,
   nonCashBenefits: (json['nonCashBenefits'] as num?)?.toDouble() ?? 0.0,
@@ -83,6 +85,8 @@ Map<String, dynamic> _$WorkerModelToJson(_WorkerModel instance) =>
       'pensionContribution': instance.pensionContribution,
       'mortgageInterest': instance.mortgageInterest,
       'hospContribution': instance.hospContribution,
+      'postRetirementMedicalContribution':
+          instance.postRetirementMedicalContribution,
       'lifeInsurancePremium': instance.lifeInsurancePremium,
       'nonCashBenefits': instance.nonCashBenefits,
       'nonTaxableAllowance': instance.nonTaxableAllowance,
@@ -128,6 +132,8 @@ _CreateWorkerRequest _$CreateWorkerRequestFromJson(Map<String, dynamic> json) =>
       pensionContribution: (json['pensionContribution'] as num?)?.toDouble(),
       mortgageInterest: (json['mortgageInterest'] as num?)?.toDouble(),
       hospContribution: (json['hospContribution'] as num?)?.toDouble(),
+      postRetirementMedicalContribution:
+          (json['postRetirementMedicalContribution'] as num?)?.toDouble(),
       lifeInsurancePremium: (json['lifeInsurancePremium'] as num?)?.toDouble(),
       nonCashBenefits: (json['nonCashBenefits'] as num?)?.toDouble(),
       nonTaxableAllowance: (json['nonTaxableAllowance'] as num?)?.toDouble(),
@@ -168,6 +174,8 @@ Map<String, dynamic> _$CreateWorkerRequestToJson(
   'pensionContribution': instance.pensionContribution,
   'mortgageInterest': instance.mortgageInterest,
   'hospContribution': instance.hospContribution,
+  'postRetirementMedicalContribution':
+      instance.postRetirementMedicalContribution,
   'lifeInsurancePremium': instance.lifeInsurancePremium,
   'nonCashBenefits': instance.nonCashBenefits,
   'nonTaxableAllowance': instance.nonTaxableAllowance,
@@ -211,6 +219,8 @@ _UpdateWorkerRequest _$UpdateWorkerRequestFromJson(Map<String, dynamic> json) =>
       pensionContribution: (json['pensionContribution'] as num?)?.toDouble(),
       mortgageInterest: (json['mortgageInterest'] as num?)?.toDouble(),
       hospContribution: (json['hospContribution'] as num?)?.toDouble(),
+      postRetirementMedicalContribution:
+          (json['postRetirementMedicalContribution'] as num?)?.toDouble(),
       lifeInsurancePremium: (json['lifeInsurancePremium'] as num?)?.toDouble(),
       nonCashBenefits: (json['nonCashBenefits'] as num?)?.toDouble(),
       nonTaxableAllowance: (json['nonTaxableAllowance'] as num?)?.toDouble(),
@@ -252,6 +262,8 @@ Map<String, dynamic> _$UpdateWorkerRequestToJson(
   'pensionContribution': instance.pensionContribution,
   'mortgageInterest': instance.mortgageInterest,
   'hospContribution': instance.hospContribution,
+  'postRetirementMedicalContribution':
+      instance.postRetirementMedicalContribution,
   'lifeInsurancePremium': instance.lifeInsurancePremium,
   'nonCashBenefits': instance.nonCashBenefits,
   'nonTaxableAllowance': instance.nonTaxableAllowance,

@@ -720,7 +720,6 @@ export class IntaSendService {
       const response = await lastValueFrom(
         this.httpService.post(url, payload, {
           headers: {
-            Authorization: `Bearer ${this.secretKey}`,
             'X-IntaSend-Public-API-Key': this.publishableKey,
             'Content-Type': 'application/json',
           },
@@ -729,11 +728,9 @@ export class IntaSendService {
       this.logger.log('Checkout URL created:', response.data);
       return response.data; // Expected: { url: "...", signature: "...", ... }
     } catch (error) {
-      this.logger.error(
-        'Failed to create checkout URL',
-        error.response?.data || error.message,
-      );
-      throw error;
+      const details = error.response?.data || error.message;
+      this.logger.error('Failed to create checkout URL', details);
+      throw new Error(`IntaSend checkout failed: ${JSON.stringify(details)}`);
     }
   }
   /**

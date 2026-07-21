@@ -87,9 +87,7 @@ class _FinancePageState extends ConsumerState<FinancePage>
         child: CustomScrollView(
           slivers: [
             // Hero Header
-            SliverToBoxAdapter(
-              child: _buildHeroHeader(payPeriodsAsync),
-            ),
+            SliverToBoxAdapter(child: _buildHeroHeader(payPeriodsAsync)),
 
             // Funding Sources
             SliverToBoxAdapter(
@@ -103,47 +101,43 @@ class _FinancePageState extends ConsumerState<FinancePage>
                       mpesaPhone: profile.mpesaPhone,
                       mpesaPaybill: profile.mpesaPaybill,
                       defaultPaymentMethod: settings.defaultPaymentMethod,
-                      isDirectMPesa: (profile.mpesaPaybill == null || profile.mpesaPaybill!.isEmpty) && 
-                                     (profile.mpesaPhone != null && profile.mpesaPhone!.isNotEmpty),
+                      isDirectMPesa:
+                          (profile.mpesaPaybill == null ||
+                              profile.mpesaPaybill!.isEmpty) &&
+                          (profile.mpesaPhone != null &&
+                              profile.mpesaPhone!.isNotEmpty),
                     ),
                   ),
                   loading: () => const FundingSourcesSection(isLoading: true),
-                  error: (_, __) => const FundingSourcesSection(isLoading: false), // Fallback to defaults
+                  error: (_, __) => const FundingSourcesSection(
+                    isLoading: false,
+                  ), // Fallback to defaults
                 ),
                 loading: () => const FundingSourcesSection(isLoading: true),
-                error: (e, s) => const FundingSourcesSection(isLoading: false, error: 'Failed to load profile'),
+                error: (e, s) => const FundingSourcesSection(
+                  isLoading: false,
+                  error: 'Failed to load profile',
+                ),
               ),
             ),
 
             // Quick Actions Grid
-            SliverToBoxAdapter(
-              child: _buildQuickActionsGrid(context),
-            ),
+            SliverToBoxAdapter(child: _buildQuickActionsGrid(context)),
 
             // Financial Overview
-            SliverToBoxAdapter(
-              child: _buildFinancialOverview(payPeriodsAsync),
-            ),
+            SliverToBoxAdapter(child: _buildFinancialOverview(payPeriodsAsync)),
 
             // Quick Export Section
-            SliverToBoxAdapter(
-              child: _buildQuickExportCard(payPeriodsAsync),
-            ),
+            SliverToBoxAdapter(child: _buildQuickExportCard(payPeriodsAsync)),
 
             // Account Mappings
-            SliverToBoxAdapter(
-              child: _buildAccountMappingsCard(),
-            ),
+            SliverToBoxAdapter(child: _buildAccountMappingsCard()),
 
             // Integrations Coming Soon
-            SliverToBoxAdapter(
-              child: _buildIntegrationsCard(),
-            ),
+            SliverToBoxAdapter(child: _buildIntegrationsCard()),
 
             // Bottom padding
-            const SliverToBoxAdapter(
-              child: SizedBox(height: 100),
-            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 100)),
           ],
         ),
       ),
@@ -185,10 +179,7 @@ class _FinancePageState extends ConsumerState<FinancePage>
                   children: [
                     Text(
                       'Finance',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                      ),
+                      style: TextStyle(color: Colors.white70, fontSize: 14),
                     ),
                     SizedBox(height: 4),
                     Text(
@@ -229,27 +220,52 @@ class _FinancePageState extends ConsumerState<FinancePage>
   }
 
   Widget _buildStatsRow(List<PayPeriod> periods) {
-    final completedPeriods = periods.where(
-      (p) => p.status == PayPeriodStatus.completed || p.status == PayPeriodStatus.closed
-    ).toList();
-    
+    final completedPeriods = periods
+        .where(
+          (p) =>
+              p.status == PayPeriodStatus.completed ||
+              p.status == PayPeriodStatus.closed,
+        )
+        .toList();
+
     final totalGross = completedPeriods.fold<double>(
-      0, (sum, p) => sum + (p.totalGrossAmount ?? 0)
+      0,
+      (sum, p) => sum + (p.totalGrossAmount ?? 0),
     );
     final totalDeductions = completedPeriods.fold<double>(
-      0, (sum, p) => sum + (p.totalGrossAmount ?? 0) - (p.totalNetAmount ?? 0)
+      0,
+      (sum, p) => sum + (p.totalGrossAmount ?? 0) - (p.totalNetAmount ?? 0),
     );
     final totalNet = completedPeriods.fold<double>(
-      0, (sum, p) => sum + (p.totalNetAmount ?? 0)
+      0,
+      (sum, p) => sum + (p.totalNetAmount ?? 0),
     );
 
     return Row(
       children: [
-        Expanded(child: _buildStatItem(Icons.trending_up_rounded, _formatAmount(totalGross), 'Total Gross')),
+        Expanded(
+          child: _buildStatItem(
+            Icons.trending_up_rounded,
+            _formatAmount(totalGross),
+            'Total Gross',
+          ),
+        ),
         const SizedBox(width: 12),
-        Expanded(child: _buildStatItem(Icons.receipt_long_rounded, _formatAmount(totalDeductions), 'Deductions')),
+        Expanded(
+          child: _buildStatItem(
+            Icons.receipt_long_rounded,
+            _formatAmount(totalDeductions),
+            'Deductions',
+          ),
+        ),
         const SizedBox(width: 12),
-        Expanded(child: _buildStatItem(Icons.payments_rounded, _formatAmount(totalNet), 'Net Paid')),
+        Expanded(
+          child: _buildStatItem(
+            Icons.payments_rounded,
+            _formatAmount(totalNet),
+            'Net Paid',
+          ),
+        ),
       ],
     );
   }
@@ -257,11 +273,17 @@ class _FinancePageState extends ConsumerState<FinancePage>
   Widget _buildStatsRowLoading() {
     return Row(
       children: [
-        Expanded(child: _buildStatItem(Icons.trending_up_rounded, '--', 'Total Gross')),
+        Expanded(
+          child: _buildStatItem(Icons.trending_up_rounded, '--', 'Total Gross'),
+        ),
         const SizedBox(width: 12),
-        Expanded(child: _buildStatItem(Icons.receipt_long_rounded, '--', 'Deductions')),
+        Expanded(
+          child: _buildStatItem(Icons.receipt_long_rounded, '--', 'Deductions'),
+        ),
         const SizedBox(width: 12),
-        Expanded(child: _buildStatItem(Icons.payments_rounded, '--', 'Net Paid')),
+        Expanded(
+          child: _buildStatItem(Icons.payments_rounded, '--', 'Net Paid'),
+        ),
       ],
     );
   }
@@ -289,10 +311,7 @@ class _FinancePageState extends ConsumerState<FinancePage>
           const SizedBox(height: 2),
           Text(
             label,
-            style: const TextStyle(
-              color: Colors.white60,
-              fontSize: 10,
-            ),
+            style: const TextStyle(color: Colors.white60, fontSize: 10),
           ),
         ],
       ),
@@ -418,7 +437,11 @@ class _FinancePageState extends ConsumerState<FinancePage>
                   color: const Color(0xFF10B981).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.pie_chart_rounded, color: Color(0xFF10B981), size: 24),
+                child: const Icon(
+                  Icons.pie_chart_rounded,
+                  color: Color(0xFF10B981),
+                  size: 24,
+                ),
               ),
               const SizedBox(width: 12),
               const Expanded(
@@ -427,7 +450,11 @@ class _FinancePageState extends ConsumerState<FinancePage>
                   children: [
                     Text(
                       'Financial Breakdown',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF111827)),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF111827),
+                      ),
                     ),
                     Text(
                       'This year\'s payroll allocation',
@@ -450,9 +477,13 @@ class _FinancePageState extends ConsumerState<FinancePage>
   }
 
   Widget _buildBreakdownBars(List<PayPeriod> periods) {
-    final completedPeriods = periods.where(
-      (p) => p.status == PayPeriodStatus.completed || p.status == PayPeriodStatus.closed
-    ).toList();
+    final completedPeriods = periods
+        .where(
+          (p) =>
+              p.status == PayPeriodStatus.completed ||
+              p.status == PayPeriodStatus.closed,
+        )
+        .toList();
 
     if (completedPeriods.isEmpty) {
       return Container(
@@ -465,40 +496,75 @@ class _FinancePageState extends ConsumerState<FinancePage>
           children: [
             Icon(Icons.info_outline, color: Color(0xFF9CA3AF)),
             SizedBox(width: 12),
-            Expanded(child: Text('Complete a pay period to see breakdown', style: TextStyle(color: Color(0xFF6B7280)))),
+            Expanded(
+              child: Text(
+                'Complete a pay period to see breakdown',
+                style: TextStyle(color: Color(0xFF6B7280)),
+              ),
+            ),
           ],
         ),
       );
     }
 
-    final totalGross = completedPeriods.fold<double>(0, (sum, p) => sum + (p.totalGrossAmount ?? 0));
-    final totalNet = completedPeriods.fold<double>(0, (sum, p) => sum + (p.totalNetAmount ?? 0));
+    final totalGross = completedPeriods.fold<double>(
+      0,
+      (sum, p) => sum + (p.totalGrossAmount ?? 0),
+    );
+    final totalNet = completedPeriods.fold<double>(
+      0,
+      (sum, p) => sum + (p.totalNetAmount ?? 0),
+    );
     final totalDeductions = totalGross - totalNet;
 
     // Calculate percentages
     final netPercent = totalGross > 0 ? (totalNet / totalGross) : 0.0;
-    final deductionsPercent = totalGross > 0 ? (totalDeductions / totalGross) : 0.0;
+    final deductionsPercent = totalGross > 0
+        ? (totalDeductions / totalGross)
+        : 0.0;
 
     return Column(
       children: [
-        _buildProgressRow('Net Salaries', totalNet, netPercent, const Color(0xFF10B981)),
+        _buildProgressRow(
+          'Net Salaries',
+          totalNet,
+          netPercent,
+          const Color(0xFF10B981),
+        ),
         const SizedBox(height: 12),
-        _buildProgressRow('Tax & Deductions', totalDeductions, deductionsPercent, const Color(0xFFF59E0B)),
+        _buildProgressRow(
+          'Tax & Deductions',
+          totalDeductions,
+          deductionsPercent,
+          const Color(0xFFF59E0B),
+        ),
       ],
     );
   }
 
-  Widget _buildProgressRow(String label, double value, double percent, Color color) {
+  Widget _buildProgressRow(
+    String label,
+    double value,
+    double percent,
+    Color color,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label, style: const TextStyle(fontSize: 13, color: Color(0xFF374151))),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 13, color: Color(0xFF374151)),
+            ),
             Text(
               'KES ${_formatAmount(value)} (${(percent * 100).toStringAsFixed(0)}%)',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: color),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
             ),
           ],
         ),
@@ -518,19 +584,26 @@ class _FinancePageState extends ConsumerState<FinancePage>
 
   Widget _buildQuickExportCard(AsyncValue<List<PayPeriod>> payPeriodsAsync) {
     // Check feature access
-    final featureAccess = ref.watch(featureAccessProvider('accounting_integration'));
-    
+    final featureAccess = ref.watch(
+      featureAccessProvider('accounting_integration'),
+    );
+
     return featureAccess.when(
       data: (access) => _buildExportCardContent(payPeriodsAsync, access),
-      loading: () => _buildExportCardContent(payPeriodsAsync, FeatureAccessResult.full()),
-      error: (_, __) => _buildExportCardContent(payPeriodsAsync, FeatureAccessResult.full()),
+      loading: () =>
+          _buildExportCardContent(payPeriodsAsync, FeatureAccessResult.full()),
+      error: (_, __) =>
+          _buildExportCardContent(payPeriodsAsync, FeatureAccessResult.full()),
     );
   }
 
-  Widget _buildExportCardContent(AsyncValue<List<PayPeriod>> payPeriodsAsync, FeatureAccessResult access) {
+  Widget _buildExportCardContent(
+    AsyncValue<List<PayPeriod>> payPeriodsAsync,
+    FeatureAccessResult access,
+  ) {
     final isPreview = access.isPreview;
     final hasAccess = access.hasAccess;
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(20),
@@ -546,32 +619,55 @@ class _FinancePageState extends ConsumerState<FinancePage>
                   color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.file_download_rounded, color: Color(0xFF3B82F6), size: 24),
+                child: const Icon(
+                  Icons.file_download_rounded,
+                  color: Color(0xFF3B82F6),
+                  size: 24,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Export to Accounting', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    Text('Download payroll CSV', style: TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
+                    Text(
+                      'Export to Accounting',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'Download payroll CSV',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+                    ),
                   ],
                 ),
               ),
               // Feature access indicator
               if (isPreview)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.amber.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Text('PREVIEW', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.amber)),
+                  child: const Text(
+                    'PREVIEW',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.amber,
+                    ),
+                  ),
                 ),
             ],
           ),
           const SizedBox(height: 20),
-          
+
           // Preview notice banner
           if (isPreview)
             Container(
@@ -584,11 +680,17 @@ class _FinancePageState extends ConsumerState<FinancePage>
                 children: [
                   const Icon(Icons.info_outline, color: Colors.amber, size: 20),
                   const SizedBox(width: 10),
-                  Expanded(child: Text(access.mockNotice ?? 'This is sample data. Upgrade to see your real data.', style: TextStyle(fontSize: 13))),
+                  Expanded(
+                    child: Text(
+                      access.mockNotice ??
+                          'This is sample data. Upgrade to see your real data.',
+                      style: TextStyle(fontSize: 13),
+                    ),
+                  ),
                 ],
               ),
             ),
-          
+
           // Show export UI only if feature is accessible and not in preview mode
           if (hasAccess && !isPreview) ...[
             const SizedBox(height: 16),
@@ -599,12 +701,18 @@ class _FinancePageState extends ConsumerState<FinancePage>
     );
   }
 
-  Widget _buildExportPeriodDropdown(AsyncValue<List<PayPeriod>> payPeriodsAsync) {
+  Widget _buildExportPeriodDropdown(
+    AsyncValue<List<PayPeriod>> payPeriodsAsync,
+  ) {
     return payPeriodsAsync.when(
       data: (periods) {
-        final completed = periods.where(
-          (p) => p.status == PayPeriodStatus.completed || p.status == PayPeriodStatus.closed
-        ).toList();
+        final completed = periods
+            .where(
+              (p) =>
+                  p.status == PayPeriodStatus.completed ||
+                  p.status == PayPeriodStatus.closed,
+            )
+            .toList();
 
         if (completed.isEmpty) {
           return Container(
@@ -617,7 +725,12 @@ class _FinancePageState extends ConsumerState<FinancePage>
               children: [
                 Icon(Icons.info_outline, color: Colors.amber, size: 20),
                 SizedBox(width: 10),
-                Expanded(child: Text('No completed periods to export', style: TextStyle(fontSize: 13))),
+                Expanded(
+                  child: Text(
+                    'No completed periods to export',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                ),
               ],
             ),
           );
@@ -629,15 +742,23 @@ class _FinancePageState extends ConsumerState<FinancePage>
               initialValue: _selectedPayPeriodId,
               hint: const Text('Select pay period'),
               decoration: InputDecoration(
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 filled: true,
                 fillColor: const Color(0xFFF9FAFB),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
               ),
               items: completed.map((p) {
                 final start = DateFormat('MMM d').format(p.startDate);
                 final end = DateFormat('MMM d, y').format(p.endDate);
-                return DropdownMenuItem(value: p.id, child: Text('$start - $end'));
+                return DropdownMenuItem(
+                  value: p.id,
+                  child: Text('$start - $end'),
+                );
               }).toList(),
               onChanged: (v) => setState(() => _selectedPayPeriodId = v),
             ),
@@ -648,8 +769,12 @@ class _FinancePageState extends ConsumerState<FinancePage>
                 onPressed: _isExporting ? null : _exportPayroll,
                 icon: _isExporting
                     ? const SizedBox(
-                        width: 18, height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
                     : const Icon(Icons.download_rounded, size: 20),
                 label: Text(_isExporting ? 'Exporting...' : 'Download CSV'),
@@ -657,7 +782,9 @@ class _FinancePageState extends ConsumerState<FinancePage>
                   backgroundColor: const Color(0xFF3B82F6),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   elevation: 0,
                 ),
               ),
@@ -685,7 +812,8 @@ class _FinancePageState extends ConsumerState<FinancePage>
       child: Column(
         children: [
           InkWell(
-            onTap: () => setState(() => _showAccountMappings = !_showAccountMappings),
+            onTap: () =>
+                setState(() => _showAccountMappings = !_showAccountMappings),
             borderRadius: BorderRadius.circular(20),
             child: Padding(
               padding: const EdgeInsets.all(20),
@@ -697,20 +825,38 @@ class _FinancePageState extends ConsumerState<FinancePage>
                       color: const Color(0xFF8B5CF6).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.settings_rounded, color: Color(0xFF8B5CF6), size: 24),
+                    child: const Icon(
+                      Icons.settings_rounded,
+                      color: Color(0xFF8B5CF6),
+                      size: 24,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Chart of Accounts', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                        Text('Configure ledger mappings', style: TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
+                        Text(
+                          'Chart of Accounts',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          'Configure ledger mappings',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF6B7280),
+                          ),
+                        ),
                       ],
                     ),
                   ),
                   Icon(
-                    _showAccountMappings ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                    _showAccountMappings
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
                     color: const Color(0xFF9CA3AF),
                   ),
                 ],
@@ -725,18 +871,25 @@ class _FinancePageState extends ConsumerState<FinancePage>
                 children: [
                   const Divider(),
                   const SizedBox(height: 16),
-                  ..._mappingControllers.entries.map((e) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: TextField(
-                      controller: e.value,
-                      decoration: InputDecoration(
-                        labelText: _getAccountName(e.key),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                        prefixIcon: const Icon(Icons.tag_rounded, size: 20),
+                  ..._mappingControllers.entries.map(
+                    (e) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: TextField(
+                        controller: e.value,
+                        decoration: InputDecoration(
+                          labelText: _getAccountName(e.key),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          prefixIcon: const Icon(Icons.tag_rounded, size: 20),
+                        ),
                       ),
                     ),
-                  )),
+                  ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
@@ -745,7 +898,9 @@ class _FinancePageState extends ConsumerState<FinancePage>
                           onPressed: _resetMappings,
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                           child: const Text('Reset Defaults'),
                         ),
@@ -758,7 +913,9 @@ class _FinancePageState extends ConsumerState<FinancePage>
                             backgroundColor: const Color(0xFF8B5CF6),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             elevation: 0,
                           ),
                           child: const Text('Save Mappings'),
@@ -769,7 +926,9 @@ class _FinancePageState extends ConsumerState<FinancePage>
                 ],
               ),
             ),
-            crossFadeState: _showAccountMappings ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            crossFadeState: _showAccountMappings
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
             duration: const Duration(milliseconds: 200),
           ),
         ],
@@ -793,32 +952,65 @@ class _FinancePageState extends ConsumerState<FinancePage>
                   color: Colors.grey.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.cloud_sync_rounded, color: Color(0xFF9CA3AF), size: 24),
+                child: const Icon(
+                  Icons.cloud_sync_rounded,
+                  color: Color(0xFF9CA3AF),
+                  size: 24,
+                ),
               ),
               const SizedBox(width: 12),
               const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Integrations', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    Text('Coming soon', style: TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
+                    Text(
+                      'Integrations',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      'Coming soon',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+                    ),
                   ],
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          _buildIntegrationItem('QuickBooks Online', 'Automatic sync', Icons.sync_rounded, Colors.green),
+          _buildIntegrationItem(
+            'QuickBooks Online',
+            'Automatic sync',
+            Icons.sync_rounded,
+            Colors.green,
+          ),
           const SizedBox(height: 10),
-          _buildIntegrationItem('Xero', 'Direct connection', Icons.link_rounded, Colors.blue),
+          _buildIntegrationItem(
+            'Xero',
+            'Direct connection',
+            Icons.link_rounded,
+            Colors.blue,
+          ),
           const SizedBox(height: 10),
-          _buildIntegrationItem('Sage', 'Export support', Icons.upload_file_rounded, Colors.orange),
+          _buildIntegrationItem(
+            'Sage',
+            'Export support',
+            Icons.upload_file_rounded,
+            Colors.orange,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildIntegrationItem(String name, String desc, IconData icon, Color color) {
+  Widget _buildIntegrationItem(
+    String name,
+    String desc,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -833,8 +1025,20 @@ class _FinancePageState extends ConsumerState<FinancePage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: const TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF6B7280))),
-                Text(desc, style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF))),
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF6B7280),
+                  ),
+                ),
+                Text(
+                  desc,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF9CA3AF),
+                  ),
+                ),
               ],
             ),
           ),
@@ -844,7 +1048,14 @@ class _FinancePageState extends ConsumerState<FinancePage>
               color: Colors.grey.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Text('Soon', style: TextStyle(fontSize: 10, color: Color(0xFF9CA3AF), fontWeight: FontWeight.w600)),
+            child: const Text(
+              'Soon',
+              style: TextStyle(
+                fontSize: 10,
+                color: Color(0xFF9CA3AF),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
@@ -854,27 +1065,38 @@ class _FinancePageState extends ConsumerState<FinancePage>
   BoxDecoration _cardDecoration(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return BoxDecoration(
-      color: Theme.of(context).cardTheme.color ?? (isDark ? const Color(0xFF1E1E1E) : Colors.white),
+      color:
+          Theme.of(context).cardTheme.color ??
+          (isDark ? const Color(0xFF1E1E1E) : Colors.white),
       borderRadius: BorderRadius.circular(20),
-      boxShadow: isDark ? null : [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.04),
-          blurRadius: 12,
-          offset: const Offset(0, 4),
-        ),
-      ],
+      boxShadow: isDark
+          ? null
+          : [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
     );
   }
 
   String _getAccountName(String category) {
     switch (category) {
-      case 'SALARY_EXPENSE': return 'Salaries & Wages';
-      case 'PAYE_LIABILITY': return 'PAYE Payable';
-      case 'NSSF_LIABILITY': return 'NSSF Payable';
-      case 'NHIF_LIABILITY': return 'NHIF Payable';
-      case 'HOUSING_LEVY_LIABILITY': return 'Housing Levy';
-      case 'CASH_BANK': return 'Cash at Bank';
-      default: return category;
+      case 'SALARY_EXPENSE':
+        return 'Salaries & Wages';
+      case 'PAYE_LIABILITY':
+        return 'PAYE Payable';
+      case 'NSSF_LIABILITY':
+        return 'NSSF Payable';
+      case 'NHIF_LIABILITY':
+        return 'SHIF Payable';
+      case 'HOUSING_LEVY_LIABILITY':
+        return 'Housing Levy';
+      case 'CASH_BANK':
+        return 'Cash at Bank';
+      default:
+        return category;
     }
   }
 
@@ -899,11 +1121,15 @@ class _FinancePageState extends ConsumerState<FinancePage>
 
   Future<void> _saveMappings() async {
     try {
-      final mappings = _mappingControllers.entries.map((e) => {
-        'category': e.key,
-        'accountCode': e.value.text,
-        'accountName': _getAccountName(e.key),
-      }).toList();
+      final mappings = _mappingControllers.entries
+          .map(
+            (e) => {
+              'category': e.key,
+              'accountCode': e.value.text,
+              'accountName': _getAccountName(e.key),
+            },
+          )
+          .toList();
 
       await ApiService().saveAccountMappings({'mappings': mappings});
       _showSnack('Account mappings saved');
@@ -921,19 +1147,22 @@ class _FinancePageState extends ConsumerState<FinancePage>
     setState(() => _isExporting = true);
 
     try {
-      final response = await ApiService().exportPayrollToCSV(_selectedPayPeriodId!);
+      final response = await ApiService().exportPayrollToCSV(
+        _selectedPayPeriodId!,
+      );
       final csvData = response.data['data'] as String;
-      final filename = response.data['filename'] as String? ?? 'payroll_export.csv';
+      final filename =
+          response.data['filename'] as String? ?? 'payroll_export.csv';
 
       // Convert CSV string to bytes and trigger download
       final bytes = utf8.encode(csvData);
-      
+
       await DownloadUtils.downloadFile(
         filename: filename,
         bytes: bytes,
         mimeType: 'text/csv',
       );
-      
+
       _showSnack('Downloaded: $filename');
     } catch (e) {
       _showSnack('Export failed: $e', isError: true);

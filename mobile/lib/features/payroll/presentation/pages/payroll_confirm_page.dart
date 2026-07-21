@@ -28,7 +28,6 @@ import '../../../workers/data/repositories/workers_repository.dart';
 import 'package:mobile/integrations/intasend/intasend.dart';
 import '../../../../integrations/stripe/services/stripe_service.dart'; // Stripe Service
 
-
 /// Payroll confirmation page
 class PayrollConfirmPage extends ConsumerStatefulWidget {
   final List<String> workerIds;
@@ -47,7 +46,7 @@ class PayrollConfirmPage extends ConsumerStatefulWidget {
 class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
   PayrollConfirmState _state = const PayrollConfirmState.initial();
   List<WorkerPayout>? _preparedPayouts;
-  
+
   Map<String, String> _workerPhones = {};
   List<String> _cashWorkerNames = [];
   List<PayrollCalculation> _calculations = [];
@@ -71,12 +70,12 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
     try {
       // 1. Fetch Workers for phone numbers
       final workerRepo = ref.read(workersRepositoryProvider);
-      final allWorkers = await workerRepo.getWorkers(includeInactive: true); 
-      
-      final workers = widget.workerIds.isEmpty 
-          ? allWorkers 
+      final allWorkers = await workerRepo.getWorkers(includeInactive: true);
+
+      final workers = widget.workerIds.isEmpty
+          ? allWorkers
           : allWorkers.where((w) => widget.workerIds.contains(w.id)).toList();
-          
+
       if (workers.isEmpty) {
         if (mounted) {
           setState(() {
@@ -88,11 +87,11 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
         }
         return;
       }
-      
-      _workerPhones = { for (var w in workers) w.id : w.phoneNumber };
-      
+
+      _workerPhones = {for (var w in workers) w.id: w.phoneNumber};
+
       final actualWorkerIds = workers.map((w) => w.id).toList();
-      
+
       // Track payment methods for UI display
       _cashWorkerNames = workers
           .where((w) => w.paymentMethod.toUpperCase() == 'CASH')
@@ -103,11 +102,13 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
       // FIX: Try to get draft payroll first to respect any user edits (e.g. partial salary)
       final repo = ref.read(payrollRepositoryProvider);
       List<PayrollCalculation> calculations = [];
-      
+
       try {
         final draftItems = await repo.getDraftPayroll(widget.payPeriodId);
         // Filter for selected workers
-        calculations = draftItems.where((c) => actualWorkerIds.contains(c.workerId)).toList();
+        calculations = draftItems
+            .where((c) => actualWorkerIds.contains(c.workerId))
+            .toList();
       } catch (_) {
         // Fallback to fresh calculation if draft fetch fails
       }
@@ -116,22 +117,23 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
       if (calculations.isEmpty) {
         calculations = await repo.calculatePayroll(actualWorkerIds);
       }
-      
+
       // 2.5 Save draft payroll so backend has DRAFT records for finalization
       // This is critical for off-cycle flows where no drafts were created yet
       try {
         final existingDrafts = await repo.getDraftPayroll(widget.payPeriodId);
         if (existingDrafts.isEmpty) {
-          final draftItems = calculations.map((c) => {
-            'workerId': c.workerId,
-            'grossSalary': c.grossSalary,
-          }).toList();
+          final draftItems = calculations
+              .map(
+                (c) => {'workerId': c.workerId, 'grossSalary': c.grossSalary},
+              )
+              .toList();
           await repo.saveDraftPayroll(widget.payPeriodId, draftItems);
         }
       } catch (_) {
         // Non-critical: processPayroll controller also creates drafts as fallback
       }
-      
+
       // 3. Map to IntaSend WorkerPayout
       _calculations = calculations;
       final payouts = calculations.map((c) {
@@ -149,10 +151,10 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
       // 4. Verify funds
       // Use backend verification which supports worker filtering
       final verification = await repo.verifyFunds(
-        widget.payPeriodId, 
+        widget.payPeriodId,
         workerIds: actualWorkerIds,
       );
-      
+
       if (mounted) {
         setState(() {
           _state = _state.copyWith(
@@ -175,7 +177,7 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
 
   void _showTopupSheet() {
     final shortfall = _state.verification?.shortfall ?? 0;
-    
+
     // Attempt to get phone number from settings
     final settingsAsync = ref.read(settingsProvider);
     final defaultPhone = settingsAsync.value?.mpesaPhone;
@@ -193,64 +195,78 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
   Future<void> _performStripeTopup(double amount) async {
     _showSnackbar(PayrollConfirmSnackbars.loading('Initializing Stripe...'));
     try {
-       final stripeService = ref.read(stripeIntegrationServiceProvider);
-       // Initialize Sheet (Backend call)
-       await stripeService.initPaymentSheet(amount: amount, currency: 'EUR');
-       
-       if (mounted) _hideSnackbar();
-       
-       // Present Sheet
-       await stripeService.presentPaymentSheet();
-       
-       if (mounted) {
-         _showSnackbar(PayrollConfirmSnackbars.success('Payment successful! Verifying balance...'));
-         // Wait for webhook (a bit longer for Stripe?) or optimistically verify
-         await Future.delayed(const Duration(seconds: 5)); 
-         await _verifyFunds();
-       }
+      final stripeService = ref.read(stripeIntegrationServiceProvider);
+      // Initialize Sheet (Backend call)
+      await stripeService.initPaymentSheet(amount: amount, currency: 'EUR');
+
+      if (mounted) _hideSnackbar();
+
+      // Present Sheet
+      await stripeService.presentPaymentSheet();
+
+      if (mounted) {
+        _showSnackbar(
+          PayrollConfirmSnackbars.success(
+            'Payment successful! Verifying balance...',
+          ),
+        );
+        // Wait for webhook (a bit longer for Stripe?) or optimistically verify
+        await Future.delayed(const Duration(seconds: 5));
+        await _verifyFunds();
+      }
     } catch (e) {
-       if (mounted) {
-         _hideSnackbar();
-         // Handle "Cancelled" specific error if possible to just hide snackbar?
-         // StripeException usually contains code 'Canceled'.
-         // For now, simple error message.
-         _showSnackbar(PayrollConfirmSnackbars.error('Payment Error: $e'));
-       }
+      if (mounted) {
+        _hideSnackbar();
+        // Handle "Cancelled" specific error if possible to just hide snackbar?
+        // StripeException usually contains code 'Canceled'.
+        // For now, simple error message.
+        _showSnackbar(PayrollConfirmSnackbars.error('Payment Error: $e'));
+      }
     }
   }
 
   Future<void> _performCheckoutTopup(double amount) async {
-    _showSnackbar(PayrollConfirmSnackbars.loading('Redirecting to Checkout...'));
+    _showSnackbar(
+      PayrollConfirmSnackbars.loading('Redirecting to Checkout...'),
+    );
 
     try {
       final paymentService = ref.read(paymentServiceProvider);
       // Initiate Checkout
       final url = await paymentService.checkoutTopUp(amount: amount);
-      
+
       if (mounted && url != null) {
-         _hideSnackbar();
-         
-         // Launch URL
-         final uri = Uri.parse(url);
-         if (await canLaunchUrl(uri)) {
-             await launchUrl(uri, mode: LaunchMode.externalApplication);
-             
-             // Show success message and wait for user to return
-             // Ideally we should poll or have a "I have paid" button, but simple delay works for now.
-             _showSnackbar(PayrollConfirmSnackbars.success('Checkout opened. Please complete payment and return.'));
-             
-             // Wait for user to complete payment (e.g., 30s) then verify
-             // Optimistic verify after delay
-             await Future.delayed(const Duration(seconds: 15)); 
-             await _verifyFunds();
-         } else {
-             _showSnackbar(PayrollConfirmSnackbars.error('Could not launch payment page.'));
-         }
+        _hideSnackbar();
+
+        // Launch URL
+        final uri = Uri.parse(url);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+
+          // Show success message and wait for user to return
+          // Ideally we should poll or have a "I have paid" button, but simple delay works for now.
+          _showSnackbar(
+            PayrollConfirmSnackbars.success(
+              'Checkout opened. Please complete payment and return.',
+            ),
+          );
+
+          // Wait for user to complete payment (e.g., 30s) then verify
+          // Optimistic verify after delay
+          await Future.delayed(const Duration(seconds: 15));
+          await _verifyFunds();
+        } else {
+          _showSnackbar(
+            PayrollConfirmSnackbars.error('Could not launch payment page.'),
+          );
+        }
       } else {
-         if (mounted) {
-            _hideSnackbar();
-            _showSnackbar(PayrollConfirmSnackbars.error('Failed to generate checkout link.'));
-         }
+        if (mounted) {
+          _hideSnackbar();
+          _showSnackbar(
+            PayrollConfirmSnackbars.error('Failed to generate checkout link.'),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -269,7 +285,7 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
       if (formattedPhone.startsWith('0')) {
         formattedPhone = '254${formattedPhone.substring(1)}';
       } else if (formattedPhone.startsWith('+254')) {
-         formattedPhone = formattedPhone.substring(1);
+        formattedPhone = formattedPhone.substring(1);
       }
 
       final paymentService = ref.read(paymentServiceProvider);
@@ -280,10 +296,12 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
 
       if (mounted && response != null) {
         _hideSnackbar();
-        
+
         if (response.isFailed) {
-             _showSnackbar(PayrollConfirmSnackbars.error('Top Up Failed: ${response.message}'));
-             return;
+          _showSnackbar(
+            PayrollConfirmSnackbars.error('Top Up Failed: ${response.message}'),
+          );
+          return;
         }
 
         _showSnackbar(
@@ -291,8 +309,8 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
             'STK Push Sent! Check your phone to complete payment.',
           ),
         );
-        
-        await Future.delayed(const Duration(seconds: 15)); 
+
+        await Future.delayed(const Duration(seconds: 15));
         await _verifyFunds();
       }
     } catch (e) {
@@ -305,8 +323,10 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
 
   Future<void> _processPayroll() async {
     if (_preparedPayouts == null || _preparedPayouts!.isEmpty) {
-        _showSnackbar(PayrollConfirmSnackbars.error('No payroll data to process'));
-        return;
+      _showSnackbar(
+        PayrollConfirmSnackbars.error('No payroll data to process'),
+      );
+      return;
     }
 
     setState(() {
@@ -318,11 +338,13 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
 
     try {
       // Process payroll via backend API (returns jobId for async processing)
-      final response = await ref.read(payrollProvider.notifier).processPayroll(
+      final response = await ref
+          .read(payrollProvider.notifier)
+          .processPayroll(
             widget.workerIds,
             widget.payPeriodId,
             skipPayout: false,
-      );
+          );
 
       // If we have a jobId, show the progress dialog
       if (response.isAsync && response.jobId != null && mounted) {
@@ -340,19 +362,25 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
 
           PayrollBatchResult batchResult;
           if (finalStatus.result != null) {
-            final payoutData = finalStatus.result!['payoutResults'] as Map<String, dynamic>? ?? finalStatus.result!;
+            final payoutData =
+                finalStatus.result!['payoutResults'] as Map<String, dynamic>? ??
+                finalStatus.result!;
             final processResult = PayrollProcessingResult.fromJson(payoutData);
             batchResult = PayrollBatchResult(
               successCount: processResult.successCount,
               failureCount: processResult.failureCount,
               totalProcessed: processResult.totalCount,
               failedWorkerIds: processResult.failedWorkerIds,
-              results: processResult.results.map((r) => PayrollWorkerResult(
-                success: r.success,
-                workerName: r.workerName,
-                netPay: r.netPay ?? 0,
-                error: r.error,
-              )).toList(),
+              results: processResult.results
+                  .map(
+                    (r) => PayrollWorkerResult(
+                      success: r.success,
+                      workerName: r.workerName,
+                      netPay: r.netPay ?? 0,
+                      error: r.error,
+                    ),
+                  )
+                  .toList(),
             );
           } else {
             // Fallback if result is missing
@@ -361,12 +389,16 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
               failureCount: 0,
               totalProcessed: _preparedPayouts!.length,
               failedWorkerIds: [],
-              results: _preparedPayouts!.map((p) => PayrollWorkerResult(
-                success: true,
-                workerName: p.name,
-                netPay: p.amount,
-                error: null,
-              )).toList(),
+              results: _preparedPayouts!
+                  .map(
+                    (p) => PayrollWorkerResult(
+                      success: true,
+                      workerName: p.name,
+                      netPay: p.amount,
+                      error: null,
+                    ),
+                  )
+                  .toList(),
             );
           }
 
@@ -394,12 +426,16 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
           failureCount: 0,
           totalProcessed: _preparedPayouts!.length,
           failedWorkerIds: [],
-          results: _preparedPayouts!.map((p) => PayrollWorkerResult(
-            success: true,
-            workerName: p.name,
-            netPay: p.amount,
-            error: null,
-          )).toList(),
+          results: _preparedPayouts!
+              .map(
+                (p) => PayrollWorkerResult(
+                  success: true,
+                  workerName: p.name,
+                  netPay: p.amount,
+                  error: null,
+                ),
+              )
+              .toList(),
         );
 
         if (mounted) {
@@ -518,10 +554,7 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
             ],
           ],
           const SizedBox(height: 24),
-          _buildSummaryCard(
-            context: context,
-            verification: verification,
-          ),
+          _buildSummaryCard(context: context, verification: verification),
           if (!_isAllCash) ...[
             const SizedBox(height: 24),
             const Center(child: IntaSendTrustBadge(width: 320)),
@@ -565,7 +598,9 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: Colors.amber.withValues(alpha: 0.08),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
+              ),
             ),
             child: Row(
               children: [
@@ -575,7 +610,11 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
                     color: Colors.amber.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(Icons.payments_outlined, color: Colors.amber.shade800, size: 24),
+                  child: Icon(
+                    Icons.payments_outlined,
+                    color: Colors.amber.shade800,
+                    size: 24,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -624,7 +663,9 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
                           ),
                           child: Center(
                             child: Text(
-                              calc.workerName.isNotEmpty ? calc.workerName[0].toUpperCase() : '?',
+                              calc.workerName.isNotEmpty
+                                  ? calc.workerName[0].toUpperCase()
+                                  : '?',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: Colors.amber.shade800,
@@ -655,7 +696,10 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
           ),
 
           // Tax obligations section
-          if (totalPaye > 0 || totalNssf > 0 || totalShif > 0 || totalHousingLevy > 0) ...[
+          if (totalPaye > 0 ||
+              totalNssf > 0 ||
+              totalShif > 0 ||
+              totalHousingLevy > 0) ...[
             const Divider(height: 1),
             Padding(
               padding: const EdgeInsets.all(20),
@@ -673,15 +717,15 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
                   const SizedBox(height: 4),
                   Text(
                     'Remit these to the respective authorities',
-                    style: TextStyle(fontSize: 12, color: context.textSecondary),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: context.textSecondary,
+                    ),
                   ),
                   const SizedBox(height: 12),
-                  if (totalPaye > 0)
-                    _taxRow(context, 'PAYE (KRA)', totalPaye),
-                  if (totalNssf > 0)
-                    _taxRow(context, 'NSSF', totalNssf),
-                  if (totalShif > 0)
-                    _taxRow(context, 'SHIF (NHIF)', totalShif),
+                  if (totalPaye > 0) _taxRow(context, 'PAYE (KRA)', totalPaye),
+                  if (totalNssf > 0) _taxRow(context, 'NSSF', totalNssf),
+                  if (totalShif > 0) _taxRow(context, 'SHIF', totalShif),
                   if (totalHousingLevy > 0)
                     _taxRow(context, 'Housing Levy', totalHousingLevy),
                 ],
@@ -699,7 +743,10 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(color: context.textSecondary, fontSize: 14)),
+          Text(
+            label,
+            style: TextStyle(color: context.textSecondary, fontSize: 14),
+          ),
           Text(
             'KES ${amount.toStringAsFixed(2)}',
             style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
@@ -715,11 +762,16 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
     required VoidCallback onTopUp,
   }) {
     final isSufficient = verification.hasSufficientFunds;
-    final canCoverWithClearing = !isSufficient && 
-        (verification.availableBalance + verification.clearingBalance >= verification.requiredAmount);
-    
+    final canCoverWithClearing =
+        !isSufficient &&
+        (verification.availableBalance + verification.clearingBalance >=
+            verification.requiredAmount);
+
     return Container(
-      decoration: PayrollConfirmTheme.walletCardDecoration(context, isSufficient: isSufficient),
+      decoration: PayrollConfirmTheme.walletCardDecoration(
+        context,
+        isSufficient: isSufficient,
+      ),
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
@@ -731,46 +783,65 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
                 children: [
                   Text(
                     'Wallet Balance',
-                    style: TextStyle(color: context.textSecondary, fontSize: 14),
+                    style: TextStyle(
+                      color: context.textSecondary,
+                      fontSize: 14,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     verification.formattedBalance,
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   if (verification.clearingBalance > 0) ...[
-                  const SizedBox(height: 8),
-                  Container(
-                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                     decoration: BoxDecoration(
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
                         color: Colors.orange.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
-                     ),
-                     child: Text(
+                        border: Border.all(
+                          color: Colors.orange.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Text(
                         'Clearing: ${verification.formattedClearing}',
                         style: TextStyle(
-                           fontSize: 12, 
-                           color: Colors.orange.shade800,
-                           fontWeight: FontWeight.w500,
+                          fontSize: 12,
+                          color: Colors.orange.shade800,
+                          fontWeight: FontWeight.w500,
                         ),
-                     ),
-                  ),
-                ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
               if (!isSufficient && !canCoverWithClearing)
-                 ElevatedButton.icon(
-                    onPressed: onTopUp,
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Top Up'),
-                    style: PayrollConfirmTheme.mpesaButtonStyle.copyWith(
-                       padding: const WidgetStatePropertyAll(EdgeInsets.symmetric(horizontal: 16, vertical: 8)),
-                       backgroundColor: const WidgetStatePropertyAll(PayrollConfirmTheme.mpesaGreen),
-                       minimumSize: const WidgetStatePropertyAll(Size(0, 36)),
-                       shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
+                ElevatedButton.icon(
+                  onPressed: onTopUp,
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Top Up'),
+                  style: PayrollConfirmTheme.mpesaButtonStyle.copyWith(
+                    padding: const WidgetStatePropertyAll(
+                      EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     ),
-                 ),
+                    backgroundColor: const WidgetStatePropertyAll(
+                      PayrollConfirmTheme.mpesaGreen,
+                    ),
+                    minimumSize: const WidgetStatePropertyAll(Size(0, 36)),
+                    shape: WidgetStatePropertyAll(
+                      RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
           if (!isSufficient) ...[
@@ -790,7 +861,10 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
                     Expanded(
                       child: Text(
                         'Funds are clearing. You have enough to cover this payment once settled.',
-                        style: TextStyle(color: Colors.blue.shade900, fontWeight: FontWeight.w500),
+                        style: TextStyle(
+                          color: Colors.blue.shade900,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ],
@@ -810,7 +884,10 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
                     Expanded(
                       child: Text(
                         'Insufficient funds. Shortfall: ${verification.formattedShortfall}',
-                        style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w500),
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ],
@@ -831,40 +908,69 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
       // Use context.surfacePrimary directly since backgroundColor didn't exist in theme
       decoration: BoxDecoration(
         color: context.surfacePrimary,
-        borderRadius: BorderRadius.circular(PayrollConfirmTheme.cardBorderRadius),
+        borderRadius: BorderRadius.circular(
+          PayrollConfirmTheme.cardBorderRadius,
+        ),
         border: Border.all(color: context.borderMuted),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-           const Text('Payroll Summary', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-           const SizedBox(height: 16),
-           _row(context, 'Workers', '${verification.workerCount}'),
-           const Divider(height: 24),
-           _row(context, 'Net Pay', 'KES ${verification.netPayTotal.toStringAsFixed(2)}'),
-           if (verification.estimatedFees > 0) ...[
-             const SizedBox(height: 8),
-             _row(context, 'M-Pesa Fees (by provider)', verification.formattedFees),
-           ],
-           const Divider(height: 24),
-           _row(context, 'Total Required', verification.formattedRequired, bold: true),
+          const Text(
+            'Payroll Summary',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          ),
+          const SizedBox(height: 16),
+          _row(context, 'Workers', '${verification.workerCount}'),
+          const Divider(height: 24),
+          _row(
+            context,
+            'Net Pay',
+            'KES ${verification.netPayTotal.toStringAsFixed(2)}',
+          ),
+          if (verification.estimatedFees > 0) ...[
+            const SizedBox(height: 8),
+            _row(
+              context,
+              'M-Pesa Fees (by provider)',
+              verification.formattedFees,
+            ),
+          ],
+          const Divider(height: 24),
+          _row(
+            context,
+            'Total Required',
+            verification.formattedRequired,
+            bold: true,
+          ),
         ],
       ),
     );
   }
-  
-  Widget _row(BuildContext context, String label, String value, {bool bold = false}) {
+
+  Widget _row(
+    BuildContext context,
+    String label,
+    String value, {
+    bool bold = false,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-         Text(label, style: TextStyle(
-           color: bold ? context.textPrimary : context.textSecondary,
-           fontWeight: bold ? FontWeight.bold : FontWeight.normal,
-         )),
-         Text(value, style: TextStyle(
-           fontWeight: FontWeight.bold,
-           fontSize: bold ? 16 : 14,
-         )),
+        Text(
+          label,
+          style: TextStyle(
+            color: bold ? context.textPrimary : context.textSecondary,
+            fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: bold ? 16 : 14,
+          ),
+        ),
       ],
     );
   }
@@ -882,7 +988,11 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
         children: [
           Row(
             children: [
-              Icon(Icons.payments_outlined, color: Colors.amber.shade800, size: 20),
+              Icon(
+                Icons.payments_outlined,
+                color: Colors.amber.shade800,
+                size: 20,
+              ),
               const SizedBox(width: 8),
               Text(
                 _isAllCash ? 'Cash Payment' : 'Cash Workers',
@@ -897,11 +1007,11 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
           Text(
             _isAllCash
                 ? 'This is a cash payroll. No wallet deduction required. '
-                  'Please disburse cash to your worker(s) and this run '
-                  'will be recorded as completed.'
+                      'Please disburse cash to your worker(s) and this run '
+                      'will be recorded as completed.'
                 : '${_cashWorkerNames.join(", ")} will be paid in cash. '
-                  'No wallet deduction for cash workers. '
-                  'Please disburse their pay manually.',
+                      'No wallet deduction for cash workers. '
+                      'Please disburse their pay manually.',
             style: TextStyle(
               color: Colors.amber.shade900,
               fontSize: 13,
@@ -924,10 +1034,10 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
   Widget _buildActionSection(FundVerificationResult? verification) {
     final canProceed = verification?.canProceed ?? false;
     final isProcessing = _state.isProcessing;
-    
+
     if (verification == null) return const SizedBox.shrink();
 
-    final buttonLabel = canProceed 
+    final buttonLabel = canProceed
         ? (_isAllCash ? 'Confirm & Record' : 'Confirm & Pay')
         : 'Insufficient Funds';
 
@@ -948,19 +1058,26 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
           onPressed: canProceed && !isProcessing ? _processPayroll : null,
           style: PayrollConfirmTheme.primaryButtonStyle(context).copyWith(
             backgroundColor: WidgetStateProperty.resolveWith((states) {
-               if (states.contains(WidgetState.disabled)) return context.borderMuted;
-               return PayrollConfirmTheme.successGreen;
+              if (states.contains(WidgetState.disabled))
+                return context.borderMuted;
+              return PayrollConfirmTheme.successGreen;
             }),
           ),
           child: isProcessing
               ? const SizedBox(
                   width: 24,
                   height: 24,
-                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
                 )
               : Text(
                   buttonLabel,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
         ),
       ),

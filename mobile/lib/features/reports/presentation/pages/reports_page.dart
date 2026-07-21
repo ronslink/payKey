@@ -11,7 +11,6 @@ import '../providers/export_provider.dart';
 import '../../../../core/widgets/feature_gate.dart';
 import '../../../../main.dart';
 
-
 class ReportsPage extends ConsumerWidget {
   const ReportsPage({super.key});
 
@@ -48,7 +47,10 @@ class ReportsPage extends ConsumerWidget {
   }
 
   Widget _buildReportTypeSelector(
-      BuildContext context, WidgetRef ref, ReportParams params) {
+    BuildContext context,
+    WidgetRef ref,
+    ReportParams params,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -67,9 +69,9 @@ class ReportsPage extends ConsumerWidget {
           Text(
             'Select Report Type',
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: Colors.grey.shade600,
-                  fontWeight: FontWeight.w500,
-                ),
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w500,
+            ),
           ),
           const SizedBox(height: 12),
           SingleChildScrollView(
@@ -89,7 +91,7 @@ class ReportsPage extends ConsumerWidget {
                 _buildReportTypeChip(
                   context,
                   ref,
-                  'Statutory (P10)',
+                  'Statutory Summary',
                   Icons.gavel,
                   ReportType.statutory,
                   params.type,
@@ -109,7 +111,7 @@ class ReportsPage extends ConsumerWidget {
                 _buildReportTypeChip(
                   context,
                   ref,
-                  'P9 Tax Cards',
+                  'P9 Supporting Summaries',
                   Icons.description,
                   ReportType.p9Report,
                   params.type,
@@ -141,8 +143,9 @@ class ReportsPage extends ConsumerWidget {
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           onTap: () {
-            ref.read(reportParamsProvider.notifier).update(
-                ref.read(reportParamsProvider).copyWith(type: type));
+            ref
+                .read(reportParamsProvider.notifier)
+                .update(ref.read(reportParamsProvider).copyWith(type: type));
           },
           borderRadius: BorderRadius.circular(12),
           child: Padding(
@@ -172,7 +175,10 @@ class ReportsPage extends ConsumerWidget {
   }
 
   Widget _buildPayPeriodBasedReport(
-      BuildContext context, WidgetRef ref, ReportParams reportParams) {
+    BuildContext context,
+    WidgetRef ref,
+    ReportParams reportParams,
+  ) {
     final payPeriodsAsync = ref.watch(payPeriodsProvider);
     final reportDataAsync = ref.watch(reportDataProvider);
 
@@ -196,10 +202,13 @@ class ReportsPage extends ConsumerWidget {
               }
 
               // Auto-select removed to prevent loops
-              
+
               return Card(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   child: DropdownButtonFormField<String>(
                     initialValue: reportParams.payPeriodId,
                     decoration: const InputDecoration(
@@ -216,8 +225,9 @@ class ReportsPage extends ConsumerWidget {
                       );
                     }).toList(),
                     onChanged: (value) {
-                      ref.read(reportParamsProvider.notifier).update(
-                          reportParams.copyWith(payPeriodId: value));
+                      ref
+                          .read(reportParamsProvider.notifier)
+                          .update(reportParams.copyWith(payPeriodId: value));
                     },
                   ),
                 ),
@@ -242,7 +252,9 @@ class ReportsPage extends ConsumerWidget {
 
               if (reportParams.type == ReportType.payrollSummary ||
                   reportParams.type == ReportType.musterRoll) {
-                return _PayrollSummaryView(report: data as PayrollSummaryReport);
+                return _PayrollSummaryView(
+                  report: data as PayrollSummaryReport,
+                );
               } else if (reportParams.type == ReportType.statutory) {
                 return _StatutoryReportView(report: data as StatutoryReport);
               }
@@ -322,7 +334,10 @@ class _P9ReportView extends ConsumerWidget {
         );
       } else if (next.successMessage != null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.successMessage!), backgroundColor: Colors.green),
+          SnackBar(
+            content: Text(next.successMessage!),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     });
@@ -368,7 +383,10 @@ class _P9ReportView extends ConsumerWidget {
             children: [
               Icon(Icons.calendar_today, color: Colors.green.shade600),
               const SizedBox(width: 12),
-              const Text('Tax Year:', style: TextStyle(fontWeight: FontWeight.w500)),
+              const Text(
+                'Tax Year:',
+                style: TextStyle(fontWeight: FontWeight.w500),
+              ),
               const Spacer(),
               DropdownButton<int>(
                 value: year,
@@ -391,14 +409,20 @@ class _P9ReportView extends ConsumerWidget {
   }
 
   Widget _buildP9List(
-      BuildContext context, WidgetRef ref, List<P9Report> reports) {
+    BuildContext context,
+    WidgetRef ref,
+    List<P9Report> reports,
+  ) {
     if (reports.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.description_outlined,
-                size: 64, color: Colors.grey.shade400),
+            Icon(
+              Icons.description_outlined,
+              size: 64,
+              color: Colors.grey.shade400,
+            ),
             const SizedBox(height: 16),
             Text(
               'No P9 Reports Found',
@@ -410,7 +434,7 @@ class _P9ReportView extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'P9 reports are generated from finalized payroll data.\nProcess payroll to generate P9 tax cards.',
+              'P9 supporting summaries are generated from finalized payroll data.\nProcess payroll to create a worker tax deduction summary.',
               style: TextStyle(color: Colors.grey.shade500),
               textAlign: TextAlign.center,
             ),
@@ -521,9 +545,9 @@ class _P9ReportView extends ConsumerWidget {
               const SizedBox(width: 8),
               Text(
                 'Employee P9 Cards',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -600,10 +624,7 @@ class _P9ReportView extends ConsumerWidget {
                 children: [
                   Text(
                     title,
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -624,7 +645,10 @@ class _P9ReportView extends ConsumerWidget {
   }
 
   Widget _buildWorkerP9Card(
-      BuildContext context, WidgetRef ref, P9Report report) {
+    BuildContext context,
+    WidgetRef ref,
+    P9Report report,
+  ) {
     final currencyFormat = NumberFormat('#,##0.00');
     final activeMonths = report.activeMonths.length;
 
@@ -642,7 +666,11 @@ class _P9ReportView extends ConsumerWidget {
               CircleAvatar(
                 radius: 24,
                 backgroundColor: Colors.green.shade100,
-                child: Icon(Icons.person, color: Colors.green.shade700, size: 28),
+                child: Icon(
+                  Icons.person,
+                  color: Colors.green.shade700,
+                  size: 28,
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -689,10 +717,7 @@ class _P9ReportView extends ConsumerWidget {
                   const SizedBox(height: 2),
                   Text(
                     'Total PAYE',
-                    style: TextStyle(
-                      color: Colors.grey.shade500,
-                      fontSize: 10,
-                    ),
+                    style: TextStyle(color: Colors.grey.shade500, fontSize: 10),
                   ),
                 ],
               ),
@@ -813,8 +838,11 @@ class _P9WorkerDetailView extends StatelessWidget {
                       CircleAvatar(
                         radius: 32,
                         backgroundColor: Colors.green.shade100,
-                        child: Icon(Icons.person,
-                            color: Colors.green.shade700, size: 36),
+                        child: Icon(
+                          Icons.person,
+                          color: Colors.green.shade700,
+                          size: 36,
+                        ),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -926,12 +954,22 @@ class _P9WorkerDetailView extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   _buildTotalRow(
-                      'Basic Salary', report.totals.basicSalary, currencyFormat),
+                    'Basic Salary',
+                    report.totals.basicSalary,
+                    currencyFormat,
+                  ),
                   _buildTotalRow(
-                      'Gross Pay', report.totals.grossPay, currencyFormat),
+                    'Gross Pay',
+                    report.totals.grossPay,
+                    currencyFormat,
+                  ),
                   const Divider(color: Colors.green),
-                  _buildTotalRow('Total PAYE', report.totals.paye, currencyFormat,
-                      isBold: true),
+                  _buildTotalRow(
+                    'Total PAYE',
+                    report.totals.paye,
+                    currencyFormat,
+                    isBold: true,
+                  ),
                 ],
               ),
             ),
@@ -955,10 +993,7 @@ class _P9WorkerDetailView extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           label,
-          style: TextStyle(
-            color: Colors.grey.shade600,
-            fontSize: 12,
-          ),
+          style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
         ),
       ],
     );
@@ -1023,23 +1058,69 @@ class _P9WorkerDetailView extends StatelessWidget {
                   child: Column(
                     children: [
                       _buildDetailRow(
-                          'Basic Salary', month.basicSalary, currencyFormat),
+                        'Cash Pay',
+                        month.basicSalary,
+                        currencyFormat,
+                      ),
                       _buildDetailRow(
-                          'Benefits', month.benefits, currencyFormat),
+                        'Non-Cash Benefits',
+                        month.benefits,
+                        currencyFormat,
+                      ),
                       _buildDetailRow(
-                          'Gross Pay', month.grossPay, currencyFormat),
+                        'Gross Pay',
+                        month.grossPay,
+                        currencyFormat,
+                      ),
                       const Divider(),
-                      _buildDetailRow('NSSF Contribution', month.contribution,
-                          currencyFormat),
                       _buildDetailRow(
-                          'Taxable Pay', month.taxablePay, currencyFormat),
+                        'Allowable Pension / NSSF',
+                        month.contribution,
+                        currencyFormat,
+                      ),
                       _buildDetailRow(
-                          'Tax Charged', month.taxCharged, currencyFormat),
+                        'Affordable Housing Levy',
+                        month.housingLevy,
+                        currencyFormat,
+                      ),
+                      _buildDetailRow('SHIF', month.shif, currencyFormat),
                       _buildDetailRow(
-                          'Personal Relief', month.relief, currencyFormat),
+                        'Post-Retirement Medical Fund',
+                        month.postRetirementMedical,
+                        currencyFormat,
+                      ),
+                      _buildDetailRow(
+                        'Mortgage Interest',
+                        month.ownerOccupiedInterest,
+                        currencyFormat,
+                      ),
+                      _buildDetailRow(
+                        'Chargeable Pay',
+                        month.taxablePay,
+                        currencyFormat,
+                      ),
+                      _buildDetailRow(
+                        'Tax Charged',
+                        month.taxCharged,
+                        currencyFormat,
+                      ),
+                      _buildDetailRow(
+                        'Personal Relief',
+                        month.relief,
+                        currencyFormat,
+                      ),
+                      _buildDetailRow(
+                        'Insurance Relief',
+                        month.insuranceRelief,
+                        currencyFormat,
+                      ),
                       const Divider(),
-                      _buildDetailRow('PAYE Payable', month.paye, currencyFormat,
-                          isBold: true),
+                      _buildDetailRow(
+                        'PAYE Payable',
+                        month.paye,
+                        currencyFormat,
+                        isBold: true,
+                      ),
                     ],
                   ),
                 ),
@@ -1049,8 +1130,12 @@ class _P9WorkerDetailView extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(String label, double value, NumberFormat format,
-      {bool isBold = false}) {
+  Widget _buildDetailRow(
+    String label,
+    double value,
+    NumberFormat format, {
+    bool isBold = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -1075,8 +1160,12 @@ class _P9WorkerDetailView extends StatelessWidget {
     );
   }
 
-  Widget _buildTotalRow(String label, double value, NumberFormat format,
-      {bool isBold = false}) {
+  Widget _buildTotalRow(
+    String label,
+    double value,
+    NumberFormat format, {
+    bool isBold = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -1185,7 +1274,10 @@ class _PayrollSummaryView extends ConsumerWidget {
                         color: Colors.purple.shade100,
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(Icons.download, color: Colors.purple.shade700),
+                      child: Icon(
+                        Icons.download,
+                        color: Colors.purple.shade700,
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -1219,7 +1311,6 @@ class _PayrollSummaryView extends ConsumerWidget {
 
           const SizedBox(height: 24),
 
-
           // Employee Breakdown Header
           Row(
             children: [
@@ -1227,9 +1318,9 @@ class _PayrollSummaryView extends ConsumerWidget {
               const SizedBox(width: 8),
               Text(
                 'Employee Breakdown',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const Spacer(),
               Text(
@@ -1241,46 +1332,55 @@ class _PayrollSummaryView extends ConsumerWidget {
           const SizedBox(height: 12),
 
           // Employee Cards
-          ...report.records.map((record) => Card(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.blue.shade100,
-                    child: Icon(Icons.person, color: Colors.blue.shade700),
-                  ),
-                  title: Text(
-                    record.workerName,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text(
-                    'Net: KES ${currencyFormat.format(record.netPay)}',
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'KES ${currencyFormat.format(record.grossPay)}',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.picture_as_pdf, color: Colors.blue),
-                        onPressed: () {
-                           if (record.id.isNotEmpty) {
-                             ref.read(taxExportProvider.notifier).downloadPayslip(
-                               recordId: record.id,
-                             );
-                           } else {
-                             ScaffoldMessenger.of(context).showSnackBar(
-                               const SnackBar(content: Text('Cannot download: Invalid record ID')),
-                             );
-                           }
-                        }, 
-                      ),
-                    ],
-                  ),
+          ...report.records.map(
+            (record) => Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: Colors.blue.shade100,
+                  child: Icon(Icons.person, color: Colors.blue.shade700),
                 ),
-              )),
+                title: Text(
+                  record.workerName,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text(
+                  'Net: KES ${currencyFormat.format(record.netPay)}',
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'KES ${currencyFormat.format(record.grossPay)}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.picture_as_pdf,
+                        color: Colors.blue,
+                      ),
+                      onPressed: () {
+                        if (record.id.isNotEmpty) {
+                          ref
+                              .read(taxExportProvider.notifier)
+                              .downloadPayslip(recordId: record.id);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Cannot download: Invalid record ID',
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -1290,16 +1390,18 @@ class _PayrollSummaryView extends ConsumerWidget {
     final startDate = DateTime.parse(report.payPeriod.startDate);
     final endDate = DateTime.parse(report.payPeriod.endDate);
 
-    ref.read(taxExportProvider.notifier).downloadStatutoryReport(
+    ref
+        .read(taxExportProvider.notifier)
+        .downloadStatutoryReport(
           exportType: 'MUSTER_ROLL_CSV',
           startDate: startDate,
           endDate: endDate,
           title: 'Muster Roll',
         );
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Downloading muster roll...')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Downloading muster roll...')));
   }
 }
 
@@ -1330,7 +1432,11 @@ class _StatutoryReportView extends ConsumerWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.gavel, color: Colors.orange.shade700, size: 32),
+                      Icon(
+                        Icons.gavel,
+                        color: Colors.orange.shade700,
+                        size: 32,
+                      ),
                       const SizedBox(width: 16),
                       Expanded(
                         child: Column(
@@ -1345,7 +1451,7 @@ class _StatutoryReportView extends ConsumerWidget {
                               ),
                             ),
                             Text(
-                              'P10-style statutory summary',
+                              'PAYE and statutory contribution summary',
                               style: TextStyle(
                                 color: Colors.orange.shade600,
                                 fontSize: 12,
@@ -1415,9 +1521,9 @@ class _StatutoryReportView extends ConsumerWidget {
           // Employee Table
           Text(
             'Employee Breakdown',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
 
@@ -1426,7 +1532,8 @@ class _StatutoryReportView extends ConsumerWidget {
               scrollDirection: Axis.horizontal,
               child: DataTable(
                 headingRowColor: WidgetStateColor.resolveWith(
-                    (states) => Colors.orange.shade50),
+                  (states) => Colors.orange.shade50,
+                ),
                 columns: const [
                   DataColumn(label: Text('Name')),
                   DataColumn(label: Text('Gross')),
@@ -1436,17 +1543,21 @@ class _StatutoryReportView extends ConsumerWidget {
                   DataColumn(label: Text('PAYE')),
                 ],
                 rows: report.employees.map((e) {
-                  return DataRow(cells: [
-                    DataCell(Text(e.name)),
-                    DataCell(Text(currencyFormat.format(e.grossPay))),
-                    DataCell(Text(currencyFormat.format(e.nssf))),
-                    DataCell(Text(currencyFormat.format(e.shif))),
-                    DataCell(Text(currencyFormat.format(e.housingLevy))),
-                    DataCell(Text(
-                      currencyFormat.format(e.paye),
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    )),
-                  ]);
+                  return DataRow(
+                    cells: [
+                      DataCell(Text(e.name)),
+                      DataCell(Text(currencyFormat.format(e.grossPay))),
+                      DataCell(Text(currencyFormat.format(e.nssf))),
+                      DataCell(Text(currencyFormat.format(e.shif))),
+                      DataCell(Text(currencyFormat.format(e.housingLevy))),
+                      DataCell(
+                        Text(
+                          currencyFormat.format(e.paye),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  );
                 }).toList(),
               ),
             ),
@@ -1464,14 +1575,21 @@ class _StatutoryReportView extends ConsumerWidget {
       if (next.error != null && next.error != previous?.error) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Export Failed: ${next.error}'), backgroundColor: Colors.red),
+            SnackBar(
+              content: Text('Export Failed: ${next.error}'),
+              backgroundColor: Colors.red,
+            ),
           );
         }
       }
-      if (next.successMessage != null && next.successMessage != previous?.successMessage) {
+      if (next.successMessage != null &&
+          next.successMessage != previous?.successMessage) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(next.successMessage!), backgroundColor: Colors.green),
+            SnackBar(
+              content: Text(next.successMessage!),
+              backgroundColor: Colors.green,
+            ),
           );
         }
       }
@@ -1502,7 +1620,7 @@ class _StatutoryReportView extends ConsumerWidget {
           _buildExportButton(
             context,
             ref,
-            'PAYE (P10 CSV)',
+            'PAYE Supporting CSV',
             Icons.download,
             Colors.green,
             'KRA_P10_CSV',
@@ -1542,16 +1660,18 @@ class _StatutoryReportView extends ConsumerWidget {
       onPressed: () {
         if (exportType == 'PDF') {
           // Handle PDF Download
-           ref.read(taxExportProvider.notifier).downloadStatutoryPdf(
-             payPeriodId: report.payPeriod.id,
-           );
-           return;
+          ref
+              .read(taxExportProvider.notifier)
+              .downloadStatutoryPdf(payPeriodId: report.payPeriod.id);
+          return;
         }
 
         final startDate = DateTime.parse(report.payPeriod.startDate);
         final endDate = DateTime.parse(report.payPeriod.endDate);
 
-        ref.read(taxExportProvider.notifier).downloadStatutoryReport(
+        ref
+            .read(taxExportProvider.notifier)
+            .downloadStatutoryReport(
               exportType: exportType,
               startDate: startDate,
               endDate: endDate,
@@ -1606,10 +1726,7 @@ class _SummaryCard extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               title,
-              style: TextStyle(
-                color: Colors.grey.shade600,
-                fontSize: 12,
-              ),
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
             ),
             const SizedBox(height: 4),
             Text(

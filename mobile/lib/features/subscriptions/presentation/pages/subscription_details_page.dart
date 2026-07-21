@@ -750,9 +750,8 @@ class _SubscriptionDetailsPageState
             const SizedBox(height: 12),
             Text(
               '• Upgrade anytime to unlock more features\n'
-              '• Payment is processed securely via Stripe/M-Pesa\n'
               '• You can cancel or change plans at any time\n'
-              '• Need help? Contact support 24/7',
+              '• Need help? Email support@paydome.co',
               style: TextStyle(color: Colors.blue.shade700, height: 1.6),
             ),
           ],
@@ -984,11 +983,7 @@ class _SubscriptionDetailsPageState
           children: [
             Text('Need help with your subscription?'),
             SizedBox(height: 16),
-            Text('📧 Email: support@paykey.app'),
-            SizedBox(height: 8),
-            Text('📞 Phone: +254 700 000 000'),
-            SizedBox(height: 8),
-            Text('💬 Live chat available 24/7'),
+            Text('Email: support@paydome.co'),
           ],
         ),
         actions: [

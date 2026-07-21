@@ -1,57 +1,61 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect } from "react";
 
 const loadingPhrases = [
-  'Connecting to M-Pesa',
-  'Loading KRA compliance',
-  'Securing your payroll',
-  'Preparing your dashboard',
-]
+  "Connecting to M-Pesa",
+  "Loading KRA compliance",
+  "Securing your payroll",
+  "Preparing your dashboard",
+];
 
-export default function LoadingScreen({ onComplete }: { onComplete: () => void }) {
-  const [progress, setProgress] = useState(0)
-  const [currentPhrase, setCurrentPhrase] = useState(0)
-  const [fadeOut, setFadeOut] = useState(false)
+export default function LoadingScreen({
+  onComplete,
+}: {
+  onComplete: () => void;
+}) {
+  const [progress, setProgress] = useState(0);
+  const [currentPhrase, setCurrentPhrase] = useState(0);
+  const [fadeOut, setFadeOut] = useState(false);
 
   useEffect(() => {
     // Progress bar animation
     const progressInterval = setInterval(() => {
-      setProgress(prev => {
+      setProgress((prev) => {
         if (prev >= 100) {
-          clearInterval(progressInterval)
-          return 100
+          clearInterval(progressInterval);
+          return 100;
         }
         // Accelerate towards end
-        const increment = prev < 60 ? 2 : prev < 85 ? 3 : 5
-        return Math.min(prev + increment, 100)
-      })
-    }, 40)
+        const increment = prev < 60 ? 2 : prev < 85 ? 3 : 5;
+        return Math.min(prev + increment, 100);
+      });
+    }, 40);
 
     // Phrase rotation
     const phraseInterval = setInterval(() => {
-      setCurrentPhrase(prev => (prev + 1) % loadingPhrases.length)
-    }, 600)
+      setCurrentPhrase((prev) => (prev + 1) % loadingPhrases.length);
+    }, 600);
 
     return () => {
-      clearInterval(progressInterval)
-      clearInterval(phraseInterval)
-    }
-  }, [])
+      clearInterval(progressInterval);
+      clearInterval(phraseInterval);
+    };
+  }, []);
 
   useEffect(() => {
     if (progress >= 100) {
-      const timeout = setTimeout(() => setFadeOut(true), 300)
-      const completeTimeout = setTimeout(() => onComplete(), 900)
+      const timeout = setTimeout(() => setFadeOut(true), 300);
+      const completeTimeout = setTimeout(() => onComplete(), 900);
       return () => {
-        clearTimeout(timeout)
-        clearTimeout(completeTimeout)
-      }
+        clearTimeout(timeout);
+        clearTimeout(completeTimeout);
+      };
     }
-  }, [progress, onComplete])
+  }, [progress, onComplete]);
 
   return (
     <div
       className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#070B14] transition-opacity duration-600 ${
-        fadeOut ? 'opacity-0 pointer-events-none' : 'opacity-100'
+        fadeOut ? "opacity-0 pointer-events-none" : "opacity-100"
       }`}
     >
       {/* Animated Ring Background */}
@@ -67,14 +71,22 @@ export default function LoadingScreen({ onComplete }: { onComplete: () => void }
         {/* Center Logo */}
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-xl shadow-orange-500/30 animate-[pulse_2s_ease-in-out_infinite]">
-            <img src="/app-icon.jpg" alt="Paydome" className="w-full h-full object-cover" />
+            <img
+              src="/app-icon.jpg"
+              alt="Paydome"
+              className="w-full h-full object-cover"
+            />
           </div>
         </div>
       </div>
 
       {/* Brand */}
-      <h1 className="text-2xl font-bold text-white tracking-tight mb-1">Paydome</h1>
-      <p className="text-xs text-slate-500 tracking-widest uppercase mb-10">Domestic Payroll · Kenya</p>
+      <h1 className="text-2xl font-bold text-white tracking-tight mb-1">
+        Paydome
+      </h1>
+      <p className="text-xs text-slate-500 tracking-widest uppercase mb-10">
+        Domestic Payroll · Kenya
+      </p>
 
       {/* Loading phrase */}
       <p className="text-sm text-emerald-400/80 font-mono mb-6 h-5 transition-all duration-300">
@@ -92,15 +104,17 @@ export default function LoadingScreen({ onComplete }: { onComplete: () => void }
 
       {/* Feature badges */}
       <div className="flex items-center gap-4 mt-10">
-        {['M-Pesa Native', 'KRA · NHIF · SHIF', 'AES-256 Encrypted'].map((badge) => (
-          <span
-            key={badge}
-            className="text-[10px] text-slate-500 px-3 py-1 rounded-full border border-white/5 bg-white/[0.02]"
-          >
-            {badge}
-          </span>
-        ))}
+        {["M-Pesa Enabled", "PAYE · NSSF · SHIF", "Secure Connections"].map(
+          (badge) => (
+            <span
+              key={badge}
+              className="text-[10px] text-slate-500 px-3 py-1 rounded-full border border-white/5 bg-white/[0.02]"
+            >
+              {badge}
+            </span>
+          ),
+        )}
       </div>
     </div>
-  )
+  );
 }

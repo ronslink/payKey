@@ -4,6 +4,11 @@ import request from 'supertest';
 import { AppModule } from './../src/app.module';
 import { cleanupTestData } from './test-utils';
 import { DataSource } from 'typeorm';
+import {
+  RateType,
+  TaxConfig,
+  TaxType,
+} from '../src/modules/tax-config/entities/tax-config.entity';
 
 describe('Payroll Payment Flow E2E', () => {
   let app: INestApplication;
@@ -24,6 +29,60 @@ describe('Payroll Payment Flow E2E', () => {
     // Clean up DB before starting
     const dataSource = app.get(DataSource);
     await cleanupTestData(dataSource);
+    await dataSource.getRepository(TaxConfig).save([
+      {
+        taxType: TaxType.SHIF,
+        rateType: RateType.PERCENTAGE,
+        effectiveFrom: new Date('2024-01-01'),
+        configuration: { percentage: 2.75, minAmount: 300 },
+        isActive: true,
+      },
+      {
+        taxType: TaxType.HOUSING_LEVY,
+        rateType: RateType.PERCENTAGE,
+        effectiveFrom: new Date('2024-01-01'),
+        configuration: { percentage: 1.5 },
+        isActive: true,
+      },
+      {
+        taxType: TaxType.NSSF_TIER1,
+        rateType: RateType.TIERED,
+        effectiveFrom: new Date('2024-01-01'),
+        configuration: {
+          tiers: [
+            { name: 'Tier 1', salaryFrom: 0, salaryTo: 7000, rate: 0.06 },
+          ],
+        },
+        isActive: true,
+      },
+      {
+        taxType: TaxType.NSSF_TIER2,
+        rateType: RateType.TIERED,
+        effectiveFrom: new Date('2024-01-01'),
+        configuration: {
+          tiers: [
+            { name: 'Tier 2', salaryFrom: 7001, salaryTo: 36000, rate: 0.06 },
+          ],
+        },
+        isActive: true,
+      },
+      {
+        taxType: TaxType.PAYE,
+        rateType: RateType.GRADUATED,
+        effectiveFrom: new Date('2024-01-01'),
+        configuration: {
+          brackets: [
+            { from: 0, to: 24000, rate: 0.1 },
+            { from: 24001, to: 32333, rate: 0.25 },
+            { from: 32334, to: 500000, rate: 0.3 },
+            { from: 500001, to: 800000, rate: 0.325 },
+            { from: 800001, to: null, rate: 0.35 },
+          ],
+          personalRelief: 2400,
+        },
+        isActive: true,
+      },
+    ]);
 
     // Register a new user
     const email = `payment.flow.${Date.now()}@paykey.com`;
@@ -47,6 +106,10 @@ describe('Payroll Payment Flow E2E', () => {
 
     authToken = loginRes.body.access_token;
     _userId = loginRes.body.user.id;
+    await dataSource.query(
+      `UPDATE "users" SET "tier" = 'BASIC' WHERE "id" = $1`,
+      [_userId],
+    );
   });
 
   afterAll(async () => {

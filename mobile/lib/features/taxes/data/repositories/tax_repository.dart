@@ -14,7 +14,8 @@ class TaxRepository {
   Future<List<TaxSubmissionModel>> getIndividualTaxSubmissions() async {
     try {
       // Use the generic submissions endpoint for now, filtering if necessary
-      final response = await _apiService.taxes.getSubmissions(); // Calls taxes.getSubmissions()
+      final response = await _apiService.taxes
+          .getSubmissions(); // Calls taxes.getSubmissions()
       if (response.data is List) {
         return (response.data as List)
             .map((json) => TaxSubmissionModel.fromJson(json))
@@ -82,18 +83,22 @@ class TaxRepository {
   }
 
   // Calculate tax for individual returns - Now uses backend API
-  Future<Map<String, double>> calculateTax(double income, double deductions) async {
+  Future<Map<String, double>> calculateTax(
+    double income,
+    double deductions,
+  ) async {
     try {
       // Use backend API for proper tax calculations (PAYE, NSSF, SHIF, Housing Levy)
       final apiService = ApiService();
       final response = await apiService.calculateTax(income);
-      
+
       if (response.statusCode == 200) {
         final taxData = response.data;
         return {
           'grossIncome': income,
           'deductions': deductions,
-          'taxableIncome': income - deductions, // Simplified for individual returns
+          'taxableIncome':
+              income - deductions, // Simplified for individual returns
           'taxAmount': taxData['paye'] ?? 0.0, // Use PAYE from backend
           'netIncome': income - (taxData['paye'] ?? 0.0),
           // Additional breakdowns from backend
@@ -109,14 +114,14 @@ class TaxRepository {
       throw Exception('Failed to calculate tax: $e');
     }
   }
-  
+
   // Backward compatibility alias - Now uses backend API
   Future<Map<String, double>> calculatePayrollTax(double grossSalary) async {
     try {
       // Use backend API for proper payroll tax calculations
       final apiService = ApiService();
       final response = await apiService.calculateTax(grossSalary);
-      
+
       if (response.statusCode == 200) {
         final taxData = response.data;
         return {
@@ -128,7 +133,9 @@ class TaxRepository {
           'netPay': grossSalary - (taxData['totalDeductions'] ?? 0.0),
         };
       } else {
-        throw Exception('Failed to calculate payroll tax: ${response.statusMessage}');
+        throw Exception(
+          'Failed to calculate payroll tax: ${response.statusMessage}',
+        );
       }
     } catch (e) {
       throw Exception('Failed to calculate payroll tax: $e');
@@ -138,15 +145,11 @@ class TaxRepository {
   // Get current tax table
   Future<Map<String, dynamic>> getCurrentTaxTable() async {
     try {
-      // Return mock tax table data
-      return {
-        'taxYear': '2024',
-        'bands': [
-          {'min': 0, 'max': 288000, 'rate': 0.1},
-          {'min': 288001, 'max': 388000, 'rate': 0.15},
-          {'min': 388001, 'max': 6000000, 'rate': 0.3},
-        ],
-      };
+      final response = await _apiService.getCurrentTaxTable();
+      if (response.data is Map) {
+        return Map<String, dynamic>.from(response.data as Map);
+      }
+      throw Exception('The server returned an invalid tax table');
     } catch (e) {
       throw Exception('Failed to fetch tax table: $e');
     }
@@ -168,12 +171,7 @@ class TaxRepository {
     } catch (e) {
       // Fallback for UI if API fails, but ideally should propagate or show error state
       debugPrint('Failed to fetch compliance status: $e');
-      return {
-        'kraPin': false,
-        'nssf': false,
-        'nhif': false,
-        'status': 'error',
-      };
+      return {'kraPin': false, 'nssf': false, 'nhif': false, 'status': 'error'};
     }
   }
 
@@ -183,7 +181,9 @@ class TaxRepository {
       final response = await _apiService.dio.get('/taxes/deadlines');
       if (response.data is List) {
         return List<Map<String, dynamic>>.from(
-          (response.data as List).map((item) => Map<String, dynamic>.from(item)),
+          (response.data as List).map(
+            (item) => Map<String, dynamic>.from(item),
+          ),
         );
       }
       return [];
@@ -195,7 +195,9 @@ class TaxRepository {
   }
 
   // Submit tax return
-  Future<TaxSubmissionModel> submitTaxReturn(TaxSubmissionModel submission) async {
+  Future<TaxSubmissionModel> submitTaxReturn(
+    TaxSubmissionModel submission,
+  ) async {
     try {
       // Mock implementation - just return the submission with updated data
       return submission.copyWith(
@@ -272,15 +274,20 @@ class TaxRepository {
       throw Exception('Failed to fetch tax payment instructions: $e');
     }
   }
+
   // Download statutory return (KRA, NSSF, SHIF)
-  Future<String> downloadStatutoryReturn(String exportType, DateTime startDate, DateTime endDate) async {
+  Future<String> downloadStatutoryReturn(
+    String exportType,
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
     try {
       final response = await _apiService.taxes.exportStatutoryReturn(
         exportType: exportType,
         startDate: startDate,
         endDate: endDate,
       );
-      
+
       final data = response.data;
       // We expect data to contain { id, downloadUrl, fileName }
       // This ID is needed to trigger the actual download
