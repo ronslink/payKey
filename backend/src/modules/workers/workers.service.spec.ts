@@ -170,7 +170,9 @@ describe('WorkersService', () => {
     it('should throw error when worker not found', async () => {
       (mockWorkerRepository.findOne as jest.Mock).mockResolvedValue(null);
 
-      await expect(service.findOne('999', 'user-123')).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('999', 'user-123')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -203,7 +205,13 @@ describe('WorkersService', () => {
       expect(mockWorkerRepository.findOne).toHaveBeenCalledWith({
         where: { id: '1', userId: 'user-123' },
       });
-      expect(mockWorkerRepository.save).toHaveBeenCalledWith(updatedWorker);
+      expect(mockWorkerRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: existingWorker.id,
+          userId: existingWorker.userId,
+          ...updateData,
+        }),
+      );
       expect(result).toEqual(updatedWorker);
       expect(result.salaryGross).toBe(70000);
     });
