@@ -100,7 +100,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: paydome-production-aab-${{ inputs.build_number }}
-          path: mobile/build/app/outputs/bundle/release/app-release.aab
+          path: mobile/build/app/outputs/bundle/release/*.aab
           if-no-files-found: error
           retention-days: 14
 

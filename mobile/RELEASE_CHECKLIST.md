@@ -1,5 +1,16 @@
 # Mobile release candidates
 
+The 18 September 2026 Android candidate is **1.1.6 (version code 23)**, following
+the user's confirmed latest Play upload, version code 22. The local signed AAB
+has package `com.payglobus.paydome`; bundletool validates it and jarsigner verifies
+its signature. Compare its certificate with Play Console's **upload** certificate
+when uploading. A local signature check does not establish Play acceptance.
+
+Deploy and verify the matching backend before rolling this mobile candidate out:
+its authenticated document/download flows depend on the hardened API. Then
+perform the physical-device checks below. This bundle has not been uploaded or
+published to Google Play.
+
 The manual Android workflow builds a signed production AAB; it does not publish
 to Google Play. Set these secrets in the GitHub `PROD` environment:
 
