@@ -14,6 +14,7 @@ const fixture = {
   INTASEND_SECRET_KEY: "unit-test-private",
   INTASEND_CHALLENGE: "unit-test-challenge",
   STRIPE_SECRET_KEY: "sk_live_unit_test_only",
+  STRIPE_PUBLISHABLE_KEY: "pk_live_unittestonly",
   STRIPE_WEBHOOK_SECRET: "whsec_unit_test_only",
   BACKEND_IMAGE: `example/paykey-backend@sha256:${"a".repeat(64)}`,
   RELEASE_COMMIT: "b".repeat(40),
@@ -34,6 +35,16 @@ test("rejects missing live payment verification and mutable image configuration"
     () => createProductionEnvironment({ ...fixture, REDIS_PASSWORD: "" }),
     /REDIS_PASSWORD/,
   );
+  for (const key of ["", "pk_test_unittestonly", "sk_live_unittestonly"]) {
+    assert.throws(
+      () =>
+        createProductionEnvironment({
+          ...fixture,
+          STRIPE_PUBLISHABLE_KEY: key,
+        }),
+      /STRIPE_PUBLISHABLE_KEY/,
+    );
+  }
   assert.throws(
     () => createProductionEnvironment({ ...fixture, INTASEND_CHALLENGE: "" }),
     /INTASEND_CHALLENGE/,
@@ -146,6 +157,10 @@ test("production Compose models require immutable image/password and isolate hos
       if (model.services.backend) {
         const backend = model.services.backend;
         assert.equal(backend.image, fixture.BACKEND_IMAGE);
+        assert.equal(
+          backend.environment.STRIPE_PUBLISHABLE_KEY,
+          fixture.STRIPE_PUBLISHABLE_KEY,
+        );
         assert.equal(backend.ports[0].host_ip, "127.0.0.1");
         assert.ok(
           !backend.volumes.some(

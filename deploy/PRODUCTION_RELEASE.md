@@ -26,28 +26,55 @@ restart services or run migrations. The `release` option is restricted to `main`
 and invokes the required CI and release chain. A separate GitHub Release/tag is
 not required: deployed images and the website are tied to the tested commit.
 
-1. Recover trusted SSH access and confirm the current DigitalOcean droplet and
-   database cluster. Run only read-only checks until the target is confirmed.
+1. Reconfirm the target through read-only inspection. Existing deployment-key
+   access is restored locally and in GitHub. The running backend is verified on
+   DigitalOcean managed PostgreSQL over certificate-verified TLS 1.3; all 35
+   migration names match, with no pending SQL. The database CA is mounted read-only.
 2. In the GitHub `PROD` environment, supply `REDIS_PASSWORD` (new random value,
    at least 16 characters), `JWT_SECRET` (at least 32 characters), `DATABASE_URL`,
    live IntaSend keys and either `INTASEND_CHALLENGE` or `INTASEND_WEBHOOK_SECRET`.
-   Supply a live Stripe API key and its `whsec_` webhook secret. Preserve the existing signing
+   Supply a live Stripe API key and its `whsec_` webhook secret. The existing live
+   `STRIPE_PUBLISHABLE_KEY` is configured and verified as a GitHub `PROD` variable;
+   the workflow, environment writer and Compose require and pass it at runtime.
+   The approved `REDIS_PASSWORD` is already stored in `PROD`. Preserve the existing signing
    secret unless deliberately invalidating existing sessions.
 3. Install the database CA at `/opt/paykey/ca-certificate.crt`. Optional Firebase
    credentials belong at `/opt/paykey/secrets/firebase-service-account.json`,
    outside Git/image layers. Email/SMS credentials and provider variables must
    be supplied separately if those channels are offered.
-4. Verify database backup freshness and retention. This launch adds no migrations,
+4. Verify database backup freshness/retention and trusted sources; these remain
+   unverified after another 1Password CLI authorization timeout. This launch adds no migrations,
    and its read-only preflight rejects
    any pending migration before stopping the existing application. If legacy SQL
    is pending, inspect its schema/data effects, restore a recent backup into an
    isolated database, rehearse the SQL and recovery there, and apply the reviewed SQL in a separate migration
    operation before retrying the application release. Do not mark unexecuted SQL
    as applied merely to bypass this check. Record the backup/restore identifier,
-   time and release commit. The release script does not create a managed-database
+   time and release commit when SQL is required. No restore rehearsal is required
+   for the current application-only rollout with all migrations already applied.
+   The release script does not create a managed-database
    backup or claim one has been tested.
 5. Verify ingress terminates TLS and proxies to host loopback port 3000. Backend
    public port exposure is removed. Confirm firewall/trusted-source settings.
+6. Resolve EUR payroll funding before releasing EUR payments. Stripe settlement
+   currently credits only the application's KES ledger; payroll draws from each
+   employer's IntaSend working wallet. No bridge funds that wallet. The choice of
+   pre-funded float/manual settlement or another verified mechanism remains
+   pending. Hourly balance observation now logs discrepancies without overwriting
+   the ledger; this protects recorded credit but does not fund payouts.
+7. The enabled Paydome subscription webhook lacks `payment_intent.succeeded`.
+   Add it only after the corrected backend is deployed and the funding path is
+   agreed. First verify Stripe sandbox checkout, signed delivery and settlement;
+   monitor the first genuine authorized live purchase. Do not run synthetic
+   live-card tests ([Stripe testing guidance](https://docs.stripe.com/testing)).
+
+The latest wallet code passed three PostgreSQL settlement tests, the ledger
+preservation regression, nine configuration checks and the backend build. Android
+currency/native fixes passed their widget check, signed rebuild and artifact
+validation, including the registered upload-certificate match. Lint has zero
+introduced diagnostic fingerprints. These changes still need fresh CI; earlier
+passing CI at `e75e077` does not cover them. No production deployment or Play upload
+has occurred.
 
 ## What the release script does
 
@@ -81,8 +108,9 @@ unrestricted `docker compose config` in CI logs.
 
 On a replacement failure the script removes only containers bearing the current
 release's Compose project label and restarts retained backend/Redis containers.
-It **does not reverse database migrations**. Backward-compatible migrations and
-a separately tested database recovery plan are prerequisites.
+It **does not reverse database migrations**. If a separate SQL operation is
+introduced, review backward compatibility and rehearse recovery before that
+operation; the current application release requires no SQL.
 
 Previous image IDs, container names, `.env` and upload snapshots are retained in
 the release directory. Keep enough disk capacity for them; perform separately

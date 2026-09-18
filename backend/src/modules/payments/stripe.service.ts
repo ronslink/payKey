@@ -155,8 +155,43 @@ export class StripeService {
     amount: number,
     currency: string = 'eur',
     paymentMethodTypes: string[] = ['card', 'sepa_debit'],
-  ): Promise<{ clientSecret: string; transactionId: string }> {
+  ): Promise<{
+    clientSecret: string;
+    transactionId: string;
+    publishableKey: string;
+  }> {
     const stripe = this.ensureStripeConfigured();
+    const publishableKey =
+      this.configService.get<string>('STRIPE_PUBLISHABLE_KEY') || '';
+    const secretKey = this.configService.get<string>('STRIPE_SECRET_KEY') || '';
+    const keyMode = /^(?:sk|rk)_(live|test)_/.exec(secretKey)?.[1];
+    if (
+      !keyMode ||
+      !/^pk_(live|test)_[A-Za-z0-9]+$/.test(publishableKey) ||
+      !publishableKey.startsWith(`pk_${keyMode}_`)
+    ) {
+      throw new BadRequestException(
+        'Stripe publishable key is missing or uses the wrong mode',
+      );
+    }
+    const amountInCents = Math.round(amount * 100);
+    if (
+      currency.toUpperCase() !== 'EUR' ||
+      !Number.isFinite(amount) ||
+      amount < 0.5 ||
+      !Number.isSafeInteger(amountInCents) ||
+      Math.abs(amount * 100 - amountInCents) > 0.000001
+    ) {
+      throw new BadRequestException(
+        'Wallet funding requires a valid EUR amount',
+      );
+    }
+    // Refuse a new charge when we cannot convert its proceeds into the KES wallet.
+    // Settlement checks the rate again because delayed payments can clear later.
+    const rate = await this.exchangeRateService.getLatestRate('EUR', 'KES');
+    if (!Number.isFinite(rate) || rate <= 0) {
+      throw new BadRequestException('Wallet exchange rate is unavailable');
+    }
 
     // Create pending transaction
     const transaction = this.transactionRepository.create({
@@ -175,7 +210,7 @@ export class StripeService {
 
     // Create PaymentIntent
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // Convert to cents
+      amount: amountInCents,
       currency: currency.toLowerCase(),
       payment_method_types: paymentMethodTypes,
       metadata: {
@@ -196,6 +231,7 @@ export class StripeService {
     return {
       clientSecret: paymentIntent.client_secret,
       transactionId: transaction.id,
+      publishableKey,
     };
   }
 
@@ -359,13 +395,18 @@ export class StripeService {
   private async handlePaymentIntentSucceeded(
     paymentIntent: Stripe.PaymentIntent,
   ): Promise<void> {
-    const { userId, transactionId, type } = paymentIntent.metadata;
+    const { transactionId, type } = paymentIntent.metadata;
 
     if (type !== 'WALLET_TOPUP' || !transactionId) {
       return; // Ignore non-wallet payments
     }
 
-    const amountToCredit = await this.transactionRepository.manager.transaction(
+    // Read the current provider state; a signed event can be stale or replayed.
+    const settledIntent =
+      await this.ensureStripeConfigured().paymentIntents.retrieve(
+        paymentIntent.id,
+      );
+    const credit = await this.transactionRepository.manager.transaction(
       async (manager) => {
         const transaction = await manager.findOne(Transaction, {
           where: { id: transactionId },
@@ -378,72 +419,89 @@ export class StripeService {
           return undefined;
         }
 
+        const sourceCurrency = transaction.currency.toUpperCase();
+        const sourceAmount = Number(transaction.amount);
+        const expectedCents = Math.round(sourceAmount * 100);
+        if (
+          transaction.provider !== 'STRIPE' ||
+          transaction.type !== TransactionType.DEPOSIT ||
+          transaction.providerRef !== settledIntent.id ||
+          settledIntent.id !== paymentIntent.id ||
+          settledIntent.status !== 'succeeded' ||
+          settledIntent.metadata.type !== 'WALLET_TOPUP' ||
+          settledIntent.metadata.transactionId !== transaction.id ||
+          settledIntent.metadata.userId !== transaction.userId ||
+          settledIntent.currency.toUpperCase() !== sourceCurrency ||
+          !['EUR', 'USD', 'KES'].includes(sourceCurrency) ||
+          !Number.isFinite(sourceAmount) ||
+          !Number.isSafeInteger(expectedCents) ||
+          expectedCents <= 0 ||
+          settledIntent.amount !== expectedCents ||
+          settledIntent.amount_received !== expectedCents
+        ) {
+          throw new BadRequestException(
+            'Stripe payment does not match the wallet transaction',
+          );
+        }
+
         if (transaction.status === TransactionStatus.SUCCESS) {
           this.logger.log(`Transaction ${transactionId} already processed`);
           return undefined;
         }
 
-        // Update Transaction
-        transaction.status = TransactionStatus.SUCCESS;
-        transaction.providerRef = paymentIntent.id;
-        // transaction.updatedAt = new Date(); // Not in entity
-        await manager.save(Transaction, transaction);
-
-        // Credit Wallet
-        // Stripe charges are in cents, so we use amount/100
-        const amountReceivedEur = paymentIntent.amount_received / 100;
-
-        let amount = amountReceivedEur;
-        let appliedRate = 1;
-        let targetCurrency = 'EUR';
-
-        // FX Conversion (EUR -> KES)
-        if (transaction.currency !== 'KES' && transaction.currency !== 'USD') {
-          targetCurrency = 'KES';
-          try {
-            // Fetch latest periodic rate (Cached/DB)
-            appliedRate = await this.exchangeRateService.getLatestRate(
-              'EUR',
-              'KES',
-            );
-            amount = this.roundCurrency(amountReceivedEur * appliedRate);
-          } catch (e) {
-            this.logger.error(
-              'FX Conversion Failed. Using 1:1 Fallback (Manual Review Required)',
-              e,
-            );
-            // Fallback is 1:1, effectively freezing real value transfer until resolved
-          }
+        const appliedRate =
+          sourceCurrency === 'KES'
+            ? 1
+            : await this.exchangeRateService.getLatestRate(
+                sourceCurrency,
+                'KES',
+              );
+        if (!Number.isFinite(appliedRate) || appliedRate <= 0) {
+          throw new BadRequestException('Wallet exchange rate is unavailable');
         }
+        const amount = this.roundCurrency(sourceAmount * appliedRate);
+        if (!Number.isFinite(amount) || amount <= 0) {
+          throw new BadRequestException('Wallet credit amount is invalid');
+        }
+
+        transaction.status = TransactionStatus.SUCCESS;
 
         // Update Transaction Metadata
         transaction.metadata = {
-          ...transaction.metadata,
+          ...(transaction.metadata as Record<string, unknown> | null),
           fxApplied: {
-            sourceAmount: amountReceivedEur,
-            sourceCurrency: 'EUR',
-            targetCurrency,
+            sourceAmount,
+            sourceCurrency,
+            targetCurrency: 'KES',
             rate: appliedRate,
             creditedAmount: amount,
           },
         };
         await manager.save(Transaction, transaction);
 
-        await manager.increment(User, { id: userId }, 'walletBalance', amount);
+        const updated = await manager.increment(
+          User,
+          { id: transaction.userId },
+          'walletBalance',
+          amount,
+        );
+        if (updated.affected !== 1) {
+          throw new NotFoundException('Wallet owner was not found');
+        }
 
         this.logger.log(
-          `Wallet credited for user ${userId}: ${amount} KES (Rate: ${appliedRate}, Source: ${amountReceivedEur} EUR)`,
+          `Wallet credited for user ${transaction.userId}: ${amount} KES (Rate: ${appliedRate}, Source: ${sourceAmount} ${sourceCurrency})`,
         );
 
-        return amount;
+        return { amount, userId: transaction.userId };
       },
     );
 
-    if (amountToCredit !== undefined) {
+    if (credit !== undefined) {
       // Send Push Notification
       try {
         const deviceToken = await this.deviceTokenRepository.findOne({
-          where: { userId, isActive: true },
+          where: { userId: credit.userId, isActive: true },
           order: { lastUsedAt: 'DESC' },
         });
 
@@ -451,7 +509,7 @@ export class StripeService {
           await this.notificationsService.sendPaymentStatusNotification(
             deviceToken.token,
             'Wallet', // "Worker Name" context used as "Wallet" for topups
-            amountToCredit,
+            credit.amount,
             'SUCCESS',
             'TOPUP',
           );

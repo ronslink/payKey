@@ -207,7 +207,7 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
       if (mounted) {
         _showSnackbar(
           PayrollConfirmSnackbars.success(
-            'Payment successful! Verifying balance...',
+            'Payment submitted. Your wallet updates after confirmation.',
           ),
         );
         // Wait for webhook (a bit longer for Stripe?) or optimistically verify

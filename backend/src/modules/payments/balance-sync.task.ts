@@ -17,11 +17,11 @@ export class BalanceSyncTask {
 
   @Cron(CronExpression.EVERY_HOUR)
   async syncBalances() {
-    this.logger.log('Starting scheduled wallet balance synchronization...');
+    this.logger.log('Starting scheduled wallet balance observation...');
 
     const users = await this.usersRepository.find({
       where: { intasendWalletId: Not(IsNull()) },
-      select: ['id', 'email', 'walletBalance', 'intasendWalletId'],
+      select: ['id', 'walletBalance', 'intasendWalletId'],
     });
 
     this.logger.log(`Found ${users.length} users with IntaSend wallets.`);
@@ -38,33 +38,28 @@ export class BalanceSyncTask {
         const localBalance = Number(user.walletBalance);
 
         if (isNaN(realBalance)) {
-          this.logger.warn(`Invalid balance returned for user ${user.email}`);
+          this.logger.warn(`Invalid balance returned for user ${user.id}`);
           continue;
         }
 
         const diff = Math.abs(realBalance - localBalance);
 
         if (diff > 10) {
-          // Tolerate small differences, log significant drift
+          // Provider availability excludes other-provider credits, clearing funds
+          // and payouts in flight. An aggregate difference cannot justify a
+          // monetary ledger adjustment; investigate the underlying transactions.
           this.logger.warn(
-            `Balance Drift Detected for ${user.email}: Local=${localBalance}, Real=${realBalance}, Diff=${diff}`,
+            `Balance discrepancy for user ${user.id}: Ledger=${localBalance}, IntaSend=${realBalance}, Diff=${diff}. Review required; ledger unchanged.`,
           );
-
-          // Update Local Balance
-          await this.usersRepository.update(user.id, {
-            walletBalance: realBalance,
-          });
-
-          this.logger.log(`Synced balance for ${user.email}`);
         }
       } catch (error) {
         this.logger.error(
-          `Failed to sync balance for user ${user.email}`,
+          `Failed to observe balance for user ${user.id}`,
           error,
         );
       }
     }
 
-    this.logger.log('Completed wallet balance synchronization.');
+    this.logger.log('Completed wallet balance observation.');
   }
 }

@@ -944,7 +944,7 @@ class PaymentEndpoints extends BaseEndpoints {
 
   // Checkout
   Future<Response> initiateCheckout(double amount) {
-    return _api.post('/payments/checkout/topup', data: {'amount': amount});
+    return _api.post('/payments/unified/checkout/topup', data: {'amount': amount});
   }
 }
 

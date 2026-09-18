@@ -14,6 +14,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { StripeService } from './stripe.service';
+import { StripeTopupDto } from './stripe-topup.dto';
 
 import { IntaSendService } from './intasend.service';
 import {
@@ -329,11 +330,12 @@ export class UnifiedPaymentsController {
   @Post('stripe/create-intent')
   async initiateStripeTopup(
     @Request() req: AuthenticatedRequest,
-    @Body() body: { amount: number; paymentMethodTypes?: string[] },
+    @Body() body: StripeTopupDto,
   ): Promise<{
     success: boolean;
     clientSecret: string;
     transactionId: string;
+    publishableKey: string;
   }> {
     const { userId } = req.user;
 
@@ -344,7 +346,7 @@ export class UnifiedPaymentsController {
 
     try {
       const amount = Number(body.amount);
-      if (isNaN(amount) || amount <= 0) {
+      if (!Number.isFinite(amount) || amount < 0.5 || body.currency !== 'EUR') {
         throw new HttpException('Invalid amount', HttpStatus.BAD_REQUEST);
       }
 
@@ -355,7 +357,7 @@ export class UnifiedPaymentsController {
       const result = await this.stripeService.createPaymentIntent(
         userId,
         amount,
-        'EUR', // Default to EUR for SEPA. If user wants KES via card, we might need to change this.
+        body.currency,
         types,
       );
 
@@ -363,6 +365,7 @@ export class UnifiedPaymentsController {
         success: true,
         clientSecret: result.clientSecret,
         transactionId: result.transactionId,
+        publishableKey: result.publishableKey,
       };
     } catch (error) {
       console.error('Unified Stripe TopUp Error:', error);

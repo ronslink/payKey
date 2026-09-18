@@ -49,6 +49,7 @@ async function audit() {
     'INTASEND_PUBLISHABLE_KEY',
     'INTASEND_SECRET_KEY',
     'STRIPE_SECRET_KEY',
+    'STRIPE_PUBLISHABLE_KEY',
     'STRIPE_WEBHOOK_SECRET',
   ];
   const missing = required.filter((name) => !get(name)?.trim());
@@ -61,10 +62,11 @@ async function audit() {
     throw new Error(`Missing required configuration: ${missing.join(', ')}`);
   if (
     !/^(sk|rk)_live_/.test(get('STRIPE_SECRET_KEY')) ||
+    !/^pk_live_[A-Za-z0-9]+$/.test(get('STRIPE_PUBLISHABLE_KEY')) ||
     !get('STRIPE_WEBHOOK_SECRET').startsWith('whsec_')
   )
     throw new Error(
-      'Missing required configuration: live Stripe API key and webhook signing secret',
+      'Missing required configuration: live Stripe API/publishable keys and webhook signing secret',
     );
   if (get('JWT_SECRET').length < 32 || get('REDIS_PASSWORD').length < 16)
     throw new Error(
@@ -94,6 +96,7 @@ async function audit() {
         'APPLE_PRIVATE_KEY',
       ].every((name) => Boolean(get(name)?.trim())),
       stripe: Boolean(get('STRIPE_SECRET_KEY') && get('STRIPE_WEBHOOK_SECRET')),
+      stripePublishableKey: /^pk_live_[A-Za-z0-9]+$/.test(get('STRIPE_PUBLISHABLE_KEY')),
       emailProvider: get('EMAIL_PROVIDER') || 'MOCK',
       smsProvider: get('SMS_PROVIDER') || 'MOCK',
       firebaseCredentialFile: Boolean(

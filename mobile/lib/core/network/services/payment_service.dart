@@ -61,7 +61,7 @@ extension PaymentService on ApiService {
   }
 
   Future<Response> initiateCheckoutTopup(double amount) async {
-    return dio.post('/payments/checkout/topup', data: {
+    return dio.post('/payments/unified/checkout/topup', data: {
       'amount': amount,
     });
   }

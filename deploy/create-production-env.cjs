@@ -9,6 +9,7 @@ const required = [
   "INTASEND_PUBLISHABLE_KEY",
   "INTASEND_SECRET_KEY",
   "STRIPE_SECRET_KEY",
+  "STRIPE_PUBLISHABLE_KEY",
   "STRIPE_WEBHOOK_SECRET",
   "BACKEND_IMAGE",
   "RELEASE_COMMIT",
@@ -70,6 +71,10 @@ function createProductionEnvironment(source) {
   }
   if (!/^(sk|rk)_live_/.test(source.STRIPE_SECRET_KEY))
     throw new Error("STRIPE_SECRET_KEY must be a live Stripe API key");
+  if (!/^pk_live_[A-Za-z0-9]+$/.test(source.STRIPE_PUBLISHABLE_KEY))
+    throw new Error(
+      "STRIPE_PUBLISHABLE_KEY must be a live Stripe publishable key",
+    );
   if (!source.STRIPE_WEBHOOK_SECRET.startsWith("whsec_"))
     throw new Error(
       "STRIPE_WEBHOOK_SECRET must be a Stripe webhook signing secret",

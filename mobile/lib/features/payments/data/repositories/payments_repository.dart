@@ -37,7 +37,7 @@ class PaymentsRepository {
     try {
       final token = await _storage.read(key: 'access_token');
       final response = await _dio.post(
-        '/payments/checkout/topup',
+        '/payments/unified/checkout/topup',
         data: {'amount': amount},
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );

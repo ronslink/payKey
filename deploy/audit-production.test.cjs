@@ -37,6 +37,7 @@ async function executeAudit({
     INTASEND_SECRET_KEY: 'test-secret-must-stay-private',
     INTASEND_CHALLENGE: 'test-verifier-must-stay-private',
     STRIPE_SECRET_KEY: 'sk_live_test-must-stay-private',
+    STRIPE_PUBLISHABLE_KEY: 'pk_live_unittestonly',
     STRIPE_WEBHOOK_SECRET: 'whsec_test-must-stay-private',
   };
   let clientOptions;
