@@ -31,29 +31,29 @@ export function privateExportsDirectory(): string {
   return path.join(storageRoot(), 'private', 'exports');
 }
 
-function isWithin(root: string, file: string): boolean {
-  const relative = path.relative(root, file);
-  return (
-    !!relative &&
-    relative !== '..' &&
-    !relative.startsWith(`..${path.sep}`) &&
-    !path.isAbsolute(relative)
-  );
-}
-
 /** Resolve real paths as well as lexical paths so symlinks cannot escape storage. */
 export async function existingFileWithin(
   root: string,
   relative: string,
 ): Promise<string | undefined> {
-  const candidate = path.resolve(root, relative);
-  if (!isWithin(path.resolve(root), candidate)) return undefined;
+  const resolvedRoot = path.resolve(root);
+  const candidate = path.resolve(resolvedRoot, relative);
+  // Include the separator so a sibling such as "documents-extra" cannot match.
+  const rootBoundary = resolvedRoot.endsWith(path.sep)
+    ? resolvedRoot
+    : `${resolvedRoot}${path.sep}`;
+  if (candidate === resolvedRoot || !candidate.startsWith(rootBoundary))
+    return undefined;
   try {
     const [realRoot, realFile] = await Promise.all([
-      fs.promises.realpath(root),
+      fs.promises.realpath(resolvedRoot),
       fs.promises.realpath(candidate),
     ]);
-    if (!isWithin(realRoot, realFile)) return undefined;
+    const realBoundary = realRoot.endsWith(path.sep)
+      ? realRoot
+      : `${realRoot}${path.sep}`;
+    if (realFile === realRoot || !realFile.startsWith(realBoundary))
+      return undefined;
     return (await fs.promises.stat(realFile)).isFile() ? realFile : undefined;
   } catch {
     return undefined;

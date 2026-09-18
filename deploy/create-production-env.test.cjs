@@ -19,6 +19,16 @@ const fixture = {
   RELEASE_COMMIT: "b".repeat(40),
 };
 
+function composeEnvironment(candidate) {
+  // Shell variables override --env-file, even when empty. CI deliberately sets
+  // DATABASE_URL='' for its isolated database; do not let that or local secrets
+  // replace the candidate values whose serialization this test is verifying.
+  const environment = { ...process.env };
+  for (const [, name] of candidate.matchAll(/^([A-Z][A-Z0-9_]*)=/gm))
+    delete environment[name];
+  return environment;
+}
+
 test("rejects missing live payment verification and mutable image configuration", () => {
   assert.throws(
     () => createProductionEnvironment({ ...fixture, REDIS_PASSWORD: "" }),
@@ -59,7 +69,8 @@ test("Compose preserves literal dollars, quotes, backslashes and multiline secre
         "-----BEGIN PRIVATE KEY-----\r\nquote' dollar$ \\backslash\n-----END PRIVATE KEY-----",
     };
     const envPath = path.join(directory, "candidate.env");
-    fs.writeFileSync(envPath, createProductionEnvironment(values));
+    const candidate = createProductionEnvironment(values);
+    fs.writeFileSync(envPath, candidate);
     const environment = Object.fromEntries(
       Object.keys(values).map((name) => [name, "${" + name + "}"]),
     );
@@ -82,7 +93,7 @@ test("Compose preserves literal dollars, quotes, backslashes and multiline secre
         "--format",
         "json",
       ],
-      { encoding: "utf8" },
+      { encoding: "utf8", env: composeEnvironment(candidate) },
     );
     assert.equal(
       result.status,
@@ -108,7 +119,8 @@ test("production Compose models require immutable image/password and isolate hos
   );
   try {
     const envPath = path.join(directory, "candidate.env");
-    fs.writeFileSync(envPath, createProductionEnvironment(fixture));
+    const candidate = createProductionEnvironment(fixture);
+    fs.writeFileSync(envPath, candidate);
     for (const filename of [
       "docker-compose.backend.yml",
       "docker-compose.infra.yml",
@@ -127,7 +139,7 @@ test("production Compose models require immutable image/password and isolate hos
           "--format",
           "json",
         ],
-        { encoding: "utf8" },
+        { encoding: "utf8", env: composeEnvironment(candidate) },
       );
       assert.equal(result.status, 0, `${filename} must parse`);
       const model = JSON.parse(result.stdout);

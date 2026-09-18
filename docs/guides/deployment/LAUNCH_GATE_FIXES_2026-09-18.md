@@ -139,6 +139,16 @@ The migration audit now compares actual migration names, including nonstandard
 filenames and shared timestamps; all nine deployment/audit tests passed after
 this correction. No new schema migration is introduced by the launch fixes.
 
+The first published inspection run confirmed that GitHub `PROD` points to
+`paykey-db-do-user-18876815-0.d.db.ondigitalocean.com:25060/defaultdb`, that the
+Stripe key uses a live-key prefix and that the JWT minimum length and webhook
+secret format checks pass. These checks establish configured values, not provider
+acceptance or the running database connection. The server also rejected the
+GitHub `DO_SSH_KEY` with a public-key authentication failure. Restore authorized
+SSH access before deployment; the inspection did not reach Docker or PostgreSQL.
+Another 1Password CLI authorization request timed out, leaving backup inspection
+unverified. The release is prepared in PR #4 and has not been deployed.
+
 1. **Complete runtime and database verification.** DigitalOcean inventory is now
    confirmed. Existing local SSH identities were rejected by the production host;
    further 1Password CLI authorization is needed for API/database checks. Confirm

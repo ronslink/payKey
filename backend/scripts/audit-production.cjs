@@ -18,9 +18,14 @@ const {
 function readMigrationIdentities(directory) {
   return fs.readdirSync(directory).filter((file) => file.endsWith('.js')).map((file) => {
     const source = fs.readFileSync(path.join(directory, file), 'utf8');
+    const namedExports = new Set(
+      [...source.matchAll(/\bexports\.([A-Za-z_$][\w$]*)\s*=\s*([A-Za-z_$][\w$]*)\s*;/g)]
+        .filter((match) => match[1] === match[2])
+        .map((match) => match[1]),
+    );
     const exportedClasses = [...source.matchAll(/\bclass\s+([A-Za-z_$][\w$]*)\s*\{/g)]
       .map((match) => match[1])
-      .filter((name) => new RegExp(`exports\\.${name.replace(/\$/g, '\\$')}\\s*=\\s*${name.replace(/\$/g, '\\$')}\\s*;`).test(source));
+      .filter((name) => namedExports.has(name));
     if (exportedClasses.length !== 1)
       throw new Error('Deployed image contains an unsupported migration declaration');
     const declaredName = source.match(/^\s*(?:this\.)?name\s*=\s*(['"])([^'"\r\n]+)\1\s*;?\s*$/m);

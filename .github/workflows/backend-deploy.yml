@@ -23,6 +23,8 @@ jobs:
       - name: Confirm target and configured release credentials without revealing values
         env:
           DO_HOST: ${{ secrets.DO_HOST }}
+          DO_USERNAME: ${{ secrets.DO_USERNAME }}
+          DO_SSH_KEY: ${{ secrets.DO_SSH_KEY }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
@@ -35,6 +37,14 @@ jobs:
           let u;
           try { u = new URL(e.DATABASE_URL); } catch { console.error('Invalid configured database URL'); process.exit(1); }
           console.log(JSON.stringify({source:'GitHub PROD',database:{host:u.hostname,port:u.port||'5432',name:u.pathname.slice(1)},redisPasswordConfigured:!!e.REDIS_PASSWORD,jwtMinimumLength:(e.JWT_SECRET||'').length>=32,stripeLiveKey:/^(sk|rk)_live_/.test(e.STRIPE_SECRET_KEY||''),stripeWebhookConfigured:(e.STRIPE_WEBHOOK_SECRET||'').startsWith('whsec_')}));
+          const fs = require('node:fs'), path = require('node:path'), crypto = require('node:crypto');
+          const keyPath = path.join(e.RUNNER_TEMP, 'paykey-inspection-key');
+          try {
+            fs.writeFileSync(keyPath, e.DO_SSH_KEY, {mode:0o600, flag:'wx'});
+            const pub = require('node:child_process').execFileSync('ssh-keygen',['-y','-f',keyPath],{encoding:'utf8',stdio:['ignore','pipe','ignore']}).trim().split(/\s+/);
+            console.log(JSON.stringify({deploymentUserIsRoot:e.DO_USERNAME==='root',deploymentKeyFingerprint:'SHA256:'+crypto.createHash('sha256').update(Buffer.from(pub[1],'base64')).digest('base64').replace(/=+$/,'')}));
+          } catch { console.log('Could not derive deployment public-key fingerprint'); }
+          finally { fs.rmSync(keyPath,{force:true}); }
           JS
       - name: Encode read-only inspection script
         run: echo "PRODUCTION_INSPECTION_SCRIPT=$(base64 -w0 deploy/inspect-running-production.cjs)" >> "$GITHUB_ENV"

@@ -142,7 +142,7 @@ test('migration audit includes nonstandard filenames and distinguishes names sha
 test('migration audit uses an explicit instance name and fails closed on unreadable metadata', async () => {
   const recognized = await executeAudit({
     migrationFiles: {
-      'legacy-name.js': compiledMigration('OldClass1700000000000', 'Fixture1700000000000'),
+      'legacy-name.js': compiledMigration('Old$Class1700000000000', 'Fixture1700000000000'),
     },
   });
   assert.equal(recognized.exitCode, undefined);

@@ -18,7 +18,11 @@ import { KraService } from '../gov-integrations/services/kra.service';
 import { NssfService } from '../gov-integrations/services/nssf.service';
 import { ShifService } from '../gov-integrations/services/shif.service';
 import { registerPublicAvatars } from './public-avatars';
-import { resolvePrivateExport, resolvePrivateFile } from './storage-paths';
+import {
+  existingFileWithin,
+  resolvePrivateExport,
+  resolvePrivateFile,
+} from './storage-paths';
 import { UploadsService } from './uploads.service';
 import { ExportService } from '../export/services/export.service';
 import { ExportType } from '../export/entities/export.entity';
@@ -255,8 +259,30 @@ describe('private file access', () => {
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  it('rejects legacy directory symlinks outside the private document root', async () => {
-    const outside = path.join(temp, 'outside');
+  it('rejects relative and absolute escapes into a sibling with the same root prefix', async () => {
+    const root = path.join(temp, 'storage', 'private', 'documents');
+    const valid = write(
+      'storage/private/documents/valid.pdf',
+      'private document',
+    );
+    const sibling = write(
+      'storage/private/documents-extra/secret.pdf',
+      'another private document',
+    );
+    await expect(existingFileWithin(root, 'valid.pdf')).resolves.toBe(valid);
+    for (const reference of [
+      path.join('..', 'documents-extra', 'secret.pdf'),
+      sibling,
+      '.',
+    ]) {
+      await expect(
+        existingFileWithin(root, reference),
+      ).resolves.toBeUndefined();
+    }
+  });
+
+  it('rejects directory symlinks into a sibling with the same private root prefix', async () => {
+    const outside = path.join(temp, 'legacy-uploads', 'documents-extra');
     fs.mkdirSync(outside);
     fs.writeFileSync(path.join(outside, 'secret.pdf'), 'secret');
     const linkedWorker = '30000000-0000-4000-8000-000000000003';
