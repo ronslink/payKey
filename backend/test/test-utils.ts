@@ -6,6 +6,8 @@
 import { DataSource } from 'typeorm';
 import { INestApplication } from '@nestjs/common';
 import { randomBytes } from 'crypto';
+import { TaxConfig } from '../src/modules/tax-config/entities/tax-config.entity';
+import { TaxConfigService } from '../src/modules/tax-config/services/tax-config.service';
 
 /**
  * Generate a cryptographically unique ID for test data
@@ -39,6 +41,14 @@ export function generateTestPhone(): string {
  * 3. Last resort: synchronize(true)
  */
 export async function cleanupTestData(dataSource: DataSource): Promise<void> {
+  if (
+    process.env.NODE_ENV !== 'test' ||
+    !String(dataSource.options.database).endsWith('_test')
+  ) {
+    throw new Error(
+      'Test cleanup requires NODE_ENV=test and a database ending in _test',
+    );
+  }
   if (!dataSource.isInitialized) {
     console.warn('DataSource not initialized, skipping cleanup');
     return;
@@ -64,6 +74,13 @@ export async function cleanupTestData(dataSource: DataSource): Promise<void> {
     await dataSource.query(
       `TRUNCATE TABLE ${tableNames} RESTART IDENTITY CASCADE;`,
     );
+    // Application initialization seeds rates before individual suites clean up.
+    // Restore the reference data needed by payroll after clearing user fixtures.
+    if (dataSource.hasMetadata(TaxConfig)) {
+      await new TaxConfigService(
+        dataSource.getRepository(TaxConfig),
+      ).seedInitialConfigs();
+    }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.warn(`Dynamic cleanup failed: ${errorMessage}`);

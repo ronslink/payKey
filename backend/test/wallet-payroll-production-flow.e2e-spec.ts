@@ -39,7 +39,9 @@ const waitFor = async <T>(
     await new Promise((resolve) => setTimeout(resolve, 150));
   }
 
-  throw new Error(`Timed out waiting for condition. Last value: ${last}`);
+  throw new Error(
+    `Timed out waiting for condition. Last value: ${String(last)}`,
+  );
 };
 
 describe('Wallet Top-up to Payroll Payout Production Flow E2E', () => {
@@ -102,7 +104,9 @@ describe('Wallet Top-up to Payroll Payout Production Flow E2E', () => {
         rateType: RateType.TIERED,
         effectiveFrom: new Date('2024-01-01'),
         configuration: {
-          tiers: [{ name: 'Tier 1', salaryFrom: 0, salaryTo: 7000, rate: 0.06 }],
+          tiers: [
+            { name: 'Tier 1', salaryFrom: 0, salaryTo: 7000, rate: 0.06 },
+          ],
         },
         isActive: true,
       },
@@ -144,7 +148,7 @@ describe('Wallet Top-up to Payroll Payout Production Flow E2E', () => {
     }
   });
 
-  it('credits a confirmed IntaSend top-up, then pays payroll only after B2C webhook confirmation', async () => {
+  it('credits and settles payroll once despite concurrent duplicate IntaSend callbacks', async () => {
     const topupAmount = 10000;
     const user = await helpers.createTestUser({
       emailPrefix: 'prod.flow',
@@ -172,28 +176,48 @@ describe('Wallet Top-up to Payroll Payout Production Flow E2E', () => {
       'sandbox-wallet-production-flow',
     );
 
-    const depositTx = await dataSource.getRepository(Transaction).findOneByOrFail({
-      userId: user.userId,
-      type: TransactionType.DEPOSIT,
-    });
+    const depositTx = await dataSource
+      .getRepository(Transaction)
+      .findOneByOrFail({
+        userId: user.userId,
+        type: TransactionType.DEPOSIT,
+      });
 
-    await request(app.getHttpServer())
-      .post('/webhooks/intasend')
-      .set('X-IntaSend-Signature', 'test-signature')
-      .send({
-        invoice_id: 'sandbox-topup-checkout',
-        api_ref: depositTx.id,
-        state: 'COMPLETE',
-        provider: 'CARD-PAYMENT',
-        currency: 'KES',
-        value: topupAmount,
-      })
-      .expect(201);
+    const deliverTopup = (state: 'CLEARING' | 'COMPLETE') =>
+      request(app.getHttpServer())
+        .post('/webhooks/intasend')
+        .set('X-IntaSend-Signature', 'test-signature')
+        .send({
+          invoice_id: 'sandbox-topup-checkout',
+          api_ref: depositTx.id,
+          state,
+          provider: 'CARD-PAYMENT',
+          currency: 'KES',
+          value: topupAmount,
+        })
+        .expect(201);
+
+    await Promise.all([deliverTopup('CLEARING'), deliverTopup('CLEARING')]);
+    const clearingUser = await dataSource.getRepository(User).findOneByOrFail({
+      id: user.userId,
+    });
+    expect(Number(clearingUser.clearingBalance)).toBe(topupAmount);
+    expect(Number(clearingUser.walletBalance)).toBe(0);
+
+    await deliverTopup('COMPLETE');
 
     const creditedUser = await dataSource.getRepository(User).findOneByOrFail({
       id: user.userId,
     });
     expect(Number(creditedUser.walletBalance)).toBe(topupAmount);
+    expect(Number(creditedUser.clearingBalance)).toBe(0);
+
+    await Promise.all([deliverTopup('COMPLETE'), deliverTopup('COMPLETE')]);
+    const retriedUser = await dataSource.getRepository(User).findOneByOrFail({
+      id: user.userId,
+    });
+    expect(Number(retriedUser.walletBalance)).toBe(topupAmount);
+    expect(Number(retriedUser.clearingBalance)).toBe(0);
 
     await helpers.createTestWorker(user.token, {
       name: 'Production Flow Worker',
@@ -258,28 +282,33 @@ describe('Wallet Top-up to Payroll Payout Production Flow E2E', () => {
       .findOneByOrFail({ id: user.userId });
     expect(Number(userAfterDeduction.walletBalance)).toBeLessThan(topupAmount);
 
-    await request(app.getHttpServer())
-      .post('/webhooks/intasend')
-      .set('X-IntaSend-Signature', 'test-signature')
-      .send({
-        tracking_id: 'sandbox-b2c-tracking-production-flow',
-        status: 'COMPLETE',
-        provider: 'MPESA-B2C',
-        currency: 'KES',
-        value: salaryTx.amount,
-        transactions: [
-          {
-            account: salaryTx.accountReference,
-            status: 'COMPLETE',
-            provider: 'MPESA-B2C',
-          },
-        ],
-      })
-      .expect(201);
+    const deliverPayout = () =>
+      request(app.getHttpServer())
+        .post('/webhooks/intasend')
+        .set('X-IntaSend-Signature', 'test-signature')
+        .send({
+          tracking_id: 'sandbox-b2c-tracking-production-flow',
+          status: 'COMPLETE',
+          provider: 'MPESA-B2C',
+          currency: 'KES',
+          value: salaryTx.amount,
+          transactions: [
+            {
+              account: salaryTx.accountReference,
+              status: 'COMPLETE',
+              provider: 'MPESA-B2C',
+            },
+          ],
+        })
+        .expect(201);
 
-    const paidRecord = await dataSource.getRepository(PayrollRecord).findOneByOrFail({
-      id: processingRecord.id,
-    });
+    await deliverPayout();
+
+    const paidRecord = await dataSource
+      .getRepository(PayrollRecord)
+      .findOneByOrFail({
+        id: processingRecord.id,
+      });
     const completedSalaryTx = await dataSource
       .getRepository(Transaction)
       .findOneByOrFail({ id: salaryTx.id });
@@ -291,5 +320,24 @@ describe('Wallet Top-up to Payroll Payout Production Flow E2E', () => {
       id: payPeriodId,
     });
     expect(period.status).toBe(PayPeriodStatus.COMPLETED);
+
+    await Promise.all([deliverPayout(), deliverPayout()]);
+    const userAfterRetries = await dataSource
+      .getRepository(User)
+      .findOneByOrFail({ id: user.userId });
+    expect(Number(userAfterRetries.walletBalance)).toBe(
+      Number(userAfterDeduction.walletBalance),
+    );
+    expect(Number(userAfterRetries.clearingBalance)).toBe(0);
+    expect(
+      await dataSource.getRepository(Transaction).countBy({
+        userId: user.userId,
+        type: TransactionType.SALARY_PAYOUT,
+      }),
+    ).toBe(1);
+    const recordAfterRetries = await dataSource
+      .getRepository(PayrollRecord)
+      .findOneByOrFail({ id: processingRecord.id });
+    expect(recordAfterRetries.paymentStatus).toBe('paid');
   });
 });

@@ -30,7 +30,6 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.payglobus.paydome"
         setProperty("archivesBaseName", "paykey")
         // You can update the following values to match your application needs.
@@ -54,8 +53,7 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+            // Production release requires the upload keystore from key.properties.
             signingConfig = signingConfigs.getByName("release")
             proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
             isMinifyEnabled = true

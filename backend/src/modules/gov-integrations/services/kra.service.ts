@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import * as ExcelJS from 'exceljs';
 import * as path from 'path';
 import * as fs from 'fs';
+import { randomUUID } from 'crypto';
+import { privateGovDirectory } from '../../uploads/storage-paths';
 import { PayrollRecord } from '../../payroll/entities/payroll-record.entity';
 import { Worker } from '../../workers/entities/worker.entity';
 import {
@@ -14,7 +16,7 @@ import {
 
 @Injectable()
 export class KraService {
-  private readonly outputDir = 'uploads/gov-files/kra';
+  private readonly outputDir = privateGovDirectory('kra');
 
   constructor(
     @InjectRepository(PayrollRecord)
@@ -27,7 +29,7 @@ export class KraService {
 
   private ensureOutputDir() {
     if (!fs.existsSync(this.outputDir)) {
-      fs.mkdirSync(this.outputDir, { recursive: true });
+      fs.mkdirSync(this.outputDir, { recursive: true, mode: 0o700 });
     }
   }
 
@@ -53,6 +55,7 @@ export class KraService {
         .createQueryBuilder('pr')
         .leftJoinAndSelect('pr.worker', 'worker')
         .where('pr.payPeriodId = :payPeriodId', { payPeriodId })
+        .andWhere('pr.userId = :userId', { userId })
         .getMany();
 
       if (records.length === 0) {
@@ -167,10 +170,11 @@ export class KraService {
       // Ensure output directory exists (using fs directly here in case ensureOutputDir has issues)
       if (!fs.existsSync(this.outputDir)) {
         console.log(`[KRA Export] Creating directory: ${this.outputDir}`);
-        fs.mkdirSync(this.outputDir, { recursive: true });
+        fs.mkdirSync(this.outputDir, { recursive: true, mode: 0o700 });
       }
 
-      const filePath = path.join(this.outputDir, fileName);
+      const storedName = `${randomUUID()}.xlsx`;
+      const filePath = path.join(this.outputDir, storedName);
       console.log(`[KRA Export] Writing file to: ${filePath}`);
 
       // Write file
@@ -183,7 +187,7 @@ export class KraService {
         payPeriodId,
         type: GovSubmissionType.KRA_P10,
         status: GovSubmissionStatus.GENERATED,
-        filePath,
+        filePath: `private/gov-files/kra/${storedName}`,
         fileName,
         totalAmount: totalPaye,
         employeeCount: records.length,

@@ -880,7 +880,10 @@ export class PayrollService {
     const resolvedWorkerId = await this.resolveWorkerId(userId, workerId);
 
     return this.payrollRepository.find({
-      where: { workerId: resolvedWorkerId, status: PayrollStatus.FINALIZED },
+      where: {
+        workerId: resolvedWorkerId,
+        status: In([PayrollStatus.FINALIZED, PayrollStatus.PAID]),
+      },
       relations: ['payPeriod'],
       order: { periodStart: 'DESC' },
     });
@@ -900,7 +903,7 @@ export class PayrollService {
       where: {
         id: recordId,
         workerId: resolvedWorkerId,
-        status: PayrollStatus.FINALIZED,
+        status: In([PayrollStatus.FINALIZED, PayrollStatus.PAID]),
       },
       relations: ['worker', 'payPeriod'],
     });

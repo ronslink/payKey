@@ -1,247 +1,194 @@
-name: Backend CI (With Tests)
-
-# Full CI pipeline — lint, build, unit tests, and E2E tests.
-# Runs on every push/PR to main or develop that touches backend code.
-# The Docker build + deploy only runs on pushes to main (not PRs).
+name: Backend CI and verified deployment
 
 on:
+  workflow_call:
   workflow_dispatch:
   push:
     branches: [main, develop]
     paths:
       - 'backend/**'
+      - 'deploy/**'
+      - 'website/**'
+      - '.github/workflows/deploy-website.yml'
+      - '.github/workflows/backend-*.yml'
+      - '.github/workflows/deploy-prod*.yml'
   pull_request:
     branches: [main, develop]
     paths:
       - 'backend/**'
+      - 'deploy/**'
+      - 'website/**'
+      - '.github/workflows/deploy-website.yml'
+      - '.github/workflows/backend-*.yml'
+      - '.github/workflows/deploy-prod*.yml'
+
+permissions:
+  contents: read
 
 concurrency:
   group: ${{ github.ref == 'refs/heads/main' && 'production-backend' || format('backend-ci-{0}', github.ref) }}
   cancel-in-progress: false
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '24'
 
 jobs:
-  # ─── CI: Lint + Build + Test ─────────────────────────────────────────────────
   backend-ci:
-    name: Backend CI
+    name: Build, lint and test
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: ./backend
-
     services:
       postgres:
         image: postgres:17-alpine
         env:
           POSTGRES_USER: paykey
-          POSTGRES_PASSWORD: password
+          POSTGRES_PASSWORD: local_ci_database_password
           POSTGRES_DB: paykey_test
-        ports:
-          - 5432:5432
+        ports: ['5432:5432']
         options: >-
           --health-cmd pg_isready
-          --health-interval 10s
+          --health-interval 5s
           --health-timeout 5s
-          --health-retries 5
-
+          --health-retries 12
       redis:
         image: redis:7-alpine
-        ports:
-          - 6379:6379
+        ports: ['6379:6379']
         options: >-
           --health-cmd "redis-cli ping"
-          --health-interval 10s
+          --health-interval 5s
           --health-timeout 5s
-          --health-retries 5
-
+          --health-retries 12
     env:
       NODE_ENV: test
+      DATABASE_URL: ''
       DB_HOST: localhost
-      DB_PORT: 5432
+      DB_PORT: '5432'
       DB_USER: paykey
       DB_USERNAME: paykey
-      DB_PASSWORD: password
+      DB_PASSWORD: local_ci_database_password
       DB_NAME: paykey_test
-      DB_LOGGING: false
+      DB_LOGGING: 'false'
       REDIS_HOST: localhost
-      REDIS_PORT: 6379
+      REDIS_PORT: '6379'
       JWT_SECRET: test_secret_key_for_ci_cd_pipeline_12345
-      JWT_EXPIRATION: 1h
-
+      INTASEND_IS_LIVE: 'false'
+      INTASEND_SIMULATE: 'true'
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: npm
           cache-dependency-path: backend/package-lock.json
-
       - name: Install dependencies
-        run: npm ci --ignore-scripts
-
-      - name: Install PostgreSQL client
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y postgresql-client
-
-      - name: Create .env.test
-        run: |
-          cat > .env.test << 'EOF'
-          NODE_ENV=test
-          DB_HOST=localhost
-          DB_PORT=5432
-          DB_USER=paykey
-          DB_USERNAME=paykey
-          DB_PASSWORD=password
-          DB_NAME=paykey_test
-          DB_LOGGING=false
-          REDIS_HOST=localhost
-          REDIS_PORT=6379
-          JWT_SECRET=test_secret_key_for_ci_cd_pipeline_12345
-          JWT_EXPIRATION=1h
-          EOF
-
-      - name: Wait for PostgreSQL
-        run: |
-          until PGPASSWORD=password psql -U paykey -h localhost -d paykey_test \
-            -c "SELECT 1" > /dev/null 2>&1; do
-            echo "Waiting for PostgreSQL..."; sleep 2
-          done
-          echo "PostgreSQL is ready"
-
-      - name: Create root role (safety net)
-        run: |
-          PGPASSWORD=password psql -U paykey -h localhost -d paykey_test -c "
-            DO \$\$ BEGIN
-              IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'root') THEN
-                CREATE ROLE root WITH LOGIN SUPERUSER PASSWORD 'password';
-              END IF;
-            END \$\$;"
-
-      - name: Lint
-        run: npm run lint
-        continue-on-error: true
-
+        run: npm ci
+      - name: Block introduced lint diagnostics (retain full legacy report)
+        run: node scripts/lint-regression.cjs
       - name: Build
         run: npm run build
-
-      - name: Unit tests
-        run: npm run test
-
-      - name: Sync database schema
+      - name: Unit and security regression tests
+        run: npm test -- --runInBand
+      - name: Deployment configuration regression tests
+        run: node --test ../deploy/create-production-env.test.cjs ../deploy/audit-production.test.cjs
+      - name: Check deployment shell syntax
+        run: bash -n ../deploy/deploy-backend.sh
+      - name: Prepare isolated test database
         run: npm run typeorm:schema:sync
-        continue-on-error: true
-
-      - name: E2E tests
+      - name: E2E tests against isolated services
         run: npm run test:e2e
-        timeout-minutes: 10
-        continue-on-error: true
-
+        timeout-minutes: 15
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
+          name: backend-test-results
           path: |
             backend/coverage/
             backend/test-results/
 
-  # ─── Build & Push Docker Image (main branch only) ───────────────────────────
   docker-build:
-    name: Build Docker Image
+    name: Build immutable image
     runs-on: ubuntu-latest
-    needs: [backend-ci]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
+    needs: backend-ci
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build and push
+      - name: Build and push exact tested commit
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: ./backend
           push: true
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/paykey-backend:latest
-            ${{ secrets.DOCKER_USERNAME }}/paykey-backend:${{ github.sha }}
+          tags: ${{ secrets.DOCKER_USERNAME }}/paykey-backend:${{ github.sha }}
+          build-args: RELEASE_COMMIT=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ─── Deploy to Production (main push only) ──────────────────────────────────
   deploy:
-    name: Deploy to Production
+    name: Deploy verified image
     runs-on: ubuntu-latest
-    needs: [docker-build]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    timeout-minutes: 20
+    needs: docker-build
     environment: PROD
-
+    env:
+      RELEASE_ID: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
-      - name: Create .env Configuration
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Stage release scripts
+        run: |
+          umask 077
+          mkdir -p release/deploy
+          cp deploy/deploy-backend.sh deploy/docker-compose.backend.yml deploy/docker-compose.infra.yml release/deploy/
+      - name: Validate and stage new production configuration
         env:
+          BACKEND_IMAGE: ${{ secrets.DOCKER_USERNAME }}/paykey-backend@${{ needs.docker-build.outputs.digest }}
+          RELEASE_COMMIT: ${{ github.sha }}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
           INTASEND_PUBLISHABLE_KEY: ${{ secrets.INTASEND_PUB_KEY_PROD }}
           INTASEND_SECRET_KEY: ${{ secrets.INTASEND_SECRET_KEY_PROD }}
-          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
-          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
           INTASEND_WEBHOOK_SECRET: ${{ secrets.INTASEND_WEBHOOK_SECRET }}
           INTASEND_CHALLENGE: ${{ secrets.INTASEND_CHALLENGE }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
           APPLE_KEY_ID: ${{ secrets.APPLE_KEY_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_BUNDLE_ID: ${{ secrets.APPLE_BUNDLE_ID }}
           APPLE_PRIVATE_KEY: ${{ secrets.APPLE_PRIVATE_KEY }}
-        run: |
-          touch .env
-          echo "NODE_ENV=production"               >> .env
-          echo "DATABASE_URL=$DATABASE_URL"         >> .env
-          echo "DOCKER_USERNAME=$DOCKER_USERNAME"   >> .env
-          echo "REDIS_HOST=paykey_redis_prod"       >> .env
-          echo "REDIS_PORT=6379"                    >> .env
-          echo "JWT_SECRET=$JWT_SECRET"             >> .env
-          echo "JWT_EXPIRES_IN=7d"                  >> .env
-          echo "INTASEND_PUBLISHABLE_KEY=$INTASEND_PUBLISHABLE_KEY" >> .env
-          echo "INTASEND_SECRET_KEY=$INTASEND_SECRET_KEY"           >> .env
-          echo "INTASEND_IS_LIVE=true"              >> .env
-          echo "STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY"               >> .env
-          echo "STRIPE_WEBHOOK_SECRET=$STRIPE_WEBHOOK_SECRET"       >> .env
-          echo "INTASEND_WEBHOOK_SECRET=$INTASEND_WEBHOOK_SECRET"   >> .env
-          echo "INTASEND_CHALLENGE=$INTASEND_CHALLENGE"             >> .env
-          echo "GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID"         >> .env
-          echo "GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID" >> .env
-          echo "APPLE_KEY_ID=$APPLE_KEY_ID"         >> .env
-          echo "APPLE_TEAM_ID=$APPLE_TEAM_ID"       >> .env
-          echo "APPLE_BUNDLE_ID=$APPLE_BUNDLE_ID"   >> .env
-          echo "APPLE_PRIVATE_KEY=\"$APPLE_PRIVATE_KEY\"" >> .env
-          echo "NODE_EXTRA_CA_CERTS=/app/ca-certificate.crt" >> .env
-
-      - name: Copy .env to server
+          EMAIL_PROVIDER: ${{ vars.EMAIL_PROVIDER }}
+          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+          SENDGRID_FROM_EMAIL: ${{ vars.SENDGRID_FROM_EMAIL }}
+          SMS_PROVIDER: ${{ vars.SMS_PROVIDER }}
+          AFRICANSTALKING_API_KEY: ${{ secrets.AFRICANSTALKING_API_KEY }}
+          AFRICANSTALKING_USERNAME: ${{ vars.AFRICANSTALKING_USERNAME }}
+        run: node deploy/create-production-env.cjs release/.env.candidate
+      - name: Upload staged release without touching live environment
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DO_HOST }}
           username: ${{ secrets.DO_USERNAME }}
           key: ${{ secrets.DO_SSH_KEY }}
-          source: ".env"
-          target: "/opt/paykey"
-
-      - name: Deploy to DigitalOcean
+          source: release/
+          strip_components: 1
+          target: /opt/paykey/releases/${{ env.RELEASE_ID }}
+      - name: Release backend and preserve rollback state
         uses: appleboy/ssh-action@v1.0.0
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
@@ -250,97 +197,20 @@ jobs:
           host: ${{ secrets.DO_HOST }}
           username: ${{ secrets.DO_USERNAME }}
           key: ${{ secrets.DO_SSH_KEY }}
-          envs: DOCKER_USERNAME,DOCKER_PASSWORD
-          timeout: 20m
+          envs: DOCKER_USERNAME,DOCKER_PASSWORD,RELEASE_ID
+          command_timeout: 18m
           script: |
-            set -e
-            cd /opt/paykey
+            set -eu
+            printf '%s' "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+            bash "/opt/paykey/releases/$RELEASE_ID/deploy/deploy-backend.sh" "/opt/paykey/releases/$RELEASE_ID"
+      - name: Remove runner copy of production configuration
+        if: always()
+        run: rm -f release/.env.candidate
 
-            # ── 1. Docker health check ────────────────────────────────────────
-            echo "🩺 Checking Docker daemon..."
-            if ! docker info > /dev/null 2>&1; then
-              echo "⚠️  Docker daemon unresponsive — restarting..."
-              sudo systemctl restart docker
-              sleep 5
-              docker info || { echo "❌ Docker daemon failed to recover"; exit 1; }
-            fi
-
-            # ── 2. Disk space report + aggressive pre-pull cleanup ───────────
-            echo "💾 Disk space before cleanup:"
-            df -h /var/lib/docker 2>/dev/null || df -h /
-
-            echo "🧹 Pruning dangling images and stopped containers..."
-            docker image prune -f
-            docker container prune -f
-
-            # If still under 1 GB, do a full system prune (removes ALL unused images)
-            AVAIL_KB=$(df /var/lib/docker 2>/dev/null | awk 'NR==2{print $4}' || df / | awk 'NR==2{print $4}')
-            if [ "${AVAIL_KB:-0}" -lt 1048576 ]; then
-              echo "⚠️  Under 1 GB free — running full docker system prune to reclaim space..."
-              docker system prune -af
-            fi
-
-            echo "💾 Disk space after cleanup:"
-            df -h /var/lib/docker 2>/dev/null || df -h /
-
-            # Hard abort only if still under 512 MB after full prune
-            AVAIL_KB=$(df /var/lib/docker 2>/dev/null | awk 'NR==2{print $4}' || df / | awk 'NR==2{print $4}')
-            if [ "${AVAIL_KB:-0}" -lt 524288 ]; then
-              echo "❌ Under 512 MB free even after full prune — disk critically full, aborting."
-              exit 1
-            fi
-
-            # ── 3. Authenticate with Docker Hub ──────────────────────────────
-            echo "🔐 Logging in to Docker Hub..."
-            echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-
-            # ── 4. Pull latest code ───────────────────────────────────────────
-            git fetch origin main
-            git reset --hard origin/main
-
-            # ── 5. Ensure shared infrastructure is available ───────────────────
-            docker network create paykey-network-prod 2>/dev/null || true
-            docker compose --env-file .env -f deploy/docker-compose.infra.yml up -d
-
-            # ── 6. Pull the new image and migrate before replacing live code ──
-            docker compose --env-file .env -f deploy/docker-compose.backend.yml pull backend
-            if ! docker compose --env-file .env -f deploy/docker-compose.backend.yml \
-              run --rm --no-deps backend npm run typeorm:migration:run:prod; then
-              echo "❌ Migration failed — the live backend was not replaced."
-              exit 1
-            fi
-
-            docker compose --env-file .env -f deploy/docker-compose.backend.yml up -d \
-              --force-recreate backend
-
-            # ── 7. Require the new API to become healthy ───────────────────────
-            healthy=0
-            for attempt in $(seq 1 18); do
-              if docker exec paykey_backend_prod \
-                wget -q --spider http://127.0.0.1:3000/api; then
-                healthy=1
-                break
-              fi
-              sleep 5
-            done
-            if [ "$healthy" -ne 1 ]; then
-              echo "❌ Backend failed its post-deploy health check."
-              docker logs --tail 100 paykey_backend_prod
-              exit 1
-            fi
-
-            echo "📜 Recent backend logs:"
-            docker logs --tail 50 paykey_backend_prod
-
-            # Admin and website have independent deployment workflows.
-            echo "📊 Running application containers:"
-            docker ps --format "table {{.Names}}\t{{.Status}}" \
-              --filter name=paykey_backend_prod \
-              --filter name=paykey_admin_prod \
-              --filter name=paydome_website_prod
-
-            # ── 8. Post-deploy cleanup and summary ────────────────────────────
-            docker image prune -f
-            echo "💾 Disk space after deploy:"
-            df -h /var/lib/docker 2>/dev/null || df -h /
-            echo "Deployment complete: $(date)"
+  website-release:
+    name: Release website after backend readiness
+    needs: deploy
+    uses: ./.github/workflows/deploy-website.yml
+    with:
+      release_sha: ${{ github.sha }}
+    secrets: inherit

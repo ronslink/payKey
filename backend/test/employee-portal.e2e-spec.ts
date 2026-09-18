@@ -1,3 +1,5 @@
+import { User, UserTier } from '../src/modules/users/entities/user.entity';
+import { DataSource } from 'typeorm';
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
@@ -52,6 +54,10 @@ describe('Employee Portal E2E', () => {
       .send({ email: userData.email, password: userData.password });
 
     employerToken = loginRes.body.access_token;
+    await app
+      .get(DataSource)
+      .getRepository(User)
+      .update(loginRes.body.user.id, { tier: UserTier.PLATINUM });
 
     // Create a worker for invite tests using unique data
     const workerData = createTestWorkerData({

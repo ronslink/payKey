@@ -10,6 +10,8 @@ import {
   Request,
   HttpCode,
   HttpStatus,
+  BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { NotificationsService } from './notifications.service';
@@ -57,38 +59,46 @@ export class NotificationsController {
   ) {
     const userId = req.user.userId;
 
-    // Check if token already exists for this user
-    let deviceToken = await this.deviceTokenRepository.findOne({
-      where: { userId, token: dto.token },
-    });
+    if (
+      typeof dto.token !== 'string' ||
+      !dto.token.trim() ||
+      dto.token.length > 4096 ||
+      !Object.values(DevicePlatform).includes(dto.platform) ||
+      (dto.deviceId !== undefined &&
+        (typeof dto.deviceId !== 'string' || dto.deviceId.length > 255))
+    ) {
+      throw new BadRequestException(
+        'A valid device token and platform are required',
+      );
+    }
 
-    if (deviceToken) {
-      // Update existing token
-      deviceToken.isActive = true;
-      deviceToken.lastUsedAt = new Date();
-      deviceToken.platform = dto.platform;
-      if (dto.deviceId) deviceToken.deviceId = dto.deviceId;
-    } else {
-      // Check if this device already has a different token (replace old one)
+    await this.deviceTokenRepository.manager.transaction(async (manager) => {
+      // Serialize registrations for the same device across account switches.
+      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+        dto.token,
+      ]);
+      const repository = manager.getRepository(DeviceToken);
+      await repository.update({ token: dto.token }, { isActive: false });
       if (dto.deviceId) {
-        await this.deviceTokenRepository.update(
+        await repository.update(
           { userId, deviceId: dto.deviceId },
           { isActive: false },
         );
       }
-
-      // Create new token
-      deviceToken = this.deviceTokenRepository.create({
+      const existing = await repository.findOne({
+        where: { userId, token: dto.token },
+      });
+      const deviceToken = repository.create({
+        ...(existing || {}),
         userId,
         token: dto.token,
         platform: dto.platform,
-        deviceId: dto.deviceId,
+        deviceId: dto.deviceId || existing?.deviceId,
         isActive: true,
         lastUsedAt: new Date(),
       });
-    }
-
-    await this.deviceTokenRepository.save(deviceToken);
+      await repository.save(deviceToken);
+    });
 
     return {
       success: true,
@@ -184,6 +194,7 @@ export class NotificationsController {
     @Request() req: { user: { userId: string } },
     @Body() dto: SendTestNotificationDto,
   ) {
+    if (process.env.NODE_ENV === 'production') throw new NotFoundException();
     const { type, recipient, message, subject } = dto;
 
     let result;

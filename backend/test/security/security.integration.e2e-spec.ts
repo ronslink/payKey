@@ -2,37 +2,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { ConfigModule } from '@nestjs/config';
-import { AuthModule } from '../../src/modules/auth/auth.module';
-import { UsersModule } from '../../src/modules/users/users.module';
-import { WorkersModule } from '../../src/modules/workers/workers.module';
-import { PayrollModule } from '../../src/modules/payroll/payroll.module';
-import { TestDatabaseModule } from '../test-database.module';
-import { User } from '../../src/modules/users/entities/user.entity';
+import { Repository, DataSource } from 'typeorm';
+import { ThrottlerStorage, ThrottlerStorageService } from '@nestjs/throttler';
+import { AppModule } from '../../src/app.module';
+import { cleanupTestData } from '../test-utils';
+import { User, UserTier } from '../../src/modules/users/entities/user.entity';
 import { Worker } from '../../src/modules/workers/entities/worker.entity';
 import * as bcrypt from 'bcrypt';
-import { MockBullModule } from '../mock-bull.module';
-
-jest.mock('@nestjs/bullmq', () => {
-  const actual = jest.requireActual('@nestjs/bullmq');
-
-  return {
-    ...actual,
-    BullModule: {
-      forRoot: jest.fn().mockReturnValue({ module: class {}, providers: [] }),
-      forRootAsync: jest
-        .fn()
-        .mockReturnValue({ module: class {}, providers: [] }),
-      registerQueue: jest
-        .fn()
-        .mockReturnValue({ module: class {}, providers: [] }),
-      registerQueueAsync: jest
-        .fn()
-        .mockReturnValue({ module: class {}, providers: [] }),
-    },
-  };
-});
 
 describe('Security Tests', () => {
   let app: INestApplication;
@@ -44,15 +20,7 @@ describe('Security Tests', () => {
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [
-        TestDatabaseModule,
-        ConfigModule.forRoot({ isGlobal: true }),
-        MockBullModule,
-        AuthModule,
-        UsersModule,
-        WorkersModule,
-        PayrollModule,
-      ],
+      imports: [AppModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
@@ -60,6 +28,7 @@ describe('Security Tests', () => {
       new ValidationPipe({ whitelist: true, transform: true }),
     );
     await app.init();
+    await cleanupTestData(app.get(DataSource));
 
     userRepo = moduleFixture.get<Repository<User>>(getRepositoryToken(User));
     workerRepo = moduleFixture.get<Repository<Worker>>(
@@ -72,7 +41,7 @@ describe('Security Tests', () => {
       passwordHash: await bcrypt.hash('test-password', 10),
       firstName: 'Security',
       lastName: 'Test',
-      countryCode: 'KE',
+      tier: UserTier.PLATINUM,
       isOnboardingCompleted: true,
     });
 
@@ -81,7 +50,7 @@ describe('Security Tests', () => {
       passwordHash: await bcrypt.hash('test-password', 10),
       firstName: 'Other',
       lastName: 'User',
-      countryCode: 'KE',
+      tier: UserTier.PLATINUM,
       isOnboardingCompleted: true,
     });
 
@@ -97,6 +66,15 @@ describe('Security Tests', () => {
       });
 
     authToken = (loginRes.body as { access_token: string }).access_token;
+    expect(authToken).toBeTruthy();
+  });
+
+  beforeEach(() => {
+    // Each scenario has its own request budget; rate-limit tests still exercise
+    // the real guard/storage across all requests within that scenario.
+    const storage = app.get<ThrottlerStorageService>(ThrottlerStorage);
+    storage.onApplicationShutdown(); // Cancel TTL callbacks before clearing their entries.
+    storage.storage.clear();
   });
 
   afterAll(async () => {

@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { AppModule } from '../../src/app.module';
-import { TestDatabaseModule } from '../test-database.module';
 import { cleanupTestData } from '../test-utils';
 import { PayrollService } from '../../src/modules/payroll/payroll.service';
 import { WorkersService } from '../../src/modules/workers/workers.service';
@@ -14,6 +13,7 @@ import { PayPeriod } from '../../src/modules/payroll/entities/pay-period.entity'
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as fs from 'fs';
+import { resolvePrivateFile } from '../../src/modules/uploads/storage-paths';
 
 describe('Gov Integrations E2E', () => {
   let app: INestApplication;
@@ -29,7 +29,7 @@ describe('Gov Integrations E2E', () => {
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule, TestDatabaseModule],
+      imports: [AppModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
@@ -75,7 +75,8 @@ describe('Gov Integrations E2E', () => {
       userId: testUser.id,
       startDate: new Date('2024-01-01'),
       endDate: new Date('2024-01-31'),
-      status: 'OPEN' as any,
+      status: 'ACTIVE' as any,
+      name: 'Government export test period',
     });
     payPeriodId = payPeriod.id;
 
@@ -109,26 +110,29 @@ describe('Gov Integrations E2E', () => {
     );
     expect(submission).toBeDefined();
     expect(submission.filePath).toContain('kra');
-    expect(fs.existsSync(submission.filePath)).toBe(true);
+    expect(
+      fs.existsSync(await resolvePrivateFile(submission.filePath, 'gov-files')),
+    ).toBe(true);
   });
 
   it('should generate NSSF Excel file', async () => {
-    const submission = await nssfService.generateNSSFExcel(
-      payPeriodId,
-      testUser.id,
-    );
+    const submission = await nssfService.generateSF24(payPeriodId, testUser.id);
     expect(submission).toBeDefined();
     expect(submission.filePath).toContain('nssf');
-    expect(fs.existsSync(submission.filePath)).toBe(true);
+    expect(
+      fs.existsSync(await resolvePrivateFile(submission.filePath, 'gov-files')),
+    ).toBe(true);
   });
 
   it('should generate SHIF Excel file', async () => {
-    const submission = await shifService.generateSHIFExcel(
+    const submission = await shifService.generateContributionFile(
       payPeriodId,
       testUser.id,
     );
     expect(submission).toBeDefined();
     expect(submission.filePath).toContain('shif');
-    expect(fs.existsSync(submission.filePath)).toBe(true);
+    expect(
+      fs.existsSync(await resolvePrivateFile(submission.filePath, 'gov-files')),
+    ).toBe(true);
   });
 });

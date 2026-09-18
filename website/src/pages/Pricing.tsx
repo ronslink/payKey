@@ -1,5 +1,6 @@
 import { Check, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 import {
   Tooltip,
   TooltipContent,
@@ -61,7 +62,7 @@ const plans = [
       "M-Pesa payments",
       "P9 supporting summaries",
     ],
-    "Start Free Trial",
+    "Choose Basic",
     true,
   ),
   definePlan(
@@ -79,7 +80,7 @@ const plans = [
       "Priority support",
       "Excel worker import",
     ],
-    "Start Free Trial",
+    "Choose Gold",
   ),
   definePlan(
     "Platinum",
@@ -100,14 +101,14 @@ const plans = [
       "Multi-property management",
       "Excel worker import",
     ],
-    "Start Free Trial",
+    "Choose Platinum",
   ),
 ];
 
 const faqItems = [
   {
     q: "Can I change plans anytime?",
-    a: "Yes, you can upgrade or downgrade your plan at any time. Changes take effect on your next billing cycle.",
+    a: "Contact our team to change an existing paid plan. You can turn automatic renewal on or off from your account.",
   },
   {
     q: "Is there a setup fee?",
@@ -118,8 +119,8 @@ const faqItems = [
     a: "Link your M-Pesa account, enter your worker's phone number, and send salary directly. They receive the money instantly with an SMS confirmation.",
   },
   {
-    q: "What happens after the 14-day trial?",
-    a: "You can stay on Free or choose Basic, Gold, or Platinum. If you decide not to continue with a paid plan, your data stays safe and you can export it anytime.",
+    q: "How can I get started?",
+    a: "Visit Get started for available app access or contact our team. We can confirm which plans and purchase options are currently available for your device.",
   },
 ];
 
@@ -136,6 +137,10 @@ export default function Pricing() {
           <p className="text-lg text-slate-400 max-w-2xl mx-auto">
             Start free, then upgrade when you need more workers or advanced
             payroll tools. All prices are in Kenyan Shillings.
+          </p>
+          <p className="text-sm text-slate-400 max-w-2xl mx-auto mt-3">
+            Web card subscriptions are billed monthly in US dollars. Review the
+            current USD amount before continuing to secure checkout.
           </p>
         </div>
       </div>
@@ -185,13 +190,14 @@ export default function Pricing() {
               </ul>
 
               <Button
+                asChild
                 className={`w-full font-semibold ${
                   plan.highlighted
                     ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20"
                     : "bg-white/5 hover:bg-white/10 text-white border border-white/10"
                 }`}
               >
-                {plan.cta}
+                <Link to={`/account?plan=${plan.name.toLowerCase()}`}>{plan.cta}</Link>
               </Button>
             </div>
           ))}

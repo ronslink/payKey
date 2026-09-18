@@ -34,6 +34,7 @@ import { TaxPaymentsService } from '../tax-payments/services/tax-payments.servic
 import { PaymentMethod } from '../tax-payments/entities/tax-payment.entity';
 import { TaxType } from '../tax-config/entities/tax-config.entity';
 import { User } from '../users/entities/user.entity';
+import { redactProviderSecrets } from '../../common/security/provider-secrets';
 
 // ============================================================================
 // Types & Interfaces
@@ -634,11 +635,14 @@ export class UnifiedPaymentsController {
     userId: string,
     limit = 10,
   ): Promise<Transaction[]> {
-    return this.transactionRepository.find({
+    const transactions = await this.transactionRepository.find({
       where: { userId },
       order: { createdAt: 'DESC' },
       take: limit,
     });
+    return transactions.map((transaction) =>
+      redactProviderSecrets(transaction),
+    );
   }
 
   private async getActiveSubscriptionCount(userId: string): Promise<number> {

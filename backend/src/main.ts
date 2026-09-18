@@ -2,7 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import * as crypto from 'crypto';
-import { json, urlencoded } from 'express';
+import { registerRequestBodyParsers } from './common/http/request-body';
 
 // Fix for Node.js 18 compatibility with TypeORM
 if (!globalThis.crypto) {
@@ -10,33 +10,16 @@ if (!globalThis.crypto) {
 }
 
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { join } from 'path';
+import { registerPublicAvatars } from './modules/uploads/public-avatars';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bodyParser: false, // Disable default parser to handle raw body manually
   });
 
-  // Serve static files from 'uploads' directory
-  // Use process.cwd() to ensure we look in /app/uploads regardless of where dist/main.js is
-  app.useStaticAssets(join(process.cwd(), 'uploads'), {
-    prefix: '/uploads/',
-    setHeaders: (res) => {
-      res.set('Access-Control-Allow-Origin', '*');
-      res.set('Access-Control-Allow-Methods', 'GET');
-      res.set('Cross-Origin-Resource-Policy', 'cross-origin');
-    },
-  });
+  registerPublicAvatars(app);
 
-  // Middleware to capture raw body for webhook verification
-  const rawBodyBuffer = (req: any, res: any, buf: Buffer, encoding: string) => {
-    if (buf && buf.length) {
-      req.rawBody = buf;
-    }
-  };
-
-  app.use(json({ verify: rawBodyBuffer }));
-  app.use(urlencoded({ verify: rawBodyBuffer, extended: true }));
+  registerRequestBodyParsers(app);
 
   // Trust proxy (required for Cloudflare/reverse proxies to get real client IP)
   // Only enable in production where we're behind a reverse proxy

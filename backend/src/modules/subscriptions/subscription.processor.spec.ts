@@ -24,6 +24,7 @@ import {
 describe('SubscriptionProcessor', () => {
   let processor: SubscriptionProcessor;
   let subscriptionRepository: {
+    manager: { transaction: jest.Mock; query: jest.Mock };
     create: jest.Mock;
     findOne: jest.Mock;
     save: jest.Mock;
@@ -56,6 +57,10 @@ describe('SubscriptionProcessor', () => {
 
   beforeEach(async () => {
     subscriptionRepository = {
+      manager: {
+        query: jest.fn().mockResolvedValue([]),
+        transaction: jest.fn((work) => work(subscriptionRepository.manager)),
+      },
       create: jest.fn().mockImplementation((entity) => entity),
       findOne: jest.fn(),
       save: jest.fn().mockImplementation((entity) => Promise.resolve(entity)),
@@ -134,6 +139,41 @@ describe('SubscriptionProcessor', () => {
     }).compile();
 
     processor = module.get(SubscriptionProcessor);
+  });
+
+  it('rechecks provider ownership after acquiring the billing lock before running an old renewal job', async () => {
+    const subscription = {
+      id: 'subscription-1',
+      userId: 'user-1',
+      stripeSubscriptionId: null,
+      status: SubscriptionStatus.ACTIVE,
+      tier: SubscriptionTier.GOLD,
+      pendingTier: SubscriptionTier.FREE,
+      autoRenewal: false,
+    };
+    subscriptionRepository.findOne.mockImplementation(() =>
+      Promise.resolve({ ...subscription }),
+    );
+    subscriptionRepository.manager.query.mockImplementation(() => {
+      // A Stripe payment completed while this queued renewal waited for its lock.
+      subscription.stripeSubscriptionId = 'sub_active' as any;
+      return Promise.resolve([]);
+    });
+    await processor.process({
+      id: 'queued-job',
+      name: 'renew-subscription',
+      data: { subscriptionId: subscription.id },
+    } as any);
+    expect(subscriptionRepository.manager.query).toHaveBeenCalledWith(
+      'SELECT pg_advisory_xact_lock(hashtext($1))',
+      ['stripe-billing:user-1'],
+    );
+    expect(subscriptionRepository.findOne).toHaveBeenCalledTimes(2);
+    expect(subscriptionRepository.save).not.toHaveBeenCalled();
+    expect(userRepository.update).not.toHaveBeenCalled();
+    expect(paymentRepository.save).not.toHaveBeenCalled();
+    expect(transactionRepository.save).not.toHaveBeenCalled();
+    expect(intaSendService.createCheckoutUrl).not.toHaveBeenCalled();
   });
 
   it('creates an IntaSend renewal checkout instead of deducting the payroll wallet', async () => {

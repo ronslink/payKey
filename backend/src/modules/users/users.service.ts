@@ -1,7 +1,7 @@
 import { Injectable, ConflictException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from './entities/user.entity';
+import { User, UserRole, UserTier } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { IntaSendService } from '../payments/intasend.service';
 
@@ -27,10 +27,20 @@ export class UsersService {
       throw new ConflictException('Email already exists');
     }
 
-    const { password, ...userData } = createUserDto;
+    // Public registration must never accept roles, entitlements or balances.
+    // Keep this allowlist at the persistence boundary as well as the HTTP DTO.
     const user = this.usersRepository.create({
-      ...userData,
+      email: createUserDto.email,
+      firstName: createUserDto.firstName,
+      lastName: createUserDto.lastName,
+      phoneNumber: createUserDto.phone,
+      businessName: createUserDto.businessName,
       passwordHash: createUserDto.passwordHash,
+      role: UserRole.USER,
+      tier: UserTier.FREE,
+      walletBalance: 0,
+      clearingBalance: 0,
+      isOnboardingCompleted: false,
     });
     return this.usersRepository.save(user);
   }

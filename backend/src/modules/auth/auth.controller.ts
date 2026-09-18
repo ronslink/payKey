@@ -17,7 +17,7 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Post('register')
-  @UsePipes(new ValidationPipe())
+  @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   async register(@Body() createUserDto: CreateUserDto) {
     try {
       return await this.authService.register(createUserDto);

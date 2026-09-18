@@ -2,6 +2,7 @@ import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { getJwtSecret } from '../auth/jwt.config';
 import { BullModule } from '@nestjs/bullmq';
 import { WorkersService } from './workers.service';
 import { WorkersController } from './workers.controller';
@@ -40,7 +41,7 @@ import { UploadsModule } from '../uploads/uploads.module';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET', 'your-secret-key'),
+        secret: getJwtSecret(configService),
         signOptions: { expiresIn: '7d' },
       }),
       inject: [ConfigService],

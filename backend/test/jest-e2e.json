@@ -6,6 +6,7 @@
   ],
   "rootDir": ".",
   "testEnvironment": "node",
+  "setupFiles": ["<rootDir>/network-guard.cjs"],
   "testTimeout": 120000,
   "testRegex": ".e2e-spec.ts$",
   "transform": {

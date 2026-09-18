@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import * as ExcelJS from 'exceljs';
 import * as path from 'path';
 import * as fs from 'fs';
+import { randomUUID } from 'crypto';
+import { privateGovDirectory } from '../../uploads/storage-paths';
 import { PayrollRecord } from '../../payroll/entities/payroll-record.entity';
 import { Worker } from '../../workers/entities/worker.entity';
 import {
@@ -14,7 +16,7 @@ import {
 
 @Injectable()
 export class ShifService {
-  private readonly outputDir = 'uploads/gov-files/shif';
+  private readonly outputDir = privateGovDirectory('shif');
 
   constructor(
     @InjectRepository(PayrollRecord)
@@ -27,7 +29,7 @@ export class ShifService {
 
   private ensureOutputDir() {
     if (!fs.existsSync(this.outputDir)) {
-      fs.mkdirSync(this.outputDir, { recursive: true });
+      fs.mkdirSync(this.outputDir, { recursive: true, mode: 0o700 });
     }
   }
 
@@ -40,7 +42,7 @@ export class ShifService {
     userId: string,
   ): Promise<GovSubmission> {
     const records = await this.payrollRecordRepository.find({
-      where: { payPeriodId },
+      where: { payPeriodId, userId },
       relations: ['worker'],
     });
 
@@ -99,7 +101,8 @@ export class ShifService {
 
     const timestamp = new Date().toISOString().split('T')[0];
     const fileName = `SHIF_${payPeriodId.substring(0, 8)}_${timestamp}.xlsx`;
-    const filePath = path.join(this.outputDir, fileName);
+    const storedName = `${randomUUID()}.xlsx`;
+    const filePath = path.join(this.outputDir, storedName);
 
     await workbook.xlsx.writeFile(filePath);
 
@@ -108,7 +111,7 @@ export class ShifService {
       payPeriodId,
       type: GovSubmissionType.SHIF,
       status: GovSubmissionStatus.GENERATED,
-      filePath,
+      filePath: `private/gov-files/shif/${storedName}`,
       fileName,
       totalAmount: totalContribution,
       employeeCount: records.length,

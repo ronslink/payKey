@@ -13,9 +13,12 @@ import {
   BadRequestException,
   NotFoundException,
   ForbiddenException,
+  Res,
+  ParseUUIDPipe,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiConsumes, ApiBody, ApiBearerAuth } from '@nestjs/swagger';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
@@ -28,6 +31,7 @@ import { UploadDocumentDto } from '../dto/upload-document.dto';
 import { UploadsService } from '../../uploads/uploads.service';
 
 @ApiTags('Worker Documents')
+@ApiBearerAuth()
 @Controller('workers')
 @UseGuards(JwtAuthGuard)
 export class WorkerDocumentsController {
@@ -43,7 +47,10 @@ export class WorkerDocumentsController {
    * Get all documents for a worker
    */
   @Get(':workerId/documents')
-  async getDocuments(@Param('workerId') workerId: string, @Request() req: any) {
+  async getDocuments(
+    @Param('workerId', ParseUUIDPipe) workerId: string,
+    @Request() req: { user: { userId: string } },
+  ) {
     console.log(
       `[WorkerDocumentsController] getDocuments called for worker: ${workerId}, user: ${req.user?.userId}`,
     );
@@ -68,7 +75,7 @@ export class WorkerDocumentsController {
         `[WorkerDocumentsController] Found ${documents.length} documents`,
       );
 
-      return documents;
+      return documents.map((document) => this.downloadResponse(document));
     } catch (error) {
       console.error(
         '[WorkerDocumentsController] Error in getDocuments:',
@@ -97,10 +104,10 @@ export class WorkerDocumentsController {
     },
   })
   async uploadDocument(
-    @Param('workerId') workerId: string,
+    @Param('workerId', ParseUUIDPipe) workerId: string,
     @UploadedFile() file: Express.Multer.File,
     @Body() dto: UploadDocumentDto,
-    @Request() req: any,
+    @Request() req: { user: { userId: string } },
   ) {
     if (!file) {
       throw new BadRequestException('No file uploaded');
@@ -132,7 +139,41 @@ export class WorkerDocumentsController {
 
     await this.documentRepository.save(document);
 
-    return document;
+    return this.downloadResponse(document);
+  }
+
+  private downloadResponse(document: WorkerDocument) {
+    return {
+      ...document,
+      url: `/workers/documents/${document.id}/download`,
+    };
+  }
+
+  @Get('documents/:documentId/download')
+  async downloadDocument(
+    @Param('documentId', ParseUUIDPipe) documentId: string,
+    @Request() req: { user: { userId: string } },
+    @Res() res: Response,
+  ) {
+    const document = await this.documentRepository.findOne({
+      where: { id: documentId },
+    });
+    if (!document) throw new NotFoundException('Document not found');
+
+    const worker = await this.workerRepository.findOne({
+      where: { id: document.workerId, userId: req.user.userId },
+    });
+    if (!worker) throw new NotFoundException('Document not found');
+
+    const filePath = await this.uploadsService.resolveDocument(
+      document.url,
+      document.workerId,
+    );
+    res.set({
+      'Cache-Control': 'private, no-store',
+      'X-Content-Type-Options': 'nosniff',
+    });
+    res.download(filePath, document.name);
   }
 
   /**
@@ -141,8 +182,8 @@ export class WorkerDocumentsController {
   @Delete('documents/:documentId')
   @HttpCode(204)
   async deleteDocument(
-    @Param('documentId') documentId: string,
-    @Request() req: any,
+    @Param('documentId', ParseUUIDPipe) documentId: string,
+    @Request() req: { user: { userId: string } },
   ) {
     // Find document and verify ownership through worker
     const document = await this.documentRepository.findOne({
@@ -164,7 +205,7 @@ export class WorkerDocumentsController {
     }
 
     // Delete file from filesystem
-    await this.uploadsService.deleteDocument(document.url);
+    await this.uploadsService.deleteDocument(document.url, document.workerId);
 
     // Delete database record
     await this.documentRepository.delete(documentId);

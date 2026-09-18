@@ -14,6 +14,7 @@ import { EmployeePortalService } from '../services/employee-portal.service';
 import { LeaveManagementService } from '../services/leave-management.service';
 import { FeatureAccessService } from '../../subscriptions/feature-access.service';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import type { AuthenticatedRequest } from '../../../common/interfaces/user.interface';
 
 @ApiTags('Employee Portal')
 @Controller('employee-portal')
@@ -263,18 +264,24 @@ export class EmployeePortalController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Employee cancels their leave request' })
   async cancelLeaveRequest(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Param('requestId') requestId: string,
   ) {
+    const { employerId, workerId } = req.user;
+    if (!employerId || !workerId) {
+      throw new ForbiddenException('An employee account is required.');
+    }
+
     await this.assertFullFeatureAccess(
-      req.user.employerId,
+      employerId,
       'employee_portal',
       'Employee portal access requires your employer to have a Platinum subscription.',
     );
 
     return this.leaveManagementService.cancelLeaveRequest(
-      req.user.employerId,
+      employerId,
       requestId,
+      workerId,
     );
   }
 

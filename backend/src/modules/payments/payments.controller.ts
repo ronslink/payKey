@@ -52,6 +52,7 @@ import {
 } from '../payroll/entities/pay-period.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { DeviceToken } from '../notifications/entities/device-token.entity';
+import { redactProviderSecrets } from '../../common/security/provider-secrets';
 
 @Controller('payments')
 export class PaymentsController {
@@ -170,7 +171,10 @@ export class PaymentsController {
       remarks: string;
     },
   ) {
-    if (process.env.NODE_ENV === 'production') {
+    if (
+      process.env.NODE_ENV === 'production' ||
+      process.env.INTASEND_IS_LIVE === 'true'
+    ) {
       throw new BadRequestException(
         'Direct B2C payouts are disabled in production. Use payroll finalization.',
       );
@@ -211,7 +215,10 @@ export class PaymentsController {
     @Body() body: { amount: number },
   ) {
     // Only allow in development mode
-    if (process.env.NODE_ENV === 'production') {
+    if (
+      process.env.NODE_ENV === 'production' ||
+      process.env.INTASEND_IS_LIVE === 'true'
+    ) {
       throw new Error('This endpoint is only available in development mode');
     }
 
@@ -374,6 +381,12 @@ export class PaymentsController {
     @Headers('x-intasend-signature') signature: string,
     @Body() body: any,
   ) {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      throw new BadRequestException('Invalid webhook payload');
+    }
+    const livePayments =
+      process.env.NODE_ENV === 'production' ||
+      process.env.INTASEND_IS_LIVE === 'true';
     // 0. Robust Signature Retrieval (Headers can be lowercase or different casing via proxies)
     const effectiveSignature =
       signature ||
@@ -386,14 +399,16 @@ export class PaymentsController {
     );
 
     if (!effectiveSignature) {
-      console.warn(
-        '[DEBUG] Webhook missing Signature. Headers:',
-        JSON.stringify(req.headers),
-      );
+      console.warn('[DEBUG] Webhook signature header is absent.');
     }
 
-    // CHECK FOR BYPASS
-    const isBypassed = process.env.INTASEND_DISABLE_SIG_CHECK === 'true';
+    // Signature checks may only be bypassed in explicit non-production testing.
+    const bypassRequested = process.env.INTASEND_DISABLE_SIG_CHECK === 'true';
+    const isBypassed = bypassRequested && !livePayments;
+
+    if (bypassRequested && livePayments) {
+      this.logger.error('INTASEND_DISABLE_SIG_CHECK was ignored in live mode.');
+    }
 
     if (isBypassed) {
       console.warn(
@@ -413,19 +428,28 @@ export class PaymentsController {
             challenge,
           )
         ) {
-          console.error(
-            `⛔ Challenge Verification Failed for signature: ${effectiveSignature}`,
-          );
-          console.log('Headers:', JSON.stringify(req.headers));
+          console.error('⛔ Challenge Verification Failed.');
           throw new BadRequestException('Invalid signature or challenge');
         }
         return { challenge: challenge };
       }
 
       // Check if this is a simulation FIRST
-      const isSimulation =
+      const callbackInvoiceId: unknown = (body as Record<string, unknown>)
+        .invoice_id;
+      const callbackHost: unknown = (body as Record<string, unknown>).host;
+      const simulationRequested =
         process.env.INTASEND_SIMULATE === 'true' ||
-        (body.host === 'localhost' && body.invoice_id?.startsWith('INV_SIM_'));
+        (callbackHost === 'localhost' &&
+          typeof callbackInvoiceId === 'string' &&
+          callbackInvoiceId.startsWith('INV_SIM_'));
+      const isSimulation = simulationRequested && !livePayments;
+
+      if (simulationRequested && livePayments) {
+        this.logger.error(
+          'IntaSend simulation bypass was ignored in live mode.',
+        );
+      }
 
       if (isSimulation) {
         this.logger.log(
@@ -439,22 +463,27 @@ export class PaymentsController {
             challenge,
           )
         ) {
-          console.error(
-            `⛔ Signature Verification Failed. Sig: ${effectiveSignature}`,
-          );
+          console.error('⛔ Signature Verification Failed.');
           throw new BadRequestException('Invalid signature or challenge');
         }
       }
     }
 
-    this.logger.log('🔹 IntaSend Webhook Payload Verified:', body);
+    this.logger.log('🔹 IntaSend webhook payload verified.');
 
-    this.logger.log('🔹 IntaSend Webhook Received:', body);
-
-    this.logger.log('🔹 IntaSend Webhook Received:', body);
-
-    let { invoice_id, tracking_id, state, api_ref, value, from_data, to_data } =
-      body;
+    let { invoice_id, tracking_id, state, api_ref, to_data } = body as {
+      invoice_id?: string;
+      tracking_id?: string;
+      state?: string;
+      api_ref?: string;
+      to_data?: {
+        transaction?: {
+          transaction_id?: string;
+          narrative?: string;
+          status?: string;
+        };
+      };
+    };
 
     // B2C batch webhooks use `status` at the top level (not `state`).
     // STK deposit webhooks use `state`. Normalise so both paths use `state`.
@@ -578,6 +607,10 @@ export class PaymentsController {
         );
         const newStatus = itemizedStatus || batchStatus;
 
+        // CLEARING can arrive in state, status or clearing_status. Retries of
+        // the same transition must never credit the clearing balance again.
+        if (newStatus === previousStatus) continue;
+
         if (
           previousStatus === TransactionStatus.CLEARING &&
           newStatus === TransactionStatus.PENDING
@@ -601,13 +634,23 @@ export class PaymentsController {
           tx.paymentMethod = detectedPaymentMethod;
         }
 
-        tx.metadata = {
-          ...(typeof tx.metadata === 'string'
-            ? JSON.parse(tx.metadata)
-            : tx.metadata),
+        let previousMetadata: unknown = tx.metadata;
+        if (typeof previousMetadata === 'string') {
+          try {
+            previousMetadata = JSON.parse(previousMetadata) as unknown;
+          } catch {
+            previousMetadata = {};
+          }
+        }
+        tx.metadata = redactProviderSecrets({
+          ...(previousMetadata &&
+          typeof previousMetadata === 'object' &&
+          !Array.isArray(previousMetadata)
+            ? previousMetadata
+            : {}),
           webhookEvent: body,
           updatedAt: new Date().toISOString(),
-        };
+        });
 
         // Handle Deposit Logic (Only credit once per transaction)
         if (tx.type === TransactionType.DEPOSIT) {
@@ -616,14 +659,14 @@ export class PaymentsController {
               User,
               { id: tx.userId },
               'clearingBalance',
-              Number(value || tx.amount),
+              Number(tx.amount),
             );
           } else if (newStatus === TransactionStatus.SUCCESS) {
             await manager.increment(
               User,
               { id: tx.userId },
               'walletBalance',
-              Number(value || tx.amount),
+              Number(tx.amount),
             );
 
             if (previousStatus === TransactionStatus.CLEARING) {
@@ -631,9 +674,19 @@ export class PaymentsController {
                 User,
                 { id: tx.userId },
                 'clearingBalance',
-                Number(value || tx.amount),
+                Number(tx.amount),
               );
             }
+          } else if (
+            newStatus === TransactionStatus.FAILED &&
+            previousStatus === TransactionStatus.CLEARING
+          ) {
+            await manager.decrement(
+              User,
+              { id: tx.userId },
+              'clearingBalance',
+              Number(tx.amount),
+            );
           }
         }
 
@@ -659,6 +712,9 @@ export class PaymentsController {
         updatedCount++;
       }
 
+      if (updatedCount === 0) {
+        return { status: 'ignored', reason: 'No status transition' };
+      }
       await manager.save(Transaction, transactions);
 
       // 6. Send Push Notifications for status updates
@@ -715,10 +771,21 @@ export class PaymentsController {
             where: { id: subPaymentId },
           });
           if (payment) {
+            await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+              `stripe-billing:${payment.userId}`,
+            ]);
             const subscription = await manager.findOne(Subscription, {
               where: { id: payment.subscriptionId },
             });
-            if (subscription) {
+            if (subscription?.stripeSubscriptionId) {
+              await manager.update(SubscriptionPayment, subPaymentId, {
+                notes:
+                  'Payment received after Stripe billing was linked; reconciliation required. Stripe entitlement unchanged.',
+              });
+              this.logger.warn(
+                'Received legacy subscription payment requires reconciliation with Stripe billing',
+              );
+            } else if (subscription) {
               subscription.status = SubscriptionStatus.ACTIVE;
               subscription.billingPeriod =
                 payment.billingPeriod || subscription.billingPeriod;

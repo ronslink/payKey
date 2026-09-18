@@ -15,31 +15,27 @@ export default function HomeCTA() {
                 Start paying your staff the right way
               </h2>
               <p className="text-lg text-slate-300 max-w-xl">
-                Set up your household payroll, add your first worker, and try
-                the core workflow free for 14 days.
+                Find out how to access the app and set up your household payroll.
+                Our team can help you take the first step.
               </p>
             </div>
 
             <div className="flex flex-col sm:flex-row items-center gap-4 shrink-0">
-              <Link to="/pricing">
                 <Button
+                  asChild
                   size="lg"
                   className="bg-white hover:bg-slate-100 text-emerald-900 font-semibold px-8 shadow-xl transition-all hover:scale-[1.02]"
                 >
-                  Start Free Trial
-                  <ArrowRight className="w-4 h-4 ml-2" />
+                  <Link to="/get-started">Get started <ArrowRight className="w-4 h-4 ml-2" /></Link>
                 </Button>
-              </Link>
-              <Link to="/contact">
                 <Button
+                  asChild
                   size="lg"
                   variant="outline"
                   className="border-white/20 bg-white/5 hover:bg-white/10 text-white font-semibold px-8 backdrop-blur-sm"
                 >
-                  <Calendar className="w-4 h-4 mr-2" />
-                  Book a Demo
+                  <Link to="/contact"><Calendar className="w-4 h-4 mr-2" /> Book a Demo</Link>
                 </Button>
-              </Link>
             </div>
           </div>
         </div>

@@ -50,25 +50,21 @@ export default function HomeHero() {
           <div
             className={`flex flex-col sm:flex-row items-center gap-4 mb-8 transition-all duration-700 delay-300 ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"}`}
           >
-            <Link to="/pricing">
               <Button
+                asChild
                 size="lg"
                 className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-8 shadow-xl shadow-emerald-500/25 transition-all hover:shadow-emerald-500/40 hover:scale-[1.02]"
               >
-                Get the app
-                <ArrowRight className="w-4 h-4 ml-2" />
+                <Link to="/get-started">Get the app <ArrowRight className="w-4 h-4 ml-2" /></Link>
               </Button>
-            </Link>
-            <Link to="/features">
               <Button
+                asChild
                 size="lg"
                 variant="outline"
                 className="border-white/10 bg-white/5 hover:bg-white/10 text-white font-semibold px-8 backdrop-blur-sm"
               >
-                <Play className="w-4 h-4 mr-2" />
-                See how it works
+                <Link to="/features"><Play className="w-4 h-4 mr-2" /> See how it works</Link>
               </Button>
-            </Link>
           </div>
 
           {/* Trust badges */}

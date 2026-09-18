@@ -63,11 +63,9 @@ export class IntaSendService {
       `INTASEND_IS_LIVE env: ${this.configService.get('INTASEND_IS_LIVE')}`,
     );
     this.logger.debug(
-      `Publishable Key Set: ${this.publishableKey ? 'Yes' : 'No'} (${this.publishableKey ? this.publishableKey.substring(0, 10) + '...' : 'None'})`,
+      `Publishable Key Set: ${this.publishableKey ? 'Yes' : 'No'}`,
     );
-    this.logger.debug(
-      `Secret Key Set: ${this.secretKey ? 'Yes' : 'No'} (${this.secretKey ? this.secretKey.substring(0, 5) + '...' : 'None'})`,
-    );
+    this.logger.debug(`Secret Key Set: ${this.secretKey ? 'Yes' : 'No'}`);
 
     if (!this.publishableKey || !this.secretKey) {
       this.logger.warn(
@@ -78,6 +76,26 @@ export class IntaSendService {
     const configuredWebhookSecret = this.configService.get(
       'INTASEND_WEBHOOK_SECRET',
     );
+
+    if (this.isLive) {
+      if (!this.publishableKey || !this.secretKey) {
+        throw new Error('Live IntaSend credentials are required');
+      }
+      if (
+        !configuredWebhookSecret &&
+        !this.configService.get('INTASEND_CHALLENGE')
+      ) {
+        throw new Error(
+          'Live IntaSend webhook verification must be configured',
+        );
+      }
+      if (
+        this.configService.get('INTASEND_SIMULATE') === 'true' ||
+        this.configService.get('INTASEND_DISABLE_SIG_CHECK') === 'true'
+      ) {
+        throw new Error('IntaSend testing bypasses are forbidden in live mode');
+      }
+    }
 
     if (configuredWebhookSecret) {
       this.webhookSecret = configuredWebhookSecret;
@@ -107,17 +125,21 @@ export class IntaSendService {
     rawBody: Buffer,
     challenge?: string,
   ): boolean {
-    const configuredChallenge = this.configService.get('INTASEND_CHALLENGE');
+    const configuredChallenge =
+      this.configService.get<string>('INTASEND_CHALLENGE');
+    if (
+      (challenge !== undefined && typeof challenge !== 'string') ||
+      (signature !== undefined && typeof signature !== 'string')
+    )
+      return false;
 
     // 1. Prioritize Challenge Verification (Official Docs Method)
     if (configuredChallenge && challenge) {
-      if (configuredChallenge === challenge) {
+      if (this.safeCompare(configuredChallenge, challenge)) {
         this.logger.log('✅ Webhook Challenge matched.');
         return true;
       }
-      this.logger.warn(
-        `⛔ Webhook Challenge Mismatch: Expected ${configuredChallenge}, got ${challenge}`,
-      );
+      this.logger.warn('⛔ Webhook Challenge Mismatch.');
       // Fallthrough to signature check? No, if challenge is mismatched, it's definitely invalid.
       return false;
     }
@@ -136,7 +158,7 @@ export class IntaSendService {
       return false;
     }
 
-    if (!rawBody) {
+    if (!rawBody || !Buffer.isBuffer(rawBody) || !this.webhookSecret) {
       this.logger.warn(
         '⚠️ Webhook missing raw body. Ensure main.ts captures it.',
       );
@@ -149,19 +171,23 @@ export class IntaSendService {
       .update(rawBody)
       .digest('hex');
 
-    if (hmac !== signature) {
-      this.logger.warn(
-        `⛔ Invalid Webhook Signature. Expected: ${hmac.substring(0, 10)}..., Received: ${signature.substring(0, 10)}... | Secret used: ${this.webhookSecret ? 'YES' : 'NO'} | Body Len: ${rawBody.length}`,
-      );
-      // Log raw body preview for debugging (careful with PII)
-      this.logger.debug(
-        `Raw Body Preview: ${rawBody.toString('utf8').substring(0, 100)}...`,
-      );
+    if (!this.safeCompare(hmac, signature)) {
+      this.logger.warn('⛔ Invalid Webhook Signature.');
       return false;
     }
 
     this.logger.log('✅ Webhook Signature matched.');
     return true;
+  }
+
+  private safeCompare(expected: string, received: string): boolean {
+    const expectedBuffer = Buffer.from(expected);
+    const receivedBuffer = Buffer.from(received);
+
+    return (
+      expectedBuffer.length === receivedBuffer.length &&
+      crypto.timingSafeEqual(expectedBuffer, receivedBuffer)
+    );
   }
 
   /**

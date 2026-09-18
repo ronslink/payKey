@@ -225,9 +225,10 @@ export class LeaveManagementService {
   async cancelLeaveRequest(
     userId: string,
     requestId: string,
+    workerId?: string,
   ): Promise<LeaveRequest> {
     const leaveRequest = await this.leaveRequestRepository.findOne({
-      where: { id: requestId },
+      where: { id: requestId, ...(workerId ? { workerId } : {}) },
       relations: ['worker'],
     });
 

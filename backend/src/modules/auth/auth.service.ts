@@ -1,12 +1,15 @@
-import { Injectable, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { User } from '../users/entities/user.entity';
 import * as bcrypt from 'bcrypt';
 import * as appleSignin from 'apple-signin-auth';
-import * as fs from 'fs';
-import * as path from 'path';
 import { ConfigService } from '@nestjs/config';
 import { OAuth2Client } from 'google-auth-library';
 
@@ -49,7 +52,7 @@ export class AuthService {
     return null;
   }
 
-  async login(user: Omit<User, 'passwordHash'>) {
+  login(user: Omit<User, 'passwordHash'>) {
     const payload: JwtPayload = {
       email: user.email,
       sub: user.id,
@@ -95,26 +98,36 @@ export class AuthService {
   }
 
   async loginWithSocial(socialLoginDto: SocialLoginDto) {
-    const {
-      provider,
-      token,
-      email: clientEmail,
-      firstName,
-      lastName,
-      photoUrl,
-    } = socialLoginDto;
+    const { provider, token, firstName, lastName, photoUrl } = socialLoginDto;
 
-    let socialId = token;
-    let verifiedEmail = clientEmail;
+    let socialId: string;
+    let verifiedEmail: string | undefined;
 
     if (provider === SocialProvider.GOOGLE) {
       const googlePayload = await this.verifyGoogleToken(token);
       socialId = googlePayload.sub;
-      verifiedEmail = googlePayload.email || clientEmail;
+      verifiedEmail = googlePayload.email;
     } else if (provider === SocialProvider.APPLE) {
       const applePayload = await this.verifyAppleToken(token);
       socialId = applePayload.sub;
-      verifiedEmail = applePayload.email || clientEmail;
+      verifiedEmail = applePayload.email;
+
+      // Apple can omit email on subsequent sign-ins. Only an identity already
+      // linked to this verified subject may sign in without a verified email.
+      if (!verifiedEmail) {
+        const existingUser = await this.usersService.findOneByAppleId(socialId);
+        if (existingUser) return this.login(existingUser);
+      } else if (String(applePayload.email_verified) !== 'true') {
+        throw new UnauthorizedException(
+          'A verified provider email is required',
+        );
+      }
+    } else {
+      throw new UnauthorizedException('Unsupported social provider');
+    }
+
+    if (!verifiedEmail) {
+      throw new UnauthorizedException('A verified provider email is required');
     }
 
     // Check if user exists or create them
@@ -144,7 +157,7 @@ export class AuthService {
       !appleBundleId ||
       (!appleKeyPath && !applePrivateKeyEnv)
     ) {
-      throw new Error('Apple configuration missing in environment variables');
+      throw new ServiceUnavailableException('Apple sign-in is not configured');
     }
 
     try {
@@ -162,10 +175,12 @@ export class AuthService {
         ignoreExpiration: false,
       });
 
+      if (!tokenPayload.sub) {
+        throw new UnauthorizedException('Invalid Apple identity token');
+      }
       return tokenPayload;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      throw new Error(`Apple token verification failed: ${message}`);
+    } catch {
+      throw new UnauthorizedException('Invalid Apple identity token');
     }
   }
 
@@ -177,15 +192,12 @@ export class AuthService {
     const iosClientId = this.configService.get<string>('GOOGLE_CLIENT_ID');
     const webClientId = this.configService.get<string>('GOOGLE_WEB_CLIENT_ID');
 
-    const allowedAudiences = [iosClientId, webClientId].filter(
-      Boolean,
-    ) as string[];
+    const allowedAudiences = [iosClientId, webClientId]
+      .map((audience) => audience?.trim())
+      .filter((audience): audience is string => Boolean(audience));
 
     if (allowedAudiences.length === 0) {
-      console.warn(
-        'No GOOGLE_CLIENT_ID or GOOGLE_WEB_CLIENT_ID configured — skipping Google token verification (dev fallback)',
-      );
-      return { sub: idToken, email: undefined };
+      throw new ServiceUnavailableException('Google sign-in is not configured');
     }
 
     // Use a client with no audience restriction — we'll validate the audience ourselves
@@ -197,13 +209,16 @@ export class AuthService {
         idToken,
         audience: allowedAudiences,
       });
-      const payload = ticket.getPayload()!;
+      const payload = ticket.getPayload();
+      if (!payload?.sub || !payload.email || payload.email_verified !== true) {
+        throw new UnauthorizedException('A verified Google email is required');
+      }
       console.debug(
         `Google token verified. Audience: ${payload.aud}, Platform client matched.`,
       );
       return payload;
-    } catch (error) {
-      throw new Error(`Google token verification failed: ${error.message}`);
+    } catch {
+      throw new UnauthorizedException('Invalid Google identity token');
     }
   }
 }

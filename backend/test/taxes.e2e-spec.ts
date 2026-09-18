@@ -3,6 +3,8 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from './../src/app.module';
 import { createTestUserData } from './test-utils';
+import { DataSource } from 'typeorm';
+import { TaxTable } from '../src/modules/taxes/entities/tax-table.entity';
 
 /**
  * Taxes & Tax Submissions E2E Tests
@@ -26,6 +28,20 @@ describe('Taxes E2E', () => {
 
     app = moduleFixture.createNestApplication();
     await app.init();
+    // Legacy table endpoint needs its own fixture; calculation rates use TaxConfig.
+    await app
+      .get(DataSource)
+      .getRepository(TaxTable)
+      .save({
+        year: 2000,
+        effectiveDate: new Date('2000-01-01'),
+        isActive: true,
+        nssfConfig: { tierILimit: 100, tierIILimit: 1000, rate: 0.06 },
+        nhifConfig: { rate: 0.01 },
+        housingLevyRate: 0.01,
+        payeBands: [],
+        personalRelief: 0,
+      });
 
     // Register and login test user
     const userData = createTestUserData({

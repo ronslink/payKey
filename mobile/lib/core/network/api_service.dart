@@ -42,6 +42,8 @@ class ApiService {
   // Stream for handling unauthorized errors
   final _unauthorizedController = StreamController<void>.broadcast();
   Stream<void> get onUnauthorized => _unauthorizedController.stream;
+  final _tokenChangedController = StreamController<String?>.broadcast();
+  Stream<String?> get onTokenChanged => _tokenChangedController.stream;
 
   // Endpoint accessors
   late final AuthEndpoints auth;
@@ -220,10 +222,12 @@ class ApiService {
 
   Future<void> saveToken(String token) async {
     await secureStorage.write(key: 'access_token', value: token);
+    _tokenChangedController.add(token);
   }
 
   Future<void> clearToken() async {
     await secureStorage.delete(key: 'access_token');
+    _tokenChangedController.add(null);
   }
 
   Future<String?> getToken() async {
@@ -1271,6 +1275,12 @@ class EmployeePortalEndpoints extends BaseEndpoints {
 
   /// Employee: Get own profile
   Future<Response> getMyProfile() => _api.get('/employee-portal/my-profile');
+
+  /// Employee-scoped endpoints enforce ownership and finalized payslips.
+  Future<Response> getMyPayslips() => _api.get('/payroll/me');
+
+  Future<List<int>> downloadMyPayslip(String recordId) =>
+      _api.downloadFile('/payroll/me/${Uri.encodeComponent(recordId)}/pdf');
 
   /// Employee: Get assigned property (Gold/Platinum only)
   /// Returns property details for clock-in location display

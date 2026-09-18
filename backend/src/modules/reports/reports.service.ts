@@ -24,6 +24,7 @@ import {
   PayrollStatus,
 } from '../payroll/entities/payroll-record.entity';
 import { PayPeriod } from '../payroll/entities/pay-period.entity';
+import { redactProviderSecrets } from '../../common/security/provider-secrets';
 
 // Cache TTLs
 const DASHBOARD_CACHE_TTL = 5 * 60 * 1000; // 5 minutes for dashboard
@@ -80,7 +81,7 @@ export class ReportsService {
         amount: t.amount,
         status: t.status,
         createdAt: t.createdAt,
-        metadata: t.metadata,
+        metadata: redactProviderSecrets<unknown>(t.metadata),
       })),
     };
   }

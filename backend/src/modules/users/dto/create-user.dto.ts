@@ -1,11 +1,4 @@
-import {
-  IsEmail,
-  IsEnum,
-  IsOptional,
-  IsString,
-  MinLength,
-} from 'class-validator';
-import { UserTier } from '../entities/user.entity';
+import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class CreateUserDto {
   @IsEmail()
@@ -22,10 +15,6 @@ export class CreateUserDto {
   @IsOptional()
   @IsString()
   lastName?: string;
-
-  @IsOptional()
-  @IsEnum(UserTier)
-  tier?: UserTier;
 
   @IsOptional()
   @IsString()

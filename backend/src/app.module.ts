@@ -34,6 +34,7 @@ import { GovIntegrationsModule } from './modules/gov-integrations/gov-integratio
 import { SystemConfigModule } from './modules/system-config/system-config.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { SupportModule } from './modules/support/support.module';
+import { HealthModule } from './modules/health/health.module';
 import { getDatabaseConfig } from './config/database.config';
 
 // Explicit Entity Imports
@@ -107,7 +108,7 @@ import { SupportMessage } from './modules/support/entities/support-message.entit
     AccountingModule,
     ActivitiesModule,
     TasksModule,
-    TestingModule,
+    ...(process.env.NODE_ENV === 'test' ? [TestingModule] : []),
     ReportsModule,
     TimeTrackingModule,
     ExportModule,
@@ -122,6 +123,7 @@ import { SupportMessage } from './modules/support/entities/support-message.entit
     SystemConfigModule,
     AdminModule,
     SupportModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

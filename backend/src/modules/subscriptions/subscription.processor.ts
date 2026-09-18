@@ -61,6 +61,22 @@ export class SubscriptionProcessor extends WorkerHost {
   }
 
   private async handleRenewal(subscriptionId: string) {
+    const owner = await this.subscriptionRepository.findOne({
+      where: { id: subscriptionId },
+      select: { userId: true },
+    });
+    if (!owner) return;
+    return this.subscriptionRepository.manager.transaction(async (manager) => {
+      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+        `stripe-billing:${owner.userId}`,
+      ]);
+      // The queued job may predate Stripe activation. Hold the same account lock
+      // as provider settlement until renewal has finished, then release it.
+      return this.renewUnmanagedSubscription(subscriptionId);
+    });
+  }
+
+  private async renewUnmanagedSubscription(subscriptionId: string) {
     const subscription = await this.subscriptionRepository.findOne({
       where: { id: subscriptionId },
       relations: ['user'],
@@ -68,6 +84,13 @@ export class SubscriptionProcessor extends WorkerHost {
 
     if (!subscription) {
       this.logger.error(`Subscription ${subscriptionId} not found`);
+      return;
+    }
+
+    if (subscription.stripeSubscriptionId) {
+      this.logger.log(
+        `Skipping provider-managed subscription ${subscriptionId}`,
+      );
       return;
     }
 
