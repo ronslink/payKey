@@ -143,8 +143,14 @@ describe('Employee Portal - Payslips & Leave E2E', () => {
       .expect(200);
     expect(Array.isArray(response.body)).toBe(true);
     expect(
-      response.body.map((record: PayrollRecord) => record.id).sort(),
-    ).toEqual([finalizedRecord.id, paidRecord.id].sort());
+      response.body
+        .map((record: PayrollRecord) => record.id)
+        .sort((left: string, right: string) => left.localeCompare(right)),
+    ).toEqual(
+      [finalizedRecord.id, paidRecord.id].sort((left, right) =>
+        left.localeCompare(right),
+      ),
+    );
     expect(
       response.body.every(
         (record: PayrollRecord) => record.workerId === workerId,

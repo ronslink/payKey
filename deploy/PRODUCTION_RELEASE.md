@@ -37,11 +37,11 @@ not required: deployed images and the website are tied to the tested commit.
    credentials belong at `/opt/paykey/secrets/firebase-service-account.json`,
    outside Git/image layers. Email/SMS credentials and provider variables must
    be supplied separately if those channels are offered.
-4. Verify database backup retention and restore a recent backup into an isolated
-   database. This launch adds no migrations, and its read-only preflight rejects
+4. Verify database backup freshness and retention. This launch adds no migrations,
+   and its read-only preflight rejects
    any pending migration before stopping the existing application. If legacy SQL
-   is pending, inspect its schema/data effects, rehearse it and recovery against
-   the restored database, and apply the reviewed SQL in a separate migration
+   is pending, inspect its schema/data effects, restore a recent backup into an
+   isolated database, rehearse the SQL and recovery there, and apply the reviewed SQL in a separate migration
    operation before retrying the application release. Do not mark unexecuted SQL
    as applied merely to bypass this check. Record the backup/restore identifier,
    time and release commit. The release script does not create a managed-database

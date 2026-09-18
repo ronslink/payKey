@@ -15,7 +15,7 @@ website account flow and Stripe hosted checkout.
 | Paid launch | Website signup/login, authenticated plan selection, server-priced USD checkout and renewal controls are implemented. A return page reports active service only after backend verification. Signed Stripe callbacks settle once per invoice, handle out-of-order events and protect cancellation/renewal periods. Existing Stripe contracts cannot be overwritten by another payment method. Production requires live Stripe credentials. |
 | Private files | Worker documents, government payroll files and accounting exports use persistent private storage and authenticated ownership checks. Existing file references resolve through preserved legacy storage. Public static serving is limited to avatar images. |
 | Database safety | Production requires an explicit database URL and verified TLS. Schema synchronization and automatic startup migrations are disabled in production. A standalone read-only audit identifies the actual database host, TLS session and migration state without starting the app. |
-| Deployment | A shared CI path tests before publishing an immutable image. Release scripts preserve uploads/exports and previous containers, reuse Redis storage, run explicit migrations and require database/Redis readiness before promoting configuration. |
+| Deployment | A shared CI path tests before publishing an immutable image. Release scripts preserve uploads/exports and previous containers, reuse Redis storage, reject pending migrations before stopping the old app, and require database/Redis readiness before promoting configuration. |
 | Mobile/customer access | Website calls to action lead to account/access pages. Approved app links are configurable. Push tokens register on login/startup/refresh and deactivate on logout. Employee payslips and document downloads use authenticated routes. Signing/Firebase restoration is configured for release workflows. |
 | Employee isolation | Payslip history includes finalized and paid records and excludes drafts. Employees cannot download another worker's payslip or cancel another worker's leave, including within the same employer. |
 | Account deletion | Unauthenticated requests cannot delete passwordless social accounts by email. Authenticated deletion verifies ownership. Recurring billing must be ended before deletion; worker activity records no longer prevent the tested cleanup flow. |
@@ -149,12 +149,43 @@ SSH access before deployment; the inspection did not reach Docker or PostgreSQL.
 Another 1Password CLI authorization request timed out, leaving backup inspection
 unverified. The release is prepared in PR #4 and has not been deployed.
 
+### Pull request checks and triage
+
+For PR #4 head `3fc4735`, [functional backend CI](https://github.com/ronslink/payKey/actions/runs/35334758409)
+passed its build, lint-regression, unit/security, deployment-configuration and
+isolated-database E2E checks. Image publication and deployment were skipped for
+the pull request. [CodeQL](https://github.com/ronslink/payKey/runs/105567089712)
+also passed, including the corrected migration-identity parser and storage-path
+containment checks. These results do not establish live provider acceptance or
+production access.
+
+SonarCloud's check remains failed. Its reliability gate flags a default string
+sort in the payslip test; an explicit `localeCompare` comparator now preserves
+the intended comparison of the same record-ID sets. This was a test-expression
+finding, not evidence that employee payslip access failed. Its security findings
+cover action version pinning, package installation scripts, the container's root
+user, `git` lookup through `PATH` in the optional baseline generator, and the
+local environment-writer's operator-supplied destination argument. They remain
+open for contextual security review; no alerts were dismissed, no gate was
+disabled, and no application permissions or CLI behavior were changed merely to
+improve the rating. The local CLI finding does not demonstrate a customer-facing
+path traversal. Package-install and runtime-user changes require dependency and
+storage-permission analysis before being applied.
+
+These static-analysis findings are tracked separately from the demonstrated
+launch blockers: rejected deployment SSH authentication, unverified running
+database/migration state and backup recovery, and outstanding real-provider and
+signed-device acceptance. The failed SonarCloud check still needs consideration
+under the repository's merge requirements; successful functional CI is not a
+claim that every quality check passed.
+
 1. **Complete runtime and database verification.** DigitalOcean inventory is now
    confirmed. Existing local SSH identities were rejected by the production host;
    further 1Password CLI authorization is needed for API/database checks. Confirm
    the authorized shell access method, container image and actual database hostname. Verify
-   trusted sources, managed backup retention and a successful restore into a
-   separate database. Rehearse the release migrations against that restore.
+   trusted sources and managed backup freshness/retention. If any legacy migration
+   is pending, review its effects and rehearse it against a restored separate
+   database before applying SQL. This application release introduces no migration.
 2. **Configure and accept real paid billing.** Stripe and IntaSend credential names
    are confirmed in GitHub `PROD`; verify they contain the correct live credentials
    and match the signed webhook/callback configuration. Verify a controlled subscription purchase,
