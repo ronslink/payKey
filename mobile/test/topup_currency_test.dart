@@ -7,6 +7,7 @@ void main() {
     'KES shortfall cannot become an EUR charge when switching methods',
     (tester) async {
       double? chargedEur;
+      String? chargedCurrency;
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -16,8 +17,10 @@ void main() {
                   context: context,
                   shortfall: 1000,
                   onMpesaConfirm: (_, _) {},
-                  onCheckoutConfirm: (_) {},
-                  onStripeConfirm: (amount) => chargedEur = amount,
+                  onStripeConfirm: (amount, currency) {
+                    chargedEur = amount;
+                    chargedCurrency = currency;
+                  },
                 ),
                 child: const Text('Top up'),
               ),
@@ -29,7 +32,10 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Add KES 1000.00'), findsOneWidget);
 
-      await tester.tap(find.text('EUR (Stripe)'));
+      await tester.tap(find.text('Card'));
+      await tester.pumpAndSettle();
+      expect(find.text('Pay KES 1000.00'), findsOneWidget);
+      await tester.tap(find.text('EUR'));
       await tester.pumpAndSettle();
       final eurField = find.byKey(const ValueKey('topup-amount-EUR'));
       expect(tester.widget<TextField>(eurField).controller!.text, isEmpty);
@@ -45,12 +51,13 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Add KES 1000.00'), findsOneWidget);
 
-      await tester.tap(find.text('EUR (Stripe)'));
+      await tester.tap(find.text('Card'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Pay EUR 10.25'));
       await tester.tap(find.text('Pay EUR 10.25'));
       await tester.pumpAndSettle();
       expect(chargedEur, 10.25);
+      expect(chargedCurrency, 'EUR');
     },
   );
 }

@@ -111,6 +111,13 @@ describe('Stripe wallet funding and settlement', () => {
       .send(payload);
   }
 
+  function createFunding(body: object) {
+    return request(app.getHttpServer())
+      .post('/payments/unified/stripe/create-intent')
+      .set('Authorization', `Bearer ${owner.token}`)
+      .send({ paymentMethodTypes: ['card'], ...body });
+  }
+
   async function balance(userId: string) {
     const user = await database
       .getRepository(User)
@@ -144,18 +151,23 @@ describe('Stripe wallet funding and settlement', () => {
     return { payment, intent };
   }
 
-  it('requires explicit EUR and an available conversion before creating an exact-cent intent', async () => {
+  it('requires explicit currency, card method and EUR conversion before creating an exact-cent intent', async () => {
     const transactions = database.getRepository(Transaction);
     const countBefore = await transactions.countBy({ userId: owner.userId });
-    const create = (body: object) =>
-      request(app.getHttpServer())
-        .post('/payments/unified/stripe/create-intent')
-        .set('Authorization', `Bearer ${owner.token}`)
-        .send(body);
+    const create = createFunding;
     for (const body of [
       { amount: 10 },
-      { amount: 10, currency: 'KES' },
+      { amount: 10, currency: 'JPY' },
       { amount: 10, currency: 'USD' },
+      { amount: 10, currency: 'EUR', paymentMethodTypes: undefined },
+      { amount: 10, currency: 'EUR', paymentMethodTypes: ['sepa_debit'] },
+      { amount: 10, currency: 'EUR', paymentMethodTypes: [] },
+      {
+        amount: 10,
+        currency: 'EUR',
+        paymentMethodTypes: ['card', 'sepa_debit'],
+      },
+      { amount: 10.001, currency: 'EUR' },
     ]) {
       await create(body).expect(400);
     }
@@ -200,6 +212,8 @@ describe('Stripe wallet funding and settlement', () => {
     expect(sent).toMatchObject({
       amount: '1234',
       currency: 'eur',
+      'payment_method_types[0]': 'card',
+      confirm: 'false',
       'metadata[userId]': owner.userId,
     });
     const stored = await transactions.findOneByOrFail({
@@ -214,10 +228,103 @@ describe('Stripe wallet funding and settlement', () => {
     expect(await balance(owner.userId)).toBe(0);
   });
 
+  it('lets Stripe enforce the KES minimum before writing and credits KES cards once without FX', async () => {
+    const transactions = database.getRepository(Transaction);
+    const countBefore = await transactions.countBy({ userId: owner.userId });
+    const balanceBefore = await balance(owner.userId);
+    rates.getLatestRate
+      .mockClear()
+      .mockRejectedValue(new Error('No FX available'));
+    const minimumRejection = nock('https://api.stripe.com')
+      .post('/v1/payment_intents')
+      .reply(400, {
+        error: {
+          type: 'invalid_request_error',
+          code: 'amount_too_small',
+          message: 'Amount is below the account minimum.',
+        },
+      });
+    await createFunding({ amount: 1, currency: 'KES' }).expect(400);
+    expect(minimumRejection.isDone()).toBe(true);
+    expect(await transactions.countBy({ userId: owner.userId })).toBe(
+      countBefore,
+    );
+    expect(await balance(owner.userId)).toBe(balanceBefore);
+
+    let sent: Record<string, string> = {};
+    const provider = nock('https://api.stripe.com')
+      .post('/v1/payment_intents')
+      .reply((_uri, body) => {
+        sent =
+          typeof body === 'string'
+            ? Object.fromEntries(new URLSearchParams(body))
+            : (body as Record<string, string>);
+        return [
+          200,
+          {
+            id: 'pi_wallet_kes',
+            client_secret: 'pi_wallet_kes_secret_fixture',
+          },
+        ];
+      });
+    const result = await createFunding({
+      amount: 1000,
+      currency: 'KES',
+    }).expect(201);
+    expect(provider.isDone()).toBe(true);
+    expect(sent).toMatchObject({
+      amount: '100000',
+      currency: 'kes',
+      'payment_method_types[0]': 'card',
+      confirm: 'false',
+    });
+    const stored = await transactions.findOneByOrFail({
+      id: result.body.transactionId as string,
+    });
+    expect(stored).toMatchObject({
+      currency: 'KES',
+      providerRef: 'pi_wallet_kes',
+      status: TransactionStatus.PENDING,
+    });
+    expect(Number(stored.amount)).toBe(1000);
+    currentIntent = {
+      id: 'pi_wallet_kes',
+      object: 'payment_intent',
+      status: 'succeeded',
+      currency: 'kes',
+      amount: 100000,
+      amount_received: 100000,
+      metadata: {
+        type: 'WALLET_TOPUP',
+        transactionId: stored.id,
+        userId: owner.userId,
+      },
+    } as Stripe.PaymentIntent;
+    await Promise.all([
+      callback(currentIntent).expect(201),
+      callback(currentIntent).expect(201),
+      callback(currentIntent).expect(201),
+    ]);
+    expect(await balance(owner.userId)).toBe(balanceBefore + 1000);
+    expect(await balance(other.userId)).toBe(0);
+    expect(
+      (await transactions.findOneByOrFail({ id: stored.id })).metadata
+        .fxApplied,
+    ).toEqual({
+      sourceAmount: 1000,
+      sourceCurrency: 'KES',
+      targetCurrency: 'KES',
+      rate: 1,
+      creditedAmount: 1000,
+    });
+    expect(rates.getLatestRate).not.toHaveBeenCalled();
+  });
+
   it('keeps missing or invalid FX retryable and credits once across concurrent signed callbacks', async () => {
     const { payment, intent } = await walletPayment('retry');
     currentIntent = intent;
     const transactions = database.getRepository(Transaction);
+    const balanceBefore = await balance(owner.userId);
     rates.getLatestRate.mockRejectedValue(new Error('Rate unavailable'));
     await callback(intent).expect(401);
     for (const rate of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
@@ -226,7 +333,7 @@ describe('Stripe wallet funding and settlement', () => {
       expect(
         (await transactions.findOneByOrFail({ id: payment.id })).status,
       ).toBe(TransactionStatus.PENDING);
-      expect(await balance(owner.userId)).toBe(0);
+      expect(await balance(owner.userId)).toBe(balanceBefore);
     }
     rates.getLatestRate.mockResolvedValue(150);
     await Promise.all([
@@ -234,7 +341,7 @@ describe('Stripe wallet funding and settlement', () => {
       callback(intent).expect(201),
       callback(intent).expect(201),
     ]);
-    expect(await balance(owner.userId)).toBe(1500);
+    expect(await balance(owner.userId)).toBe(balanceBefore + 1500);
     expect(await balance(other.userId)).toBe(0);
     const settled = await transactions.findOneByOrFail({ id: payment.id });
     expect(settled.status).toBe(TransactionStatus.SUCCESS);

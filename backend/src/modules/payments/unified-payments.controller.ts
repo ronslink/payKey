@@ -9,6 +9,7 @@ import {
   UseGuards,
   HttpException,
   HttpStatus,
+  ValidationPipe,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -330,7 +331,8 @@ export class UnifiedPaymentsController {
   @Post('stripe/create-intent')
   async initiateStripeTopup(
     @Request() req: AuthenticatedRequest,
-    @Body() body: StripeTopupDto,
+    @Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+    body: StripeTopupDto,
   ): Promise<{
     success: boolean;
     clientSecret: string;
@@ -345,20 +347,11 @@ export class UnifiedPaymentsController {
     );
 
     try {
-      const amount = Number(body.amount);
-      if (!Number.isFinite(amount) || amount < 0.5 || body.currency !== 'EUR') {
-        throw new HttpException('Invalid amount', HttpStatus.BAD_REQUEST);
-      }
-
-      // Default to ['card', 'sepa_debit'] if not specified
-      // Note: Mobile SDK might send types.
-      const types = body.paymentMethodTypes || ['card', 'sepa_debit'];
-
       const result = await this.stripeService.createPaymentIntent(
         userId,
-        amount,
+        body.amount,
         body.currency,
-        types,
+        body.paymentMethodTypes,
       );
 
       return {
@@ -368,7 +361,10 @@ export class UnifiedPaymentsController {
         publishableKey: result.publishableKey,
       };
     } catch (error) {
-      console.error('Unified Stripe TopUp Error:', error);
+      console.error(
+        'Unified Stripe TopUp Error:',
+        error instanceof Error ? error.name : 'PaymentError',
+      );
       const message =
         error instanceof Error
           ? error.message

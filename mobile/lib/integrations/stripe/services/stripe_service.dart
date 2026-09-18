@@ -18,7 +18,7 @@ class StripeIntegrationService {
         data: {
           'amount': amount,
           'currency': currency,
-          'paymentMethodTypes': ['card', 'sepa_debit'],
+          'paymentMethodTypes': ['card'],
         },
       );
 
@@ -39,8 +39,7 @@ class StripeIntegrationService {
         paymentSheetParameters: SetupPaymentSheetParameters(
           paymentIntentClientSecret: clientSecret,
           merchantDisplayName: 'PayDome',
-          // billingDetails: BillingDetails(email: email), // Optional
-          allowsDelayedPaymentMethods: true, // Crucial for SEPA
+          allowsDelayedPaymentMethods: false,
         ),
       );
     } catch (e) {

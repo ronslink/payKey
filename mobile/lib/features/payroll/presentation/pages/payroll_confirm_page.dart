@@ -8,7 +8,6 @@ import '../providers/payroll_provider.dart';
 import '../providers/pay_period_provider.dart';
 import '../constants/payroll_confirm_constants.dart';
 import '../widgets/topup_selection_sheet.dart'; // New sheet
-import 'package:url_launcher/url_launcher.dart'; // For Checkout
 import '../models/payroll_confirm_state.dart';
 import '../../../settings/providers/settings_provider.dart';
 
@@ -187,17 +186,16 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
       shortfall: shortfall,
       defaultPhone: defaultPhone,
       onMpesaConfirm: _performTopup,
-      onCheckoutConfirm: _performCheckoutTopup,
       onStripeConfirm: _performStripeTopup,
     );
   }
 
-  Future<void> _performStripeTopup(double amount) async {
+  Future<void> _performStripeTopup(double amount, String currency) async {
     _showSnackbar(PayrollConfirmSnackbars.loading('Initializing Stripe...'));
     try {
       final stripeService = ref.read(stripeIntegrationServiceProvider);
       // Initialize Sheet (Backend call)
-      await stripeService.initPaymentSheet(amount: amount, currency: 'EUR');
+      await stripeService.initPaymentSheet(amount: amount, currency: currency);
 
       if (mounted) _hideSnackbar();
 
@@ -221,57 +219,6 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
         // StripeException usually contains code 'Canceled'.
         // For now, simple error message.
         _showSnackbar(PayrollConfirmSnackbars.error('Payment Error: $e'));
-      }
-    }
-  }
-
-  Future<void> _performCheckoutTopup(double amount) async {
-    _showSnackbar(
-      PayrollConfirmSnackbars.loading('Redirecting to Checkout...'),
-    );
-
-    try {
-      final paymentService = ref.read(paymentServiceProvider);
-      // Initiate Checkout
-      final url = await paymentService.checkoutTopUp(amount: amount);
-
-      if (mounted && url != null) {
-        _hideSnackbar();
-
-        // Launch URL
-        final uri = Uri.parse(url);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-
-          // Show success message and wait for user to return
-          // Ideally we should poll or have a "I have paid" button, but simple delay works for now.
-          _showSnackbar(
-            PayrollConfirmSnackbars.success(
-              'Checkout opened. Please complete payment and return.',
-            ),
-          );
-
-          // Wait for user to complete payment (e.g., 30s) then verify
-          // Optimistic verify after delay
-          await Future.delayed(const Duration(seconds: 15));
-          await _verifyFunds();
-        } else {
-          _showSnackbar(
-            PayrollConfirmSnackbars.error('Could not launch payment page.'),
-          );
-        }
-      } else {
-        if (mounted) {
-          _hideSnackbar();
-          _showSnackbar(
-            PayrollConfirmSnackbars.error('Failed to generate checkout link.'),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        _hideSnackbar();
-        _showSnackbar(PayrollConfirmSnackbars.error('Checkout Error: $e'));
       }
     }
   }

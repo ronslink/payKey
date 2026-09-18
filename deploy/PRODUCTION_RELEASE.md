@@ -17,6 +17,26 @@ Legacy lint debt remains visible in the complete `lint-report.json` test-result
 artifact. Build/type checking and every E2E assertion still fail normally. Do
 not regenerate the baseline to make a failed release pass; fix the new issue.
 
+## Payment architecture for this release
+
+Prepared routing keeps M-Pesa in KES as the default and uses Stripe for cards,
+with explicit KES by default or optional EUR. The backend is being aligned to
+both card currencies ([Stripe currency support](https://docs.stripe.com/currencies)).
+This code is not deployed; updated checks and real-provider acceptance remain
+outstanding. IntaSend's current [homepage FAQ](https://intasend.com/) says it is
+not supporting cards, despite its older [card guide](https://developers.intasend.com/docs/accept-card-payment)
+and [fund-wallet guide](https://developers.intasend.com/docs/fund-wallet). Do not
+depend on the legacy IntaSend hosted-card route.
+
+M-Pesa funding targets the employer's IntaSend wallet through `wallet_id`
+([fund wallet](https://developers.intasend.com/docs/fund-wallet)); payroll uses
+that wallet for [external transfers](https://developers.intasend.com/docs/external-transfers)
+and requires [funded available balance](https://developers.intasend.com/docs/send-money).
+[Internal transfers](https://developers.intasend.com/docs/internal-transfers)
+operate only between owned IntaSend wallets. No Stripe-to-IntaSend funding bridge
+exists in this application. This affects every Stripe wallet charge, including
+KES without FX, and is separate from Stripe subscription billing.
+
 ## Before the first hardened release
 
 The manual `backend-deploy.yml` entrypoint defaults to `inspect`: it uses the
@@ -56,11 +76,13 @@ not required: deployed images and the website are tied to the tested commit.
    backup or claim one has been tested.
 5. Verify ingress terminates TLS and proxies to host loopback port 3000. Backend
    public port exposure is removed. Confirm firewall/trusted-source settings.
-6. Resolve EUR payroll funding before releasing EUR payments. Stripe settlement
+6. Resolve provider liquidity before releasing any Stripe wallet payments (KES
+   or EUR). Stripe settlement
    currently credits only the application's KES ledger; payroll draws from each
-   employer's IntaSend working wallet. No bridge funds that wallet. The choice of
-   pre-funded float/manual settlement or another verified mechanism remains
-   pending. Hourly balance observation now logs discrepancies without overwriting
+   employer's IntaSend working wallet. No bridge funds that wallet, and no
+   pre-funded balance or other operational mechanism has been verified. Agree and
+   verify the actual funding arrangement before rollout. Hourly balance observation
+   now logs discrepancies without overwriting
    the ledger; this protects recorded credit but does not fund payouts.
 7. The enabled Paydome subscription webhook lacks `payment_intent.succeeded`.
    Add it only after the corrected backend is deployed and the funding path is
@@ -68,12 +90,14 @@ not required: deployed images and the website are tied to the tested commit.
    monitor the first genuine authorized live purchase. Do not run synthetic
    live-card tests ([Stripe testing guidance](https://docs.stripe.com/testing)).
 
-The latest wallet code passed three PostgreSQL settlement tests, the ledger
-preservation regression, nine configuration checks and the backend build. Android
-currency/native fixes passed their widget check, signed rebuild and artifact
-validation, including the registered upload-certificate match. Lint has zero
-introduced diagnostic fingerprints. These changes still need fresh CI; earlier
-passing CI at `e75e077` does not cover them. No production deployment or Play upload
+The KES/EUR card-routing correction passed four PostgreSQL wallet scenarios and
+the unchanged paid-subscription journey, plus the backend build and focused lint.
+Five mobile checks cover M-Pesa dispatch, KES card dispatch, separate EUR input,
+and Stripe native initialization for both currencies; focused Dart analysis passes.
+Provider HTTP/native responses are simulated in these checks. The previous
+ledger-preservation and nine configuration checks remain valid. Run fresh CI
+and verify the rebuilt signed candidate before rollout; passing CI at `4207c23`
+predates these latest routing changes. No production deployment or Play upload
 has occurred.
 
 ## What the release script does

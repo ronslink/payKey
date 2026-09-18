@@ -14,13 +14,40 @@ website account flow and Stripe hosted checkout.
 | Authentication | Production JWT configuration fails closed. Social login requires verified provider tokens and configured audiences. |
 | Payment integrity | Live IntaSend callbacks cannot bypass verification. Settlement handles repeated clearing/final callbacks without duplicate balance movements. Provider secrets are removed from stored and returned callback metadata. |
 | Paid launch | Website signup/login, authenticated plan selection, server-priced USD checkout and renewal controls are implemented. A return page reports active service only after backend verification. Signed Stripe callbacks settle once per invoice, handle out-of-order events and protect cancellation/renewal periods. Existing Stripe contracts cannot be overwritten by another payment method. Production requires live Stripe credentials. |
-| Wallet currency and ledger | KES remains the default. EUR uses a separate empty input and explicit EUR payment request, then converts to KES on verified settlement. Invalid/missing FX prevents credit; replayed callbacks credit once. Hourly IntaSend observations report discrepancies without overwriting the ledger. The provider funding gap below still blocks EUR release. |
+| Wallet currency and ledger | Prepared routing keeps M-Pesa/KES as the default and sends card payments through Stripe with explicit KES by default or optional EUR. EUR has a separate amount input and converts to KES on verified settlement. Invalid/missing FX prevents credit; replayed callbacks credit once. Hourly IntaSend observations report discrepancies without overwriting the ledger. Actual provider funding remains a release blocker for all Stripe wallet payments, including KES. |
 | Private files | Worker documents, government payroll files and accounting exports use persistent private storage and authenticated ownership checks. Existing file references resolve through preserved legacy storage. Public static serving is limited to avatar images. |
 | Database safety | Production requires an explicit database URL and verified TLS. Schema synchronization and automatic startup migrations are disabled in production. A standalone read-only audit identifies the actual database host, TLS session and migration state without starting the app. |
 | Deployment | A shared CI path tests before publishing an immutable image. Release scripts preserve uploads/exports and previous containers, reuse Redis storage, reject pending migrations before stopping the old app, and require database/Redis readiness before promoting configuration. |
 | Mobile/customer access | Website calls to action lead to account/access pages. Approved app links are configurable. Push tokens register on login/startup/refresh and deactivate on logout. Employee payslips and document downloads use authenticated routes. Signing/Firebase restoration is configured for release workflows. |
 | Employee isolation | Payslip history includes finalized and paid records and excludes drafts. Employees cannot download another worker's payslip or cancel another worker's leave, including within the same employer. |
 | Account deletion | Unauthenticated requests cannot delete passwordless social accounts by email. Authenticated deletion verifies ownership. Recurring billing must be ended before deletion; worker activity records no longer prevent the tested cleanup flow. |
+
+## Payment routing and provider funding
+
+The prepared mobile flow is **M-Pesa (KES)** by default, or **Card through Stripe**
+with explicit KES/EUR selection; the backend accepts both
+card currencies. Stripe supports both currencies, while the application must
+select the intended charge currency ([Stripe currencies](https://docs.stripe.com/currencies)).
+Focused routing and settlement checks pass. These changes are not deployed and
+still require real-provider acceptance.
+
+IntaSend's current homepage FAQ states, "Currently, IntaSend is not supporting
+card payments" ([IntaSend](https://intasend.com/), checked 18 September 2026).
+Older [card-payment](https://developers.intasend.com/docs/accept-card-payment)
+and [wallet-funding](https://developers.intasend.com/docs/fund-wallet) guides
+still describe cards. Do not rely on the legacy IntaSend hosted-card route for
+this launch. M-Pesa collections can target the employer's working wallet using
+`wallet_id` ([fund-wallet guide](https://developers.intasend.com/docs/fund-wallet)).
+
+Payroll disburses from that selected wallet using `wallet_id`, and its available
+balance must be funded ([external transfers](https://developers.intasend.com/docs/external-transfers),
+[send-money prerequisites](https://developers.intasend.com/docs/send-money)).
+IntaSend [internal transfers](https://developers.intasend.com/docs/internal-transfers)
+move funds only between owned IntaSend wallets. They do not move Stripe proceeds
+into IntaSend. The repository has no such funding bridge: Stripe settlement
+credits the application ledger only. This liquidity gap affects both KES and
+EUR card funding; it is separate from EUR conversion and from website subscription
+billing. No bridge or pre-funded balance is assumed.
 
 ## Verification
 
@@ -85,13 +112,16 @@ issues in UI/main files.
   configuration/audit tests passed. Backend lint comparison reports zero added
   diagnostics; existing debt remains visible. The two final journey files also
   pass focused lint.
-- Subsequent wallet fixes passed three PostgreSQL settlement tests: explicit EUR
-  and exact cents, retryable FX failure with concurrent callback idempotency, and
-  mismatched/unpaid payment rejection. One widget regression preserves separate
-  KES/EUR inputs; one reconciliation regression preserves other-provider credit
-  when IntaSend reports a lower balance. Nine configuration checks and the backend
-  build passed. The lint baseline reports zero introduced diagnostic fingerprints;
-  existing debt remains. These local results require fresh CI for the updated source.
+- The card-routing correction passed four PostgreSQL wallet scenarios plus the
+  unchanged paid-subscription journey: explicit KES/EUR and exact minor units,
+  card-only creation, rejected provider minimums without pending records,
+  retryable FX failure, mismatched/unpaid payment rejection, and concurrent
+  callback idempotency. KES settlement credits the exact KES amount without FX.
+  Five mobile checks cover default M-Pesa dispatch, KES card dispatch, separate
+  EUR input, and native Stripe initialization for both currencies. Focused Dart
+  analysis, backend build and focused backend lint pass. These automated checks
+  simulate provider HTTP/native SDK boundaries; they do not prove live settlement.
+  The prior ledger-preservation and deployment-configuration checks remain valid.
 - Android now uses `FlutterFragmentActivity` and AppCompat themes as required by
   [the Stripe Flutter SDK](https://github.com/flutter-stripe/flutter_stripe).
   The mobile API consumes only the validated publishable key and PaymentIntent
@@ -169,24 +199,26 @@ filenames and shared timestamps; all nine deployment/audit tests passed after
 this correction. No new schema migration is introduced by the launch fixes.
 
 Android **1.1.6 (version code 23)** was rebuilt with Flutter 3.41.7 for
-`com.payglobus.paydome` after the wallet and native SDK fixes. The earlier candidate
+`com.payglobus.paydome` after the card-routing and native SDK fixes. The earlier candidate
 and rebuilt artifact both passed bundletool/signature checks. The
 signed-in Play Console confirms that **22 (1.1.5)** is available on the internal
 testing track and production is inactive. Build 23 has not been uploaded or
 published. The registered Play upload certificate matches the local AAB's SHA-256
 fingerprint exactly: `FE:9C:82:E1:64:67:F4:46:29:21:63:48:69:D4:23:69:68:8D:FF:F1:1B:45:17:4D:C7:1E:02:EE:73:76:65:DE`.
 Deploy the matching backend before mobile rollout, then complete acceptance on a
-device using the signed build.
+device using the signed build. The latest verified artifact includes the KES/EUR
+Stripe-card routing correction, is 64,053,803 bytes, and has SHA-256
+`F649B628CBF5417E721F863ABD2E5660CFABF1EA7998D8E63FE9EDBF6C12EDE3`.
 
 ### Pull request checks and triage
 
-For the earlier PR #4 head `e75e077`, [functional backend CI](https://github.com/ronslink/payKey/actions/runs/35336199060)
+For PR #4 head `4207c23`, [functional backend CI](https://github.com/ronslink/payKey/actions/runs/35338832844)
 passed its build, lint-regression, unit/security, deployment-configuration and
 isolated-database E2E checks. Image publication and deployment were skipped for
 the pull request. CodeQL also passed for this head. The migration-identity parser
 and storage-path containment corrections remain covered. These results do not
 establish live provider or signed-device acceptance.
-The subsequent wallet, native SDK and reconciliation changes need fresh CI;
+The subsequent KES/EUR card-routing changes need fresh CI;
 the earlier passing run does not cover them.
 
 SonarCloud's check remains failed only on New Code Security Rating. The earlier
@@ -219,12 +251,13 @@ SonarCloud findings remain open for review alongside the production gates below.
    delivery, IntaSend callback configuration and the approved server-defined USD
    prices. Rotate the IntaSend challenge because historical customer-facing
    metadata could expose it.
-3. **Resolve EUR payroll funding before release.** Stripe credits the application's
+3. **Resolve all Stripe wallet funding before release.** Stripe credits the application's
    local KES ledger, but payroll pays from each employer's IntaSend working wallet.
    No transfer/funding bridge exists. Removing hourly ledger overwrites preserves
-   the credit; it does not fund payroll. The operational choice is still pending:
-   pre-funded float, manual settlement, or funding not yet set up. Keep EUR payments
-   blocked from release until this is agreed and verified. The Paydome webhook is
+   the credit; it does not fund payroll. No funding arrangement has been verified.
+   Keep Stripe wallet payments in both KES and EUR blocked from release until the
+   actual funding path is agreed and verified. FX conversion and website subscription
+   billing do not resolve this separate liquidity requirement. The Paydome webhook is
    missing `payment_intent.succeeded`; add that event only after the corrected
    backend is deployed and the funding path is agreed. Do not enable event delivery
    as a substitute for resolving provider funding.

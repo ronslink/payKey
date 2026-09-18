@@ -4,15 +4,13 @@ import '../../../../core/theme/pay_colors.dart';
 class TopupSelectionSheet extends StatefulWidget {
   final double defaultAmount;
   final Function(double amount, String phone) onMpesaConfirm;
-  final Function(double amount) onCheckoutConfirm;
-  final Function(double amount) onStripeConfirm;
+  final Function(double amount, String currency) onStripeConfirm;
   final String? defaultPhone;
 
   const TopupSelectionSheet({
     super.key,
     required this.defaultAmount,
     required this.onMpesaConfirm,
-    required this.onCheckoutConfirm,
     required this.onStripeConfirm,
     this.defaultPhone,
   });
@@ -21,8 +19,7 @@ class TopupSelectionSheet extends StatefulWidget {
     required BuildContext context,
     required double shortfall,
     required Function(double amount, String phone) onMpesaConfirm,
-    required Function(double amount) onCheckoutConfirm,
-    required Function(double amount) onStripeConfirm,
+    required Function(double amount, String currency) onStripeConfirm,
     String? defaultPhone,
   }) {
     final defaultAmount = shortfall > 0 ? shortfall.ceilToDouble() : 1000.0;
@@ -34,7 +31,6 @@ class TopupSelectionSheet extends StatefulWidget {
       builder: (context) => TopupSelectionSheet(
         defaultAmount: defaultAmount,
         onMpesaConfirm: onMpesaConfirm,
-        onCheckoutConfirm: onCheckoutConfirm,
         onStripeConfirm: onStripeConfirm,
         defaultPhone: defaultPhone,
       ),
@@ -51,11 +47,12 @@ class _TopupSelectionSheetState extends State<TopupSelectionSheet>
   late final TextEditingController _amountController;
   late final TextEditingController _eurAmountController;
   late final TextEditingController _phoneController;
+  String _cardCurrency = 'KES';
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
     _amountController = TextEditingController(
       text: widget.defaultAmount.toStringAsFixed(0),
     );
@@ -75,16 +72,16 @@ class _TopupSelectionSheetState extends State<TopupSelectionSheet>
     super.dispose();
   }
 
-  bool get _isStripe => _tabController.index == 2;
-  String get _currency => _isStripe ? 'EUR' : 'KES';
+  bool get _isStripe => _tabController.index == 1;
+  String get _currency => _isStripe ? _cardCurrency : 'KES';
   TextEditingController get _activeAmountController =>
-      _isStripe ? _eurAmountController : _amountController;
+      _currency == 'EUR' ? _eurAmountController : _amountController;
   double? get _enteredAmount => double.tryParse(_activeAmountController.text);
   bool get _validAmount {
     final amount = _enteredAmount;
     return amount != null &&
         amount.isFinite &&
-        amount >= (_isStripe ? 0.5 : 1) &&
+        amount >= (_currency == 'EUR' ? 0.5 : 1) &&
         RegExp(r'^\d+(\.\d{1,2})?$').hasMatch(_activeAmountController.text);
   }
 
@@ -97,10 +94,8 @@ class _TopupSelectionSheetState extends State<TopupSelectionSheet>
 
     if (_tabController.index == 0) {
       widget.onMpesaConfirm(amount, _phoneController.text);
-    } else if (_tabController.index == 1) {
-      widget.onCheckoutConfirm(amount);
     } else {
-      widget.onStripeConfirm(amount);
+      widget.onStripeConfirm(amount, _currency);
     }
   }
 
@@ -145,12 +140,25 @@ class _TopupSelectionSheetState extends State<TopupSelectionSheet>
               indicatorColor: const Color(0xFF1B5E20), // M-Pesa Green approx
               tabs: const [
                 Tab(text: 'M-Pesa'),
-                Tab(text: 'Card (KES)'),
-                Tab(text: 'EUR (Stripe)'),
+                Tab(text: 'Card'),
               ],
               onTap: (_) => setState(() {}),
             ),
             const SizedBox(height: 24),
+            if (_isStripe) ...[
+              const Text('Payment currency'),
+              const SizedBox(height: 8),
+              SegmentedButton<String>(
+                segments: const [
+                  ButtonSegment(value: 'KES', label: Text('KES')),
+                  ButtonSegment(value: 'EUR', label: Text('EUR')),
+                ],
+                selected: {_cardCurrency},
+                onSelectionChanged: (selection) =>
+                    setState(() => _cardCurrency = selection.single),
+              ),
+              const SizedBox(height: 16),
+            ],
             _buildAmountField(),
             const SizedBox(height: 16),
             _buildFeeNotice(),
@@ -161,11 +169,7 @@ class _TopupSelectionSheetState extends State<TopupSelectionSheet>
                 controller: _tabController,
                 physics:
                     const NeverScrollableScrollPhysics(), // Disable swipe to avoid confusion
-                children: [
-                  _buildPhoneField(),
-                  _buildCheckoutInfo(),
-                  _buildStripeInfo(),
-                ],
+                children: [_buildPhoneField(), _buildStripeInfo()],
               ),
             ),
             const SizedBox(height: 16),
@@ -182,7 +186,7 @@ class _TopupSelectionSheetState extends State<TopupSelectionSheet>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          _isStripe ? 'Amount to pay in EUR' : 'Wallet Top-up Amount',
+          _isStripe ? 'Amount to pay in $_currency' : 'Wallet Top-up Amount',
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
@@ -194,7 +198,7 @@ class _TopupSelectionSheetState extends State<TopupSelectionSheet>
           style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           decoration: InputDecoration(
             prefixText: '$_currency ',
-            hintText: _isStripe ? 'Enter EUR amount' : null,
+            hintText: _currency == 'EUR' ? 'Enter EUR amount' : null,
             prefixStyle: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -231,7 +235,7 @@ class _TopupSelectionSheetState extends State<TopupSelectionSheet>
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              _isStripe
+              _currency == 'EUR'
                   ? 'You will pay in EUR. Your wallet is credited in KES using '
                         'the exchange rate when payment settles. '
                         'Your bank may charge additional fees.'
@@ -277,21 +281,11 @@ class _TopupSelectionSheetState extends State<TopupSelectionSheet>
     );
   }
 
-  Widget _buildCheckoutInfo() {
-    return Center(
-      child: Text(
-        'You will be redirected to complete payment via Card or PesaLink.',
-        textAlign: TextAlign.center,
-        style: TextStyle(color: context.textSecondary),
-      ),
-    );
-  }
-
   Widget _buildStripeInfo() {
     return Center(
       child: Text(
-        'Pay in EUR by card or SEPA. Bank payments may take several days; '
-        'your wallet is credited after payment is confirmed.',
+        'Pay by credit or debit card securely through Stripe. '
+        'Your wallet balance is held in KES.',
         textAlign: TextAlign.center,
         style: TextStyle(color: context.textSecondary),
       ),
@@ -313,7 +307,7 @@ class _TopupSelectionSheetState extends State<TopupSelectionSheet>
         child: Text(
           _validAmount
               ? '${_isStripe ? 'Pay' : 'Add'} $_currency ${_enteredAmount!.toStringAsFixed(2)}'
-              : 'Enter ${_isStripe ? 'at least EUR 0.50' : 'a KES amount'}',
+              : 'Enter ${_currency == 'EUR' ? 'at least EUR 0.50' : 'a KES amount'}',
           style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,

@@ -24,6 +24,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { DeviceToken } from '../notifications/entities/device-token.entity';
 import { SystemConfigService } from '../system-config/system-config.service';
 import { StripeSubscriptionBilling } from './stripe-subscription-billing';
+import { randomUUID } from 'node:crypto';
 
 @Injectable()
 export class StripeService {
@@ -148,13 +149,13 @@ export class StripeService {
   }
 
   /**
-   * Create Payment Intent for Wallet Top Up (SEPA/Card)
+   * Create an unconfirmed card PaymentIntent for explicit KES or EUR funding.
    */
   async createPaymentIntent(
     userId: string,
     amount: number,
-    currency: string = 'eur',
-    paymentMethodTypes: string[] = ['card', 'sepa_debit'],
+    currency: string,
+    paymentMethodTypes: string[],
   ): Promise<{
     clientSecret: string;
     transactionId: string;
@@ -176,25 +177,32 @@ export class StripeService {
     }
     const amountInCents = Math.round(amount * 100);
     if (
-      currency.toUpperCase() !== 'EUR' ||
+      !['KES', 'EUR'].includes(currency) ||
       !Number.isFinite(amount) ||
-      amount < 0.5 ||
+      amount < (currency === 'EUR' ? 0.5 : 0.01) ||
       !Number.isSafeInteger(amountInCents) ||
-      Math.abs(amount * 100 - amountInCents) > 0.000001
+      Math.abs(amount * 100 - amountInCents) > 0.000001 ||
+      !Array.isArray(paymentMethodTypes) ||
+      paymentMethodTypes.length !== 1 ||
+      paymentMethodTypes[0] !== 'card'
     ) {
       throw new BadRequestException(
-        'Wallet funding requires a valid EUR amount',
+        'Card funding requires an explicit KES or EUR amount and card payment method',
       );
     }
     // Refuse a new charge when we cannot convert its proceeds into the KES wallet.
     // Settlement checks the rate again because delayed payments can clear later.
-    const rate = await this.exchangeRateService.getLatestRate('EUR', 'KES');
-    if (!Number.isFinite(rate) || rate <= 0) {
-      throw new BadRequestException('Wallet exchange rate is unavailable');
+    if (currency === 'EUR') {
+      const rate = await this.exchangeRateService.getLatestRate('EUR', 'KES');
+      if (!Number.isFinite(rate) || rate <= 0) {
+        throw new BadRequestException('Wallet exchange rate is unavailable');
+      }
     }
 
-    // Create pending transaction
+    // Allocate the reference without writing. Stripe enforces its actual account
+    // and currency minimums before we persist a pending transaction.
     const transaction = this.transactionRepository.create({
+      id: randomUUID(),
       userId,
       amount,
       currency: currency.toUpperCase(),
@@ -206,13 +214,13 @@ export class StripeService {
         initiatedAt: new Date().toISOString(),
       },
     });
-    await this.transactionRepository.save(transaction);
-
-    // Create PaymentIntent
+    // This cannot charge: the client only receives its confirmation secret after
+    // the matching transaction and provider reference are durably saved below.
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amountInCents,
       currency: currency.toLowerCase(),
       payment_method_types: paymentMethodTypes,
+      confirm: false,
       metadata: {
         userId,
         transactionId: transaction.id,
@@ -220,13 +228,12 @@ export class StripeService {
       },
     });
 
-    // Update transaction with PI ID
-    transaction.providerRef = paymentIntent.id;
-    await this.transactionRepository.save(transaction);
-
     if (!paymentIntent.client_secret) {
       throw new BadRequestException('Failed to generate client secret');
     }
+
+    transaction.providerRef = paymentIntent.id;
+    await this.transactionRepository.save(transaction);
 
     return {
       clientSecret: paymentIntent.client_secret,

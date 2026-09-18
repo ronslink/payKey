@@ -3,78 +3,61 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/features/payroll/presentation/widgets/topup_selection_sheet.dart';
 
 void main() {
-  group('TopupSelectionSheet Widget Test', () {
-    testWidgets('renders all tabs and amount field', (
-      WidgetTester tester,
-    ) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: TopupSelectionSheet(
-              defaultAmount: 1000,
-              onMpesaConfirm: (_, __) {},
-              onCheckoutConfirm: (_) {},
-              onStripeConfirm: (_) {},
+  for (final card in [false, true]) {
+    testWidgets(
+      card
+          ? 'KES card top-up is sent to Stripe'
+          : 'M-Pesa is the default KES route',
+      (tester) async {
+        double? mpesaAmount;
+        String? mpesaPhone;
+        double? cardAmount;
+        String? cardCurrency;
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () => TopupSelectionSheet.show(
+                    context: context,
+                    shortfall: 1000,
+                    defaultPhone: '0712345678',
+                    onMpesaConfirm: (amount, phone) {
+                      mpesaAmount = amount;
+                      mpesaPhone = phone;
+                    },
+                    onStripeConfirm: (amount, currency) {
+                      cardAmount = amount;
+                      cardCurrency = currency;
+                    },
+                  ),
+                  child: const Text('Top up'),
+                ),
+              ),
             ),
           ),
-        ),
-      );
-
-      // Verify Tabs
-      expect(find.text('M-Pesa'), findsOneWidget);
-      expect(find.text('Checkout'), findsOneWidget);
-      expect(find.text('Global/SEPA'), findsOneWidget);
-
-      // Verify Amount Field
-      expect(find.text('Wallet Top-up Amount'), findsOneWidget);
-      expect(find.text('1000'), findsOneWidget);
-      expect(
-        find.text(
-          'You are adding KES 1000.00. Any provider fee will be shown before you confirm payment.',
-        ),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('Stripe tab triggers onStripeConfirm', (
-      WidgetTester tester,
-    ) async {
-      bool stripeCalled = false;
-      double? confirmedAmount;
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: TopupSelectionSheet(
-              defaultAmount: 5000,
-              onMpesaConfirm: (_, __) {},
-              onCheckoutConfirm: (_) {},
-              onStripeConfirm: (amount) {
-                stripeCalled = true;
-                confirmedAmount = amount;
-              },
-            ),
-          ),
-        ),
-      );
-
-      // Tap Stripe Tab
-      await tester.tap(find.text('Global/SEPA'));
-      await tester.pumpAndSettle();
-
-      // Verify Stripe info text
-      expect(
-        find.text('Pay with Card, SEPA, or Apple/Google Pay via Stripe.'),
-        findsOneWidget,
-      );
-
-      // Tap Confirm
-      await tester.tap(find.text('Add KES 5000'));
-      await tester.pump();
-
-      // Assert
-      expect(stripeCalled, isTrue);
-      expect(confirmedAmount, 5000);
-    });
-  });
+        );
+        await tester.tap(find.text('Top up'));
+        await tester.pumpAndSettle();
+        expect(find.text('Add KES 1000.00'), findsOneWidget);
+        if (card) {
+          await tester.tap(find.text('Card'));
+          await tester.pumpAndSettle();
+        }
+        final confirm = find.text('${card ? 'Pay' : 'Add'} KES 1000.00');
+        await tester.ensureVisible(confirm);
+        await tester.tap(confirm);
+        await tester.pumpAndSettle();
+        if (card) {
+          expect(cardAmount, 1000);
+          expect(cardCurrency, 'KES');
+          expect(mpesaAmount, isNull);
+        } else {
+          expect(mpesaAmount, 1000);
+          expect(mpesaPhone, '0712345678');
+          expect(cardAmount, isNull);
+        }
+      },
+    );
+  }
 }

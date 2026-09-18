@@ -1,25 +1,24 @@
 import {
-  ArrayNotEmpty,
-  Equals,
+  ArrayMaxSize,
+  ArrayMinSize,
   IsArray,
   IsIn,
   IsNumber,
-  IsOptional,
   Min,
 } from 'class-validator';
 
 export class StripeTopupDto {
   @IsNumber({ allowInfinity: false, allowNaN: false, maxDecimalPlaces: 2 })
-  @Min(0.5)
+  @Min(0.01)
   amount: number;
 
   // An explicit currency prevents old clients' KES amounts being charged in EUR.
-  @Equals('EUR')
-  currency: 'EUR';
+  @IsIn(['KES', 'EUR'])
+  currency: 'KES' | 'EUR';
 
-  @IsOptional()
   @IsArray()
-  @ArrayNotEmpty()
-  @IsIn(['card', 'sepa_debit'], { each: true })
-  paymentMethodTypes?: string[];
+  @ArrayMinSize(1)
+  @ArrayMaxSize(1)
+  @IsIn(['card'], { each: true })
+  paymentMethodTypes: ['card'];
 }
