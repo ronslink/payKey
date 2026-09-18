@@ -144,6 +144,18 @@ export class StripeService {
     return this.billing().checkoutStatus(userId, sessionId);
   }
 
+  assertNoPayableSubscriptionCheckout(
+    userId: string,
+    email: string,
+    storedCustomerId?: string,
+  ) {
+    return this.billing().assertNoPayableCheckout(
+      userId,
+      email,
+      storedCustomerId,
+    );
+  }
+
   billingReturnUrl(result: 'success' | 'cancel', sessionId?: string) {
     return this.billing().returnUrl(result, sessionId);
   }
@@ -161,6 +173,16 @@ export class StripeService {
     transactionId: string;
     publishableKey: string;
   }> {
+    // Card receipts do not fund the IntaSend wallet used for payroll payouts.
+    // Enable new charges only after that funding path is operational; keep
+    // subscription billing and settlement of existing payments independent.
+    if (
+      this.configService.get<string>('STRIPE_WALLET_FUNDING_ENABLED') !== 'true'
+    ) {
+      throw new BadRequestException(
+        'Card wallet top-ups are currently unavailable. Please use M-Pesa.',
+      );
+    }
     const stripe = this.ensureStripeConfigured();
     const publishableKey =
       this.configService.get<string>('STRIPE_PUBLISHABLE_KEY') || '';

@@ -68,3 +68,58 @@ test('expired sessions clear account data and propagate authorization errors', a
   assert.equal(api.readSession(), null);
   assert.equal(store.get(api.CHECKOUT_KEY), undefined);
 });
+
+test('M-Pesa uses the reviewed server KES quote and activates only after paid entitlement confirmation', async () => {
+  store.set('paydome.account.v1', JSON.stringify({ token: 'owner-session', email: 'owner@example.invalid' }));
+  const paymentId = 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa';
+  const quote = { planId: 'BASIC', billingPeriod: 'yearly', amount: 13000, currency: 'KES', periodStart: '2026-09-18T00:00:00Z', periodEnd: '2027-09-18T00:00:00Z', renewalMode: 'manual' };
+  const calls = [];
+  const statuses = [
+    { status: 'PENDING', entitlementActive: true }, // Existing access is not this receipt's payment confirmation.
+    { status: 'COMPLETED', entitlementActive: false },
+    { status: 'COMPLETED', entitlementActive: true },
+  ];
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url, options });
+    if (url.endsWith('/mpesa-quote')) return reply(quote);
+    if (url.endsWith('/mpesa-subscribe')) return reply({ paymentId });
+    return reply({ paymentId, ...statuses.shift(), amount: 13000, currency: 'KES' });
+  };
+  const reviewed = await api.quoteMpesaSubscription('basic', 'yearly');
+  assert.equal(api.isMpesaPaymentMethod('mpesa'), true); // Backend enum serialization must keep pending recovery reachable.
+  assert.equal(api.isMpesaPaymentMethod('MPESA'), true);
+  assert.equal(api.isMpesaPaymentMethod('stripe'), false);
+  await api.startMpesaSubscription(reviewed, '0712 345 678');
+  assert.deepEqual(JSON.parse(calls[1].options.body), {
+    planId: 'BASIC', billingPeriod: 'yearly', expectedAmount: 13000, phoneNumber: '254712345678',
+  });
+  assert.equal((await api.readMpesaSubscriptionPayment(paymentId)).entitlementActive, false);
+  assert.equal((await api.readMpesaSubscriptionPayment(paymentId)).entitlementActive, false);
+  assert.equal((await api.readMpesaSubscriptionPayment(paymentId)).entitlementActive, true);
+  assert.ok(calls.every(call => call.options.headers.Authorization === 'Bearer owner-session'));
+  assert.equal(calls.filter(call => call.url.endsWith('/mpesa-subscribe')).length, 1);
+  assert.ok(calls.slice(2).every(call => call.options.method === 'GET'));
+});
+
+test('a mismatched quote cannot be displayed as the selected M-Pesa offer', async () => {
+  store.set('paydome.account.v1', JSON.stringify({ token: 'owner-session', email: 'owner@example.invalid' }));
+  globalThis.fetch = async () => reply({ planId: 'BASIC', billingPeriod: 'monthly', amount: 9.99, currency: 'USD', renewalMode: 'manual' });
+  await assert.rejects(api.quoteMpesaSubscription('basic', 'monthly'), /valid M-Pesa price/);
+  globalThis.fetch = async () => reply({ planId: 'BASIC', billingPeriod: 'monthly', amount: 1300, currency: 'KES', renewalMode: 'manual', periodStart: '2026-09-18T00:00:00Z', periodEnd: '2026-09-18T00:00:00Z' });
+  await assert.rejects(api.quoteMpesaSubscription('basic', 'monthly'), /valid M-Pesa price/);
+});
+
+test('failed M-Pesa attempts stay failed and another receipt cannot confirm them', async () => {
+  store.set('paydome.account.v1', JSON.stringify({ token: 'owner-session', email: 'owner@example.invalid' }));
+  const paymentId = 'aaaaaaaa-1111-4111-8111-aaaaaaaaaaaa';
+  globalThis.fetch = async () => reply({ paymentId, status: 'FAILED', entitlementActive: true });
+  assert.deepEqual(await api.readMpesaSubscriptionPayment(paymentId), { paymentStatus: 'failed', entitlementActive: false });
+  globalThis.fetch = async () => reply({ paymentId: 'bbbbbbbb-2222-4222-8222-bbbbbbbbbbbb', status: 'COMPLETED', entitlementActive: true });
+  await assert.rejects(api.readMpesaSubscriptionPayment(paymentId), /unexpected payment status/);
+});
+
+test('invalid M-Pesa phone numbers and payment references never make provider requests', async () => {
+  globalThis.fetch = async () => { throw new Error('Must not request'); };
+  await assert.rejects(api.startMpesaSubscription({ planId: 'BASIC', billingPeriod: 'monthly', amount: 1300 }, '+49 123456789'), /Kenyan M-Pesa number/);
+  await assert.rejects(api.readMpesaSubscriptionPayment('../other-account'), /Invalid payment reference/);
+});

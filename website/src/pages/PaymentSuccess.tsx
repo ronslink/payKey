@@ -1,17 +1,21 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { apiRequest, ApiError, CHECKOUT_KEY, readSession } from '@/lib/billing-api';
+import { apiRequest, ApiError, CHECKOUT_KEY, readMpesaSubscriptionPayment, readSession, validPaymentId } from '@/lib/billing-api';
 import type { CheckoutStatus } from '@/lib/billing-api';
 
 export default function PaymentSuccess() {
   const [params] = useSearchParams();
   const location = useLocation();
   const cancelled = location.pathname.endsWith('/cancel');
+  const paymentId = params.get('payment_id');
+  const isMpesa = paymentId !== null;
   const sessionId = params.get('session_id') || sessionStorage.getItem(CHECKOUT_KEY) || '';
-  const validSession = /^cs_[A-Za-z0-9_]+$/.test(sessionId);
-  const [resultForSession, setResultForSession] = useState<{ sessionId: string; result: CheckoutStatus } | null>(null);
-  const status = resultForSession?.sessionId === sessionId ? resultForSession.result : null;
+  const reference = isMpesa ? paymentId : sessionId;
+  const validSession = isMpesa ? validPaymentId(paymentId) : /^cs_[A-Za-z0-9_]+$/.test(sessionId);
+  const resultKey = `${isMpesa ? 'mpesa' : 'stripe'}:${reference}`;
+  const [resultForSession, setResultForSession] = useState<{ key: string; result: CheckoutStatus } | null>(null);
+  const status = resultForSession?.key === resultKey ? resultForSession.result : null;
   const [error, setError] = useState('');
   const [checking, setChecking] = useState(false);
   const [expired, setExpired] = useState(false);
@@ -26,10 +30,12 @@ export default function PaymentSuccess() {
     async function check() {
       setChecking(true);
       try {
-        const result = await apiRequest<CheckoutStatus>(`/payments/subscriptions/checkout-status/${encodeURIComponent(sessionId)}`, { signal: controller.signal });
+        const result = isMpesa
+          ? await readMpesaSubscriptionPayment(reference, controller.signal)
+          : await apiRequest<CheckoutStatus>(`/payments/subscriptions/checkout-status/${encodeURIComponent(reference)}`, { signal: controller.signal });
         if (controller.signal.aborted) return;
-        setResultForSession({ sessionId, result });
-        if (!(result.paymentStatus === 'paid' && result.entitlementActive) && result.paymentStatus !== 'failed' && ++polls < 10) {
+        setResultForSession({ key: resultKey, result });
+        if (!(result.paymentStatus === 'paid' && result.entitlementActive) && result.paymentStatus !== 'failed' && ++polls < (isMpesa ? 20 : 10)) {
           timer = setTimeout(check, 3000);
         } else setChecking(false);
       } catch (err) {
@@ -41,10 +47,10 @@ export default function PaymentSuccess() {
     }
     void check();
     return () => { controller.abort(); if (timer) clearTimeout(timer); };
-  }, [validSession, signedIn, cancelled, sessionId, attempt]);
+  }, [validSession, signedIn, cancelled, reference, resultKey, isMpesa, attempt]);
 
   const active = status?.paymentStatus === 'paid' && status.entitlementActive === true;
-  const returnPath = `/payments/subscriptions/success?session_id=${encodeURIComponent(sessionId)}`;
+  const returnPath = isMpesa ? `/subscription/success?payment_id=${encodeURIComponent(reference)}` : `/payments/subscriptions/success?session_id=${encodeURIComponent(reference)}`;
   const heading = cancelled ? 'Checkout closed' : active ? 'Your subscription is active' : status?.paymentStatus === 'failed' ? 'Payment not completed' : 'Checking your payment';
   return <section className="max-w-xl mx-auto px-4 py-16 sm:py-24">
     <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 sm:p-10 text-center">
@@ -56,7 +62,7 @@ export default function PaymentSuccess() {
           : active ? <p>Your {status?.tier || ''} plan has been confirmed by the server. Sign in to the app with the same account to use it.</p>
           : status?.paymentStatus === 'failed' ? <p>The payment was not completed. You can review your account before trying again.</p>
           : status?.paymentStatus === 'paid' ? <p>Your payment was received. We are waiting for your subscription activation to finish.</p>
-          : <p>{checking ? 'Waiting for payment confirmation from the provider…' : 'Your payment has not yet been confirmed. Check again shortly or contact support before starting another payment.'}</p>}
+          : <><p>{checking ? 'Waiting for payment confirmation from the provider…' : 'Your payment has not yet been confirmed. Check again shortly or contact support before starting another payment.'}</p>{isMpesa ? <p>Approve the M-Pesa prompt on your phone. Refreshing this page only checks the existing payment; it does not send another prompt.</p> : null}</>}
         {error ? <p role="alert" className="text-rose-300">{error}</p> : null}
       </div>
       <div className="flex flex-col gap-3 mt-8">

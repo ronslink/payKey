@@ -39,6 +39,7 @@ describe('Stripe wallet funding and settlement', () => {
   const signer = new Stripe('sk_test_wallet_settlement_e2e_only');
   const originalKey = process.env.STRIPE_SECRET_KEY;
   const originalPublicKey = process.env.STRIPE_PUBLISHABLE_KEY;
+  const originalWalletFunding = process.env.STRIPE_WALLET_FUNDING_ENABLED;
   const publicKey = 'pk_test_walletsettlemente2eonly';
   const originalSecret = process.env.STRIPE_WEBHOOK_SECRET;
   const rates = { getLatestRate: jest.fn<Promise<number>, [string, string]>() };
@@ -87,9 +88,13 @@ describe('Stripe wallet funding and settlement', () => {
     else process.env.STRIPE_PUBLISHABLE_KEY = originalPublicKey;
     if (originalSecret === undefined) delete process.env.STRIPE_WEBHOOK_SECRET;
     else process.env.STRIPE_WEBHOOK_SECRET = originalSecret;
+    if (originalWalletFunding === undefined)
+      delete process.env.STRIPE_WALLET_FUNDING_ENABLED;
+    else process.env.STRIPE_WALLET_FUNDING_ENABLED = originalWalletFunding;
   });
 
   beforeEach(async () => {
+    process.env.STRIPE_WALLET_FUNDING_ENABLED = 'true';
     // Keep the real request limiter. Each distinct scenario gets a fresh second.
     await new Promise((resolve) => setTimeout(resolve, 1100));
   });
@@ -150,6 +155,42 @@ describe('Stripe wallet funding and settlement', () => {
     } as Stripe.PaymentIntent;
     return { payment, intent };
   }
+
+  it('blocks KES and EUR card top-ups without a Stripe intent or pending transaction when funding is disabled or unset', async () => {
+    const transactions = database.getRepository(Transaction);
+    const countBefore = await transactions.countBy({ userId: owner.userId });
+    const balanceBefore = await balance(owner.userId);
+    const interceptor = nock('https://api.stripe.com').post(
+      '/v1/payment_intents',
+    );
+    const provider = interceptor.reply(200, {
+      id: 'pi_wallet_must_not_be_created',
+      client_secret: 'pi_wallet_must_not_be_created_secret_fixture',
+    });
+    try {
+      for (const enabled of [undefined, 'false']) {
+        if (enabled === undefined)
+          delete process.env.STRIPE_WALLET_FUNDING_ENABLED;
+        else process.env.STRIPE_WALLET_FUNDING_ENABLED = enabled;
+        for (const currency of ['KES', 'EUR']) {
+          const response = await createFunding({
+            amount: 1000,
+            currency,
+          }).expect(400);
+          expect(response.body.message).toBe(
+            'Card wallet top-ups are currently unavailable. Please use M-Pesa.',
+          );
+        }
+      }
+      expect(provider.isDone()).toBe(false);
+      expect(await transactions.countBy({ userId: owner.userId })).toBe(
+        countBefore,
+      );
+      expect(await balance(owner.userId)).toBe(balanceBefore);
+    } finally {
+      nock.removeInterceptor(interceptor);
+    }
+  });
 
   it('requires explicit currency, card method and EUR conversion before creating an exact-cent intent', async () => {
     const transactions = database.getRepository(Transaction);
@@ -224,7 +265,7 @@ describe('Stripe wallet funding and settlement', () => {
       providerRef: 'pi_wallet_created',
       status: TransactionStatus.PENDING,
     });
-    expect(Number(stored.amount)).toBe(12.34);
+    expect(Math.round(Number(stored.amount) * 100)).toBe(1234);
     expect(await balance(owner.userId)).toBe(0);
   });
 
@@ -320,7 +361,8 @@ describe('Stripe wallet funding and settlement', () => {
     expect(rates.getLatestRate).not.toHaveBeenCalled();
   });
 
-  it('keeps missing or invalid FX retryable and credits once across concurrent signed callbacks', async () => {
+  it('settles an existing payment with funding disabled, keeps invalid FX retryable and credits concurrent callbacks once', async () => {
+    process.env.STRIPE_WALLET_FUNDING_ENABLED = 'false';
     const { payment, intent } = await walletPayment('retry');
     currentIntent = intent;
     const transactions = database.getRepository(Transaction);

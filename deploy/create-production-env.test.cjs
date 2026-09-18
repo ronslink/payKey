@@ -161,6 +161,7 @@ test("production Compose models require immutable image/password and isolate hos
           backend.environment.STRIPE_PUBLISHABLE_KEY,
           fixture.STRIPE_PUBLISHABLE_KEY,
         );
+        assert.equal(backend.environment.STRIPE_WALLET_FUNDING_ENABLED, "false");
         assert.equal(backend.ports[0].host_ip, "127.0.0.1");
         assert.ok(
           !backend.volumes.some(

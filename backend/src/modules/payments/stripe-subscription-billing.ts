@@ -55,6 +55,78 @@ export class StripeSubscriptionBilling {
     return plan;
   }
 
+  // Call while holding the account billing lock, before starting another provider.
+  // A browser cancel redirect does not make an open Stripe session unpayable.
+  async assertNoPayableCheckout(
+    userId: string,
+    email: string,
+    storedCustomerId?: string,
+  ): Promise<void> {
+    const customerIds = new Set(storedCustomerId ? [storedCustomerId] : []);
+    for await (const customer of this.stripe.customers.list({
+      email,
+      limit: 100,
+    })) {
+      customerIds.add(customer.id);
+    }
+    for (const customerId of customerIds) {
+      for await (const session of this.stripe.checkout.sessions.list({
+        customer: customerId,
+        limit: 100,
+      })) {
+        if (await this.checkoutNeedsResolution(session, userId))
+          throw new BadRequestException(
+            'A card subscription checkout is still open or being confirmed. Finish that payment or wait for it to expire before starting another subscription payment.',
+          );
+      }
+    }
+  }
+
+  private async checkoutNeedsResolution(
+    session: Stripe.Checkout.Session,
+    userId: string,
+  ) {
+    if (
+      session.mode !== 'subscription' ||
+      session.metadata?.userId !== userId ||
+      session.status === 'expired'
+    )
+      return false;
+    const subscriptionId = idOf(session.subscription);
+    if (session.status === 'complete' && subscriptionId) {
+      const contract = await this.stripe.subscriptions.retrieve(subscriptionId);
+      return !['canceled', 'incomplete_expired'].includes(contract.status);
+    }
+    return true;
+  }
+
+  private async customerForCheckout(
+    manager: EntityManager,
+    userId: string,
+    email: string,
+    name?: string,
+  ) {
+    const account = await manager.findOne(User, { where: { id: userId } });
+    if (account?.stripeCustomerId) return account.stripeCustomerId;
+    const customers = await this.stripe.customers.list({ email, limit: 1 });
+    const customer =
+      customers.data[0] ||
+      (await this.stripe.customers.create({
+        email,
+        name,
+        metadata: { userId, source: 'PayKey' },
+      }));
+    // Commit the stable identity outside the enclosing checkout transaction.
+    // An accepted-but-lost session response must not roll back this correlation.
+    // The enclosing account lock still serializes all billing initiations.
+    await this.subscriptions.manager.update(
+      User,
+      { id: userId },
+      { stripeCustomerId: customer.id },
+    );
+    return customer.id;
+  }
+
   async createCheckout(
     userId: string,
     tier: string,
@@ -65,6 +137,18 @@ export class StripeSubscriptionBilling {
     const plan = this.plan(tier.toUpperCase(), billingPeriod);
     return this.subscriptions.manager.transaction(async (manager) => {
       await this.lock(manager, userId);
+      const pendingPayment = await manager.findOne(SubscriptionPayment, {
+        where: {
+          userId,
+          paymentProvider: 'INTASEND',
+          status: PaymentStatus.PENDING,
+        },
+      });
+      if (pendingPayment) {
+        throw new BadRequestException(
+          'An M-Pesa or bank subscription payment is still pending. Wait for its result before starting a card payment.',
+        );
+      }
       const current = await manager.findOne(Subscription, {
         where: { userId },
       });
@@ -78,16 +162,14 @@ export class StripeSubscriptionBilling {
           );
         }
       }
-      const customers = await this.stripe.customers.list({ email, limit: 1 });
-      const customer =
-        customers.data[0] ||
-        (await this.stripe.customers.create({
-          email,
-          name,
-          metadata: { userId, source: 'PayKey' },
-        }));
+      const customerId = await this.customerForCheckout(
+        manager,
+        userId,
+        email,
+        name,
+      );
       const sessions = await this.stripe.checkout.sessions.list({
-        customer: customer.id,
+        customer: customerId,
         limit: 100,
       });
       for (const session of sessions.data.filter(
@@ -125,7 +207,7 @@ export class StripeSubscriptionBilling {
         source: 'PayKey',
       };
       const session = await this.stripe.checkout.sessions.create({
-        customer: customer.id,
+        customer: customerId,
         client_reference_id: userId,
         mode: 'subscription',
         payment_method_types: ['card'],

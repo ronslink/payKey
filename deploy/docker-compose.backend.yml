@@ -27,6 +27,7 @@ services:
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:?A live Stripe API key is required}
       STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:?A live Stripe publishable key is required}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:?A Stripe webhook signing secret is required}
+      STRIPE_WALLET_FUNDING_ENABLED: ${STRIPE_WALLET_FUNDING_ENABLED:-false}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_WEB_CLIENT_ID: ${GOOGLE_WEB_CLIENT_ID:-}
       APPLE_KEY_ID: ${APPLE_KEY_ID:-}

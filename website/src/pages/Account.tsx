@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { accountReturnPath, apiRequest, ApiError, authenticate, clearSession, readSession, selectedPlan } from '@/lib/billing-api';
+import { accountReturnPath, apiRequest, ApiError, authenticate, clearSession, isMpesaPaymentMethod, mpesaPaymentPath, readSession, selectedPlan, validPaymentId } from '@/lib/billing-api';
 import type { AccountSession, Subscription } from '@/lib/billing-api';
 
 const inputClass = 'w-full rounded-lg border border-white/15 bg-white/5 px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500';
@@ -26,7 +26,7 @@ function AccountOverview({ session, onSignOut }: { session: AccountSession; onSi
       const result = await apiRequest<{ subscription: Subscription }>('/subscriptions/auto-renew', {
         method: 'POST', body: { enable },
       });
-      setSubscription(result.subscription);
+      setSubscription(current => ({ ...current, ...result.subscription }));
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not update renewal.'); }
     finally { setBusy(false); }
   }
@@ -41,13 +41,21 @@ function AccountOverview({ session, onSignOut }: { session: AccountSession; onSi
       <h2 className="text-xl font-semibold text-white">{subscription.planName || subscription.tier}</h2>
       <p className="text-slate-400 mt-2">{subscription.id ? `Subscription status: ${subscription.status || 'Unavailable'}` : 'Free account — no paid subscription confirmed.'}</p>
       {subscription.endDate ? <p className="text-slate-400 mt-2">Current period ends {new Date(subscription.endDate).toLocaleDateString()}.</p> : null}
-      {subscription.id ? <>
+      {subscription.pendingPayment ? <div role="status" className="mt-4 text-slate-300">
+        <p>A subscription payment is pending. Your current access stays unchanged until payment is confirmed.</p>
+        {isMpesaPaymentMethod(subscription.pendingPayment.paymentMethod) && validPaymentId(subscription.pendingPayment.id) ? <Button asChild className="mt-3 bg-emerald-500 text-white"><Link to={mpesaPaymentPath(subscription.pendingPayment.id)}>Check M-Pesa payment</Link></Button> : <p className="mt-2">Contact support to check this payment before starting another.</p>}
+      </div> : null}
+      {subscription.id && subscription.provider === 'INTASEND' && subscription.renewalMode === 'manual' ? <>
+        <p className="text-slate-300 mt-3">M-Pesa renewal: approval required for every payment.</p>
+        <p className="text-sm text-slate-400 mt-2">Review the next KES price and approve a new prompt to renew. Your M-Pesa account is not debited automatically.</p>
+        {!subscription.pendingPayment ? <Button asChild className="mt-4 bg-emerald-500 text-white"><Link to={`/checkout?plan=${subscription.tier.toLowerCase()}&method=mpesa&period=${subscription.billingPeriod === 'yearly' ? 'yearly' : 'monthly'}&renew=1`}>Renew with M-Pesa</Link></Button> : null}
+      </> : subscription.id && subscription.provider === 'STRIPE' ? <>
         <p className="text-slate-300 mt-3">Automatic renewal: {subscription.autoRenew ? 'On' : 'Off'}</p>
         <p className="text-sm text-slate-400 mt-2">{subscription.autoRenewalDescription}</p>
         <Button disabled={busy} onClick={() => setRenewal(!subscription.autoRenew)} variant="outline" className="mt-4 bg-white/5 border-white/20 text-white">
           {busy ? 'Updating…' : subscription.autoRenew ? 'Turn off automatic renewal' : 'Turn on automatic renewal'}
         </Button>
-      </> : <Button asChild className="mt-4 bg-emerald-500 text-white"><Link to="/pricing">Choose a plan</Link></Button>}
+      </> : (!subscription.id || subscription.tier === 'FREE') && !subscription.pendingPayment ? <Button asChild className="mt-4 bg-emerald-500 text-white"><Link to="/pricing">Choose a plan</Link></Button> : null}
     </div> : !error ? <p role="status" className="text-slate-400 mb-6">Loading your subscription…</p> : null}
     <p className="text-slate-400 mb-6">Use the same email and password in the Paydome app to manage workers and payroll.</p>
     <div className="flex flex-wrap gap-3">

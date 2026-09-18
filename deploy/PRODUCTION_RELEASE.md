@@ -3,10 +3,14 @@
 `backend-ci.yml` is the single backend release path. Main-branch pushes and the
 three manual entrypoints all require lint, build, unit/security tests, deployment
 configuration tests, schema setup and E2E tests to succeed. A failed check blocks
-image publication and deployment. The website is released from the same commit
-only after the backend succeeds; admin releases remain independent.
+image publication and deployment. Website release additionally requires the
+repository variable `WEBSITE_RELEASE_ENABLED=true`; leave it unset until billing
+provider acceptance is complete. When enabled, the website follows the successful
+backend release from the same commit. Admin releases remain independent.
 Backend and website build configuration use Node 24 LTS; the website workflow
 also runs its customer billing/session regression tests before publishing an image.
+Website billing/deletion tests and its production build run on pull requests
+even while website publication is held.
 
 Lint uses `backend/eslint-baseline.json`, generated from tracked source at the
 recorded pre-hardening commit, via `node scripts/lint-regression.cjs
@@ -19,11 +23,13 @@ not regenerate the baseline to make a failed release pass; fix the new issue.
 
 ## Payment architecture for this release
 
-Prepared routing keeps M-Pesa in KES as the default and uses Stripe for cards,
-with explicit KES by default or optional EUR. The backend is being aligned to
-both card currencies ([Stripe currency support](https://docs.stripe.com/currencies)).
-This code is not deployed; updated checks and real-provider acceptance remain
-outstanding. IntaSend's current [homepage FAQ](https://intasend.com/) says it is
+Prepared routing keeps M-Pesa in KES as the default. Stripe card wallet payments
+support explicit KES or EUR, but new charges are disabled unless the GitHub
+`PROD` variable `STRIPE_WALLET_FUNDING_ENABLED` is exactly `true`. Leave it unset
+until the funding arrangement below is verified. This guard does not disable
+Stripe subscriptions or settlement of existing payments. This code is not
+deployed; fresh CI and real-provider acceptance remain outstanding. IntaSend's
+current [homepage FAQ](https://intasend.com/) says it is
 not supporting cards, despite its older [card guide](https://developers.intasend.com/docs/accept-card-payment)
 and [fund-wallet guide](https://developers.intasend.com/docs/fund-wallet). Do not
 depend on the legacy IntaSend hosted-card route.
@@ -60,7 +66,9 @@ not required: deployed images and the website are tied to the tested commit.
    secret unless deliberately invalidating existing sessions.
 3. Install the database CA at `/opt/paykey/ca-certificate.crt`. Optional Firebase
    credentials belong at `/opt/paykey/secrets/firebase-service-account.json`,
-   outside Git/image layers. Email/SMS credentials and provider variables must
+   outside Git/image layers. Production currently has no Firebase credential;
+   staging the verified local credential awaits the user's explicit approval.
+   Email/SMS credentials and provider variables must
    be supplied separately if those channels are offered.
 4. Verify database backup freshness/retention and trusted sources; these remain
    unverified after another 1Password CLI authorization timeout. This launch adds no migrations,
@@ -81,7 +89,10 @@ not required: deployed images and the website are tied to the tested commit.
    currently credits only the application's KES ledger; payroll draws from each
    employer's IntaSend working wallet. No bridge funds that wallet, and no
    pre-funded balance or other operational mechanism has been verified. Agree and
-   verify the actual funding arrangement before rollout. Hourly balance observation
+   verify the actual funding arrangement before enabling card wallet charges.
+   Keep `STRIPE_WALLET_FUNDING_ENABLED` absent or `false` in the meantime; this
+   permits the security release without exposing unfunded new card top-ups.
+   Hourly balance observation
    now logs discrepancies without overwriting
    the ledger; this protects recorded credit but does not fund payouts.
 7. The enabled Paydome subscription webhook lacks `payment_intent.succeeded`.
@@ -90,21 +101,24 @@ not required: deployed images and the website are tied to the tested commit.
    monitor the first genuine authorized live purchase. Do not run synthetic
    live-card tests ([Stripe testing guidance](https://docs.stripe.com/testing)).
 
-The KES/EUR card-routing correction passed four PostgreSQL wallet scenarios and
-the unchanged paid-subscription journey, plus the backend build and focused lint.
-Five mobile checks cover M-Pesa dispatch, KES card dispatch, separate EUR input,
-and Stripe native initialization for both currencies; focused Dart analysis passes.
-Provider HTTP/native responses are simulated in these checks. The previous
-ledger-preservation and nine configuration checks remain valid. Run fresh CI
-and verify the rebuilt signed candidate before rollout; passing CI at `4207c23`
-predates these latest routing changes. No production deployment or Play upload
-has occurred.
+See [the backend readiness record](../docs/guides/deployment/BACKEND_READINESS_2026-09-18.md)
+for the current verification and remaining prerequisites. Functional CI at
+`2fdc9d3` predates the M-Pesa subscription and final hardening work; fresh CI is
+required. Android 23 has been uploaded and prepared in Play Console, but no
+production deployment, provider transaction or mobile publication has occurred.
 
 ## What the release script does
 
 The runner writes a new mode-0600 `.env.candidate` with validated keys and
 escaped Compose quoting, preserving dollars, quotes and multiline keys. It never sources the file as shell code. The
 release is staged under `/opt/paykey/releases/<commit>-<run>-<attempt>`.
+
+Dependency installation disables lifecycle scripts; both locked applications
+were built successfully in Linux with that setting. The backend image runs as
+UID/GID 1000 (`node`). The release prepares only dedicated application storage
+for that user and verifies private writes and retained-file reads before starting
+the replacement. Optional Firebase files remain outside the image, readable
+through the application group with a mode-0750 directory and mode-0640 file.
 
 The remote script validates Compose, pulls the registry **digest** built from
 the tested commit, and runs the standalone audit with a read-only DB session.

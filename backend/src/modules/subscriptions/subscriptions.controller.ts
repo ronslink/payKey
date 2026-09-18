@@ -8,8 +8,10 @@ import {
   Param,
   Logger,
   BadRequestException,
+  NotFoundException,
   ValidationPipe,
 } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   Repository,
@@ -44,7 +46,10 @@ import {
 } from './entities/promotional-item.entity';
 import { SUBSCRIPTION_PLANS } from './subscription-plans.config';
 import { UsersService } from '../users/users.service';
-import { IntaSendService } from '../payments/intasend.service';
+import {
+  IntaSendService,
+  IntaSendStkPushError,
+} from '../payments/intasend.service';
 import { StripeService } from '../payments/stripe.service';
 import {
   Transaction,
@@ -54,7 +59,8 @@ import {
 } from '../payments/entities/transaction.entity';
 import { WorkersService } from '../workers/workers.service';
 import { SubscribeDto } from './dto/subscribe.dto';
-import { User } from '../users/entities/user.entity';
+import { User, UserTier } from '../users/entities/user.entity';
+import { paymentMetadata } from './dto/subscription-payment-metadata';
 import { AutoRenewDto, MpesaSubscribeDto } from './dto/billing-mutations.dto';
 import { redactProviderSecrets } from '../../common/security/provider-secrets';
 
@@ -124,6 +130,25 @@ export class SubscriptionsController {
       }
       return work(manager);
     });
+  }
+
+  private async assertNoCompetingPayment(manager: EntityManager, user: User) {
+    const pending = await manager.findOne(SubscriptionPayment, {
+      where: {
+        userId: user.id,
+        paymentProvider: 'INTASEND',
+        status: PaymentStatus.PENDING,
+      },
+    });
+    if (pending)
+      throw new BadRequestException(
+        'An M-Pesa or bank subscription payment is still pending. Wait for its result before starting another payment.',
+      );
+    await this.stripeService.assertNoPayableSubscriptionCheckout(
+      user.id,
+      user.email,
+      user.stripeCustomerId,
+    );
   }
 
   /**
@@ -553,8 +578,12 @@ export class SubscriptionsController {
         startDate: null,
         endDate: null,
         user: this.publicBillingUser(userData),
+        provider: null,
+        paymentMethod: null,
+        renewalMode: null,
+        billingPeriod: null,
         autoRenew: false,
-        autoRenewalAvailable: true,
+        autoRenewalAvailable: false,
         autoRenewalMode: RenewalMethod.NOTIFICATION,
         autoRenewalDescription:
           'Auto-renewal creates a secure payment request when your plan renews.',
@@ -563,18 +592,44 @@ export class SubscriptionsController {
       };
     }
 
+    const latestPaid = await this.subscriptionPaymentRepository.findOne({
+      where: {
+        subscriptionId: subscription.id,
+        userId: req.user.userId,
+        status: PaymentStatus.COMPLETED,
+      },
+      order: { paidDate: 'DESC', createdAt: 'DESC' },
+    });
+    const isManualMpesa =
+      !subscription.stripeSubscriptionId &&
+      latestPaid?.paymentMethod === 'mpesa';
     return {
       ...subscription,
+      provider: subscription.stripeSubscriptionId
+        ? 'STRIPE'
+        : latestPaid
+          ? 'INTASEND'
+          : null,
+      paymentMethod: subscription.stripeSubscriptionId
+        ? PaymentMethod.STRIPE
+        : latestPaid?.paymentMethod || null,
+      renewalMode: subscription.stripeSubscriptionId
+        ? 'automatic'
+        : latestPaid
+          ? 'manual'
+          : null,
       user: this.publicBillingUser(subscription.user),
       autoRenew: subscription.autoRenewal,
       planName:
         SUBSCRIPTION_PLANS.find((p) => p.tier === subscription.tier)?.name ||
         'Unknown Plan',
-      autoRenewalAvailable: true,
+      autoRenewalAvailable: !isManualMpesa,
       autoRenewalMode: subscription.renewalMethod,
       autoRenewalDescription: subscription.stripeSubscriptionId
         ? 'Stripe subscriptions renew automatically using the saved billing method.'
-        : 'Auto-renewal creates a secure IntaSend payment request and notifies you when your plan renews.',
+        : isManualMpesa
+          ? 'Approve each renewal with your M-Pesa PIN. Access expires at the paid-through date unless you renew.'
+          : 'Auto-renewal creates a secure IntaSend payment request and notifies you when your plan renews.',
       paymentDue: !!pendingPayment,
       pendingPayment,
     };
@@ -630,21 +685,44 @@ export class SubscriptionsController {
         !body.enable,
       );
     } else {
-      subscription.autoRenewal = body.enable;
-      subscription.renewalMethod =
-        body.renewalMethod || RenewalMethod.NOTIFICATION;
-
-      if (!body.enable && body.reason) {
-        const dateStr = new Date().toISOString().split('T')[0];
-        const newNote = `[Cancellation Reason: ${body.reason} - ${dateStr}]`;
-        subscription.notes = subscription.notes
-          ? `${subscription.notes}\n${newNote}`
-          : newNote;
-      }
-
       updatedSubscription = await this.withNonStripeBilling(
         req.user.userId,
-        (manager) => manager.save(Subscription, subscription),
+        async (manager) => {
+          // Settlement may have extended the paid period after the initial
+          // provider lookup. Read and save the current row under its billing lock.
+          const current = await manager.findOne(Subscription, {
+            where: [
+              { userId: req.user.userId, status: SubscriptionStatus.ACTIVE },
+              { userId: req.user.userId, status: SubscriptionStatus.PAST_DUE },
+            ],
+            order: { updatedAt: 'DESC' },
+          });
+          if (!current)
+            throw new BadRequestException('No active subscription found');
+          const latestPaid = await manager.findOne(SubscriptionPayment, {
+            where: {
+              subscriptionId: current.id,
+              status: PaymentStatus.COMPLETED,
+            },
+            order: { paidDate: 'DESC', createdAt: 'DESC' },
+          });
+          if (body.enable && latestPaid?.paymentMethod === 'mpesa')
+            throw new BadRequestException(
+              'M-Pesa requires your approval for each renewal. Renew from your account when ready.',
+            );
+          current.autoRenewal = body.enable;
+          current.renewalMethod =
+            body.renewalMethod || RenewalMethod.NOTIFICATION;
+
+          if (!body.enable && body.reason) {
+            const dateStr = new Date().toISOString().split('T')[0];
+            const newNote = `[Cancellation Reason: ${body.reason} - ${dateStr}]`;
+            current.notes = current.notes
+              ? `${current.notes}\n${newNote}`
+              : newNote;
+          }
+          return manager.save(Subscription, current);
+        },
       );
     }
 
@@ -760,11 +838,24 @@ export class SubscriptionsController {
         }
 
         // Check for existing subscription to warn about grace period
+        await this.assertNoCompetingPayment(manager, user);
+
         const existingSubscription = await manager
           .getRepository(Subscription)
           .findOne({
             where: { userId: req.user.userId },
           });
+
+        if (
+          existingSubscription &&
+          existingSubscription.tier !== SubscriptionTier.FREE &&
+          [SubscriptionStatus.ACTIVE, SubscriptionStatus.PAST_DUE].includes(
+            existingSubscription.status,
+          )
+        )
+          throw new BadRequestException(
+            'Your paid plan is still active. Renew with its existing payment method, or change payment methods after it expires.',
+          );
 
         let gracePeriodWarning: string | null = null;
         let daysUntilDowngrade: number | null = null;
@@ -894,6 +985,8 @@ export class SubscriptionsController {
           lock: { mode: 'pessimistic_write' },
         });
         if (!user) throw new Error('User not found');
+
+        await this.assertNoCompetingPayment(manager, user);
 
         // Check Funds
         if (Number(user.walletBalance) < amountToCharge) {
@@ -1134,6 +1227,7 @@ export class SubscriptionsController {
     return {
       id: payment.id,
       subscriptionId: payment.subscriptionId,
+      planId: paymentMetadata(payment.metadata).planId || null,
       amount: Number(payment.amount),
       currency: payment.currency,
       status: payment.status,
@@ -1153,6 +1247,118 @@ export class SubscriptionsController {
   // M-PESA SUBSCRIPTION PAYMENT
   // ============================================================================
 
+  private async buildMpesaQuote(
+    userId: string,
+    body: SubscribeDto,
+    manager: EntityManager,
+  ) {
+    const plan = SUBSCRIPTION_PLANS.find(
+      (candidate) => candidate.tier.toLowerCase() === body.planId.toLowerCase(),
+    );
+    if (!plan || plan.tier === 'FREE')
+      throw new BadRequestException('Select a paid plan for M-Pesa');
+    const linked = await manager.find(Subscription, {
+      where: { userId, stripeSubscriptionId: Not(IsNull()) },
+    });
+    if (
+      linked.some(
+        (subscription) => subscription.status !== SubscriptionStatus.CANCELLED,
+      )
+    ) {
+      throw new BadRequestException(
+        'Manage or cancel the existing Stripe subscription before changing payment methods or plans',
+      );
+    }
+    const subscription = await manager.findOne(Subscription, {
+      where: { userId },
+      order: { updatedAt: 'DESC' },
+    });
+    const now = new Date();
+    const paidThrough =
+      subscription?.endDate &&
+      subscription.endDate > now &&
+      subscription.tier !== SubscriptionTier.FREE &&
+      [SubscriptionStatus.ACTIVE, SubscriptionStatus.PAST_DUE].includes(
+        subscription.status,
+      )
+        ? subscription.endDate
+        : null;
+    if (paidThrough && String(subscription?.tier) !== plan.tier) {
+      throw new BadRequestException(
+        'Your current paid plan remains active. Choose the same plan to renew, or change plans after it expires.',
+      );
+    }
+    const billingPeriod = body.billingPeriod || 'monthly';
+    const originalAmount =
+      billingPeriod === 'yearly' ? plan.priceKESYearly : plan.priceKES;
+    let amount = originalAmount;
+    let promo: PromotionalItem | undefined;
+    let savings = 0;
+    if (body.promoCode) {
+      const user = await manager.findOneBy(User, { id: userId });
+      const resolved = await this.resolvePromoCode(
+        body.promoCode.trim().toUpperCase(),
+        plan.tier,
+        user?.tier || 'FREE',
+        manager.getRepository(PromotionalItem),
+      );
+      if (resolved.error || !resolved.promo)
+        throw new BadRequestException(resolved.error || 'Invalid promo code');
+      promo = resolved.promo;
+      const discount = this.applyPromoDiscount(amount, promo);
+      amount = discount.discountedAmount;
+      savings = discount.savings;
+    }
+    const periodStart = new Date(paidThrough || now);
+    const periodEnd = new Date(periodStart);
+    // Clamp month ends, including leap years, to preserve a full billing period.
+    const day = periodEnd.getUTCDate();
+    periodEnd.setUTCDate(1);
+    periodEnd.setUTCMonth(
+      periodEnd.getUTCMonth() + (billingPeriod === 'yearly' ? 12 : 1),
+    );
+    const lastDay = new Date(
+      Date.UTC(periodEnd.getUTCFullYear(), periodEnd.getUTCMonth() + 1, 0),
+    ).getUTCDate();
+    periodEnd.setUTCDate(Math.min(day, lastDay));
+    return {
+      plan,
+      subscription,
+      promo,
+      savings,
+      originalAmount,
+      quote: {
+        planId: plan.tier,
+        billingPeriod,
+        amount,
+        currency: 'KES',
+        periodStart,
+        periodEnd,
+        renewalMode: 'manual',
+      },
+    };
+  }
+
+  @Post('mpesa-quote')
+  async quoteMpesaSubscription(
+    @Request() req: { user: { userId: string } },
+    @Body(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    )
+    body: SubscribeDto,
+  ) {
+    const { quote } = await this.buildMpesaQuote(
+      req.user.userId,
+      body,
+      this.subscriptionRepository.manager,
+    );
+    return quote;
+  }
+
   @Post('mpesa-subscribe')
   async mpesaSubscribe(
     @Request() req: { user: { userId: string } },
@@ -1165,294 +1371,250 @@ export class SubscriptionsController {
     )
     body: MpesaSubscribeDto,
   ) {
-    const { planId, phoneNumber } = body;
-    const billingPeriod = body.billingPeriod || 'monthly';
-
-    // Validate plan
-    const plan = SUBSCRIPTION_PLANS.find(
-      (p) => p.tier.toLowerCase() === planId.toLowerCase(),
-    );
-    if (!plan) {
-      throw new Error('Invalid plan ID');
-    }
-
-    // Format phone number (ensure it starts with 254)
-    let formattedPhone = phoneNumber
-      .replace(/\s+/g, '')
-      .replace(/^\+/, '')
-      .replace(/^0/, '254');
-    if (!formattedPhone.startsWith('254')) {
-      formattedPhone = '254' + formattedPhone;
-    }
-
-    return this.withNonStripeBilling(req.user.userId, async (manager) => {
-      // Check for existing subscription to determine proration
-      const existingSubscription = await manager
-        .getRepository(Subscription)
-        .findOne({
-          where: { userId: req.user.userId, status: SubscriptionStatus.ACTIVE },
-        });
-
-      // Use yearly pricing if applicable
-      let amountToCharge =
-        billingPeriod === 'yearly' ? plan.priceKESYearly : plan.priceKES;
-      let isProrated = false;
-      let prorationDetails: any = null;
-
-      // --- Promo code resolution ---
-      let appliedPromo: PromotionalItem | null = null;
-      let promoSavings = 0;
-
-      if (body.promoCode) {
-        const user = await manager.findOne(User, {
-          where: { id: req.user.userId },
-          lock: { mode: 'pessimistic_write' },
-        });
-        const { promo, error } = await this.resolvePromoCode(
-          body.promoCode.trim().toUpperCase(),
-          plan.tier,
-          user?.tier || 'FREE',
-          manager.getRepository(PromotionalItem),
-        );
-        if (error || !promo) {
-          throw new BadRequestException(error || 'Invalid promo code');
-        }
-        const result = this.applyPromoDiscount(amountToCharge, promo);
-        promoSavings = result.savings;
-        appliedPromo = promo;
-        // Apply promo BEFORE proration so any proration is calculated on the discounted base
-        amountToCharge = result.discountedAmount;
-        this.logger.log(
-          `Promo "${promo.promoCode}" applied to M-Pesa: -${promoSavings} KES → ${amountToCharge} KES`,
-        );
-      }
-
-      // Calculate proration if upgrading from an existing paid plan
-      if (existingSubscription && existingSubscription.tier !== 'FREE') {
-        const currentPlanIndex = SUBSCRIPTION_PLANS.findIndex(
-          (p) => p.tier === existingSubscription.tier,
-        );
-        const newPlanIndex = SUBSCRIPTION_PLANS.findIndex(
-          (p) => p.tier === plan.tier,
-        );
-
-        // Downgrade: Schedule for end of period (Safe Downgrade)
-        if (newPlanIndex < currentPlanIndex) {
-          existingSubscription.pendingTier = plan.tier as SubscriptionTier;
-          existingSubscription.autoRenewal = true; // Ensure they verify renewal to switch
-
-          const dateStr = new Date().toISOString().split('T')[0];
-          const newNote = `[Downgrade to ${plan.name} scheduled - ${dateStr}]`;
-          existingSubscription.notes = existingSubscription.notes
-            ? `${existingSubscription.notes}\n${newNote}`
-            : newNote;
-
-          const savedSub = await manager
-            .getRepository(Subscription)
-            .save(existingSubscription);
-
-          return {
-            success: true,
-            message: `Plan change scheduled. You will stay on ${existingSubscription.tier} until the billing period ends, then automatically switch to ${plan.name}.`,
-            subscription: savedSub,
-            amountCharged: 0,
-            isProrated: false,
-          };
-        }
-
-        // Only prorate for upgrades
-        if (newPlanIndex > currentPlanIndex) {
-          // Clear any pending downgrade if upgrading
-          existingSubscription.pendingTier = null;
-
-          const proration = this.calculateProration(
-            existingSubscription.tier,
-            plan.tier,
-            existingSubscription.startDate || new Date(),
+    const prepared = await this.withNonStripeBilling(
+      req.user.userId,
+      async (manager) => {
+        const {
+          quote,
+          subscription: existing,
+          promo,
+          savings,
+          originalAmount,
+        } = await this.buildMpesaQuote(req.user.userId, body, manager);
+        if (body.expectedAmount !== quote.amount)
+          throw new BadRequestException(
+            'The amount changed. Review a new M-Pesa quote before paying.',
           );
-
-          // Apply promo discount on top of prorated amount (if promo was provided)
-          if (appliedPromo) {
-            const promoResult = this.applyPromoDiscount(
-              proration.proratedAmount,
-              appliedPromo,
-            );
-            promoSavings = promoResult.savings;
-            amountToCharge = promoResult.discountedAmount;
-          } else {
-            amountToCharge = proration.proratedAmount;
-          }
-          isProrated = true;
-          prorationDetails = {
-            daysRemaining: proration.daysRemaining,
-            currentPlanCredit: proration.currentPlanCredit,
-            newPlanCharge: proration.newPlanCharge,
-          };
-
-          this.logger.log(`Proration calculated: ${JSON.stringify(proration)}`);
-        }
-      }
-
-      this.logger.log(
-        `Initiating M-Pesa subscription for ${formattedPhone}, plan: ${plan.name}, amount: KES ${amountToCharge} (prorated: ${isProrated})`,
-      );
-
-      // If amount is 0 (e.g., prorated upgrade with credit), activate immediately
-      if (amountToCharge <= 0) {
-        if (existingSubscription) {
-          existingSubscription.tier = plan.tier as SubscriptionTier;
-          existingSubscription.status = SubscriptionStatus.ACTIVE;
-          await manager.getRepository(Subscription).save(existingSubscription);
-          await manager.getRepository(User).update(req.user.userId, {
-            tier: plan.tier as any,
-          });
-        }
-
-        return {
-          success: true,
-          message:
-            'Upgrade applied immediately (no additional payment required)',
-          paymentId: null,
-          subscriptionId: existingSubscription?.id,
-          amountCharged: 0,
-          isProrated: true,
-        };
-      }
-
-      // Create or update subscription (PENDING until payment confirmed)
-      let subscription = existingSubscription;
-      if (!subscription) {
-        subscription = manager.getRepository(Subscription).create({
-          userId: req.user.userId,
-          tier: plan.tier as SubscriptionTier,
-          status: SubscriptionStatus.PENDING,
-          startDate: new Date(),
-          appliedPromoId: appliedPromo?.id ?? null,
-          promoDiscountAmount: promoSavings > 0 ? promoSavings : null,
+        const pending = await manager.findOne(SubscriptionPayment, {
+          where: {
+            userId: req.user.userId,
+            status: PaymentStatus.PENDING,
+            paymentProvider: 'INTASEND',
+          },
+          order: { createdAt: 'DESC' },
         });
-      } else {
-        // Store old tier in metadata to restore if payment fails
-        subscription.tier = plan.tier as SubscriptionTier;
-        subscription.status = SubscriptionStatus.PENDING;
-        subscription.appliedPromoId = appliedPromo?.id ?? null;
-        subscription.promoDiscountAmount =
-          promoSavings > 0 ? promoSavings : null;
-      }
-      const savedSubscription = await manager
-        .getRepository(Subscription)
-        .save(subscription);
-
-      // Create pending payment record
-      const now = new Date();
-      const periodEnd = new Date(now);
-      periodEnd.setMonth(periodEnd.getMonth() + 1);
-
-      const payment = manager.getRepository(SubscriptionPayment).create({
-        subscriptionId: savedSubscription.id,
-        userId: req.user.userId,
-        amount: amountToCharge,
-        currency: 'KES',
-        status: PaymentStatus.PENDING,
-        paymentMethod: PaymentMethod.MPESA,
-        billingPeriod: 'monthly',
-        periodStart: now,
-        periodEnd: periodEnd,
-        dueDate: now,
-        paymentProvider: 'MPESA',
-        promoCodeUsed: appliedPromo?.promoCode ?? null,
-        promoDiscountAmount: promoSavings > 0 ? promoSavings : null,
-        metadata: {
-          phoneNumber: formattedPhone,
-          planId,
-          isProrated,
-          prorationDetails,
-          originalAmount: plan.priceKES,
-        },
-      });
-      const savedPayment = await manager
-        .getRepository(SubscriptionPayment)
-        .save(payment);
-
-      // Initiate STK Push via IntaSend
-      try {
-        const stkResponse = await this.intaSendService.initiateStkPush(
-          formattedPhone,
-          amountToCharge,
-          `PayKey-${plan.tier}`,
+        if (pending) {
+          if (
+            pending.paymentMethod !== 'mpesa' ||
+            paymentMetadata(pending.metadata).planId !== quote.planId ||
+            pending.billingPeriod !== quote.billingPeriod ||
+            Number(pending.amount) !== quote.amount
+          ) {
+            throw new BadRequestException(
+              'A subscription payment is already pending. Wait for its result before starting another payment.',
+            );
+          }
+          return {
+            initiate: false,
+            success: true,
+            paymentId: pending.id,
+            subscriptionId: pending.subscriptionId,
+            amount: Number(pending.amount),
+            currency: pending.currency,
+            billingPeriod: pending.billingPeriod,
+            message:
+              'An M-Pesa payment is already pending. Check your phone and payment status.',
+          };
+        }
+        const account = await manager.findOneBy(User, { id: req.user.userId });
+        if (!account) throw new NotFoundException('Account not found');
+        await this.stripeService.assertNoPayableSubscriptionCheckout(
+          req.user.userId,
+          account.email,
+          account.stripeCustomerId,
         );
-
-        // IntaSend returns invoice details. We store invoice_id or tracking_id
-        const invoiceId = stkResponse.invoice.invoice_id;
-        const trackingId = stkResponse.tracking_id; // Check actual response structure
-
-        // Update payment with checkout request ID
-        await manager
-          .getRepository(SubscriptionPayment)
-          .update(savedPayment.id, {
-            transactionId: invoiceId, // Store Invoice ID as Transaction ID
-            metadata: {
-              ...savedPayment.metadata,
-              intaSendInvoiceId: invoiceId,
-              intaSendTrackingId: trackingId,
-              provider: 'INTASEND',
-            },
-          });
-
-        // CREATE TRANSACTION RECORD FOR WEBHOOK HANDLING
-        // The PaymentsController webhook handler looks for a Transaction entity with the providerRef.
-        const transaction = manager.getRepository(Transaction).create({
+        // Keep existing paid access unchanged while the customer approves payment.
+        const subscription =
+          existing ||
+          (await manager.save(
+            Subscription,
+            manager.create(Subscription, {
+              userId: req.user.userId,
+              tier: SubscriptionTier.FREE,
+              status: SubscriptionStatus.PENDING,
+              autoRenewal: false,
+              currency: 'KES',
+            }),
+          ));
+        const paymentId = randomUUID();
+        const reference = `SUB-${paymentId}`;
+        let phoneNumber = body.phoneNumber
+          .replace(/^\+/, '')
+          .replace(/^0/, '254');
+        if (!phoneNumber.startsWith('254')) phoneNumber = `254${phoneNumber}`;
+        const payment = manager.create(SubscriptionPayment, {
+          id: paymentId,
+          subscriptionId: subscription.id,
           userId: req.user.userId,
-          amount: amountToCharge,
+          amount: quote.amount,
           currency: 'KES',
-          type: TransactionType.SUBSCRIPTION,
-          status: TransactionStatus.PENDING,
-          provider: 'INTASEND',
-          providerRef: invoiceId, // THIS matches the invoice_id in the webhook
-          accountReference: `PayKey-${plan.tier}`,
-          recipientPhone: formattedPhone,
+          status: PaymentStatus.PENDING,
+          paymentMethod: PaymentMethod.MPESA,
+          billingPeriod: quote.billingPeriod,
+          periodStart: quote.periodStart,
+          periodEnd: quote.periodEnd,
+          dueDate: new Date(),
+          paymentProvider: 'INTASEND',
+          promoCodeUsed: promo?.promoCode ?? null,
+          promoDiscountAmount: savings || null,
           metadata: {
-            subscriptionPaymentId: savedPayment.id,
-            planId: plan.tier,
-            phoneNumber: formattedPhone,
+            planId: quote.planId,
+            targetTier: quote.planId,
+            reference,
+            renewalMode: 'manual',
+            originalAmount,
+            promoId: promo?.id,
+            phoneNumber,
           },
         });
-        console.log(
-          '🔹 Creating Transaction with Metadata:',
-          transaction.metadata,
-        );
-        await manager.getRepository(Transaction).save(transaction);
-
-        // Increment promo usage when STK push is initiated (code is reserved)
-        if (appliedPromo) {
-          await manager
-            .getRepository(PromotionalItem)
-            .increment({ id: appliedPromo.id }, 'currentUses', 1);
-        }
-
-        return {
-          success: true,
-          message: 'Info: Please check your phone to enter M-Pesa PIN.',
-          paymentId: savedPayment.id,
-          checkoutRequestId: invoiceId,
-          subscriptionId: savedSubscription.id,
-          promoApplied: appliedPromo
-            ? { code: appliedPromo.promoCode, savings: promoSavings }
-            : null,
-        };
-      } catch (error) {
-        this.logger.error('IntaSend STK Push failed:', error);
-
-        // Mark payment as failed
-        await manager
-          .getRepository(SubscriptionPayment)
-          .update(savedPayment.id, {
-            status: PaymentStatus.FAILED,
-            notes: error.message,
+        if (quote.amount === 0 && promo) {
+          payment.status = PaymentStatus.COMPLETED;
+          payment.paidDate = new Date();
+          payment.metadata = {
+            ...paymentMetadata(payment.metadata),
+            entitlementApplied: true,
+          };
+          Object.assign(subscription, {
+            tier: quote.planId,
+            status: SubscriptionStatus.ACTIVE,
+            billingPeriod: quote.billingPeriod,
+            amount: 0,
+            lockedPrice: 0,
+            currency: 'KES',
+            startDate: quote.periodStart,
+            endDate: quote.periodEnd,
+            nextBillingDate: quote.periodEnd,
+            autoRenewal: false,
+            pendingTier: null,
+            gracePeriodEndDate: null,
+            appliedPromoId: promo.id,
+            promoDiscountAmount: savings,
           });
-
-        throw new Error(`Payment initiation failed: ${error.message}`);
+          await manager.save(Subscription, subscription);
+          await manager.update(User, req.user.userId, {
+            tier: quote.planId as UserTier,
+          });
+          await manager.increment(
+            PromotionalItem,
+            { id: promo.id },
+            'currentUses',
+            1,
+          );
+          await manager.save(SubscriptionPayment, payment);
+          return {
+            initiate: false,
+            success: true,
+            paymentId,
+            subscriptionId: subscription.id,
+            ...quote,
+            message: 'Subscription activated with your promotion.',
+          };
+        }
+        // Commit correlation before the provider side effect. A timeout must not
+        // erase a request that may already be on the customer's phone.
+        await manager.save(SubscriptionPayment, payment);
+        await manager.save(
+          Transaction,
+          manager.create(Transaction, {
+            id: paymentId,
+            userId: req.user.userId,
+            amount: quote.amount,
+            currency: 'KES',
+            type: TransactionType.SUBSCRIPTION,
+            status: TransactionStatus.PENDING,
+            provider: 'INTASEND',
+            accountReference: reference,
+            paymentMethod: PaymentMethodType.MPESA_STK,
+            recipientPhone: phoneNumber,
+            metadata: {
+              subscriptionPaymentId: paymentId,
+              planId: quote.planId,
+              billingPeriod: quote.billingPeriod,
+            },
+          }),
+        );
+        return {
+          initiate: true,
+          success: true,
+          paymentId,
+          subscriptionId: subscription.id,
+          amount: quote.amount,
+          currency: 'KES',
+          billingPeriod: quote.billingPeriod,
+          message:
+            'Check your phone and approve the M-Pesa payment with your PIN.',
+        };
+      },
+    );
+    const { initiate, ...response } = prepared;
+    if (!initiate) return response;
+    let phoneNumber = body.phoneNumber.replace(/^\+/, '').replace(/^0/, '254');
+    if (!phoneNumber.startsWith('254')) phoneNumber = `254${phoneNumber}`;
+    try {
+      const result: unknown = await this.intaSendService.initiateStkPush(
+        phoneNumber,
+        response.amount,
+        `SUB-${response.paymentId}`,
+      );
+      const invoiceId = (
+        result as { invoice?: { invoice_id?: unknown } } | null
+      )?.invoice?.invoice_id;
+      if (typeof invoiceId !== 'string' || !invoiceId)
+        throw new Error('Missing provider invoice');
+      await this.subscriptionRepository.manager.transaction(async (manager) => {
+        await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+          `stripe-billing:${req.user.userId}`,
+        ]);
+        const payment = await manager.findOneByOrFail(SubscriptionPayment, {
+          id: response.paymentId,
+        });
+        const transaction = await manager.findOneByOrFail(Transaction, {
+          id: response.paymentId,
+        });
+        if (transaction.providerRef && transaction.providerRef !== invoiceId)
+          throw new Error('Provider invoice mismatch');
+        transaction.providerRef = invoiceId;
+        payment.transactionId = invoiceId;
+        payment.metadata = {
+          ...paymentMetadata(payment.metadata),
+          intaSendInvoiceId: invoiceId,
+        };
+        await manager.save(Transaction, transaction);
+        await manager.save(SubscriptionPayment, payment);
+      });
+      return response;
+    } catch (error: unknown) {
+      if (error instanceof IntaSendStkPushError && error.definitiveFailure) {
+        await this.subscriptionRepository.manager.transaction(
+          async (manager) => {
+            await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+              `stripe-billing:${req.user.userId}`,
+            ]);
+            await manager.update(
+              SubscriptionPayment,
+              { id: response.paymentId, status: PaymentStatus.PENDING },
+              { status: PaymentStatus.FAILED },
+            );
+            await manager.update(
+              Transaction,
+              { id: response.paymentId, status: TransactionStatus.PENDING },
+              { status: TransactionStatus.FAILED },
+            );
+          },
+        );
+        throw new BadRequestException(
+          'The M-Pesa request was rejected. Your current subscription is unchanged. Review your phone number and try again.',
+        );
       }
-    });
+      this.logger.warn(
+        'M-Pesa subscription initiation outcome is unknown; awaiting provider confirmation',
+      );
+      return {
+        ...response,
+        message:
+          'Awaiting M-Pesa confirmation. Check your phone and payment status before trying again.',
+      };
+    }
   }
 
   // ============================================================================
@@ -1500,14 +1662,24 @@ export class SubscriptionsController {
     });
 
     if (!payment) {
-      throw new Error('Payment not found');
+      throw new NotFoundException('Payment not found');
     }
 
+    const subscription = await this.subscriptionRepository.findOneBy({
+      id: payment.subscriptionId,
+      userId: req.user.userId,
+    });
     // Polling is read-only; only verified provider settlement grants entitlement.
     return {
+      entitlementActive:
+        payment.status === PaymentStatus.COMPLETED &&
+        paymentMetadata(payment.metadata).entitlementApplied === true &&
+        subscription?.status === SubscriptionStatus.ACTIVE &&
+        !!subscription.endDate &&
+        subscription.endDate > new Date(),
       paymentId: payment.id,
       status: payment.status,
-      amount: payment.amount,
+      amount: Number(payment.amount),
       currency: payment.currency,
       paidDate: payment.paidDate,
     };

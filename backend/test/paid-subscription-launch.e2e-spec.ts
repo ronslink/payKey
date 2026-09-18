@@ -18,6 +18,7 @@ import {
   PaymentStatus,
 } from '../src/modules/subscriptions/entities/subscription-payment.entity';
 import { User, UserTier } from '../src/modules/users/entities/user.entity';
+import { IntaSendService } from '../src/modules/payments/intasend.service';
 import { createTestHelpers } from './helpers/test-helpers';
 
 // Stripe 16's Node client waits for a TLS socket event that nock 14 does not
@@ -42,17 +43,20 @@ jest.mock('stripe', () => {
 });
 
 /** Real Nest routes, JWTs, PostgreSQL transactions and Redis; only Stripe HTTP is simulated. */
-describe('Paid subscription launch journey', () => {
+describe('Paid subscription launch journey with card wallet funding disabled', () => {
   const secret = 'whsec_paid_launch_e2e_only';
   const stripe = new Stripe('sk_test_paid_launch_e2e_only');
   const originalKey = process.env.STRIPE_SECRET_KEY;
   const originalSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const originalWalletFunding = process.env.STRIPE_WALLET_FUNDING_ENABLED;
   const now = Math.floor(Date.now() / 1000);
   const periodEnd = now + 30 * 86400;
   let app: INestApplication;
   let database: DataSource;
   let provider: nock.Scope;
   let checkoutRequest: Record<string, string> = {};
+  let checkoutCreations = 0;
+  let customerCreations = 0;
   const metadata: Record<string, string> = {};
   const session = {
     id: 'cs_test_paid_launch',
@@ -113,18 +117,38 @@ describe('Paid subscription launch journey', () => {
   beforeAll(async () => {
     process.env.STRIPE_SECRET_KEY = 'sk_test_paid_launch_e2e_only';
     process.env.STRIPE_WEBHOOK_SECRET = secret;
+    process.env.STRIPE_WALLET_FUNDING_ENABLED = 'false';
     provider = nock('https://api.stripe.com')
       .persist()
       .get('/v1/customers')
       .query(true)
-      .reply(200, { object: 'list', data: [], has_more: false })
+      .reply(() => [
+        200,
+        {
+          object: 'list',
+          // Email changes cannot find the original customer in this fixture.
+          data: [],
+          has_more: false,
+        },
+      ])
       .post('/v1/customers')
-      .reply(200, { id: session.customer, object: 'customer' })
+      .reply(() => {
+        customerCreations += 1;
+        return [200, { id: session.customer, object: 'customer' }];
+      })
       .get('/v1/checkout/sessions')
       .query(true)
-      .reply(200, { object: 'list', data: [], has_more: false })
+      .reply(() => [
+        200,
+        {
+          object: 'list',
+          data: metadata.userId ? [session] : [],
+          has_more: false,
+        },
+      ])
       .post('/v1/checkout/sessions')
       .reply((_uri, body) => {
+        checkoutCreations += 1;
         checkoutRequest =
           typeof body === 'string'
             ? Object.fromEntries(new URLSearchParams(body))
@@ -132,7 +156,16 @@ describe('Paid subscription launch journey', () => {
         for (const key of ['userId', 'planTier', 'billingPeriod', 'source']) {
           metadata[key] = checkoutRequest[`metadata[${key}]`];
         }
-        return [200, session];
+        // The provider accepted the session, but its response never reached us.
+        return [
+          504,
+          {
+            error: {
+              type: 'api_error',
+              message: 'Fixture response lost after acceptance',
+            },
+          },
+        ];
       })
       .get(`/v1/checkout/sessions/${session.id}`)
       .reply(() => [200, session])
@@ -163,6 +196,9 @@ describe('Paid subscription launch journey', () => {
     else process.env.STRIPE_SECRET_KEY = originalKey;
     if (originalSecret === undefined) delete process.env.STRIPE_WEBHOOK_SECRET;
     else process.env.STRIPE_WEBHOOK_SECRET = originalSecret;
+    if (originalWalletFunding === undefined)
+      delete process.env.STRIPE_WALLET_FUNDING_ENABLED;
+    else process.env.STRIPE_WALLET_FUNDING_ENABLED = originalWalletFunding;
   });
 
   function callback(type: string, object: object, eventId: string) {
@@ -209,15 +245,23 @@ describe('Paid subscription launch journey', () => {
     const users = database.getRepository(User);
     expect((await current()).body.tier).toBe('FREE');
 
-    const checkout = await request(app.getHttpServer())
-      .post('/subscriptions/subscribe')
-      .set('Authorization', auth)
-      .send({
-        planId: 'basic',
-        paymentMethod: 'STRIPE',
-        billingPeriod: 'monthly',
-      })
-      .expect(201);
+    const startCheckout = () =>
+      request(app.getHttpServer())
+        .post('/subscriptions/subscribe')
+        .set('Authorization', auth)
+        .send({
+          planId: 'basic',
+          paymentMethod: 'STRIPE',
+          billingPeriod: 'monthly',
+        });
+    await startCheckout().expect(504);
+    expect((await users.findOneByOrFail({ id: userId })).stripeCustomerId).toBe(
+      session.customer,
+    );
+    await users.update(userId, { email: `changed.${userId}@example.com` });
+    const checkout = await startCheckout().expect(201);
+    expect(checkoutCreations).toBe(1);
+    expect(customerCreations).toBe(1);
     expect(checkout.body).toMatchObject({
       sessionId: session.id,
       checkoutUrl: session.url,
@@ -239,6 +283,58 @@ describe('Paid subscription launch journey', () => {
     expect((await users.findOneByOrFail({ id: userId })).tier).toBe(
       UserTier.FREE,
     );
+
+    // An unpaid card checkout can still charge from another browser tab. Starting
+    // M-Pesa must fail before a second provider request or receipt is created.
+    const mpesaInitiation = jest.spyOn(
+      app.get(IntaSendService),
+      'initiateStkPush',
+    );
+    const bankInitiation = jest.spyOn(
+      app.get(IntaSendService),
+      'createCheckoutUrl',
+    );
+    try {
+      const competing = await request(app.getHttpServer())
+        .post('/subscriptions/mpesa-subscribe')
+        .set('Authorization', auth)
+        .send({
+          planId: 'BASIC',
+          billingPeriod: 'monthly',
+          phoneNumber: '0712345678',
+          expectedAmount: 1300,
+        })
+        .expect(400);
+      expect(competing.body.message).toContain('card subscription checkout');
+      expect(mpesaInitiation).not.toHaveBeenCalled();
+      await request(app.getHttpServer())
+        .post('/subscriptions/subscribe')
+        .set('Authorization', auth)
+        .send({
+          planId: 'BASIC',
+          paymentMethod: 'BANK',
+          billingPeriod: 'monthly',
+        })
+        .expect(400);
+      expect(bankInitiation).not.toHaveBeenCalled();
+      await users.update(userId, { walletBalance: 10000 });
+      await request(app.getHttpServer())
+        .post('/subscriptions/subscribe')
+        .set('Authorization', auth)
+        .send({
+          planId: 'BASIC',
+          paymentMethod: 'WALLET',
+          billingPeriod: 'monthly',
+        })
+        .expect(400);
+      expect(
+        Number((await users.findOneByOrFail({ id: userId })).walletBalance),
+      ).toBe(10000);
+      expect(await receipts.countBy({ userId })).toBe(0);
+    } finally {
+      mpesaInitiation.mockRestore();
+      bankInitiation.mockRestore();
+    }
 
     session.status = 'complete';
     session.payment_status = 'paid';

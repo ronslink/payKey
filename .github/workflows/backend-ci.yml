@@ -77,14 +77,14 @@ jobs:
       INTASEND_IS_LIVE: 'false'
       INTASEND_SIMULATE: 'true'
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
           cache-dependency-path: backend/package-lock.json
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
       - name: Block introduced lint diagnostics (retain full legacy report)
         run: node scripts/lint-regression.cjs
       - name: Build
@@ -102,30 +102,53 @@ jobs:
         timeout-minutes: 15
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: backend-test-results
           path: |
             backend/coverage/
             backend/test-results/
 
+  website-ci:
+    name: Verify website billing and account flows
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: ./website
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+      - name: Verify billing and account deletion
+        run: npm test
+      - name: Build website
+        run: npm run build
+      - name: Check website deployment shell syntax
+        run: bash -n ../deploy/deploy-website.sh
+
   docker-build:
     name: Build immutable image
     runs-on: ubuntu-latest
-    needs: backend-ci
+    needs: [backend-ci, website-ci]
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     outputs:
       digest: ${{ steps.build.outputs.digest }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
       - name: Build and push exact tested commit
         id: build
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
         with:
           context: ./backend
           push: true
@@ -143,8 +166,8 @@ jobs:
     env:
       RELEASE_ID: ${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ env.NODE_VERSION }}
       - name: Stage release scripts
@@ -167,6 +190,7 @@ jobs:
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
           STRIPE_PUBLISHABLE_KEY: ${{ vars.STRIPE_PUBLISHABLE_KEY }}
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          STRIPE_WALLET_FUNDING_ENABLED: ${{ vars.STRIPE_WALLET_FUNDING_ENABLED }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
           APPLE_KEY_ID: ${{ secrets.APPLE_KEY_ID }}
@@ -179,9 +203,9 @@ jobs:
           SMS_PROVIDER: ${{ vars.SMS_PROVIDER }}
           AFRICANSTALKING_API_KEY: ${{ secrets.AFRICANSTALKING_API_KEY }}
           AFRICANSTALKING_USERNAME: ${{ vars.AFRICANSTALKING_USERNAME }}
-        run: node deploy/create-production-env.cjs release/.env.candidate
+        run: node deploy/create-production-env.cjs
       - name: Upload staged release without touching live environment
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@917f8b81dfc1ccd331fef9e2d61bdc6c8be94634 # v0.1.7
         with:
           host: ${{ secrets.DO_HOST }}
           username: ${{ secrets.DO_USERNAME }}
@@ -190,7 +214,7 @@ jobs:
           strip_components: 1
           target: /opt/paykey/releases/${{ env.RELEASE_ID }}
       - name: Release backend and preserve rollback state
-        uses: appleboy/ssh-action@v1.0.0
+        uses: appleboy/ssh-action@55dabf81b49d4120609345970c91507e2d734799 # v1.0.0
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
@@ -211,6 +235,8 @@ jobs:
   website-release:
     name: Release website after backend readiness
     needs: deploy
+    # Publish billing pages only after provider acceptance is complete.
+    if: vars.WEBSITE_RELEASE_ENABLED == 'true'
     uses: ./.github/workflows/deploy-website.yml
     with:
       release_sha: ${{ github.sha }}

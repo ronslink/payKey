@@ -41,12 +41,19 @@ async function main() {
   let results;
   let revision;
   if (generating) {
-    revision = execFileSync('git', ['rev-parse', 'HEAD'], {
+    // Baseline generation is an explicit operator action. Use the standard
+    // system installation, never a repository-controlled PATH entry or override.
+    const gitExecutable = process.platform === 'win32'
+      ? 'C:\\Program Files\\Git\\cmd\\git.exe'
+      : '/usr/bin/git';
+    if (!fs.statSync(gitExecutable).isFile())
+      throw new Error('Install Git in the documented system location');
+    revision = execFileSync(gitExecutable, ['rev-parse', 'HEAD'], {
       cwd: root,
       encoding: 'utf8',
     }).trim();
     const tracked = execFileSync(
-      'git',
+      gitExecutable,
       ['ls-tree', '-r', '--name-only', revision, '--', 'src', 'test'],
       { cwd: root, encoding: 'utf8' },
     )
@@ -56,7 +63,7 @@ async function main() {
     results = [];
     for (const file of tracked) {
       const source = execFileSync(
-        'git',
+        gitExecutable,
         ['show', `${revision}:backend/${file}`],
         { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] },
       );

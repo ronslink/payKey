@@ -3,6 +3,13 @@ import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
 import * as crypto from 'crypto';
+import { isAxiosError } from 'axios';
+
+export class IntaSendStkPushError extends Error {
+  constructor(readonly definitiveFailure: boolean) {
+    super('IntaSend STK request did not return a usable result');
+  }
+}
 
 // IntaSend sandbox requires this specific phone number for B2C payouts
 const INTASEND_SANDBOX_TEST_PHONE = '254708374149';
@@ -306,22 +313,58 @@ export class IntaSendService {
           },
         ),
       );
-      this.logger.log('IntaSend STK Push response:', response.data);
       return response.data;
-    } catch (error) {
-      this.logger.error(
-        'IntaSend STK Push failed',
-        error.response?.data || error.message,
-      );
-      throw new Error(
-        `IntaSend STK Push failed: ${JSON.stringify(error.response?.data)}`,
+    } catch (error: unknown) {
+      const status = isAxiosError(error) ? error.response?.status : undefined;
+      this.logger.warn('IntaSend STK request failed');
+      throw new IntaSendStkPushError(
+        status !== undefined && [400, 401, 403, 404, 422].includes(status),
       );
     }
   }
 
   /**
-   * Create a new Wallet
+   * Retrieve an invoice by our stored collection or checkout reference.
    */
+  async getPaymentStatus(
+    reference: string,
+    referenceType: 'invoice' | 'checkout' = 'invoice',
+  ): Promise<{
+    invoice: {
+      invoice_id: string;
+      state: string;
+      currency: string;
+      value: string | number;
+      api_ref: string;
+      provider?: string;
+    };
+  }> {
+    // Re-read the provider invoice before granting paid subscription access.
+    const response = await lastValueFrom(
+      this.httpService.post<{
+        invoice: {
+          invoice_id: string;
+          state: string;
+          currency: string;
+          value: string | number;
+          api_ref: string;
+          provider?: string;
+        };
+      }>(
+        `${this.baseUrl}/v1/payment/status/`,
+        { [`${referenceType}_id`]: reference },
+        {
+          headers: {
+            Authorization: `Bearer ${this.secretKey}`,
+            'Content-Type': 'application/json',
+          },
+          timeout: 10000,
+        },
+      ),
+    );
+    return response.data;
+  }
+
   async createWallet(
     currency: 'KES' | 'USD' | 'EUR' | 'GBP',
     label: string = '',

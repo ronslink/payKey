@@ -5,15 +5,29 @@ the user's confirmed latest Play upload, version code 22. The package is
 `com.payglobus.paydome`. The signed rebuild with the card-routing/native fixes succeeded;
 the rebuilt artifact passed bundletool and jarsigner checks, and its upload
 certificate exactly matches Play Console. Its 1,333 archive entries contained no
-recognized private-secret markers. The AAB is 64,053,803 bytes with SHA-256
-`F649B628CBF5417E721F863ABD2E5660CFABF1EA7998D8E63FE9EDBF6C12EDE3`.
+recognized private-secret markers. After removing unnecessary plugin-inherited
+media/storage permissions, the AAB is 64,053,685 bytes with SHA-256
+`7464F385C292757FCCE0C3C838E4FB9FC318DF6B7618AC05691E0F05E3B4E7A6`.
+The packaged manifest contains no `READ_MEDIA_*` or external-storage permissions.
+Existing photo/document selection uses system pickers; downloaded files are
+opened from app-private storage. Verify these flows on a physical device.
 Play currently shows **22 (1.1.5)** on internal testing and production inactive.
-Local verification does not establish Play acceptance.
+Play accepted the corrected bundle into production release `1.1.6 (23)` on
+18 September 2026. The release is saved in Publishing overview, not submitted
+for review or published. Google's automated checks and review remain separate.
+
+Play Console's publishing overview identifies broad photo/video permissions in
+version code 16 as a review blocker and requires correction across affected
+tracks. The corrected build 23 removes those permissions; older affected bundles
+must also be replaced or removed from active release tracks before submission.
+Kenya is already the targeted production country, managed publishing is on, and
+reviewer sign-in details are configured. The existing ready-to-publish change is
+a closed-testing track pause, not a production release.
 
 Deploy and verify the matching backend before rolling this mobile candidate out:
 its authenticated document/download flows depend on the hardened API. Then
-perform the physical-device checks below. This bundle has not been uploaded or
-published to Google Play.
+perform the physical-device checks below. This bundle is uploaded but has not
+been published to Google Play.
 
 M-Pesa/KES is the default top-up method. Cards use Stripe with explicit KES by
 default or optional EUR. EUR uses a separate empty amount field; verified

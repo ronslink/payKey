@@ -2,7 +2,7 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Not, Repository } from 'typeorm';
 import {
   Subscription,
   SubscriptionStatus,
@@ -94,6 +94,18 @@ export class SubscriptionProcessor extends WorkerHost {
       return;
     }
 
+    // Historical manual subscriptions may use a different row from the current
+    // Stripe contract. A queued job must not expire that account's paid access.
+    const stripeContract = await this.subscriptionRepository.findOne({
+      where: {
+        userId: subscription.userId,
+        stripeSubscriptionId: Not(IsNull()),
+        status: Not(SubscriptionStatus.CANCELLED),
+      },
+      select: { id: true },
+    });
+    if (stripeContract) return { status: 'provider_managed' };
+
     if (
       subscription.status !== SubscriptionStatus.ACTIVE &&
       subscription.status !== SubscriptionStatus.PAST_DUE
@@ -102,6 +114,15 @@ export class SubscriptionProcessor extends WorkerHost {
         `Subscription ${subscriptionId} is not active or past due. Skipping renewal.`,
       );
       return;
+    }
+
+    // A queued job may predate a successful manual renewal. Recheck under the
+    // account billing lock before changing or expiring the renewed entitlement.
+    if (
+      subscription.nextBillingDate &&
+      subscription.nextBillingDate > new Date()
+    ) {
+      return { status: 'not_due' };
     }
 
     // Check for pending tier change (e.g. scheduled downgrade)

@@ -108,15 +108,15 @@ const plans = [
 const faqItems = [
   {
     q: "Can I change plans anytime?",
-    a: "Contact our team to change an existing paid plan. You can turn automatic renewal on or off from your account.",
+    a: "Contact our team to change an existing paid plan. Card subscriptions renew automatically unless you turn renewal off. M-Pesa renewals require your approval for each payment.",
   },
   {
     q: "Is there a setup fee?",
     a: "No setup fees. Just download the app, add your staff, and start paying.",
   },
   {
-    q: "How does M-Pesa payment work?",
-    a: "Link your M-Pesa account, enter your worker's phone number, and send salary directly. They receive the money instantly with an SMS confirmation.",
+    q: "Can I pay for my subscription with M-Pesa?",
+    a: "Yes. Choose M-Pesa at checkout, review the exact KES price, and approve the prompt on your phone. Each renewal needs your approval; your M-Pesa account is not debited automatically.",
   },
   {
     q: "How can I get started?",
@@ -139,8 +139,9 @@ export default function Pricing() {
             payroll tools. All prices are in Kenyan Shillings.
           </p>
           <p className="text-sm text-slate-400 max-w-2xl mx-auto mt-3">
-            Web card subscriptions are billed monthly in US dollars. Review the
-            current USD amount before continuing to secure checkout.
+            Pay for your subscription with M-Pesa in KES or by card in USD.
+            Review the server-confirmed amount before paying. M-Pesa needs your
+            approval each period; card subscriptions renew automatically.
           </p>
         </div>
       </div>

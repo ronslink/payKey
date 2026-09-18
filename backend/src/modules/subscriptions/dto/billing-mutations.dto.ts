@@ -3,6 +3,8 @@ import {
   IsBoolean,
   IsEnum,
   IsOptional,
+  IsNumber,
+  Min,
   IsString,
   Matches,
   MaxLength,
@@ -11,6 +13,10 @@ import { SubscribeDto } from './subscribe.dto';
 import { RenewalMethod } from '../entities/subscription.entity';
 
 export class MpesaSubscribeDto extends SubscribeDto {
+  @IsNumber({ allowNaN: false, allowInfinity: false, maxDecimalPlaces: 2 })
+  @Min(0)
+  expectedAmount: number;
+
   @IsString()
   @Transform(({ value }: { value: unknown }) =>
     typeof value === 'string' ? value.replace(/\s+/g, '') : value,

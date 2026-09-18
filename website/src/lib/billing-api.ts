@@ -7,6 +7,23 @@ export interface SubscriptionPlan { id: string; tier: string; name: string; pric
 export interface Subscription {
   id: string | null; tier: string; planName: string; status?: string;
   endDate?: string | null; autoRenew?: boolean; autoRenewalDescription?: string;
+  provider?: 'STRIPE' | 'INTASEND' | null;
+  renewalMode?: 'automatic' | 'manual' | null;
+  billingPeriod?: BillingPeriod;
+  pendingPayment?: PendingSubscriptionPayment | null;
+}
+export type BillingPeriod = 'monthly' | 'yearly';
+export interface PendingSubscriptionPayment {
+  id: string; status: string; amount: number; currency: string;
+  planId?: string; billingPeriod: BillingPeriod; paymentMethod: string;
+}
+export interface MpesaQuote {
+  planId: string; billingPeriod: BillingPeriod; amount: number; currency: 'KES';
+  periodStart: string; periodEnd: string; renewalMode: 'manual';
+}
+export interface MpesaSubscriptionStatus {
+  paymentId: string; status: 'PENDING' | 'COMPLETED' | 'FAILED';
+  entitlementActive: boolean; amount: number; currency: string; paidDate?: string;
 }
 export interface CheckoutStatus {
   paymentStatus: 'pending' | 'paid' | 'failed'; entitlementActive: boolean;
@@ -47,6 +64,62 @@ export function hostedCheckoutUrl(value: string): string {
     throw new Error('The payment provider returned an unexpected checkout address. Please contact support.');
   }
   return url.href;
+}
+
+export function validPaymentId(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
+export function isMpesaPaymentMethod(value: string | undefined): boolean {
+  return value?.toLowerCase() === 'mpesa';
+}
+
+export function mpesaPaymentPath(paymentId: string): string {
+  if (!validPaymentId(paymentId)) throw new Error('The server returned an invalid payment reference. Please check your account.');
+  return `/subscription/success?payment_id=${encodeURIComponent(paymentId)}`;
+}
+
+export function normalizeMpesaPhone(value: string): string {
+  const phone = value.replace(/[\s()-]/g, '').replace(/^\+/, '').replace(/^0/, '254');
+  if (!/^254[17]\d{8}$/.test(phone)) throw new Error('Enter a Kenyan M-Pesa number, such as 0712 345 678.');
+  return phone;
+}
+
+export async function quoteMpesaSubscription(planId: string, billingPeriod: BillingPeriod, signal?: AbortSignal): Promise<MpesaQuote> {
+  const quote = await apiRequest<MpesaQuote>('/subscriptions/mpesa-quote', {
+    method: 'POST', body: { planId, billingPeriod }, signal,
+  });
+  if (quote.planId?.toLowerCase() !== planId.toLowerCase() || quote.billingPeriod !== billingPeriod ||
+    quote.currency !== 'KES' || quote.renewalMode !== 'manual' || !Number.isFinite(quote.amount) || quote.amount <= 0 ||
+    Math.abs(quote.amount * 100 - Math.round(quote.amount * 100)) > 0.000001 ||
+    !Number.isFinite(Date.parse(quote.periodStart)) || !Number.isFinite(Date.parse(quote.periodEnd)) ||
+    Date.parse(quote.periodEnd) <= Date.parse(quote.periodStart)) {
+    throw new Error('The server did not return a valid M-Pesa price. Please try again.');
+  }
+  return quote;
+}
+
+export async function startMpesaSubscription(quote: MpesaQuote, phoneNumber: string): Promise<{ paymentId: string }> {
+  const result = await apiRequest<{ paymentId: string }>('/subscriptions/mpesa-subscribe', {
+    method: 'POST', body: {
+      planId: quote.planId, billingPeriod: quote.billingPeriod,
+      phoneNumber: normalizeMpesaPhone(phoneNumber), expectedAmount: quote.amount,
+    },
+  });
+  if (!validPaymentId(result.paymentId)) throw new Error('Check your account before retrying: the payment request returned no valid reference.');
+  return result;
+}
+
+export async function readMpesaSubscriptionPayment(paymentId: string, signal?: AbortSignal): Promise<CheckoutStatus> {
+  if (!validPaymentId(paymentId)) throw new Error('Invalid payment reference.');
+  const result = await apiRequest<MpesaSubscriptionStatus>(`/subscriptions/mpesa-payment-status/${encodeURIComponent(paymentId)}`, { signal });
+  if (result.paymentId !== paymentId || !['PENDING', 'COMPLETED', 'FAILED'].includes(result.status)) {
+    throw new Error('The server returned an unexpected payment status. Please check your account.');
+  }
+  return {
+    paymentStatus: result.status === 'COMPLETED' ? 'paid' : result.status === 'FAILED' ? 'failed' : 'pending',
+    entitlementActive: result.status === 'COMPLETED' && result.entitlementActive === true,
+  };
 }
 
 export async function apiRequest<T>(path: string, options: {

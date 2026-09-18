@@ -28,6 +28,22 @@ if ! docker network inspect paykey-network-prod >/dev/null 2>&1; then
 fi
 "${backend[@]}" pull backend
 "${infra[@]}" pull redis
+
+# The image runs as node (uid/gid 1000). Prepare only its dedicated data paths;
+# do not change the live container, source uploads, or retained rollback copies.
+for directory in /opt/paykey/storage /opt/paykey/legacy-uploads /opt/paykey/secrets; do
+  [[ ! -L "$directory" ]] || { echo 'Application data directories must not be symlinks'; exit 1; }
+  mkdir -p "$directory"
+done
+chown -hR 1000:1000 /opt/paykey/storage
+chmod 700 /opt/paykey/storage
+firebase_file=/opt/paykey/secrets/firebase-service-account.json
+if [[ -e "$firebase_file" || -L "$firebase_file" ]]; then
+  [[ -f "$firebase_file" && ! -L "$firebase_file" ]] || { echo 'Firebase credentials must be a regular file'; exit 1; }
+  chgrp 1000 /opt/paykey/secrets "$firebase_file"
+  chmod 750 /opt/paykey/secrets
+  chmod 640 "$firebase_file"
+fi
 "${backend[@]}" run --rm --no-deps backend node scripts/audit-production.cjs --configuration-only
 # This launch introduces no migrations. Refuse every pending legacy migration
 # before stopping writers: old scripts may destroy data or assume prior schema
@@ -102,7 +118,6 @@ rollback() {
 }
 trap rollback ERR INT TERM
 
-mkdir -p /opt/paykey/storage /opt/paykey/legacy-uploads /opt/paykey/secrets
 rollback_needed=true
 if [[ "$backend_was_running" == true ]]; then
   # Stop writers before copying. Failure here leaves the old container intact
@@ -119,6 +134,40 @@ if [[ "$backend_was_running" == true ]]; then
     mkdir -p /opt/paykey/legacy-uploads/exports
     cp -a "$release_dir/exports-backup/." /opt/paykey/legacy-uploads/exports/
   fi
+fi
+
+# Legacy copies stay read-only inside the container. Give the application owner
+# read/traverse access without broadening access for other host users.
+chown -hR 1000:1000 /opt/paykey/legacy-uploads
+find /opt/paykey/legacy-uploads -xdev -type d -exec chmod u+rx {} +
+find /opt/paykey/legacy-uploads -xdev -type f -exec chmod u+r {} +
+"${backend[@]}" run --rm --no-deps -T backend node <<'NODE'
+const fs = require('node:fs');
+const path = require('node:path');
+if (process.getuid() !== 1000) throw new Error('Backend must run as the application user');
+const root = process.env.STORAGE_ROOT;
+const probe = fs.mkdtempSync(path.join(root, '.release-write-probe-'));
+try {
+  const file = path.join(probe, 'probe');
+  fs.writeFileSync(file, 'storage-ready', { mode: 0o600 });
+  if (fs.readFileSync(file, 'utf8') !== 'storage-ready') throw new Error('Storage read-back failed');
+  fs.unlinkSync(file);
+} finally {
+  fs.rmdirSync(probe);
+}
+function checkLegacy(directory) {
+  fs.accessSync(directory, fs.constants.R_OK | fs.constants.X_OK);
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    const filename = path.join(directory, entry.name);
+    if (entry.isDirectory()) checkLegacy(filename);
+    else if (entry.isFile()) fs.accessSync(filename, fs.constants.R_OK);
+  }
+}
+checkLegacy(process.env.LEGACY_UPLOADS_DIR);
+console.log('Non-root storage writes and retained legacy-file reads are available');
+NODE
+
+if [[ "$backend_was_running" == true ]]; then
   old_backend="paykey_backend_rollback_${release_id}"
   docker rename paykey_backend_prod "$old_backend"
 fi

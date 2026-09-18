@@ -19,7 +19,7 @@ jobs:
     timeout-minutes: 5
     environment: PROD
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Confirm target and configured release credentials without revealing values
         env:
           DO_HOST: ${{ secrets.DO_HOST }}
@@ -49,7 +49,7 @@ jobs:
       - name: Encode read-only inspection script
         run: echo "PRODUCTION_INSPECTION_SCRIPT=$(base64 -w0 deploy/inspect-running-production.cjs)" >> "$GITHUB_ENV"
       - name: Inspect running backend without changing services or data
-        uses: appleboy/ssh-action@v1.0.0
+        uses: appleboy/ssh-action@55dabf81b49d4120609345970c91507e2d734799 # v1.0.0
         with:
           host: ${{ secrets.DO_HOST }}
           username: ${{ secrets.DO_USERNAME }}

@@ -1,6 +1,7 @@
 "use strict";
 
 const fs = require("node:fs");
+const path = require("node:path");
 
 const required = [
   "DATABASE_URL",
@@ -83,6 +84,8 @@ function createProductionEnvironment(source) {
   const values = {
     NODE_ENV: "production",
     DOCKER_USERNAME: source.DOCKER_USERNAME || "",
+    STRIPE_WALLET_FUNDING_ENABLED:
+      source.STRIPE_WALLET_FUNDING_ENABLED === "true" ? "true" : "false",
   };
   for (const name of [...required, ...optional]) {
     const value = source[name] || "";
@@ -105,9 +108,15 @@ function createProductionEnvironment(source) {
 
 if (require.main === module) {
   try {
-    const destination = process.argv[2];
-    if (!destination)
-      throw new Error("Pass a new candidate environment-file path");
+    if (process.argv.length !== 2)
+      throw new Error(
+        "Production configuration is written only to release/.env.candidate",
+      );
+    const releaseDirectory = path.join(__dirname, "..", "release");
+    fs.mkdirSync(releaseDirectory, { recursive: true, mode: 0o700 });
+    if (fs.lstatSync(releaseDirectory).isSymbolicLink())
+      throw new Error("Release directory must not be a symbolic link");
+    const destination = path.join(releaseDirectory, ".env.candidate");
     const content = createProductionEnvironment(process.env);
     fs.writeFileSync(destination, content, { mode: 0o600, flag: "wx" });
     console.log(

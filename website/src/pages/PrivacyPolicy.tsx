@@ -6,7 +6,7 @@ export default function PrivacyPolicy() {
           <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">
             Privacy Policy
           </h1>
-          <p className="text-slate-400 mb-12">Last updated: 21 July 2026</p>
+          <p className="text-slate-400 mb-12">Last updated: 18 September 2026</p>
 
           <div className="flex flex-col gap-10 text-slate-300 leading-relaxed">
             <section>
@@ -43,6 +43,19 @@ export default function PrivacyPolicy() {
                   benefits, deductions, attendance, and payroll records.
                 </li>
                 <li>
+                  <strong className="text-white">Attendance location:</strong>{" "}
+                  approximate or precise coordinates, depending on your device
+                  permission, when you use foreground clock-in, clock-out, and
+                  workplace geofence features. We store recorded clock-in and
+                  clock-out coordinates as part of attendance records linked to
+                  the worker and employer.
+                </li>
+                <li>
+                  <strong className="text-white">Photos and documents:</strong>{" "}
+                  photos you choose to take or upload, and documents or import
+                  files you select for account, worker, or payroll features.
+                </li>
+                <li>
                   <strong className="text-white">Payment data:</strong> payment
                   method details, account or mobile-money identifiers,
                   transaction references, status, and amounts. Payment providers
@@ -58,10 +71,21 @@ export default function PrivacyPolicy() {
                 </li>
                 <li>
                   <strong className="text-white">
+                    App installation and notification data:
+                  </strong>{" "}
+                  Firebase installation identifiers, push notification
+                  registration tokens, device platform, and the account linked
+                  to a notification registration. Firebase Cloud Messaging uses
+                  these identifiers to deliver push notifications.
+                </li>
+                <li>
+                  <strong className="text-white">
                     Usage and diagnostic data:
                   </strong>{" "}
                   device, browser, IP address, logs, crash details, and how you
-                  use the service.
+                  use the service. Firebase Crashlytics processes crash reports,
+                  app and device diagnostics, and installation identifiers to
+                  help us diagnose faults.
                 </li>
               </ul>
             </section>
@@ -78,10 +102,18 @@ export default function PrivacyPolicy() {
                   employer filing and record-keeping obligations.
                 </li>
                 <li>
+                  Record attendance and check whether a worker is at or has left
+                  a configured workplace location.
+                </li>
+                <li>
                   Initiate and track payments that a user authorizes through our
                   payment providers.
                 </li>
                 <li>Respond to support requests and service communications.</li>
+                <li>
+                  Where we run in-app or push campaigns, send information about
+                  Paydome features, plans, or promotions.
+                </li>
                 <li>Detect fraud, abuse, security incidents, and errors.</li>
                 <li>Meet legal, accounting, and regulatory obligations.</li>
               </ul>
@@ -94,12 +126,17 @@ export default function PrivacyPolicy() {
               <p>We may share data only as needed with:</p>
               <ul className="list-disc pl-6 mt-4 flex flex-col gap-2">
                 <li>
+                  the employer associated with a worker, including attendance
+                  records and recorded clock-in and clock-out coordinates;
+                </li>
+                <li>
                   payment providers and financial institutions used to process
                   or reconcile user-authorized transactions;
                 </li>
                 <li>
                   hosting, database, authentication, analytics, communications,
-                  and technical-support providers;
+                  and technical-support providers, including Google Firebase for
+                  push notifications and crash diagnostics;
                 </li>
                 <li>
                   professional advisers, auditors, insurers, and authorities
@@ -153,6 +190,20 @@ export default function PrivacyPolicy() {
                 or restrict processing, request deletion, or request a portable
                 copy. Where processing relies on consent, you may withdraw that
                 consent.
+              </p>
+              <p className="mt-4">
+                You can decline or revoke location permission in your device
+                settings and continue using other Paydome features. Attendance
+                actions that need your location, including checks for configured
+                workplace geofences, may then be unavailable. Revoking permission
+                does not remove coordinates already stored in attendance records.
+              </p>
+              <p className="mt-4">
+                You choose which photos and documents to provide. You can also
+                control whether notifications are displayed through your device
+                settings. Turning off notification display does not by itself
+                stop Firebase installation identifiers or notification
+                registration tokens from being created and collected.
               </p>
               <p className="mt-4">
                 You can start an account-deletion request on our{" "}

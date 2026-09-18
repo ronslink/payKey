@@ -3,8 +3,11 @@
 These changes are prepared in PR #4 and have not been merged or deployed. The
 original production assessment remains a snapshot before these fixes; the
 verified runtime findings below supersede its unresolved access/database checks.
-Paid subscriptions are required for launch; the customer billing path is the
-website account flow and Stripe hosted checkout.
+Paid subscriptions are required for launch. The website account flow is being
+extended to offer M-Pesa through IntaSend alongside Stripe card subscriptions.
+The user approved customer confirmation for each M-Pesa renewal.
+The subsequent backend review and remaining release decisions are recorded in
+[Backend readiness — 18 September 2026](BACKEND_READINESS_2026-09-18.md).
 
 ## Implemented
 
@@ -14,7 +17,7 @@ website account flow and Stripe hosted checkout.
 | Authentication | Production JWT configuration fails closed. Social login requires verified provider tokens and configured audiences. |
 | Payment integrity | Live IntaSend callbacks cannot bypass verification. Settlement handles repeated clearing/final callbacks without duplicate balance movements. Provider secrets are removed from stored and returned callback metadata. |
 | Paid launch | Website signup/login, authenticated plan selection, server-priced USD checkout and renewal controls are implemented. A return page reports active service only after backend verification. Signed Stripe callbacks settle once per invoice, handle out-of-order events and protect cancellation/renewal periods. Existing Stripe contracts cannot be overwritten by another payment method. Production requires live Stripe credentials. |
-| Wallet currency and ledger | Prepared routing keeps M-Pesa/KES as the default and sends card payments through Stripe with explicit KES by default or optional EUR. EUR has a separate amount input and converts to KES on verified settlement. Invalid/missing FX prevents credit; replayed callbacks credit once. Hourly IntaSend observations report discrepancies without overwriting the ledger. Actual provider funding remains a release blocker for all Stripe wallet payments, including KES. |
+| Wallet currency and ledger | Prepared routing keeps M-Pesa/KES as the default. `STRIPE_WALLET_FUNDING_ENABLED` defaults to `false` and blocks new Stripe wallet top-ups in both KES and EUR until provider funding is resolved. Subscription billing and settlement of existing payments remain available. Prepared EUR routing uses a separate amount input and converts to KES on verified settlement; invalid/missing FX prevents credit and replayed callbacks credit once. Hourly IntaSend observations report discrepancies without overwriting the ledger. |
 | Private files | Worker documents, government payroll files and accounting exports use persistent private storage and authenticated ownership checks. Existing file references resolve through preserved legacy storage. Public static serving is limited to avatar images. |
 | Database safety | Production requires an explicit database URL and verified TLS. Schema synchronization and automatic startup migrations are disabled in production. A standalone read-only audit identifies the actual database host, TLS session and migration state without starting the app. |
 | Deployment | A shared CI path tests before publishing an immutable image. Release scripts preserve uploads/exports and previous containers, reuse Redis storage, reject pending migrations before stopping the old app, and require database/Redis readiness before promoting configuration. |
@@ -24,9 +27,11 @@ website account flow and Stripe hosted checkout.
 
 ## Payment routing and provider funding
 
-The prepared mobile flow is **M-Pesa (KES)** by default, or **Card through Stripe**
-with explicit KES/EUR selection; the backend accepts both
-card currencies. Stripe supports both currencies, while the application must
+The prepared mobile flow is **M-Pesa (KES)** by default, with a **Card through Stripe**
+option and explicit KES/EUR selection. The backend now blocks creation of new
+Stripe wallet payments by default through `STRIPE_WALLET_FUNDING_ENABLED=false`,
+for both currencies. Existing payment settlement and Stripe subscriptions are
+unaffected. The prepared card implementation supports both currencies, while the application must
 select the intended charge currency ([Stripe currencies](https://docs.stripe.com/currencies)).
 Focused routing and settlement checks pass. These changes are not deployed and
 still require real-provider acceptance.
@@ -48,6 +53,31 @@ into IntaSend. The repository has no such funding bridge: Stripe settlement
 credits the application ledger only. This liquidity gap affects both KES and
 EUR card funding; it is separate from EUR conversion and from website subscription
 billing. No bridge or pre-funded balance is assumed.
+
+### Subscription payment choice
+
+IntaSend documents [subscription plans and billing cycles](https://developers.intasend.com/reference/api_v1_subscriptions_plans_create)
+and [subscription creation](https://developers.intasend.com/reference/api_v1_subscriptions_create).
+The chosen launch behavior uses its [M-Pesa STK collection](https://developers.intasend.com/docs/m-pesa-stk-push):
+customers review the existing server-defined KES plan price, request payment,
+and approve the prompt on their phone. Paydome manages the paid access period;
+this does not provision an IntaSend automatic-debit subscription contract.
+Stripe continues to provide automatic card subscriptions at the existing USD
+prices. Neither subscription payment method credits the payroll wallet.
+
+The prepared M-Pesa implementation persists each unique payment attempt before
+requesting a provider prompt and verifies its provider invoice before granting
+access. Repeated callbacks activate once; annual payments grant the annual period;
+failed or pending payments preserve already-paid access. Early renewal extends
+the existing paid-through date. A queued expiry job rechecks that date and any
+current Stripe contract before downgrading access. Auto-renew preference updates
+reread the subscription under the billing lock so they cannot overwrite a
+simultaneous successful renewal. These paths passed the focused local checks
+below. A further guard against overlapping pending M-Pesa and Stripe checkout
+attempts is being implemented; its verification is not yet complete.
+Mid-period plan changes remain
+unavailable in this initial website flow. Native external subscription checkout
+remains disabled in the signed store candidate.
 
 ## Verification
 
@@ -91,6 +121,32 @@ Website changed-file lint passes; its full lint still reports nine pre-existing
 issues in UI/main files.
 
 ### Completion evidence
+
+The earlier release evidence below remains a record of its tested source. The
+additional backend checks do not retroactively extend the earlier CI result:
+
+- The focused M-Pesa/bank pair passed seven tests using real Nest authentication,
+  PostgreSQL and Redis with provider HTTP doubles. It verifies exact KES pricing,
+  ownership, verified invoices, duplicate callbacks, monthly/yearly access,
+  initiation failures and uncertain outcomes, and preservation of Stripe access.
+  Two additional regressions first reproduced an old manual-plan job downgrading
+  a newer Stripe contract and a preference update losing one paid month; both
+  passed after the fixes. Evidence: `backend/test-results/backend-readiness-mpesa-final.log`.
+- The focused Stripe wallet/subscription pair passed six tests with real Nest,
+  PostgreSQL and Redis and mocked provider HTTP, including default-off wallet
+  funding while paid subscriptions remain usable. Evidence:
+  `backend/test-results/backend-readiness-stripe-wallet-gate.log`.
+- The final competing-payment guard passed all eight tests across three
+  integration suites, plus 23 Stripe lifecycle unit tests. Coverage includes
+  Stripe/M-Pesa competition, bank and funded-wallet alternatives, lost Stripe
+  responses, changed emails and recovery of the same checkout. Existing paid
+  access and wallet balances are preserved when the second attempt is rejected.
+- The backend build and final production type check passed. Lint comparison
+  reports zero introduced diagnostic fingerprints against the committed baseline;
+  existing debt remains at 1,572 errors and 240 warnings. See the
+  [backend readiness record](BACKEND_READINESS_2026-09-18.md) for remaining gates.
+
+Previously verified release evidence:
 
 - Backend: 22 unit/security suites, 216 tests passed. The complete existing E2E
   run passed 30 suites and 206 tests against disposable PostgreSQL 17 and Redis.
@@ -192,46 +248,55 @@ and pass it at runtime; this public key does not replace the server secret key.
 
 The release branch also adds a read-only inspection mode to the existing manual
 backend workflow, allowing the stored GitHub SSH credential to inspect the
-running container. Website rollout now follows successful backend deployment
-from the same tested commit and uses an immutable image digest with rollback.
+running container. Website rollout is held unless repository variable
+`WEBSITE_RELEASE_ENABLED=true`. When enabled, it follows successful backend
+deployment from the same tested commit and uses an immutable image digest with rollback.
 The migration audit now compares actual migration names, including nonstandard
 filenames and shared timestamps; all nine deployment/audit tests passed after
 this correction. No new schema migration is introduced by the launch fixes.
 
 Android **1.1.6 (version code 23)** was rebuilt with Flutter 3.41.7 for
-`com.payglobus.paydome` after the card-routing and native SDK fixes. The earlier candidate
-and rebuilt artifact both passed bundletool/signature checks. The
-signed-in Play Console confirms that **22 (1.1.5)** is available on the internal
-testing track and production is inactive. Build 23 has not been uploaded or
-published. The registered Play upload certificate matches the local AAB's SHA-256
+`com.payglobus.paydome` after the card-routing, native SDK and photo-permission
+fixes. Unnecessary inherited `READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO`,
+`READ_MEDIA_AUDIO` and `READ_EXTERNAL_STORAGE` permissions are removed from all
+app variants. The final merged and packaged manifests, bundletool validation,
+signature and upload certificate were verified. Build 23 is uploaded in the
+production/open-testing review queue and its quick checks passed. Internal
+testing has a build 23 draft; build **22 (1.1.5)** remains its current active
+release. No production rollout has occurred. The registered Play upload
+certificate matches the local AAB's SHA-256
 fingerprint exactly: `FE:9C:82:E1:64:67:F4:46:29:21:63:48:69:D4:23:69:68:8D:FF:F1:1B:45:17:4D:C7:1E:02:EE:73:76:65:DE`.
 Deploy the matching backend before mobile rollout, then complete acceptance on a
-device using the signed build. The latest verified artifact includes the KES/EUR
-Stripe-card routing correction, is 64,053,803 bytes, and has SHA-256
-`F649B628CBF5417E721F863ABD2E5660CFABF1EA7998D8E63FE9EDBF6C12EDE3`.
+device using the signed build. The latest verified artifact is 64,053,685 bytes
+and has SHA-256
+`7464F385C292757FCCE0C3C838E4FB9FC318DF6B7618AC05691E0F05E3B4E7A6`.
+Passing quick checks does not establish Play policy approval or signed-device
+acceptance. See [Play Console preparation](PLAY_CONSOLE_PREPARATION_2026-09-18.md).
+
+Copying Firebase configuration into the release secret remains pending explicit
+user approval after automatic approval review blocked the transfer. No Firebase
+configuration transfer was performed.
 
 ### Pull request checks and triage
 
-For PR #4 head `4207c23`, [functional backend CI](https://github.com/ronslink/payKey/actions/runs/35338832844)
+For PR #4 head `2fdc9d3`, [functional backend CI](https://github.com/ronslink/payKey/actions/runs/35341414223)
 passed its build, lint-regression, unit/security, deployment-configuration and
 isolated-database E2E checks. Image publication and deployment were skipped for
-the pull request. CodeQL also passed for this head. The migration-identity parser
+the pull request. The migration-identity parser
 and storage-path containment corrections remain covered. These results do not
 establish live provider or signed-device acceptance.
-The subsequent KES/EUR card-routing changes need fresh CI;
+The subsequent M-Pesa subscription, wallet guard and hardening changes need fresh CI;
 the earlier passing run does not cover them.
 
-SonarCloud's check remains failed only on New Code Security Rating. The earlier
+SonarCloud reported both security and reliability findings. The earlier
 payslip-test sort reliability finding is resolved by an explicit `localeCompare`
-comparator. Its remaining security findings
-cover action version pinning, package installation scripts, the container's root
-user, `git` lookup through `PATH` in the optional baseline generator, and the
-local environment-writer's operator-supplied destination argument. They remain
-open for contextual security review; no alerts were dismissed, no gate was
-disabled, and no application permissions or CLI behavior were changed merely to
-improve the rating. The local CLI finding does not demonstrate a customer-facing
-path traversal. Package-install and runtime-user changes require dependency and
-storage-permission analysis before being applied.
+comparator. Further fixes are prepared for lifecycle-disabled package builds,
+non-root container execution with writable persistent storage, pinned action
+versions, a fixed environment-output path, a fixed Git executable path in the
+baseline generator, and an integer-cents assertion replacing a floating-point
+comparison. Fresh CI and Sonar analysis are still pending; the prepared changes
+are not evidence that the remote quality gate has passed. No alerts were dismissed
+and no quality gate was disabled.
 
 Successful functional CI is not a claim that every quality check passed. The
 SonarCloud findings remain open for review alongside the production gates below.
@@ -255,8 +320,9 @@ SonarCloud findings remain open for review alongside the production gates below.
    local KES ledger, but payroll pays from each employer's IntaSend working wallet.
    No transfer/funding bridge exists. Removing hourly ledger overwrites preserves
    the credit; it does not fund payroll. No funding arrangement has been verified.
-   Keep Stripe wallet payments in both KES and EUR blocked from release until the
-   actual funding path is agreed and verified. FX conversion and website subscription
+   The prepared default-off `STRIPE_WALLET_FUNDING_ENABLED` gate blocks new Stripe
+   wallet payments in both KES and EUR. Keep it disabled until the actual funding
+   path is agreed and verified. FX conversion and website subscription
    billing do not resolve this separate liquidity requirement. The Paydome webhook is
    missing `payment_intent.succeeded`; add that event only after the corrected
    backend is deployed and the funding path is agreed. Do not enable event delivery
@@ -265,6 +331,8 @@ SonarCloud findings remain open for review alongside the production gates below.
    beta links and verify real-device login, payslips, downloads and notifications
    using the signed Android candidate. Android signing is verified locally;
    automated signing/Firebase setup and any iOS release remain separate work.
+   Firebase release-secret transfer still awaits the explicit user approval
+   required by automatic approval review; no transfer has occurred.
    Configure actual email/SMS providers for offered delivery channels. Store-distributed
    mobile subscription checkout remains disabled pending the chosen distribution/payment path.
 5. **Deploy and verify the hardened release.** Apply the configured
