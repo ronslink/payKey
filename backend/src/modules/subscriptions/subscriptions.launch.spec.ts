@@ -35,6 +35,7 @@ describe('subscription launch boundaries', () => {
   };
   const subscriptionRepository = {
     findOne: jest.fn(),
+    findOneBy: jest.fn(),
     save: jest.fn(),
     manager: { transaction: jest.fn() },
   };
@@ -89,6 +90,7 @@ describe('subscription launch boundaries', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     subscriptionRepository.findOne.mockResolvedValue(null);
+    subscriptionRepository.findOneBy.mockResolvedValue(null);
     paymentRepository.findOne.mockResolvedValue(null);
     users.findOneById.mockResolvedValue(user);
     stripe.createCheckoutSession.mockResolvedValue({
@@ -178,8 +180,16 @@ describe('subscription launch boundaries', () => {
       ]);
       await request(app.getHttpServer())
         .post('/subscriptions/mpesa-subscribe')
-        .send({ planId: 'basic', phoneNumber: '+254712345678' })
+        .send({
+          planId: 'basic',
+          phoneNumber: '+254712345678',
+          expectedAmount: 1300,
+        })
         .expect(400);
+      expect(manager.query).toHaveBeenCalledWith(
+        'SELECT pg_advisory_xact_lock(hashtext($1))',
+        ['stripe-billing:user-a'],
+      );
       expect(intasend.initiateStkPush).not.toHaveBeenCalled();
       expect(manager.getRepository).not.toHaveBeenCalled();
     },
@@ -222,16 +232,29 @@ describe('subscription launch boundaries', () => {
       userId: 'user-a',
       subscriptionId: 'sub-1',
       status: PaymentStatus.COMPLETED,
+      amount: 1300,
+      currency: 'KES',
+      metadata: { entitlementApplied: true },
     });
-    subscriptionRepository.findOne.mockResolvedValue({
+    subscriptionRepository.findOneBy.mockResolvedValue({
       id: 'sub-1',
+      userId: 'user-a',
       status: SubscriptionStatus.CANCELLED,
       stripeSubscriptionId: 'sub_stripe',
+      endDate: new Date(Date.now() + 86400000),
     });
-    await controller.checkMpesaPaymentStatus(
+    const result = await controller.checkMpesaPaymentStatus(
       { user: { userId: 'user-a' } },
       'payment-1',
     );
+    expect(result).toMatchObject({
+      status: PaymentStatus.COMPLETED,
+      entitlementActive: false,
+    });
+    expect(subscriptionRepository.findOneBy).toHaveBeenCalledWith({
+      id: 'sub-1',
+      userId: 'user-a',
+    });
     expect(subscriptionRepository.findOne).not.toHaveBeenCalled();
     expect(subscriptionRepository.save).not.toHaveBeenCalled();
     expect(users.update).not.toHaveBeenCalled();

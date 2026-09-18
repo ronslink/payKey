@@ -5,6 +5,7 @@ import {
   PaymentStatus,
 } from '../subscriptions/entities/subscription-payment.entity';
 import {
+  Transaction,
   TransactionStatus,
   TransactionType,
 } from './entities/transaction.entity';
@@ -24,25 +25,35 @@ describe('production webhook enforcement', () => {
       decrement: jest.fn(),
       query: jest.fn(),
       findOne: jest.fn(),
+      findOneBy: jest.fn(),
     };
     const transaction = jest.fn((callback) => callback(manager));
     const verifyWebhookSignature = jest.fn(
       (signature) => signature === 'verified-signature',
     );
+    const findSubscriptionTransactions = jest.fn().mockResolvedValue([]);
+    const getPaymentStatus = jest.fn();
     const controller = new PaymentsController(
       { transaction } as never,
-      {} as never,
+      { find: findSubscriptionTransactions } as never,
       {} as never,
       {} as never,
       {} as never,
       {} as never,
       {} as never,
       { findOne: jest.fn().mockResolvedValue(null) } as never,
-      { verifyWebhookSignature } as never,
+      { verifyWebhookSignature, getPaymentStatus } as never,
       {} as never,
       {} as never,
     );
-    return { controller, manager, transaction, verifyWebhookSignature };
+    return {
+      controller,
+      manager,
+      transaction,
+      verifyWebhookSignature,
+      findSubscriptionTransactions,
+      getPaymentStatus,
+    };
   };
   const req = { headers: {}, rawBody: Buffer.from('{}') } as never;
 
@@ -165,27 +176,53 @@ describe('production webhook enforcement', () => {
   });
 
   it('records a late legacy payment without overwriting Stripe entitlement', async () => {
-    const { controller, manager } = makeController();
-    manager.find.mockResolvedValue([
-      {
-        status: TransactionStatus.PENDING,
-        providerRef: 'provider-id',
-        userId: 'owner',
-        amount: 100,
-        metadata: { subscriptionPaymentId: 'legacy-payment' },
-      },
-    ]);
+    const {
+      controller,
+      manager,
+      findSubscriptionTransactions,
+      getPaymentStatus,
+    } = makeController();
+    const storedTransaction = {
+      id: 'legacy-transaction',
+      type: TransactionType.SUBSCRIPTION,
+      status: TransactionStatus.PENDING,
+      provider: 'INTASEND',
+      providerRef: 'provider-id',
+      accountReference: 'legacy-reference',
+      userId: 'owner',
+      amount: 100,
+      currency: 'KES',
+      metadata: { subscriptionPaymentId: 'legacy-payment' },
+    };
+    const payment = {
+      id: 'legacy-payment',
+      userId: 'owner',
+      subscriptionId: 'subscription',
+      amount: 100,
+      currency: 'KES',
+      status: PaymentStatus.PENDING,
+    };
+    const subscription = {
+      id: 'subscription',
+      userId: 'owner',
+      stripeSubscriptionId: 'sub_existing',
+      status: 'ACTIVE',
+    };
+    findSubscriptionTransactions.mockResolvedValue([storedTransaction]);
     manager.findOne.mockImplementation((entity) =>
-      Promise.resolve(
-        entity === SubscriptionPayment
-          ? {
-              id: 'legacy-payment',
-              userId: 'owner',
-              subscriptionId: 'subscription',
-            }
-          : { id: 'subscription', stripeSubscriptionId: 'sub_existing' },
-      ),
+      Promise.resolve(entity === Transaction ? storedTransaction : payment),
     );
+    manager.findOneBy.mockResolvedValue(subscription);
+    manager.find.mockResolvedValue([subscription]);
+    getPaymentStatus.mockResolvedValue({
+      invoice: {
+        invoice_id: 'provider-id',
+        api_ref: 'legacy-reference',
+        state: 'COMPLETE',
+        currency: 'KES',
+        value: 100,
+      },
+    });
     await controller.handleIntaSendWebhook(req, 'verified-signature', {
       invoice_id: 'provider-id',
       state: 'COMPLETE',
@@ -194,16 +231,14 @@ describe('production webhook enforcement', () => {
       'SELECT pg_advisory_xact_lock(hashtext($1))',
       ['stripe-billing:owner'],
     );
-    expect(manager.update).toHaveBeenCalledWith(
+    expect(getPaymentStatus).toHaveBeenCalledWith('provider-id', 'checkout');
+    expect(manager.save).toHaveBeenCalledWith(
       SubscriptionPayment,
-      'legacy-payment',
-      expect.objectContaining({ status: PaymentStatus.COMPLETED }),
-    );
-    expect(manager.update).toHaveBeenCalledWith(
-      SubscriptionPayment,
-      'legacy-payment',
       expect.objectContaining({
+        id: 'legacy-payment',
+        status: PaymentStatus.COMPLETED,
         notes: expect.stringContaining('reconciliation required'),
+        metadata: expect.objectContaining({ entitlementApplied: false }),
       }),
     );
     expect(

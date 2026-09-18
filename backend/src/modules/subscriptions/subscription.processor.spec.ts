@@ -55,6 +55,15 @@ describe('SubscriptionProcessor', () => {
     sendNotification: jest.Mock;
   };
 
+  function mockUnmanagedSubscription(subscription: Subscription) {
+    // This fixture has one non-Stripe row. ID lookups find it; the separate
+    // account lookup for a non-null Stripe contract must return no match.
+    subscriptionRepository.findOne.mockImplementation(
+      ({ where }: { where: { id?: string } }) =>
+        Promise.resolve(where.id === subscription.id ? subscription : null),
+    );
+  }
+
   beforeEach(async () => {
     subscriptionRepository = {
       manager: {
@@ -197,7 +206,7 @@ describe('SubscriptionProcessor', () => {
       walletBalance: 999999,
     } as User;
 
-    subscriptionRepository.findOne.mockResolvedValue(subscription);
+    mockUnmanagedSubscription(subscription);
     userRepository.findOne.mockResolvedValue(user);
     deviceTokenRepository.findOne.mockResolvedValue({
       token: 'fcm-renewal-token',
@@ -284,7 +293,7 @@ describe('SubscriptionProcessor', () => {
       nextBillingDate: new Date('2026-05-14T00:00:00Z'),
     } as Subscription;
 
-    subscriptionRepository.findOne.mockResolvedValue(subscription);
+    mockUnmanagedSubscription(subscription);
     userRepository.findOne.mockResolvedValue({
       id: 'user-1',
       email: 'renewal@example.com',
@@ -331,7 +340,7 @@ describe('SubscriptionProcessor', () => {
       email: 'renewal@example.com',
     } as User;
 
-    subscriptionRepository.findOne.mockResolvedValue(subscription);
+    mockUnmanagedSubscription(subscription);
     userRepository.findOne.mockResolvedValue(user);
 
     const result = await processor.process({
@@ -387,7 +396,7 @@ describe('SubscriptionProcessor', () => {
       email: 'renewal@example.com',
     } as User;
 
-    subscriptionRepository.findOne.mockResolvedValue(subscription);
+    mockUnmanagedSubscription(subscription);
     userRepository.findOne.mockResolvedValue(user);
 
     const result = await processor.process({
