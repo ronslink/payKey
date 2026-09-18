@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, QueryRunner, Not, IsNull } from 'typeorm';
 import {
   DeletionRequest,
   DeletionStatus,
@@ -19,7 +19,11 @@ import { TimeEntry } from '../time-tracking/entities/time-entry.entity';
 import { LeaveRequest } from '../workers/entities/leave-request.entity';
 import { Property } from '../properties/entities/property.entity';
 import { Transaction } from '../payments/entities/transaction.entity';
-import { Subscription } from '../subscriptions/entities/subscription.entity';
+import {
+  Subscription,
+  SubscriptionStatus,
+} from '../subscriptions/entities/subscription.entity';
+import { Activity } from '../activities/entities/activity.entity';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -53,7 +57,10 @@ export class DataDeletionService {
   /**
    * Create a new deletion request
    */
-  async createRequest(dto: CreateDeletionRequestDto): Promise<DeletionRequest> {
+  async createRequest(
+    dto: CreateDeletionRequestDto,
+    authenticatedUserId?: string,
+  ): Promise<DeletionRequest> {
     // Check if user exists
     const user = await this.userRepository.findOne({
       where: { email: dto.email.toLowerCase() },
@@ -61,6 +68,17 @@ export class DataDeletionService {
 
     if (!user) {
       throw new UnauthorizedException('Invalid email or password.');
+    }
+
+    if (!user.passwordHash && authenticatedUserId !== user.id) {
+      throw new UnauthorizedException(
+        'Sign in to request deletion of this account.',
+      );
+    }
+    if (authenticatedUserId && authenticatedUserId !== user.id) {
+      throw new UnauthorizedException(
+        'Account does not belong to the signed-in user.',
+      );
     }
 
     if (user.passwordHash) {
@@ -76,6 +94,19 @@ export class DataDeletionService {
       if (!isPasswordValid) {
         throw new UnauthorizedException('Invalid email or password.');
       }
+    }
+
+    const recurringSubscription = await this.subscriptionRepository.findOne({
+      where: {
+        userId: user.id,
+        stripeSubscriptionId: Not(IsNull()),
+        status: Not(SubscriptionStatus.CANCELLED),
+      },
+    });
+    if (recurringSubscription) {
+      throw new BadRequestException(
+        'Cancel the recurring subscription before deleting this account.',
+      );
     }
 
     const request = this.deletionRequestRepository.create({
@@ -173,8 +204,28 @@ export class DataDeletionService {
    */
   private async deleteUserData(
     userId: string,
-    queryRunner: any,
+    queryRunner: QueryRunner,
   ): Promise<void> {
+    // Do not orphan a recurring contract that could keep charging after deletion.
+    await queryRunner.manager.query(
+      'SELECT pg_advisory_xact_lock(hashtext($1))',
+      [`stripe-billing:${userId}`],
+    );
+    const recurringSubscription = await queryRunner.manager.findOne(
+      Subscription,
+      {
+        where: {
+          userId,
+          stripeSubscriptionId: Not(IsNull()),
+          status: Not(SubscriptionStatus.CANCELLED),
+        },
+      },
+    );
+    if (recurringSubscription) {
+      throw new BadRequestException(
+        'Cancel the recurring subscription before deleting this account.',
+      );
+    }
     // Get all workers for this user
     const workers = await this.workerRepository.find({ where: { userId } });
     const workerIds = workers.map((w) => w.id);
@@ -212,6 +263,7 @@ export class DataDeletionService {
     await queryRunner.manager.delete(Subscription, { userId });
 
     // Finally, delete the user
+    await queryRunner.manager.delete(Activity, { userId });
     await queryRunner.manager.delete(User, { id: userId });
   }
 }

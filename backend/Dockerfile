@@ -1,5 +1,5 @@
 # Use Node.js LTS version
-FROM node:20-alpine
+FROM node:24-alpine AS build
 
 # Set working directory
 WORKDIR /app
@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install all dependencies (including dev dependencies for building)
-RUN npm ci
+RUN npm ci --ignore-scripts
 
 # Copy source code
 COPY . .
@@ -17,7 +17,19 @@ COPY . .
 RUN npm run build
 
 # Remove dev dependencies to reduce image size
-RUN npm prune --production && npm cache clean --force
+RUN npm prune --omit=dev --ignore-scripts && npm cache clean --force
+
+FROM node:24-alpine AS runtime
+WORKDIR /app
+ARG RELEASE_COMMIT=unknown
+LABEL org.opencontainers.image.revision=$RELEASE_COMMIT
+ENV NODE_ENV=production
+COPY --from=build /app/package*.json ./
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/dist ./dist
+COPY scripts/audit-production.cjs ./scripts/audit-production.cjs
+RUN mkdir -p /app/storage && chown node:node /app/storage
+USER node
 
 # Expose port
 EXPOSE 3000

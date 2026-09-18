@@ -88,6 +88,8 @@ export class ExportController {
     res.set({
       'Content-Type': 'application/octet-stream',
       'Content-Disposition': `attachment; filename="${exportRecord.fileName}"`,
+      'Cache-Control': 'private, no-store',
+      'X-Content-Type-Options': 'nosniff',
     });
 
     return new StreamableFile(fileBuffer);

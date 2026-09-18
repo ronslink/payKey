@@ -32,6 +32,7 @@ import { ExchangeRate } from './entities/exchange-rate.entity';
 import { HttpModule } from '@nestjs/axios';
 
 import { ExchangeRateService } from './exchange-rate.service';
+import { SystemConfigModule } from '../system-config/system-config.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { ExchangeRateService } from './exchange-rate.service';
     forwardRef(() => TaxPaymentsModule),
     HttpModule,
     ConfigModule,
+    SystemConfigModule,
     BullModule.registerQueue(
       { name: 'wallets' },
       { name: 'payroll-processing' }, // For scheduling status check jobs

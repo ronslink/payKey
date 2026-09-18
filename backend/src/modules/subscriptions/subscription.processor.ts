@@ -2,7 +2,7 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Not, Repository } from 'typeorm';
 import {
   Subscription,
   SubscriptionStatus,
@@ -61,6 +61,22 @@ export class SubscriptionProcessor extends WorkerHost {
   }
 
   private async handleRenewal(subscriptionId: string) {
+    const owner = await this.subscriptionRepository.findOne({
+      where: { id: subscriptionId },
+      select: { userId: true },
+    });
+    if (!owner) return;
+    return this.subscriptionRepository.manager.transaction(async (manager) => {
+      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+        `stripe-billing:${owner.userId}`,
+      ]);
+      // The queued job may predate Stripe activation. Hold the same account lock
+      // as provider settlement until renewal has finished, then release it.
+      return this.renewUnmanagedSubscription(subscriptionId);
+    });
+  }
+
+  private async renewUnmanagedSubscription(subscriptionId: string) {
     const subscription = await this.subscriptionRepository.findOne({
       where: { id: subscriptionId },
       relations: ['user'],
@@ -71,6 +87,25 @@ export class SubscriptionProcessor extends WorkerHost {
       return;
     }
 
+    if (subscription.stripeSubscriptionId) {
+      this.logger.log(
+        `Skipping provider-managed subscription ${subscriptionId}`,
+      );
+      return;
+    }
+
+    // Historical manual subscriptions may use a different row from the current
+    // Stripe contract. A queued job must not expire that account's paid access.
+    const stripeContract = await this.subscriptionRepository.findOne({
+      where: {
+        userId: subscription.userId,
+        stripeSubscriptionId: Not(IsNull()),
+        status: Not(SubscriptionStatus.CANCELLED),
+      },
+      select: { id: true },
+    });
+    if (stripeContract) return { status: 'provider_managed' };
+
     if (
       subscription.status !== SubscriptionStatus.ACTIVE &&
       subscription.status !== SubscriptionStatus.PAST_DUE
@@ -79,6 +114,15 @@ export class SubscriptionProcessor extends WorkerHost {
         `Subscription ${subscriptionId} is not active or past due. Skipping renewal.`,
       );
       return;
+    }
+
+    // A queued job may predate a successful manual renewal. Recheck under the
+    // account billing lock before changing or expiring the renewed entitlement.
+    if (
+      subscription.nextBillingDate &&
+      subscription.nextBillingDate > new Date()
+    ) {
+      return { status: 'not_due' };
     }
 
     // Check for pending tier change (e.g. scheduled downgrade)

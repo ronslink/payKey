@@ -10,6 +10,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Transaction } from '../payments/entities/transaction.entity';
+import { redactProviderSecrets } from '../../common/security/provider-secrets';
 
 @Controller('transactions')
 @UseGuards(JwtAuthGuard)
@@ -43,7 +44,9 @@ export class TransactionsController {
     const [transactions, total] = await queryBuilder.getManyAndCount();
 
     return {
-      data: transactions,
+      data: transactions.map((transaction) =>
+        redactProviderSecrets(transaction),
+      ),
       pagination: {
         page: pageNum,
         limit: limitNum,
@@ -66,6 +69,6 @@ export class TransactionsController {
       return { error: 'Transaction not found' };
     }
 
-    return transaction;
+    return redactProviderSecrets(transaction);
   }
 }

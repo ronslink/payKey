@@ -10,7 +10,7 @@
  * Or after building:
  *   node dist/src/scripts/seed-admin-user.js
  *
- * The admin email + password can also be overridden via env vars:
+ * The admin email + password must be provided via env vars:
  *   ADMIN_EMAIL=admin@yourcompany.com ADMIN_PASSWORD=SecurePass123! npx ts-node ...
  */
 
@@ -24,10 +24,22 @@ import * as path from 'path';
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 // ─── Config ──────────────────────────────────────────────────────────────────
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@paydome.io';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'PayDome@Admin2024!';
+function requireEnv(name: string): string {
+  const value = process.env[name]?.trim();
+  if (!value) {
+    throw new Error(`${name} must be provided in the environment`);
+  }
+  return value;
+}
+
+const ADMIN_EMAIL = requireEnv('ADMIN_EMAIL');
+const ADMIN_PASSWORD = requireEnv('ADMIN_PASSWORD');
 const ADMIN_FIRST_NAME = 'PayDome';
 const ADMIN_LAST_NAME = 'Admin';
+
+if (ADMIN_PASSWORD.length < 16) {
+  throw new Error('ADMIN_PASSWORD must be at least 16 characters long');
+}
 
 // ─── DB Connection (minimal — only needs the users table) ────────────────────
 const dbUrl = process.env.DATABASE_URL;
@@ -51,7 +63,7 @@ const dataSource = new DataSource(
         host: process.env.DB_HOST || 'localhost',
         port: parseInt(process.env.DB_PORT || '5432'),
         username: process.env.DB_USERNAME || process.env.DB_USER || 'paykey',
-        password: process.env.DB_PASSWORD || 'Tina76',
+        password: requireEnv('DB_PASSWORD'),
         database: process.env.DB_NAME || 'paykey',
         entities: [
           path.resolve(
@@ -102,15 +114,7 @@ async function seedAdminUser() {
     console.log(`✅ Admin user created: ${ADMIN_EMAIL}`);
   }
 
-  console.log('');
-  console.log('🎉 Admin credentials:');
-  console.log(`   Email:    ${ADMIN_EMAIL}`);
-  console.log(`   Password: ${ADMIN_PASSWORD}`);
-  console.log('');
-  console.log('⚠️  Change the password after first login!');
-  console.log(
-    '   (Or set ADMIN_EMAIL + ADMIN_PASSWORD env vars before running)',
-  );
+  console.log(`🎉 Admin account ready: ${ADMIN_EMAIL}`);
 
   await dataSource.destroy();
   process.exit(0);

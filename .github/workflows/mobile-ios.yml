@@ -1,15 +1,19 @@
-name: Mobile iOS CI
+name: iOS Production Compile Check
 
 # Manual trigger only - iOS builds are expensive and slow
 # Run manually from GitHub Actions tab when needed
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   ios-build:
-    name: Build iOS App
+    name: Compile production iOS app (unsigned)
     runs-on: macos-latest
     timeout-minutes: 60
+    environment: PROD
     defaults:
       run:
         working-directory: ./mobile
@@ -21,10 +25,27 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          flutter-version: '3.41.7'
           cache: true
 
       - name: Install Dependencies
         run: flutter pub get
+
+      - name: Restore production Firebase configuration
+        env:
+          GOOGLE_SERVICE_INFO_PLIST: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST }}
+        run: |
+          python3 - <<'PY'
+          import base64, os, plistlib
+          from pathlib import Path
+          value = os.environ.get('GOOGLE_SERVICE_INFO_PLIST')
+          if not value:
+              raise SystemExit('Missing GOOGLE_SERVICE_INFO_PLIST PROD secret (base64)')
+          data = base64.b64decode(''.join(value.split()), validate=True)
+          if plistlib.loads(data).get('BUNDLE_ID') != 'com.paykey.app':
+              raise SystemExit('Firebase configuration must match the production iOS bundle identifier')
+          Path('ios/Runner/GoogleService-Info.plist').write_bytes(data)
+          PY
 
       - name: Install Pods
         run: |
@@ -40,10 +61,25 @@ jobs:
       - name: Build iOS (No Codesign)
         # Building without codesign to check compilation.
         # For actual release, we need secrets/certs setup (Fastlane recommended).
-        run: flutter build ios --release --no-codesign
+        run: >-
+          flutter build ios --release --no-codesign
+          --dart-define=APP_ENV=prod
+          --dart-define=API_URL=https://api.paydome.co
+          --dart-define=INTASEND_IS_LIVE=true
+          --dart-define=ENABLE_EXTERNAL_SUBSCRIPTION_CHECKOUT=false
 
       - name: Upload App Bundle
         uses: actions/upload-artifact@v4
         with:
-          name: ios-app-bundle
+          name: ios-production-unsigned-compile-artifact
           path: mobile/build/ios/iphoneos/Runner.app
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Remove temporary Firebase configuration
+        if: always()
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          Path('ios/Runner/GoogleService-Info.plist').unlink(missing_ok=True)
+          PY

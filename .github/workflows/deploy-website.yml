@@ -1,50 +1,106 @@
-name: Deploy Website
+name: Release website after backend
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'website/**'
-  workflow_dispatch:
+  workflow_call:
+    inputs:
+      release_sha:
+        description: Exact commit already deployed by the backend release
+        required: true
+        type: string
+
+permissions:
+  contents: read
 
 jobs:
-  # 1. Build and Push Website Image (Docker Hub)
   build-push:
-    name: Build & Push Website
+    name: Verify and build website
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Validate release commit
+        env:
+          RELEASE_COMMIT: ${{ inputs.release_sha }}
+        run: |
+          [[ "$RELEASE_COMMIT" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$RELEASE_COMMIT" == "$GITHUB_SHA" ]]
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.release_sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+
+      - name: Install website dependencies
+        working-directory: ./website
+        run: npm ci --ignore-scripts
+
+      - name: Verify customer billing regressions
+        working-directory: ./website
+        run: npm test
+
+      - name: Check release shell syntax
+        run: bash -n deploy/deploy-website.sh
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push
-        uses: docker/build-push-action@v5
+      - name: Build and push exact tested commit
+        id: build
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
         with:
           context: ./website
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/paykey-website:latest
+          build-args: |
+            VITE_API_URL=https://api.paydome.co
+            VITE_ANDROID_APP_URL=${{ vars.VITE_ANDROID_APP_URL }}
+            VITE_IOS_APP_URL=${{ vars.VITE_IOS_APP_URL }}
+          labels: org.opencontainers.image.revision=${{ inputs.release_sha }}
+          tags: ${{ secrets.DOCKER_USERNAME }}/paykey-website:${{ inputs.release_sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # 2. Deploy to Production
   deploy:
-    name: Deploy to Production
+    name: Release website with rollback
     needs: build-push
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: PROD
+    env:
+      RELEASE_ID: ${{ inputs.release_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+      RELEASE_COMMIT: ${{ inputs.release_sha }}
+      WEBSITE_IMAGE: ${{ secrets.DOCKER_USERNAME }}/paykey-website@${{ needs.build-push.outputs.digest }}
 
     steps:
-      - name: Deploy to DigitalOcean
-        uses: appleboy/ssh-action@v1.0.0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.release_sha }}
+      - name: Stage exact release scripts
+        run: |
+          mkdir -p release/deploy
+          cp deploy/deploy-website.sh deploy/docker-compose.website.yml release/deploy/
+      - name: Upload staged website release
+        uses: appleboy/scp-action@917f8b81dfc1ccd331fef9e2d61bdc6c8be94634 # v0.1.7
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USERNAME }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          source: release/
+          strip_components: 1
+          target: /opt/paykey/releases/${{ env.RELEASE_ID }}/website
+      - name: Verify backend and release website
+        uses: appleboy/ssh-action@55dabf81b49d4120609345970c91507e2d734799 # v1.0.0
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
@@ -52,25 +108,9 @@ jobs:
           host: ${{ secrets.DO_HOST }}
           username: ${{ secrets.DO_USERNAME }}
           key: ${{ secrets.DO_SSH_KEY }}
-          envs: DOCKER_USERNAME,DOCKER_PASSWORD
-          timeout: 10m
+          envs: DOCKER_USERNAME,DOCKER_PASSWORD,RELEASE_ID,RELEASE_COMMIT,WEBSITE_IMAGE
+          command_timeout: 8m
           script: |
-            set -e
-            cd /opt/paykey
-
-            echo "🔐 Logging in to Docker Hub..."
-            echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-
-            echo "📥 Updating codebase..."
-            git fetch origin main
-            git reset --hard origin/main
-
-            echo "🌐 Pulling and deploying website..."
-            docker compose --env-file .env -f deploy/docker-compose.website.yml pull website
-            docker compose --env-file .env -f deploy/docker-compose.website.yml up -d --force-recreate website
-
-            echo "🧹 Cleaning up old images..."
-            docker image prune -f
-
-            echo "✅ Website Deployment Complete!"
-            docker ps -a --filter name=paydome_website_prod
+            set -eu
+            printf '%s' "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+            bash "/opt/paykey/releases/$RELEASE_ID/website/deploy/deploy-website.sh" "/opt/paykey/releases/$RELEASE_ID/website"

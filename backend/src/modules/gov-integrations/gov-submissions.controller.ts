@@ -14,7 +14,7 @@ import {
 import type { Response } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import * as fs from 'fs';
+import { resolvePrivateFile } from '../uploads/storage-paths';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import {
   GovSubmission,
@@ -126,11 +126,16 @@ export class GovSubmissionsController {
       throw new NotFoundException('Submission not found');
     }
 
-    if (!submission.filePath || !fs.existsSync(submission.filePath)) {
+    if (!submission.filePath) {
       throw new NotFoundException('File not found');
     }
 
-    res.download(submission.filePath, submission.fileName);
+    const filePath = await resolvePrivateFile(submission.filePath, 'gov-files');
+    res.set({
+      'Cache-Control': 'private, no-store',
+      'X-Content-Type-Options': 'nosniff',
+    });
+    res.download(filePath, submission.fileName);
   }
 
   /**

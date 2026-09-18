@@ -11,13 +11,8 @@ import { Repository } from 'typeorm';
 import {
   Subscription,
   SubscriptionStatus,
-  SubscriptionTier,
 } from '../subscriptions/entities/subscription.entity';
-import {
-  SubscriptionPayment,
-  PaymentStatus,
-  PaymentMethod,
-} from '../subscriptions/entities/subscription-payment.entity';
+import { SubscriptionPayment } from '../subscriptions/entities/subscription-payment.entity';
 import { User } from '../users/entities/user.entity';
 import {
   Transaction,
@@ -28,6 +23,8 @@ import { ExchangeRateService } from './exchange-rate.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { DeviceToken } from '../notifications/entities/device-token.entity';
 import { SystemConfigService } from '../system-config/system-config.service';
+import { StripeSubscriptionBilling } from './stripe-subscription-billing';
+import { randomUUID } from 'node:crypto';
 
 @Injectable()
 export class StripeService {
@@ -51,6 +48,22 @@ export class StripeService {
     private readonly systemConfigService: SystemConfigService,
   ) {
     const secretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
+    if (this.configService.get('NODE_ENV') === 'production') {
+      if (!secretKey || !/^(sk|rk)_live_/.test(secretKey)) {
+        throw new Error(
+          'Production paid subscriptions require a live Stripe API key',
+        );
+      }
+      if (
+        !this.configService
+          .get<string>('STRIPE_WEBHOOK_SECRET')
+          ?.startsWith('whsec_')
+      ) {
+        throw new Error(
+          'Production paid subscriptions require a Stripe webhook signing secret',
+        );
+      }
+    }
     if (!secretKey) {
       this.logger.warn('Stripe secret key not configured');
     } else {
@@ -103,94 +116,115 @@ export class StripeService {
     customerEmail: string,
     customerName?: string,
     billingPeriod: 'monthly' | 'yearly' = 'monthly',
-    successUrl?: string,
-    cancelUrl?: string,
+    _successUrl?: string,
+    _cancelUrl?: string,
   ): Promise<{ sessionId: string; url: string }> {
-    const stripe = this.ensureStripeConfigured();
+    // Retain legacy positional arguments while using only the server return URL.
+    void _successUrl;
+    void _cancelUrl;
+    return this.billing().createCheckout(
+      userId,
+      planTier,
+      customerEmail,
+      customerName,
+      billingPeriod,
+    );
+  }
 
-    const normalizedTier = planTier.toUpperCase();
-    if (!['FREE', 'BASIC', 'GOLD', 'PLATINUM'].includes(normalizedTier)) {
-      throw new BadRequestException('Invalid subscription plan');
-    }
+  private billing(): StripeSubscriptionBilling {
+    return new StripeSubscriptionBilling(
+      this.ensureStripeConfigured(),
+      this.subscriptionRepository,
+      this.paymentRepository,
+      this.configService,
+    );
+  }
 
-    try {
-      // Create or get customer
-      const customers = await stripe.customers.list({
-        email: customerEmail,
-        limit: 1,
-      });
-      let customer = customers.data[0];
+  getCheckoutStatus(userId: string, sessionId: string) {
+    return this.billing().checkoutStatus(userId, sessionId);
+  }
 
-      if (!customer) {
-        customer = await this.createCustomer(customerEmail, customerName);
-      }
+  assertNoPayableSubscriptionCheckout(
+    userId: string,
+    email: string,
+    storedCustomerId?: string,
+  ) {
+    return this.billing().assertNoPayableCheckout(
+      userId,
+      email,
+      storedCustomerId,
+    );
+  }
 
-      const frontendUrl =
-        (await this.systemConfigService.get('FRONTEND_URL')) ||
-        this.configService.get<string>('FRONTEND_URL');
-
-      if (!frontendUrl) {
-        throw new BadRequestException(
-          'System configuration error: FRONTEND_URL not set',
-        );
-      }
-
-      const session = await stripe.checkout.sessions.create({
-        customer: customer.id,
-        mode: 'subscription',
-        payment_method_types: ['card'],
-        line_items: [
-          {
-            price_data: {
-              currency: 'usd',
-              product_data: {
-                name: `${planTier.toUpperCase()} Plan (${billingPeriod}) - PayKey Payroll`,
-                description: `${billingPeriod === 'monthly' ? 'Monthly' : 'Yearly'} subscription for ${planTier} plan`,
-              },
-              recurring: {
-                interval: billingPeriod === 'yearly' ? 'year' : 'month',
-              },
-              unit_amount: this.getPlanPrice(normalizedTier, billingPeriod), // Convert to cents
-            },
-            quantity: 1,
-          },
-        ],
-        metadata: {
-          userId,
-          planTier: normalizedTier,
-          billingPeriod,
-          source: 'PayKey',
-        },
-        success_url:
-          successUrl ||
-          `${frontendUrl}/payments/subscriptions/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: cancelUrl || `${frontendUrl}/payments/subscriptions/cancel`,
-        allow_promotion_codes: true,
-      });
-
-      return {
-        sessionId: session.id,
-        url: session.url || '',
-      };
-    } catch (error) {
-      this.logger.error('Failed to create checkout session', error);
-      throw new BadRequestException('Failed to create checkout session');
-    }
+  billingReturnUrl(result: 'success' | 'cancel', sessionId?: string) {
+    return this.billing().returnUrl(result, sessionId);
   }
 
   /**
-   * Create Payment Intent for Wallet Top Up (SEPA/Card)
+   * Create an unconfirmed card PaymentIntent for explicit KES or EUR funding.
    */
   async createPaymentIntent(
     userId: string,
     amount: number,
-    currency: string = 'eur',
-    paymentMethodTypes: string[] = ['card', 'sepa_debit'],
-  ): Promise<{ clientSecret: string; transactionId: string }> {
+    currency: string,
+    paymentMethodTypes: string[],
+  ): Promise<{
+    clientSecret: string;
+    transactionId: string;
+    publishableKey: string;
+  }> {
+    // Card receipts do not fund the IntaSend wallet used for payroll payouts.
+    // Enable new charges only after that funding path is operational; keep
+    // subscription billing and settlement of existing payments independent.
+    if (
+      this.configService.get<string>('STRIPE_WALLET_FUNDING_ENABLED') !== 'true'
+    ) {
+      throw new BadRequestException(
+        'Card wallet top-ups are currently unavailable. Please use M-Pesa.',
+      );
+    }
     const stripe = this.ensureStripeConfigured();
+    const publishableKey =
+      this.configService.get<string>('STRIPE_PUBLISHABLE_KEY') || '';
+    const secretKey = this.configService.get<string>('STRIPE_SECRET_KEY') || '';
+    const keyMode = /^(?:sk|rk)_(live|test)_/.exec(secretKey)?.[1];
+    if (
+      !keyMode ||
+      !/^pk_(live|test)_[A-Za-z0-9]+$/.test(publishableKey) ||
+      !publishableKey.startsWith(`pk_${keyMode}_`)
+    ) {
+      throw new BadRequestException(
+        'Stripe publishable key is missing or uses the wrong mode',
+      );
+    }
+    const amountInCents = Math.round(amount * 100);
+    if (
+      !['KES', 'EUR'].includes(currency) ||
+      !Number.isFinite(amount) ||
+      amount < (currency === 'EUR' ? 0.5 : 0.01) ||
+      !Number.isSafeInteger(amountInCents) ||
+      Math.abs(amount * 100 - amountInCents) > 0.000001 ||
+      !Array.isArray(paymentMethodTypes) ||
+      paymentMethodTypes.length !== 1 ||
+      paymentMethodTypes[0] !== 'card'
+    ) {
+      throw new BadRequestException(
+        'Card funding requires an explicit KES or EUR amount and card payment method',
+      );
+    }
+    // Refuse a new charge when we cannot convert its proceeds into the KES wallet.
+    // Settlement checks the rate again because delayed payments can clear later.
+    if (currency === 'EUR') {
+      const rate = await this.exchangeRateService.getLatestRate('EUR', 'KES');
+      if (!Number.isFinite(rate) || rate <= 0) {
+        throw new BadRequestException('Wallet exchange rate is unavailable');
+      }
+    }
 
-    // Create pending transaction
+    // Allocate the reference without writing. Stripe enforces its actual account
+    // and currency minimums before we persist a pending transaction.
     const transaction = this.transactionRepository.create({
+      id: randomUUID(),
       userId,
       amount,
       currency: currency.toUpperCase(),
@@ -202,13 +236,13 @@ export class StripeService {
         initiatedAt: new Date().toISOString(),
       },
     });
-    await this.transactionRepository.save(transaction);
-
-    // Create PaymentIntent
+    // This cannot charge: the client only receives its confirmation secret after
+    // the matching transaction and provider reference are durably saved below.
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // Convert to cents
+      amount: amountInCents,
       currency: currency.toLowerCase(),
       payment_method_types: paymentMethodTypes,
+      confirm: false,
       metadata: {
         userId,
         transactionId: transaction.id,
@@ -216,154 +250,18 @@ export class StripeService {
       },
     });
 
-    // Update transaction with PI ID
-    transaction.providerRef = paymentIntent.id;
-    await this.transactionRepository.save(transaction);
-
     if (!paymentIntent.client_secret) {
       throw new BadRequestException('Failed to generate client secret');
     }
 
+    transaction.providerRef = paymentIntent.id;
+    await this.transactionRepository.save(transaction);
+
     return {
       clientSecret: paymentIntent.client_secret,
       transactionId: transaction.id,
+      publishableKey,
     };
-  }
-
-  private getPlanPrice(
-    planTier: string,
-    billingPeriod: 'monthly' | 'yearly' = 'monthly',
-  ): number {
-    const monthlyPrices: Record<string, number> = {
-      FREE: 0,
-      BASIC: 999, // $9.99
-      GOLD: 2999, // $29.99
-      PLATINUM: 4999, // $49.99
-    };
-
-    // Yearly prices (approx 10x monthly)
-    const yearlyPrices: Record<string, number> = {
-      FREE: 0,
-      BASIC: 9999, // $99.99
-      GOLD: 29999, // $299.99
-      PLATINUM: 49999, // $499.99
-    };
-
-    return billingPeriod === 'yearly'
-      ? yearlyPrices[planTier] || yearlyPrices.BASIC
-      : monthlyPrices[planTier] || monthlyPrices.BASIC;
-  }
-
-  /**
-   * Upgrade an existing Stripe subscription with proration
-   * Stripe automatically prorates the charge when switching plans
-   */
-  async upgradeSubscription(
-    userId: string,
-    newPlanTier: string,
-  ): Promise<{
-    success: boolean;
-    message: string;
-    subscriptionId?: string;
-    prorationAmount?: number;
-  }> {
-    const stripe = this.ensureStripeConfigured();
-    const normalizedTier = newPlanTier.toUpperCase();
-
-    // Get current subscription
-    const subscription = await this.subscriptionRepository.findOne({
-      where: { userId, status: SubscriptionStatus.ACTIVE },
-    });
-
-    if (!subscription || !subscription.stripeSubscriptionId) {
-      return {
-        success: false,
-        message:
-          'No active Stripe subscription found. Please use checkout instead.',
-      };
-    }
-
-    try {
-      // Fetch the Stripe subscription
-      const stripeSubscription = await stripe.subscriptions.retrieve(
-        subscription.stripeSubscriptionId,
-      );
-
-      if (!stripeSubscription || stripeSubscription.status !== 'active') {
-        return {
-          success: false,
-          message: 'Stripe subscription is not active',
-        };
-      }
-
-      // Get the current subscription item
-      const subscriptionItem = stripeSubscription.items.data[0];
-      if (!subscriptionItem) {
-        return {
-          success: false,
-          message: 'Could not find subscription item to upgrade',
-        };
-      }
-
-      // Create a new price for the upgraded plan
-      const newPrice = await stripe.prices.create({
-        currency: 'usd',
-        product_data: {
-          name: `${normalizedTier} Plan - PayKey Payroll`,
-        },
-        recurring: { interval: 'month' },
-        unit_amount: this.getPlanPrice(normalizedTier),
-      });
-
-      // Update the subscription with proration
-      const updatedStripeSubscription = await stripe.subscriptions.update(
-        subscription.stripeSubscriptionId,
-        {
-          items: [
-            {
-              id: subscriptionItem.id,
-              price: newPrice.id,
-            },
-          ],
-          proration_behavior: 'create_prorations',
-          metadata: {
-            planTier: normalizedTier,
-            upgradedAt: new Date().toISOString(),
-          },
-        },
-      );
-
-      // Get the latest invoice to see proration amount
-      const invoices = await stripe.invoices.list({
-        subscription: subscription.stripeSubscriptionId,
-        limit: 1,
-      });
-      const latestInvoice = invoices.data[0];
-
-      // Update local subscription record
-      subscription.tier = normalizedTier as SubscriptionTier;
-      subscription.updatedAt = new Date();
-      await this.subscriptionRepository.save(subscription);
-
-      this.logger.log(
-        `Upgraded Stripe subscription for user ${userId} to ${normalizedTier}`,
-      );
-
-      return {
-        success: true,
-        message: `Successfully upgraded to ${normalizedTier} plan. Proration applied.`,
-        subscriptionId: updatedStripeSubscription.id,
-        prorationAmount: latestInvoice
-          ? (latestInvoice.amount_due || 0) / 100
-          : undefined,
-      };
-    } catch (error) {
-      this.logger.error('Failed to upgrade Stripe subscription', error);
-      return {
-        success: false,
-        message: `Failed to upgrade: ${error.message}`,
-      };
-    }
   }
 
   /**
@@ -376,6 +274,7 @@ export class StripeService {
     try {
       switch (event.type) {
         case 'checkout.session.completed':
+        case 'checkout.session.async_payment_succeeded':
           await this.handleCheckoutCompleted(event.data.object);
           break;
         case 'payment_intent.succeeded':
@@ -409,256 +308,27 @@ export class StripeService {
   private async handleCheckoutCompleted(
     session: Stripe.Checkout.Session,
   ): Promise<void> {
-    const metadata = session.metadata || {};
-    const userId = metadata.userId;
-    const planTier = metadata.planTier;
-
-    if (!userId || !planTier) {
-      this.logger.error('Missing metadata in checkout session');
-      return;
-    }
-
-    // Update or create subscription
-    let subscription = await this.subscriptionRepository.findOne({
-      where: { userId },
-    });
-
-    const billingPeriod = metadata.billingPeriod || 'monthly';
-    const amountUSD = (session.amount_total || 0) / 100;
-    const now = new Date();
-    const nextBilling = new Date(now);
-    if (billingPeriod === 'yearly') {
-      nextBilling.setFullYear(nextBilling.getFullYear() + 1);
-    } else {
-      nextBilling.setMonth(nextBilling.getMonth() + 1);
-    }
-
-    if (!subscription) {
-      subscription = this.subscriptionRepository.create({
-        userId,
-        tier: planTier as SubscriptionTier,
-        status: SubscriptionStatus.ACTIVE,
-        startDate: now,
-        billingPeriod,
-        amount: amountUSD,
-        currency: (session.currency || 'usd').toUpperCase(),
-        nextBillingDate: nextBilling,
-        stripeSubscriptionId: session.subscription as string,
-      });
-    } else {
-      subscription.tier = planTier as SubscriptionTier;
-      subscription.status = SubscriptionStatus.ACTIVE;
-      subscription.startDate = now;
-      subscription.billingPeriod = billingPeriod;
-      subscription.amount = amountUSD;
-      subscription.currency = (session.currency || 'usd').toUpperCase();
-      subscription.nextBillingDate = nextBilling;
-      subscription.stripeSubscriptionId = session.subscription as string;
-    }
-
-    await this.subscriptionRepository.save(subscription);
-
-    // Sync tier to User entity
-    // We need to inject UsersRepository or use QueryBuilder to update the user table directly
-    await this.subscriptionRepository.manager.update(
-      'users',
-      { id: userId },
-      { tier: planTier },
-    );
-
-    // Create payment record for this checkout
-    if (amountUSD > 0) {
-      const payment = this.paymentRepository.create({
-        subscriptionId: subscription.id,
-        userId,
-        amount: amountUSD,
-        currency: (session.currency || 'usd').toUpperCase(),
-        status: PaymentStatus.COMPLETED,
-        paymentMethod: PaymentMethod.STRIPE,
-        billingPeriod,
-        periodStart: now,
-        periodEnd: nextBilling,
-        dueDate: now,
-        paidDate: now,
-        invoiceNumber: `stripe_checkout_${session.id}`,
-        paymentProvider: 'stripe',
-        transactionId: (session.payment_intent as string) || session.id,
-        metadata: {
-          stripeSessionId: session.id,
-          stripeSubscriptionId: session.subscription,
-          planTier,
-        },
-      });
-      await this.paymentRepository.save(payment);
-    }
-
-    this.logger.log(
-      `Subscription activated for user ${userId} with plan ${planTier}`,
-    );
+    await this.billing().checkoutCompleted(session.id);
   }
 
-  /**
-   * Handle successful payment (invoice.payment_succeeded)
-   * Fires for every renewal AND for the initial checkout invoice.
-   * We skip if a record already exists for the same payment_intent to avoid
-   * duplicating the initial payment that handleCheckoutCompleted already recorded.
-   */
   private async handlePaymentSucceeded(invoice: Stripe.Invoice): Promise<void> {
-    if (!invoice.subscription) return;
-
-    const paymentIntentId = invoice.payment_intent as string;
-
-    // Find subscription by Stripe ID
-    const subscription = await this.subscriptionRepository.findOne({
-      where: { stripeSubscriptionId: invoice.subscription as string },
-    });
-
-    if (!subscription) {
-      this.logger.error(
-        `Subscription not found for Stripe ID: ${invoice.subscription}`,
-      );
-      return;
-    }
-
-    // Deduplicate: skip if we already recorded a payment for this payment_intent
-    // (happens when checkout.session.completed already created the first-month record)
-    if (paymentIntentId) {
-      const existing = await this.paymentRepository.findOne({
-        where: { transactionId: paymentIntentId },
-      });
-      if (existing) {
-        this.logger.log(
-          `Payment for intent ${paymentIntentId} already recorded (id: ${existing.id}), skipping duplicate`,
-        );
-        return;
-      }
-    }
-
-    // Create payment record
-    const payment = this.paymentRepository.create({
-      subscriptionId: subscription.id,
-      userId: subscription.userId,
-      amount: (invoice.amount_paid || 0) / 100, // Convert from cents
-      currency: invoice.currency.toUpperCase(),
-      status: PaymentStatus.COMPLETED,
-      paymentMethod: PaymentMethod.STRIPE,
-      billingPeriod: subscription.billingPeriod || 'monthly',
-      periodStart: new Date(invoice.period_start * 1000),
-      periodEnd: new Date(invoice.period_end * 1000),
-      dueDate: new Date((invoice.due_date || Date.now()) * 1000),
-      paidDate: new Date(),
-      invoiceNumber: invoice.number || `inv_${invoice.id}`,
-      paymentProvider: 'stripe',
-      transactionId: paymentIntentId,
-      metadata: {
-        stripeInvoiceId: invoice.id,
-        stripeSubscriptionId: invoice.subscription,
-      },
-    });
-
-    await this.paymentRepository.save(payment);
-
-    // Update nextBillingDate on the subscription from the invoice period end
-    subscription.nextBillingDate = new Date(invoice.period_end * 1000);
-    await this.subscriptionRepository.save(subscription);
-
-    this.logger.log(`Payment recorded for subscription ${subscription.id}`);
+    await this.billing().invoicePaid(invoice.id);
   }
 
-  /**
-   * Handle failed payment
-   */
   private async handlePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
-    if (!invoice.subscription) return;
-
-    const subscription = await this.subscriptionRepository.findOne({
-      where: { stripeSubscriptionId: invoice.subscription as string },
-    });
-
-    if (subscription) {
-      // Create failed payment record
-      const payment = this.paymentRepository.create({
-        subscriptionId: subscription.id,
-        userId: subscription.userId,
-        amount: (invoice.amount_due || 0) / 100,
-        currency: invoice.currency.toUpperCase(),
-        status: PaymentStatus.FAILED,
-        paymentMethod: PaymentMethod.STRIPE,
-        billingPeriod: 'monthly',
-        periodStart: new Date(invoice.period_start * 1000),
-        periodEnd: new Date(invoice.period_end * 1000),
-        dueDate: new Date((invoice.due_date || Date.now()) * 1000),
-        invoiceNumber: invoice.number || `inv_${invoice.id}`,
-        paymentProvider: 'stripe',
-        transactionId: invoice.payment_intent as string,
-        metadata: {
-          stripeInvoiceId: invoice.id,
-          error: invoice.last_finalization_error?.message,
-        },
-      });
-
-      await this.paymentRepository.save(payment);
-
-      // Update subscription status if needed
-      if (invoice.attempt_count > 3) {
-        subscription.status = SubscriptionStatus.PAST_DUE;
-        await this.subscriptionRepository.save(subscription);
-      }
-    }
+    await this.billing().invoiceFailed(invoice.id);
   }
 
-  /**
-   * Handle subscription cancellation
-   */
   private async handleSubscriptionCancelled(
-    stripeSubscription: Stripe.Subscription,
+    subscription: Stripe.Subscription,
   ): Promise<void> {
-    const subscription = await this.subscriptionRepository.findOne({
-      where: { stripeSubscriptionId: stripeSubscription.id },
-    });
-
-    if (subscription) {
-      subscription.status = SubscriptionStatus.CANCELLED;
-      subscription.endDate = new Date();
-      await this.subscriptionRepository.save(subscription);
-      this.logger.log(`Subscription cancelled for user ${subscription.userId}`);
-    }
+    await this.billing().subscriptionChanged(subscription.id);
   }
 
-  /**
-   * Handle subscription updates
-   */
   private async handleSubscriptionUpdated(
-    stripeSubscription: Stripe.Subscription,
+    subscription: Stripe.Subscription,
   ): Promise<void> {
-    const subscription = await this.subscriptionRepository.findOne({
-      where: { stripeSubscriptionId: stripeSubscription.id },
-    });
-
-    if (subscription) {
-      // Update status based on Stripe subscription status
-      switch (stripeSubscription.status) {
-        case 'active':
-          subscription.status = SubscriptionStatus.ACTIVE;
-          break;
-        case 'past_due':
-          subscription.status = SubscriptionStatus.PAST_DUE;
-          break;
-        case 'canceled':
-          subscription.status = SubscriptionStatus.CANCELLED;
-          subscription.endDate = new Date();
-          break;
-        case 'unpaid':
-          subscription.status = SubscriptionStatus.PAST_DUE;
-          break;
-      }
-
-      subscription.autoRenewal = !stripeSubscription.cancel_at_period_end;
-      subscription.endDate = stripeSubscription.cancel_at_period_end
-        ? new Date(stripeSubscription.current_period_end * 1000)
-        : subscription.endDate;
-      await this.subscriptionRepository.save(subscription);
-    }
+    await this.billing().subscriptionChanged(subscription.id);
   }
 
   async setCancelAtPeriodEnd(
@@ -708,64 +378,14 @@ export class StripeService {
     try {
       await stripe.subscriptions.cancel(subscription.stripeSubscriptionId);
 
-      subscription.status = SubscriptionStatus.CANCELLED;
-      subscription.endDate = new Date();
-      await this.subscriptionRepository.save(subscription);
+      await this.billing().subscriptionChanged(
+        subscription.stripeSubscriptionId,
+      );
 
       this.logger.log(`Subscription cancelled for user ${userId}`);
     } catch (error) {
       this.logger.error('Failed to cancel subscription', error);
       throw new BadRequestException('Failed to cancel subscription');
-    }
-  }
-
-  /**
-   * Update subscription
-   */
-  async updateSubscription(userId: string, newPlanTier: string): Promise<void> {
-    const stripe = this.ensureStripeConfigured();
-
-    const subscription = await this.subscriptionRepository.findOne({
-      where: { userId, status: SubscriptionStatus.ACTIVE },
-    });
-
-    if (!subscription || !subscription.stripeSubscriptionId) {
-      throw new NotFoundException('Active subscription not found');
-    }
-
-    const normalizedTier = newPlanTier.toUpperCase();
-    if (!['FREE', 'BASIC', 'GOLD', 'PLATINUM'].includes(normalizedTier)) {
-      throw new BadRequestException('Invalid subscription plan');
-    }
-
-    try {
-      // In a real implementation, you'd need to get the current subscription items
-      // and update them with the new price. For simplicity, we'll cancel and create new
-
-      // Cancel current subscription
-      await stripe.subscriptions.cancel(subscription.stripeSubscriptionId);
-
-      // Create new subscription with updated plan
-      // This is simplified - in production, you'd use subscription modification
-      subscription.tier = normalizedTier as SubscriptionTier;
-      subscription.status = SubscriptionStatus.ACTIVE;
-      subscription.startDate = new Date();
-
-      await this.subscriptionRepository.save(subscription);
-
-      // Sync tier to User entity
-      await this.subscriptionRepository.manager.update(
-        'users',
-        { id: userId },
-        { tier: normalizedTier },
-      );
-
-      this.logger.log(
-        `Subscription updated for user ${userId} to ${normalizedTier}`,
-      );
-    } catch (error) {
-      this.logger.error('Failed to update subscription', error);
-      throw new BadRequestException('Failed to update subscription');
     }
   }
 
@@ -804,13 +424,18 @@ export class StripeService {
   private async handlePaymentIntentSucceeded(
     paymentIntent: Stripe.PaymentIntent,
   ): Promise<void> {
-    const { userId, transactionId, type } = paymentIntent.metadata;
+    const { transactionId, type } = paymentIntent.metadata;
 
     if (type !== 'WALLET_TOPUP' || !transactionId) {
       return; // Ignore non-wallet payments
     }
 
-    const amountToCredit = await this.transactionRepository.manager.transaction(
+    // Read the current provider state; a signed event can be stale or replayed.
+    const settledIntent =
+      await this.ensureStripeConfigured().paymentIntents.retrieve(
+        paymentIntent.id,
+      );
+    const credit = await this.transactionRepository.manager.transaction(
       async (manager) => {
         const transaction = await manager.findOne(Transaction, {
           where: { id: transactionId },
@@ -823,72 +448,89 @@ export class StripeService {
           return undefined;
         }
 
+        const sourceCurrency = transaction.currency.toUpperCase();
+        const sourceAmount = Number(transaction.amount);
+        const expectedCents = Math.round(sourceAmount * 100);
+        if (
+          transaction.provider !== 'STRIPE' ||
+          transaction.type !== TransactionType.DEPOSIT ||
+          transaction.providerRef !== settledIntent.id ||
+          settledIntent.id !== paymentIntent.id ||
+          settledIntent.status !== 'succeeded' ||
+          settledIntent.metadata.type !== 'WALLET_TOPUP' ||
+          settledIntent.metadata.transactionId !== transaction.id ||
+          settledIntent.metadata.userId !== transaction.userId ||
+          settledIntent.currency.toUpperCase() !== sourceCurrency ||
+          !['EUR', 'USD', 'KES'].includes(sourceCurrency) ||
+          !Number.isFinite(sourceAmount) ||
+          !Number.isSafeInteger(expectedCents) ||
+          expectedCents <= 0 ||
+          settledIntent.amount !== expectedCents ||
+          settledIntent.amount_received !== expectedCents
+        ) {
+          throw new BadRequestException(
+            'Stripe payment does not match the wallet transaction',
+          );
+        }
+
         if (transaction.status === TransactionStatus.SUCCESS) {
           this.logger.log(`Transaction ${transactionId} already processed`);
           return undefined;
         }
 
-        // Update Transaction
-        transaction.status = TransactionStatus.SUCCESS;
-        transaction.providerRef = paymentIntent.id;
-        // transaction.updatedAt = new Date(); // Not in entity
-        await manager.save(Transaction, transaction);
-
-        // Credit Wallet
-        // Stripe charges are in cents, so we use amount/100
-        const amountReceivedEur = paymentIntent.amount_received / 100;
-
-        let amount = amountReceivedEur;
-        let appliedRate = 1;
-        let targetCurrency = 'EUR';
-
-        // FX Conversion (EUR -> KES)
-        if (transaction.currency !== 'KES' && transaction.currency !== 'USD') {
-          targetCurrency = 'KES';
-          try {
-            // Fetch latest periodic rate (Cached/DB)
-            appliedRate = await this.exchangeRateService.getLatestRate(
-              'EUR',
-              'KES',
-            );
-            amount = this.roundCurrency(amountReceivedEur * appliedRate);
-          } catch (e) {
-            this.logger.error(
-              'FX Conversion Failed. Using 1:1 Fallback (Manual Review Required)',
-              e,
-            );
-            // Fallback is 1:1, effectively freezing real value transfer until resolved
-          }
+        const appliedRate =
+          sourceCurrency === 'KES'
+            ? 1
+            : await this.exchangeRateService.getLatestRate(
+                sourceCurrency,
+                'KES',
+              );
+        if (!Number.isFinite(appliedRate) || appliedRate <= 0) {
+          throw new BadRequestException('Wallet exchange rate is unavailable');
         }
+        const amount = this.roundCurrency(sourceAmount * appliedRate);
+        if (!Number.isFinite(amount) || amount <= 0) {
+          throw new BadRequestException('Wallet credit amount is invalid');
+        }
+
+        transaction.status = TransactionStatus.SUCCESS;
 
         // Update Transaction Metadata
         transaction.metadata = {
-          ...transaction.metadata,
+          ...(transaction.metadata as Record<string, unknown> | null),
           fxApplied: {
-            sourceAmount: amountReceivedEur,
-            sourceCurrency: 'EUR',
-            targetCurrency,
+            sourceAmount,
+            sourceCurrency,
+            targetCurrency: 'KES',
             rate: appliedRate,
             creditedAmount: amount,
           },
         };
         await manager.save(Transaction, transaction);
 
-        await manager.increment(User, { id: userId }, 'walletBalance', amount);
+        const updated = await manager.increment(
+          User,
+          { id: transaction.userId },
+          'walletBalance',
+          amount,
+        );
+        if (updated.affected !== 1) {
+          throw new NotFoundException('Wallet owner was not found');
+        }
 
         this.logger.log(
-          `Wallet credited for user ${userId}: ${amount} KES (Rate: ${appliedRate}, Source: ${amountReceivedEur} EUR)`,
+          `Wallet credited for user ${transaction.userId}: ${amount} KES (Rate: ${appliedRate}, Source: ${sourceAmount} ${sourceCurrency})`,
         );
 
-        return amount;
+        return { amount, userId: transaction.userId };
       },
     );
 
-    if (amountToCredit !== undefined) {
+    if (credit !== undefined) {
       // Send Push Notification
       try {
         const deviceToken = await this.deviceTokenRepository.findOne({
-          where: { userId, isActive: true },
+          where: { userId: credit.userId, isActive: true },
           order: { lastUsedAt: 'DESC' },
         });
 
@@ -896,7 +538,7 @@ export class StripeService {
           await this.notificationsService.sendPaymentStatusNotification(
             deviceToken.token,
             'Wallet', // "Worker Name" context used as "Wallet" for topups
-            amountToCredit,
+            credit.amount,
             'SUCCESS',
             'TOPUP',
           );

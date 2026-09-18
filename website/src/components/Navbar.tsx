@@ -9,6 +9,7 @@ const navLinks = [
   { href: '/pricing', label: 'Pricing' },
   { href: '/about', label: 'About' },
   { href: '/help', label: 'Help' },
+  { href: '/account?mode=login', label: 'Account' },
 ]
 
 export default function Navbar() {
@@ -57,15 +58,18 @@ export default function Navbar() {
               Contact
             </Link>
             <Button
+              asChild
               size="sm"
               className="bg-emerald-500 hover:bg-emerald-600 text-white font-medium shadow-lg shadow-emerald-500/20 transition-all"
             >
-              Start Free Trial
+              <Link to="/get-started">Get started</Link>
             </Button>
           </div>
 
           {/* Mobile Toggle */}
           <button
+            aria-label={mobileOpen ? 'Close navigation' : 'Open navigation'}
+            aria-expanded={mobileOpen}
             className="md:hidden p-2 rounded-md text-slate-300 hover:text-white hover:bg-white/5"
             onClick={() => setMobileOpen(!mobileOpen)}
           >
@@ -103,8 +107,8 @@ export default function Navbar() {
               >
                 Contact
               </Link>
-              <Button className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-medium">
-                Start Free Trial
+              <Button asChild className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-medium">
+                <Link to="/get-started" onClick={() => setMobileOpen(false)}>Get started</Link>
               </Button>
             </div>
           </div>

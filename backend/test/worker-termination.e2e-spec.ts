@@ -4,6 +4,8 @@ import request from 'supertest';
 import { AppModule } from './../src/app.module';
 import { TestHelpers, createTestHelpers } from './helpers/test-helpers';
 import { generateTestPhone } from './test-utils';
+import { getQueueToken } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import {
   WorkerResponse,
   TerminationHistoryResponse,
@@ -70,8 +72,7 @@ describe('Worker Termination E2E', () => {
         phoneNumber: workerPhone,
         salaryGross: 60000,
         startDate: '2024-01-01',
-        paymentMethod: 'MPESA',
-        mpesaNumber: workerPhone,
+        paymentMethod: 'CASH',
       })
       .expect(201);
 
@@ -173,6 +174,29 @@ describe('Worker Termination E2E', () => {
   });
 
   it('8. Should verify payroll record and tax submission created', async () => {
+    // Termination queues finalization; wait for the actual worker to finish.
+    const queue = app.get<Queue>(getQueueToken('payroll-processing'));
+    const jobs = await queue.getJobs([
+      'waiting',
+      'active',
+      'completed',
+      'failed',
+    ]);
+    const job = jobs.find((entry) => entry.data.workerIds?.includes(workerId));
+    expect(job).toBeDefined();
+    let state = await job!.getState();
+    for (
+      let attempt = 0;
+      attempt < 100 && !['completed', 'failed'].includes(state);
+      attempt++
+    ) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      state = await job!.getState();
+    }
+    expect({ state, failure: job!.failedReason || undefined }).toEqual({
+      state: 'completed',
+      failure: undefined,
+    });
     // Get all payroll records
     const payrollRes = await request(app.getHttpServer())
       .get('/payroll-records')

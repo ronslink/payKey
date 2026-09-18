@@ -6,6 +6,7 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
 import { JwtStrategy } from './jwt.strategy';
+import { getJwtOptions } from './jwt.config';
 
 @Module({
   imports: [
@@ -13,10 +14,7 @@ import { JwtStrategy } from './jwt.strategy';
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET') || 'supersecretkey',
-        signOptions: { expiresIn: '1d' },
-      }),
+      useFactory: getJwtOptions,
       inject: [ConfigService],
     }),
   ],

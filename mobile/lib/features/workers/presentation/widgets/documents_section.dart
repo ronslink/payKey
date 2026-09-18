@@ -254,7 +254,9 @@ class _DocumentsSectionState extends ConsumerState<DocumentsSection> {
       }
 
       // 1. Download document
-      final bytes = await ApiService().downloadFile(doc.url);
+      final bytes = await ApiService().downloadFile(
+        '/workers/documents/${Uri.encodeComponent(doc.id)}/download',
+      );
       
       // 2. Save to temporary directory
       final tempDir = await getTemporaryDirectory();

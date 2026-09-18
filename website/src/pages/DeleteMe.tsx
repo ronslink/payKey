@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-
-const API_URL = import.meta.env.VITE_API_URL || 'https://api.paydome.co';
+import { readSession } from '@/lib/billing-api';
+import { requestAccountDeletion } from '@/lib/account-deletion-api';
 
 export default function DeleteMe() {
-    const [email, setEmail] = useState('');
+    const [session, setSession] = useState(readSession);
+    const [email, setEmail] = useState(() => readSession()?.email || '');
     const [password, setPassword] = useState('');
     const [reason, setReason] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -18,22 +19,12 @@ export default function DeleteMe() {
         setError('');
 
         try {
-            const response = await fetch(`${API_URL}/data-deletion/request`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ email, password, reason }),
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to submit request. Please try again.');
-            }
-
-            const data = await response.json();
+            const data = await requestAccountDeletion({ email, password, reason });
             setRequestId(data.requestId);
+            setPassword('');
             setSubmitted(true);
         } catch (err) {
+            setSession(readSession());
             setError(err instanceof Error ? err.message : 'An error occurred');
         } finally {
             setIsSubmitting(false);
@@ -48,16 +39,16 @@ export default function DeleteMe() {
                         ✓
                     </div>
                     <h1 className="text-2xl font-bold text-white text-center mb-4">Request Submitted</h1>
-                    <p className="text-slate-400 text-center leading-relaxed mb-6">
-                        Your data deletion request has been received and will be processed automatically.
-                        All data associated with <strong className="text-white">{email}</strong> will be permanently deleted.
+                    <p role="status" className="text-slate-400 text-center leading-relaxed mb-6">
+                        Your account-deletion request for <strong className="text-white">{email}</strong> has been received.
+                        This confirms receipt of the request, not completion of deletion.
                     </p>
                     <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 mb-6">
                         <p className="text-sm text-emerald-400">
                             <strong>Request ID:</strong> {requestId}
                         </p>
                         <p className="text-sm text-emerald-400 mt-1">
-                            This process is fully automated and typically completes within 24 hours.
+                            Keep this reference. Contact support@paydome.co if you need help checking your request.
                         </p>
                     </div>
                     <Link
@@ -74,23 +65,31 @@ export default function DeleteMe() {
     return (
         <div className="min-h-screen flex items-center justify-center px-4 py-20">
             <div className="bg-card border border-white/10 rounded-2xl p-8 sm:p-10 max-w-lg w-full shadow-2xl">
-                <h1 className="text-2xl font-bold text-white text-center mb-4">Delete My Data</h1>
+                <h1 className="text-2xl font-bold text-white text-center mb-4">Delete My Paydome Account</h1>
                 <p className="text-slate-400 text-center leading-relaxed mb-6">
-                    Request the deletion of all your personal data from payDome.
-                    This action is irreversible and will permanently remove your account and all associated data.
+                    Request deletion of your Paydome account and associated personal data.
+                    This closes your account; it is not a request to remove selected data while keeping the account.
                 </p>
 
                 <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-6 text-sm text-amber-200">
-                    <strong>⚠️ Warning:</strong> This will delete:
+                    <strong>Account deletion includes:</strong>
                     <ul className="list-disc pl-5 mt-2 space-y-1 text-amber-300/80">
                         <li>Your account and profile information</li>
                         <li>All worker records</li>
                         <li>Payroll history and payslips</li>
                         <li>Time tracking and leave records</li>
                         <li>Payment and transaction history</li>
-                        <li>All other associated data</li>
                     </ul>
+                    <p className="mt-3">Some records may need to be retained for legal, accounting or security requirements, as described in our <Link className="underline" to="/paydome/privacy_policy">privacy policy</Link>.</p>
+                    <p className="mt-3">End any recurring subscription before requesting account deletion.</p>
                 </div>
+
+                <div className="mb-6 rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
+                    <p className="font-semibold text-white">Signed up with Google or Apple?</p>
+                    <p className="mt-2">This website currently supports email and password sign-in. For help deleting an account created with Google or Apple, <a className="text-emerald-400 underline" href="mailto:support@paydome.co?subject=Paydome%20account%20deletion">email support@paydome.co</a> from the address linked to your account. We need to verify ownership before processing the request. Do not send your password.</p>
+                </div>
+
+                {session ? <p className="mb-4 text-sm text-slate-300">Requesting deletion of the signed-in account: <strong className="break-all">{session.email}</strong>.</p> : <p className="mb-4 text-sm text-slate-300">If your account has a password, use the form below to confirm ownership.</p>}
 
                 <form onSubmit={handleSubmit} className="flex flex-col gap-5">
                     <div className="flex flex-col gap-2">
@@ -102,6 +101,8 @@ export default function DeleteMe() {
                             id="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
+                            readOnly={Boolean(session)}
+                            autoComplete="email"
                             placeholder="Enter your account email"
                             required
                             className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-slate-500 outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/25 transition-colors"
@@ -110,14 +111,16 @@ export default function DeleteMe() {
 
                     <div className="flex flex-col gap-2">
                         <label htmlFor="password" className="text-sm font-semibold text-slate-300">
-                            Password
+                            {session ? 'Account Password (if set)' : 'Account Password *'}
                         </label>
                         <input
                             type="password"
                             id="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            placeholder="Enter your account password (if not Google/Apple)"
+                            placeholder="Enter your account password"
+                            required={!session}
+                            autoComplete="current-password"
                             className="w-full px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-slate-500 outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/25 transition-colors"
                         />
                     </div>
@@ -136,14 +139,14 @@ export default function DeleteMe() {
                         />
                     </div>
 
-                    {error && <p className="text-red-400 text-sm">{error}</p>}
+                    {error && <p role="alert" className="text-red-400 text-sm">{error}</p>}
 
                     <button
                         type="submit"
                         disabled={isSubmitting}
                         className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3.5 rounded-lg transition-all disabled:opacity-60 cursor-pointer mt-2"
                     >
-                        {isSubmitting ? 'Submitting...' : 'Delete My Data'}
+                        {isSubmitting ? 'Submitting...' : 'Request Account Deletion'}
                     </button>
                 </form>
 

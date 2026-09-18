@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/network/api_service.dart';
+import '../../../../core/utils/download_utils.dart';
 
 import '../../data/models/employee_models.dart';
 
@@ -19,6 +20,7 @@ class _EmployeePayslipsPageState extends ConsumerState<EmployeePayslipsPage> {
   bool _isLoading = true;
   String? _error;
   List<EmployeePayslip>? _payslips;
+  bool _isDownloading = false;
 
   @override
   void initState() {
@@ -33,13 +35,8 @@ class _EmployeePayslipsPageState extends ConsumerState<EmployeePayslipsPage> {
     });
 
     try {
-      final profileResponse = await ApiService().employeePortal.getMyProfile();
-      if (profileResponse.statusCode != 200) throw Exception('Failed to get profile');
-
-      final profile = EmployeeProfile.fromJson(profileResponse.data);
-      if (profile.workerId == null) throw Exception('Worker ID not found');
-
-      final response = await ApiService().payroll.getPayslipsForWorker(profile.workerId!);
+      final response = await ApiService().employeePortal.getMyPayslips();
+      if (!mounted) return;
       
       if (response.statusCode == 200 && response.data != null) {
         final List<dynamic> data = response.data is List ? response.data : [];
@@ -66,10 +63,35 @@ class _EmployeePayslipsPageState extends ConsumerState<EmployeePayslipsPage> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = e.toString();
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _downloadPayslip(EmployeePayslip payslip) async {
+    if (_isDownloading) return;
+    _isDownloading = true;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Downloading payslip…')),
+    );
+    try {
+      final bytes = await ApiService().employeePortal.downloadMyPayslip(payslip.id);
+      if (bytes.isEmpty) throw Exception('The payslip was empty. Please try again.');
+      await DownloadUtils.downloadFile(
+        filename: 'payslip-${payslip.id.replaceAll(RegExp(r"[^a-zA-Z0-9_-]"), "")}.pdf',
+        bytes: bytes,
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not download your payslip. Please try again.')),
+        );
+      }
+    } finally {
+      _isDownloading = false;
     }
   }
 
@@ -414,6 +436,7 @@ class _EmployeePayslipsPageState extends ConsumerState<EmployeePayslipsPage> {
                         ),
                       ),
                       IconButton(
+                        tooltip: 'Download payslip',
                         icon: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
@@ -424,9 +447,7 @@ class _EmployeePayslipsPageState extends ConsumerState<EmployeePayslipsPage> {
                         ),
                         onPressed: () {
                           Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Download feature coming soon')),
-                          );
+                          _downloadPayslip(payslip);
                         },
                       ),
                     ],

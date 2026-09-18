@@ -1,6 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
+import nock from 'nock';
+import Stripe from 'stripe';
 import { AppModule } from './../src/app.module';
 import { DataSource } from 'typeorm';
 import {
@@ -22,6 +24,24 @@ import {
 } from '../src/modules/payments/entities/transaction.entity';
 import { User } from '../src/modules/users/entities/user.entity';
 
+jest.mock('stripe', () => {
+  const ActualStripe =
+    jest.requireActual<typeof import('stripe')>('stripe').default;
+  return {
+    __esModule: true,
+    default: class FixtureStripe extends ActualStripe {
+      constructor(key: string, config?: Stripe.StripeConfig) {
+        super(key, {
+          ...config,
+          httpClient: ActualStripe.createFetchHttpClient(),
+          timeout: 5000,
+          maxNetworkRetries: 0,
+        });
+      }
+    },
+  };
+});
+
 /**
  * Bank Subscription E2E Tests
  *
@@ -34,8 +54,15 @@ describe('Bank Subscription Flow E2E', () => {
   let helpers: TestHelpers;
   let authToken: string;
   let testUser: TestUserResult;
+  const originalStripeKey = process.env.STRIPE_SECRET_KEY;
 
   beforeAll(async () => {
+    process.env.STRIPE_SECRET_KEY = 'sk_test_bank_subscription_fixture';
+    nock('https://api.stripe.com')
+      .persist()
+      .get('/v1/customers')
+      .query(true)
+      .reply(200, { object: 'list', data: [], has_more: false });
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
@@ -45,6 +72,21 @@ describe('Bank Subscription Flow E2E', () => {
           url: 'https://sandbox.intasend.com/checkout/mock-url-123',
           id: 'mock-checkout-id',
           signature: 'mock-signature',
+        }),
+        getPaymentStatus: jest.fn(async (providerRef: string) => {
+          const transaction = await app
+            .get(DataSource)
+            .getRepository(Transaction)
+            .findOneByOrFail({ providerRef });
+          return {
+            invoice: {
+              invoice_id: providerRef,
+              state: 'COMPLETE',
+              api_ref: transaction.accountReference,
+              currency: transaction.currency,
+              value: transaction.amount,
+            },
+          };
         }),
         verifyWebhookSignature: jest.fn().mockReturnValue(true),
         initiateStkPush: jest.fn().mockResolvedValue({
@@ -74,6 +116,9 @@ describe('Bank Subscription Flow E2E', () => {
     if (app) {
       await app.close();
     }
+    nock.cleanAll();
+    if (originalStripeKey === undefined) delete process.env.STRIPE_SECRET_KEY;
+    else process.env.STRIPE_SECRET_KEY = originalStripeKey;
   });
 
   describe('1. Bank Details Collection', () => {
@@ -224,6 +269,24 @@ describe('Bank Subscription Flow E2E', () => {
       expect(updatedSubscription?.status).toBe(SubscriptionStatus.ACTIVE);
       expect(updatedSubscription?.tier).toBe(targetPlan.tier);
       expect(updatedUser?.tier).toBe(targetPlan.tier);
+      const provider = app.get(IntaSendService);
+      const checkoutSpy = jest.spyOn(provider, 'createCheckoutUrl');
+      const callsBefore = checkoutSpy.mock.calls.length;
+      await request(app.getHttpServer())
+        .post('/subscriptions/subscribe')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send(payload)
+        .expect(400);
+      expect(checkoutSpy.mock.calls.length).toBe(callsBefore);
+      expect(
+        await dataSource
+          .getRepository(Subscription)
+          .findOneByOrFail({ id: updatedSubscription!.id }),
+      ).toMatchObject({
+        tier: updatedSubscription!.tier,
+        status: SubscriptionStatus.ACTIVE,
+        endDate: updatedSubscription!.endDate,
+      });
     });
   });
 });

@@ -3,6 +3,13 @@ import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
 import * as crypto from 'crypto';
+import { isAxiosError } from 'axios';
+
+export class IntaSendStkPushError extends Error {
+  constructor(readonly definitiveFailure: boolean) {
+    super('IntaSend STK request did not return a usable result');
+  }
+}
 
 // IntaSend sandbox requires this specific phone number for B2C payouts
 const INTASEND_SANDBOX_TEST_PHONE = '254708374149';
@@ -63,11 +70,9 @@ export class IntaSendService {
       `INTASEND_IS_LIVE env: ${this.configService.get('INTASEND_IS_LIVE')}`,
     );
     this.logger.debug(
-      `Publishable Key Set: ${this.publishableKey ? 'Yes' : 'No'} (${this.publishableKey ? this.publishableKey.substring(0, 10) + '...' : 'None'})`,
+      `Publishable Key Set: ${this.publishableKey ? 'Yes' : 'No'}`,
     );
-    this.logger.debug(
-      `Secret Key Set: ${this.secretKey ? 'Yes' : 'No'} (${this.secretKey ? this.secretKey.substring(0, 5) + '...' : 'None'})`,
-    );
+    this.logger.debug(`Secret Key Set: ${this.secretKey ? 'Yes' : 'No'}`);
 
     if (!this.publishableKey || !this.secretKey) {
       this.logger.warn(
@@ -78,6 +83,26 @@ export class IntaSendService {
     const configuredWebhookSecret = this.configService.get(
       'INTASEND_WEBHOOK_SECRET',
     );
+
+    if (this.isLive) {
+      if (!this.publishableKey || !this.secretKey) {
+        throw new Error('Live IntaSend credentials are required');
+      }
+      if (
+        !configuredWebhookSecret &&
+        !this.configService.get('INTASEND_CHALLENGE')
+      ) {
+        throw new Error(
+          'Live IntaSend webhook verification must be configured',
+        );
+      }
+      if (
+        this.configService.get('INTASEND_SIMULATE') === 'true' ||
+        this.configService.get('INTASEND_DISABLE_SIG_CHECK') === 'true'
+      ) {
+        throw new Error('IntaSend testing bypasses are forbidden in live mode');
+      }
+    }
 
     if (configuredWebhookSecret) {
       this.webhookSecret = configuredWebhookSecret;
@@ -107,17 +132,21 @@ export class IntaSendService {
     rawBody: Buffer,
     challenge?: string,
   ): boolean {
-    const configuredChallenge = this.configService.get('INTASEND_CHALLENGE');
+    const configuredChallenge =
+      this.configService.get<string>('INTASEND_CHALLENGE');
+    if (
+      (challenge !== undefined && typeof challenge !== 'string') ||
+      (signature !== undefined && typeof signature !== 'string')
+    )
+      return false;
 
     // 1. Prioritize Challenge Verification (Official Docs Method)
     if (configuredChallenge && challenge) {
-      if (configuredChallenge === challenge) {
+      if (this.safeCompare(configuredChallenge, challenge)) {
         this.logger.log('✅ Webhook Challenge matched.');
         return true;
       }
-      this.logger.warn(
-        `⛔ Webhook Challenge Mismatch: Expected ${configuredChallenge}, got ${challenge}`,
-      );
+      this.logger.warn('⛔ Webhook Challenge Mismatch.');
       // Fallthrough to signature check? No, if challenge is mismatched, it's definitely invalid.
       return false;
     }
@@ -136,7 +165,7 @@ export class IntaSendService {
       return false;
     }
 
-    if (!rawBody) {
+    if (!rawBody || !Buffer.isBuffer(rawBody) || !this.webhookSecret) {
       this.logger.warn(
         '⚠️ Webhook missing raw body. Ensure main.ts captures it.',
       );
@@ -149,19 +178,23 @@ export class IntaSendService {
       .update(rawBody)
       .digest('hex');
 
-    if (hmac !== signature) {
-      this.logger.warn(
-        `⛔ Invalid Webhook Signature. Expected: ${hmac.substring(0, 10)}..., Received: ${signature.substring(0, 10)}... | Secret used: ${this.webhookSecret ? 'YES' : 'NO'} | Body Len: ${rawBody.length}`,
-      );
-      // Log raw body preview for debugging (careful with PII)
-      this.logger.debug(
-        `Raw Body Preview: ${rawBody.toString('utf8').substring(0, 100)}...`,
-      );
+    if (!this.safeCompare(hmac, signature)) {
+      this.logger.warn('⛔ Invalid Webhook Signature.');
       return false;
     }
 
     this.logger.log('✅ Webhook Signature matched.');
     return true;
+  }
+
+  private safeCompare(expected: string, received: string): boolean {
+    const expectedBuffer = Buffer.from(expected);
+    const receivedBuffer = Buffer.from(received);
+
+    return (
+      expectedBuffer.length === receivedBuffer.length &&
+      crypto.timingSafeEqual(expectedBuffer, receivedBuffer)
+    );
   }
 
   /**
@@ -280,22 +313,58 @@ export class IntaSendService {
           },
         ),
       );
-      this.logger.log('IntaSend STK Push response:', response.data);
       return response.data;
-    } catch (error) {
-      this.logger.error(
-        'IntaSend STK Push failed',
-        error.response?.data || error.message,
-      );
-      throw new Error(
-        `IntaSend STK Push failed: ${JSON.stringify(error.response?.data)}`,
+    } catch (error: unknown) {
+      const status = isAxiosError(error) ? error.response?.status : undefined;
+      this.logger.warn('IntaSend STK request failed');
+      throw new IntaSendStkPushError(
+        status !== undefined && [400, 401, 403, 404, 422].includes(status),
       );
     }
   }
 
   /**
-   * Create a new Wallet
+   * Retrieve an invoice by our stored collection or checkout reference.
    */
+  async getPaymentStatus(
+    reference: string,
+    referenceType: 'invoice' | 'checkout' = 'invoice',
+  ): Promise<{
+    invoice: {
+      invoice_id: string;
+      state: string;
+      currency: string;
+      value: string | number;
+      api_ref: string;
+      provider?: string;
+    };
+  }> {
+    // Re-read the provider invoice before granting paid subscription access.
+    const response = await lastValueFrom(
+      this.httpService.post<{
+        invoice: {
+          invoice_id: string;
+          state: string;
+          currency: string;
+          value: string | number;
+          api_ref: string;
+          provider?: string;
+        };
+      }>(
+        `${this.baseUrl}/v1/payment/status/`,
+        { [`${referenceType}_id`]: reference },
+        {
+          headers: {
+            Authorization: `Bearer ${this.secretKey}`,
+            'Content-Type': 'application/json',
+          },
+          timeout: 10000,
+        },
+      ),
+    );
+    return response.data;
+  }
+
   async createWallet(
     currency: 'KES' | 'USD' | 'EUR' | 'GBP',
     label: string = '',

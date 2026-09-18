@@ -69,12 +69,12 @@ export class NotificationsService implements OnModuleInit {
           admin.initializeApp({
             credential: admin.credential.cert(serviceAccount),
           });
-          this.firebaseInitialized = true;
           this.logger.log('Firebase Admin SDK initialized successfully');
         }
+        this.firebaseInitialized = true;
       } else {
         this.logger.warn(
-          `Firebase service account file not found at ${absolutePath}. Push notifications will be mocked.`,
+          `Firebase service account file not found at ${absolutePath}. Push delivery is unavailable in production.`,
         );
       }
     } catch (error) {
@@ -131,6 +131,9 @@ export class NotificationsService implements OnModuleInit {
     const provider = smsProvider.toUpperCase();
     switch (provider) {
       case 'MOCK':
+        if (this.configService.get('NODE_ENV') === 'production') {
+          return { success: false, error: 'SMS delivery is not configured' };
+        }
         this.logger.log(
           `MOCK SMS sent to ${notificationRequest.recipientPhone}: ${notificationRequest.message}`,
         );
@@ -236,6 +239,9 @@ export class NotificationsService implements OnModuleInit {
 
       case 'MOCK':
       default:
+        if (this.configService.get('NODE_ENV') === 'production') {
+          return { success: false, error: 'Email delivery is not configured' };
+        }
         this.logger.log(
           `MOCK EMAIL sent to ${notificationRequest.recipientEmail}`,
         );
@@ -323,6 +329,9 @@ export class NotificationsService implements OnModuleInit {
     }
 
     if (!this.firebaseInitialized) {
+      if (this.configService.get('NODE_ENV') === 'production') {
+        return { success: false, error: 'Push delivery is not configured' };
+      }
       this.logger.log(
         `MOCK PUSH notification sent: ${notificationRequest.message}`,
       );

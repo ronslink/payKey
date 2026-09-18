@@ -9,11 +9,13 @@ import {
   UseGuards,
   HttpException,
   HttpStatus,
+  ValidationPipe,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { StripeService } from './stripe.service';
+import { StripeTopupDto } from './stripe-topup.dto';
 
 import { IntaSendService } from './intasend.service';
 import {
@@ -34,6 +36,7 @@ import { TaxPaymentsService } from '../tax-payments/services/tax-payments.servic
 import { PaymentMethod } from '../tax-payments/entities/tax-payment.entity';
 import { TaxType } from '../tax-config/entities/tax-config.entity';
 import { User } from '../users/entities/user.entity';
+import { redactProviderSecrets } from '../../common/security/provider-secrets';
 
 // ============================================================================
 // Types & Interfaces
@@ -328,11 +331,13 @@ export class UnifiedPaymentsController {
   @Post('stripe/create-intent')
   async initiateStripeTopup(
     @Request() req: AuthenticatedRequest,
-    @Body() body: { amount: number; paymentMethodTypes?: string[] },
+    @Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
+    body: StripeTopupDto,
   ): Promise<{
     success: boolean;
     clientSecret: string;
     transactionId: string;
+    publishableKey: string;
   }> {
     const { userId } = req.user;
 
@@ -342,29 +347,24 @@ export class UnifiedPaymentsController {
     );
 
     try {
-      const amount = Number(body.amount);
-      if (isNaN(amount) || amount <= 0) {
-        throw new HttpException('Invalid amount', HttpStatus.BAD_REQUEST);
-      }
-
-      // Default to ['card', 'sepa_debit'] if not specified
-      // Note: Mobile SDK might send types.
-      const types = body.paymentMethodTypes || ['card', 'sepa_debit'];
-
       const result = await this.stripeService.createPaymentIntent(
         userId,
-        amount,
-        'EUR', // Default to EUR for SEPA. If user wants KES via card, we might need to change this.
-        types,
+        body.amount,
+        body.currency,
+        body.paymentMethodTypes,
       );
 
       return {
         success: true,
         clientSecret: result.clientSecret,
         transactionId: result.transactionId,
+        publishableKey: result.publishableKey,
       };
     } catch (error) {
-      console.error('Unified Stripe TopUp Error:', error);
+      console.error(
+        'Unified Stripe TopUp Error:',
+        error instanceof Error ? error.name : 'PaymentError',
+      );
       const message =
         error instanceof Error
           ? error.message
@@ -634,11 +634,14 @@ export class UnifiedPaymentsController {
     userId: string,
     limit = 10,
   ): Promise<Transaction[]> {
-    return this.transactionRepository.find({
+    const transactions = await this.transactionRepository.find({
       where: { userId },
       order: { createdAt: 'DESC' },
       take: limit,
     });
+    return transactions.map((transaction) =>
+      redactProviderSecrets(transaction),
+    );
   }
 
   private async getActiveSubscriptionCount(userId: string): Promise<number> {

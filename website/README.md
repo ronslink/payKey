@@ -1,4 +1,38 @@
-# React + TypeScript + Vite
+# Paydome website and account billing
+
+The public site routes plan selection to `/account?plan=basic` (also `gold` and
+`platinum`). Customers can register or sign in, review the server-provided monthly
+USD card price, and continue to Stripe-hosted checkout. Passwords and card details
+are never saved by the site; the API session token is stored only in the current
+tab's session storage. `/account` shows backend subscription status and provides
+automatic renewal controls.
+
+`/payments/subscriptions/success` checks the authenticated, owner-scoped backend
+checkout-status endpoint. It shows an active subscription only when payment is
+confirmed **and** the backend reports active entitlement. The page polls up to ten
+times and offers a manual retry. A success URL alone does not activate anything.
+`/payments/subscriptions/cancel` explains that leaving checkout is not payment
+confirmation. All prices and entitlements remain server-authoritative.
+
+Build configuration (Vite variables or matching Docker build arguments):
+
+- `VITE_API_URL`: defaults to `https://api.paydome.co`.
+- `VITE_ANDROID_APP_URL`: optional verified Google Play listing or testing URL.
+- `VITE_IOS_APP_URL`: optional verified App Store listing or TestFlight URL.
+
+See `.env.example`. Invalid or missing app links are hidden; `/get-started` offers
+account creation and the existing support contact path for app availability.
+Confirm actual app access before inviting paying users. The backend billing
+return origin must point to this site's public HTTPS origin.
+
+Run `npm run build`, `npm run lint`, and `npm test`. The billing tests mock fetch
+and exercise session handling and redirect restrictions without contacting any
+provider. Browser verification must also use mocked API responses or an isolated
+test backend; never use production credentials or initiate a live payment for a
+smoke test. Native app store billing and publication remain separate release
+requirements; this website does not enable native external checkout.
+
+## Vite template reference
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

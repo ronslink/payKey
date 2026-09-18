@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { Export, ExportType } from '../entities/export.entity';
@@ -9,6 +9,11 @@ import {
 import { PayrollRecord } from '../../payroll/entities/payroll-record.entity';
 import * as fs from 'fs';
 import * as path from 'path';
+import { randomUUID } from 'crypto';
+import {
+  privateExportsDirectory,
+  resolvePrivateExport,
+} from '../../uploads/storage-paths';
 
 interface ExportRecord {
   date: string;
@@ -29,7 +34,7 @@ interface ExportRecord {
 
 @Injectable()
 export class ExportService {
-  private readonly exportsDir = path.join(process.cwd(), 'exports');
+  private readonly exportsDir = privateExportsDirectory();
 
   private csvCell(value: string): string {
     return `"${value.replaceAll('"', '""')}"`;
@@ -415,7 +420,8 @@ export class ExportService {
     );
 
     const fileName = `payroll_export_${exportType.toLowerCase()}_${Date.now()}.${extension}`;
-    const filePath = path.join(this.exportsDir, fileName);
+    const storageName = `${randomUUID()}.${extension}`;
+    const filePath = path.join(this.exportsDir, storageName);
 
     // Ensure exports directory exists
     try {
@@ -424,7 +430,7 @@ export class ExportService {
         fs.mkdirSync(this.exportsDir, { recursive: true });
       }
       console.log(`[Export] Writing file: ${filePath}`);
-      fs.writeFileSync(filePath, content, 'utf-8');
+      fs.writeFileSync(filePath, content, { encoding: 'utf-8', mode: 0o600 });
     } catch (error) {
       console.error(`[Export] Failed to write file: ${error.message}`);
       throw new Error(`Failed to write export file: ${error.message}`);
@@ -440,7 +446,7 @@ export class ExportService {
         startDate,
         endDate,
         fileName,
-        filePath,
+        filePath: `private/exports/${storageName}`,
         recordCount,
       });
 
@@ -477,9 +483,11 @@ export class ExportService {
     });
 
     if (!exportRecord || !exportRecord.filePath) {
-      throw new Error('Export not found');
+      throw new NotFoundException('Export not found');
     }
 
-    return fs.readFileSync(exportRecord.filePath);
+    return fs.promises.readFile(
+      await resolvePrivateExport(exportRecord.filePath),
+    );
   }
 }

@@ -4,6 +4,8 @@ import request from 'supertest';
 import { AppModule } from './../src/app.module';
 import { TestHelpers, createTestHelpers } from './helpers/test-helpers';
 import { generateTestPhone } from './test-utils';
+import { DataSource } from 'typeorm';
+import { User, UserTier } from '../src/modules/users/entities/user.entity';
 import {
   WorkerResponse,
   PayPeriodResponse,
@@ -50,6 +52,12 @@ describe('Payroll Proration E2E', () => {
 
     authToken = testUser.token;
     _userId = testUser.userId;
+    // This scenario creates three workers; provision paid access as a fixture,
+    // never by accepting privileged tier fields in public registration.
+    await app
+      .get(DataSource)
+      .getRepository(User)
+      .update(_userId, { tier: UserTier.PLATINUM });
   });
 
   afterAll(async () => {

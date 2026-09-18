@@ -1,6 +1,7 @@
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import * as path from 'path';
+import { getDatabaseConnection } from './database-connection';
 
 // Entity Imports
 import { User } from '../modules/users/entities/user.entity';
@@ -51,97 +52,13 @@ import { AdminAuditLog } from '../modules/admin/entities/audit-log.entity';
 export const getDatabaseConfig = (
   configService: ConfigService,
 ): TypeOrmModuleOptions => {
-  const isTest = process.env.NODE_ENV === 'test';
-  // Check for any truthy value of CI or GITHUB_ACTIONS
-  const isCI = !!(process.env.CI || process.env.GITHUB_ACTIONS);
-
-  // Check for DATABASE_URL first (production/hosted DBs)
-  const dbUrl = configService.get('DATABASE_URL');
-  if (dbUrl) {
-    return {
-      type: 'postgres',
-      url: dbUrl,
-      ssl: { rejectUnauthorized: false },
-      entities: [
-        User,
-        Worker,
-        PayPeriod,
-        PayrollRecord,
-        Transaction,
-        TaxTable,
-        TaxSubmission,
-        TaxPayment,
-        TaxConfig,
-        Subscription,
-        SubscriptionPayment,
-        Property,
-        Country,
-        LeaveRequest,
-        Termination,
-        AccountMapping,
-        AccountingExport,
-        Activity,
-        TimeEntry,
-        Export,
-        Holiday,
-        DeletionRequest,
-        WorkerDocument,
-        GovSubmission,
-        Notification,
-        DeviceToken,
-        DeviceToken,
-        ExchangeRate,
-        SystemConfig,
-        SubscriptionPlan,
-        PromotionalItem,
-        Campaign,
-        SupportTicket,
-        SupportMessage,
-        AdminAuditLog,
-      ],
-      synchronize: false, // Use migrations in production!
-      logging: ['query', 'error'],
-      // Resolve migrations relative to this file so the path works whether we
-      // are running ts-node (src/) or the compiled dist (dist/src/).
-      // __dirname here is e.g. /app/dist/src/config in prod or /app/src/config in dev.
-      migrations: [path.join(__dirname, '../migrations/*{.ts,.js}')],
-      migrationsRun: true, // Auto-run pending migrations on every startup
-      migrationsTableName: 'migrations', // Matches the table already in use
-    };
-  }
-
-  // In CI environments, prioritize process.env over ConfigService
-  // This ensures GitHub Actions environment variables are used
-  const getConfig = (key: string, defaultValue: string = ''): string => {
-    if (isCI) {
-      // In CI, use process.env directly
-      return process.env[key] || defaultValue;
-    }
-    // Locally, use ConfigService with proper typing
-    return configService.get<string>(key) || defaultValue;
-  };
-
-  // Get username with multiple fallbacks
-  // In CI, force 'postgres' user if DB_USER/DB_USERNAME are missing or explicitly set to root,
-  // OR if we suspect permissions issues. To be safe, let's stick to env vars but add logging.
-
-  // Safer strategy: If CI, and no explicit user, default to 'postgres' (superuser) instead of 'paykey'
-  const defaultUser = isCI ? 'postgres' : 'paykey';
-  const username =
-    getConfig('DB_USERNAME') || getConfig('DB_USER') || defaultUser;
-
-  const password = getConfig('DB_PASSWORD', 'Tina76');
-  const host = getConfig('DB_HOST', 'localhost');
-  const port = parseInt(getConfig('DB_PORT', '5432'));
-  const database = getConfig('DB_NAME', isTest ? 'paykey_test' : 'paykey');
-
-  const config: TypeOrmModuleOptions = {
+  const get = (key: string): string | undefined =>
+    configService.get<string>(key);
+  const isTest = get('NODE_ENV') === 'test';
+  const production = get('NODE_ENV') === 'production';
+  return {
     type: 'postgres',
-    host,
-    port,
-    username,
-    password,
-    database,
+    ...getDatabaseConnection(get),
     entities: [
       User,
       Worker,
@@ -169,7 +86,6 @@ export const getDatabaseConfig = (
       GovSubmission,
       Notification,
       DeviceToken,
-      DeviceToken,
       ExchangeRate,
       SystemConfig,
       SubscriptionPlan,
@@ -179,21 +95,12 @@ export const getDatabaseConfig = (
       SupportMessage,
       AdminAuditLog,
     ],
-    synchronize: isTest || true, // Keep enabled for now
-    logging: ['query', 'error'],
+    synchronize: !production && (isTest || get('DB_SYNCHRONIZE') === 'true'),
+    logging:
+      !production && get('DB_LOGGING') === 'true' ? ['query', 'error'] : false,
+    migrations: [path.join(__dirname, '../migrations/*{.ts,.js}')],
+    // Schema changes are an explicit deployment step, never a startup side effect.
+    migrationsRun: false,
+    migrationsTableName: 'migrations',
   };
-
-  // Log configuration in test/CI environments (without password)
-  if (isTest || isCI) {
-    console.log('🔧 Database Configuration:', {
-      environment: isCI ? 'CI' : isTest ? 'Local Test' : 'Development',
-      host: config.host,
-      port: config.port,
-      username: config.username,
-      database: config.database,
-      synchronize: config.synchronize,
-    });
-  }
-
-  return config;
 };

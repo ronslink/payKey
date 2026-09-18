@@ -29,6 +29,10 @@ const YEAR = parseInt(
   process.env.CAMPAIGN_YEAR || String(new Date().getFullYear()),
 );
 
+if (!process.env.DATABASE_URL && !process.env.DB_PASSWORD) {
+  throw new Error('DB_PASSWORD must be set when DATABASE_URL is not provided');
+}
+
 const dbConfig = process.env.DATABASE_URL
   ? {
       connectionString: process.env.DATABASE_URL,
@@ -38,7 +42,7 @@ const dbConfig = process.env.DATABASE_URL
       host: process.env.DB_HOST || 'localhost',
       port: parseInt(process.env.DB_PORT || '5432'),
       user: process.env.DB_USERNAME || process.env.DB_USER || 'postgres',
-      password: process.env.DB_PASSWORD || 'Tina76',
+      password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME || 'paykey',
     };
 

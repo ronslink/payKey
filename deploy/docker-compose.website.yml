@@ -1,11 +1,13 @@
-# Website service for production
-# Usage: docker-compose -f deploy/docker-compose.website.yml up -d
+# Website service for production, released after its matching backend commit.
+# Use deploy/deploy-website.sh with the CI-produced immutable image digest.
 
 services:
   website:
-    image: ${DOCKER_USERNAME:-ronslink}/paykey-website:latest
+    image: ${WEBSITE_IMAGE:?An immutable website image digest is required}
     container_name: paydome_website_prod
     restart: always
+    labels:
+      org.opencontainers.image.revision: ${RELEASE_COMMIT:?A release commit is required}
     ports:
       - "8080:80"
     networks:

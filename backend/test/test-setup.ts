@@ -55,8 +55,6 @@ beforeAll(async () => {
 
     await globalDataSource.initialize();
 
-    await globalDataSource.initialize();
-
     // Use the central cleanup utility
     await cleanupTestData(globalDataSource);
 

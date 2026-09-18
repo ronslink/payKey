@@ -1,0 +1,348 @@
+# Launch gate implementation — 18 September 2026
+
+These changes are prepared in PR #4 and have not been merged or deployed. The
+original production assessment remains a snapshot before these fixes; the
+verified runtime findings below supersede its unresolved access/database checks.
+Paid subscriptions are required for launch. The website account flow is being
+extended to offer M-Pesa through IntaSend alongside Stripe card subscriptions.
+The user approved customer confirmation for each M-Pesa renewal.
+The subsequent backend review and remaining release decisions are recorded in
+[Backend readiness — 18 September 2026](BACKEND_READINESS_2026-09-18.md).
+
+## Implemented
+
+| Gate | Change |
+| --- | --- |
+| Public destructive routes | Testing routes load only in the test environment. Public registration rejects privileged fields; users start with the server-assigned role, free tier and zero balances. |
+| Authentication | Production JWT configuration fails closed. Social login requires verified provider tokens and configured audiences. |
+| Payment integrity | Live IntaSend callbacks cannot bypass verification. Settlement handles repeated clearing/final callbacks without duplicate balance movements. Provider secrets are removed from stored and returned callback metadata. |
+| Paid launch | Website signup/login, authenticated plan selection, server-priced USD checkout and renewal controls are implemented. A return page reports active service only after backend verification. Signed Stripe callbacks settle once per invoice, handle out-of-order events and protect cancellation/renewal periods. Existing Stripe contracts cannot be overwritten by another payment method. Production requires live Stripe credentials. |
+| Wallet currency and ledger | Prepared routing keeps M-Pesa/KES as the default. `STRIPE_WALLET_FUNDING_ENABLED` defaults to `false` and blocks new Stripe wallet top-ups in both KES and EUR until provider funding is resolved. Subscription billing and settlement of existing payments remain available. Prepared EUR routing uses a separate amount input and converts to KES on verified settlement; invalid/missing FX prevents credit and replayed callbacks credit once. Hourly IntaSend observations report discrepancies without overwriting the ledger. |
+| Private files | Worker documents, government payroll files and accounting exports use persistent private storage and authenticated ownership checks. Existing file references resolve through preserved legacy storage. Public static serving is limited to avatar images. |
+| Database safety | Production requires an explicit database URL and verified TLS. Schema synchronization and automatic startup migrations are disabled in production. A standalone read-only audit identifies the actual database host, TLS session and migration state without starting the app. |
+| Deployment | A shared CI path tests before publishing an immutable image. Release scripts preserve uploads/exports and previous containers, reuse Redis storage, reject pending migrations before stopping the old app, and require database/Redis readiness before promoting configuration. |
+| Mobile/customer access | Website calls to action lead to account/access pages. Approved app links are configurable. Push tokens register on login/startup/refresh and deactivate on logout. Employee payslips and document downloads use authenticated routes. Signing/Firebase restoration is configured for release workflows. |
+| Employee isolation | Payslip history includes finalized and paid records and excludes drafts. Employees cannot download another worker's payslip or cancel another worker's leave, including within the same employer. |
+| Account deletion | Unauthenticated requests cannot delete passwordless social accounts by email. Authenticated deletion verifies ownership. Recurring billing must be ended before deletion; worker activity records no longer prevent the tested cleanup flow. |
+
+## Payment routing and provider funding
+
+The prepared mobile flow is **M-Pesa (KES)** by default, with a **Card through Stripe**
+option and explicit KES/EUR selection. The backend now blocks creation of new
+Stripe wallet payments by default through `STRIPE_WALLET_FUNDING_ENABLED=false`,
+for both currencies. Existing payment settlement and Stripe subscriptions are
+unaffected. The prepared card implementation supports both currencies, while the application must
+select the intended charge currency ([Stripe currencies](https://docs.stripe.com/currencies)).
+Focused routing and settlement checks pass. These changes are not deployed and
+still require real-provider acceptance.
+
+IntaSend's current homepage FAQ states, "Currently, IntaSend is not supporting
+card payments" ([IntaSend](https://intasend.com/), checked 18 September 2026).
+Older [card-payment](https://developers.intasend.com/docs/accept-card-payment)
+and [wallet-funding](https://developers.intasend.com/docs/fund-wallet) guides
+still describe cards. Do not rely on the legacy IntaSend hosted-card route for
+this launch. M-Pesa collections can target the employer's working wallet using
+`wallet_id` ([fund-wallet guide](https://developers.intasend.com/docs/fund-wallet)).
+
+Payroll disburses from that selected wallet using `wallet_id`, and its available
+balance must be funded ([external transfers](https://developers.intasend.com/docs/external-transfers),
+[send-money prerequisites](https://developers.intasend.com/docs/send-money)).
+IntaSend [internal transfers](https://developers.intasend.com/docs/internal-transfers)
+move funds only between owned IntaSend wallets. They do not move Stripe proceeds
+into IntaSend. The repository has no such funding bridge: Stripe settlement
+credits the application ledger only. This liquidity gap affects both KES and
+EUR card funding; it is separate from EUR conversion and from website subscription
+billing. No bridge or pre-funded balance is assumed.
+
+### Subscription payment choice
+
+IntaSend documents [subscription plans and billing cycles](https://developers.intasend.com/reference/api_v1_subscriptions_plans_create)
+and [subscription creation](https://developers.intasend.com/reference/api_v1_subscriptions_create).
+The chosen launch behavior uses its [M-Pesa STK collection](https://developers.intasend.com/docs/m-pesa-stk-push):
+customers review the existing server-defined KES plan price, request payment,
+and approve the prompt on their phone. Paydome manages the paid access period;
+this does not provision an IntaSend automatic-debit subscription contract.
+Stripe continues to provide automatic card subscriptions at the existing USD
+prices. Neither subscription payment method credits the payroll wallet.
+
+The prepared M-Pesa implementation persists each unique payment attempt before
+requesting a provider prompt and verifies its provider invoice before granting
+access. Repeated callbacks activate once; annual payments grant the annual period;
+failed or pending payments preserve already-paid access. Early renewal extends
+the existing paid-through date. A queued expiry job rechecks that date and any
+current Stripe contract before downgrading access. Auto-renew preference updates
+reread the subscription under the billing lock so they cannot overwrite a
+simultaneous successful renewal. These paths passed the focused local checks
+below. A further guard against overlapping pending M-Pesa and Stripe checkout
+attempts is being implemented; its verification is not yet complete.
+Mid-period plan changes remain
+unavailable in this initial website flow. Native external subscription checkout
+remains disabled in the signed store candidate.
+
+## Verification
+
+Functional acceptance is based on necessary customer journeys, not test counts
+or formatting. Each launch check must demonstrate an observable outcome:
+
+| Necessary journey | Required evidence |
+| --- | --- |
+| Employer starts using the app | Registration/login produces a usable authenticated account while rejecting injected privileged fields. |
+| Customer purchases access | The actual API and database move from free to paid only after a verified provider confirmation; retries create one receipt and cancellation removes access. |
+| Employer runs payroll | Workers, configured tax data, draft/finalized payroll records and wallet movements persist correctly in PostgreSQL; external payouts use a provider double locally. |
+| Employee accesses records | A real employee login can list finalized/paid payslips and download PDF bytes; drafts and another employee's records remain inaccessible. |
+| Records remain private and durable | Owner-authenticated file downloads work; other accounts and anonymous/static paths fail; file paths survive container replacement through persistent storage. |
+| Failed infrastructure blocks release | PostgreSQL or Redis failure produces readiness failure; deployment does not promote an unhealthy candidate. |
+
+The last mile still requires **Stripe sandbox checkout with signed webhook
+delivery and acceptance on a device using the signed build**. Browser mocks and
+unit tests alone cannot establish those outcomes. Monitor the first genuine,
+authorized live purchase; do not create synthetic live-card transactions for
+testing, as required by [Stripe's testing guidance](https://docs.stripe.com/testing).
+
+Acceptance evidence deliberately excludes older tests that return early when
+fixtures are missing or accept either success or failure responses. The employer
+payroll tests establish calculation and persisted drafts; the funded-wallet test
+establishes queued payout settlement. Its concurrent clearing/completion retries
+are checked against persisted balances and transaction counts. The employee PDF
+test uses seeded payroll records, but real login, authorization and generated PDF
+bytes. Cash finalization is exercised by the worker-termination queue journey;
+the separate payroll service test explicitly skips provider payouts.
+
+Verification uses isolated PostgreSQL 17 and Redis containers with disposable
+storage. E2E tests block external HTTP provider traffic and refuse a non-test
+database. Provider responses in billing/browser tests are simulated; no real
+charge, payout, signup, production migration or store publication was performed.
+
+The final test results are recorded in the completion note below. The backend
+release pipeline blocks new ESLint diagnostics against a checked-in baseline
+generated from the original committed source. It retains the complete legacy
+lint report; it does not claim that the existing repository is lint-clean.
+Website changed-file lint passes; its full lint still reports nine pre-existing
+issues in UI/main files.
+
+### Completion evidence
+
+The earlier release evidence below remains a record of its tested source. The
+additional backend checks do not retroactively extend the earlier CI result:
+
+- The focused M-Pesa/bank pair passed seven tests using real Nest authentication,
+  PostgreSQL and Redis with provider HTTP doubles. It verifies exact KES pricing,
+  ownership, verified invoices, duplicate callbacks, monthly/yearly access,
+  initiation failures and uncertain outcomes, and preservation of Stripe access.
+  Two additional regressions first reproduced an old manual-plan job downgrading
+  a newer Stripe contract and a preference update losing one paid month; both
+  passed after the fixes. Evidence: `backend/test-results/backend-readiness-mpesa-final.log`.
+- The focused Stripe wallet/subscription pair passed six tests with real Nest,
+  PostgreSQL and Redis and mocked provider HTTP, including default-off wallet
+  funding while paid subscriptions remain usable. Evidence:
+  `backend/test-results/backend-readiness-stripe-wallet-gate.log`.
+- The final competing-payment guard passed all eight tests across three
+  integration suites, plus 23 Stripe lifecycle unit tests. Coverage includes
+  Stripe/M-Pesa competition, bank and funded-wallet alternatives, lost Stripe
+  responses, changed emails and recovery of the same checkout. Existing paid
+  access and wallet balances are preserved when the second attempt is rejected.
+- The backend build and final production type check passed. Lint comparison
+  reports zero introduced diagnostic fingerprints against the committed baseline;
+  existing debt remains at 1,572 errors and 240 warnings. See the
+  [backend readiness record](BACKEND_READINESS_2026-09-18.md) for remaining gates.
+
+Previously verified release evidence:
+
+- Backend: 22 unit/security suites, 216 tests passed. The complete existing E2E
+  run passed 30 suites and 206 tests against disposable PostgreSQL 17 and Redis.
+- The added real-application paid-subscription journey passed separately:
+  signup/login, server-priced checkout, verified paid activation, concurrent
+  invoice/checkout retries preserving one receipt and billing dates, and
+  cancellation returning the account to Free. Stripe HTTP alone is simulated;
+  the SDK uses its supported Fetch transport in this fixture because its Node
+  TLS transport and the HTTP interceptor did not interoperate on local Node 24.
+- The strengthened funded-wallet journey passed separately: concurrent clearing
+  callbacks, completed-deposit retries and completed-payout retries preserve
+  exact database balances and one salary transaction. IntaSend is a provider
+  double; its real account and callback delivery still require acceptance.
+- Employee login, own finalized/paid PDF downloads, draft/other-worker denial,
+  private files, readiness failures and account deletion protection passed.
+- Website production build, five billing/session tests and mocked browser
+  journeys passed. Five mobile token-sync tests and touched-file analysis passed.
+- Backend production container built successfully with Node 24. Nine deployment
+  configuration/audit tests passed. Backend lint comparison reports zero added
+  diagnostics; existing debt remains visible. The two final journey files also
+  pass focused lint.
+- The card-routing correction passed four PostgreSQL wallet scenarios plus the
+  unchanged paid-subscription journey: explicit KES/EUR and exact minor units,
+  card-only creation, rejected provider minimums without pending records,
+  retryable FX failure, mismatched/unpaid payment rejection, and concurrent
+  callback idempotency. KES settlement credits the exact KES amount without FX.
+  Five mobile checks cover default M-Pesa dispatch, KES card dispatch, separate
+  EUR input, and native Stripe initialization for both currencies. Focused Dart
+  analysis, backend build and focused backend lint pass. These automated checks
+  simulate provider HTTP/native SDK boundaries; they do not prove live settlement.
+  The prior ledger-preservation and deployment-configuration checks remain valid.
+- Android now uses `FlutterFragmentActivity` and AppCompat themes as required by
+  [the Stripe Flutter SDK](https://github.com/flutter-stripe/flutter_stripe).
+  The mobile API consumes only the validated publishable key and PaymentIntent
+  client secret; server secret keys are not returned. The signed Android rebuild
+  with these changes succeeded and passed bundletool, signature and upload-certificate
+  verification. A scan of its 1,333 entries found no recognized private-secret markers.
+
+No production deployment or provider transaction was performed. No claim of
+current statutory-rate compliance or live mobile-store approval is made by these
+local workflow checks.
+
+## Verified production state
+
+Read-only DigitalOcean API queries authenticated with the personal token held
+in 1Password confirmed the following inventory. The token was injected into a
+subprocess without printing it or saving it in the repository or doctl configuration.
+
+| Resource | Verified state |
+| --- | --- |
+| Droplet `paykey-prod` (`539164900`) | Active, London `lon1`, public `46.101.95.200`, private `10.106.0.2`. |
+| Managed cluster `paykey-db` (`2372047b-149b-4507-a640-6b456fa9a1d6`) | Online, PostgreSQL 17, `lon1`, one node, `db-s-1vcpu-1gb`. |
+| Public website and `/countries` API | Both returned HTTP 200 on the follow-up check. |
+| Public `/health/ready` | HTTP 404; the newly implemented readiness endpoint is not available on the current deployment. |
+
+The user restored authorization for the existing deployment key. Local SSH and
+the [GitHub production inspection](https://github.com/ronslink/payKey/actions/runs/35336679803)
+now succeed. A read-only probe executed inside the running backend confirmed:
+
+| Runtime check | Verified state |
+| --- | --- |
+| Actual PostgreSQL connection | `paykey-db-do-user-18876815-0.d.db.ondigitalocean.com:25060/defaultdb`; certificate verification enabled, TLS 1.3, session read-only. |
+| Migration ledger | All 35 compiled migration names match all 35 applied names; no pending or extra migrations. No SQL is required for this application release. |
+| Database CA | Installed on the host and mounted read-only. |
+| Backend and Redis | Healthy; Redis retains the persistent `deploy_redis_data_prod` volume. Approximately 29 GiB of disk space is free. |
+| Running backend image | `sha256:a80bb94c7efba3873e1d26911de297608a1b18ef22724b7bbd5858c3a91f759c`; no revision label, so the deployed source commit is not established. |
+| Stripe account and subscription endpoint | Live account authentication, charges/payouts enabled and card payments active verified read-only. The enabled endpoint `https://api.paydome.co/payments/subscriptions/webhook` includes all five subscription lifecycle events. Matching the configured signing secret still requires actual signed delivery. |
+| Notification configuration | Email and SMS use `MOCK`; live delivery is not established. |
+
+Managed backup freshness/retention and database trusted-source controls remain
+unverified because subsequent 1Password CLI authorization requests timed out.
+The successful runtime probe resolves the earlier SSH and database-identity
+blockers. These inspections changed no database records, firewall rules or
+running services.
+
+The connected Vercel account
+(`ronslinks-projects`) contains nine projects; none links to `ronslink/payKey`,
+and none of their returned domains is a Paydome domain. Both the committed and
+working backend workflows select GitHub environment `PROD`, create an environment
+file from GitHub secrets, upload it to the DigitalOcean server, and pass those
+settings to Docker Compose when the container starts. The declared backend image
+build does not inject these secrets.
+
+Read-only GitHub metadata confirms `DATABASE_URL`, `JWT_SECRET`,
+`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `INTASEND_PUB_KEY_PROD`,
+`INTASEND_SECRET_KEY_PROD`, `INTASEND_CHALLENGE`, `INTASEND_WEBHOOK_SECRET`, and
+the DigitalOcean SSH deployment credentials exist in `PROD`. Only secret names
+and update timestamps were retrieved in that metadata check. Their presence alone
+does not establish provider acceptance; the separate runtime checks are listed above.
+`REDIS_PASSWORD`, required by the hardened release, was absent from both the
+inspected `PROD` and repository secret lists. With the user's explicit approval,
+a new cryptographically random value was stored in GitHub `PROD` during release
+preparation. No value was printed or saved locally. Running services have not
+changed; the release supplies this value to Redis and the backend together.
+The existing live `STRIPE_PUBLISHABLE_KEY` was copied from the local production
+configuration to the GitHub `PROD` variable of that name and verified without
+printing its value. The release workflow, environment writer and Compose require
+and pass it at runtime; this public key does not replace the server secret key.
+
+The release branch also adds a read-only inspection mode to the existing manual
+backend workflow, allowing the stored GitHub SSH credential to inspect the
+running container. Website rollout is held unless repository variable
+`WEBSITE_RELEASE_ENABLED=true`. When enabled, it follows successful backend
+deployment from the same tested commit and uses an immutable image digest with rollback.
+The migration audit now compares actual migration names, including nonstandard
+filenames and shared timestamps; all nine deployment/audit tests passed after
+this correction. No new schema migration is introduced by the launch fixes.
+
+Android **1.1.6 (version code 23)** was rebuilt with Flutter 3.41.7 for
+`com.payglobus.paydome` after the card-routing, native SDK and photo-permission
+fixes. Unnecessary inherited `READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO`,
+`READ_MEDIA_AUDIO` and `READ_EXTERNAL_STORAGE` permissions are removed from all
+app variants. The final merged and packaged manifests, bundletool validation,
+signature and upload certificate were verified. Build 23 is uploaded in the
+production/open-testing review queue and its quick checks passed. Internal
+testing has a build 23 draft; build **22 (1.1.5)** remains its current active
+release. No production rollout has occurred. The registered Play upload
+certificate matches the local AAB's SHA-256
+fingerprint exactly: `FE:9C:82:E1:64:67:F4:46:29:21:63:48:69:D4:23:69:68:8D:FF:F1:1B:45:17:4D:C7:1E:02:EE:73:76:65:DE`.
+Deploy the matching backend before mobile rollout, then complete acceptance on a
+device using the signed build. The latest verified artifact is 64,053,685 bytes
+and has SHA-256
+`7464F385C292757FCCE0C3C838E4FB9FC318DF6B7618AC05691E0F05E3B4E7A6`.
+Passing quick checks does not establish Play policy approval or signed-device
+acceptance. See [Play Console preparation](PLAY_CONSOLE_PREPARATION_2026-09-18.md).
+
+Copying Firebase configuration into the release secret remains pending explicit
+user approval after automatic approval review blocked the transfer. No Firebase
+configuration transfer was performed.
+
+### Pull request checks and triage
+
+For PR #4 head `2fdc9d3`, [functional backend CI](https://github.com/ronslink/payKey/actions/runs/35341414223)
+passed its build, lint-regression, unit/security, deployment-configuration and
+isolated-database E2E checks. Image publication and deployment were skipped for
+the pull request. The migration-identity parser
+and storage-path containment corrections remain covered. These results do not
+establish live provider or signed-device acceptance.
+The subsequent M-Pesa subscription, wallet guard and hardening changes need fresh CI;
+the earlier passing run does not cover them.
+
+SonarCloud reported both security and reliability findings. The earlier
+payslip-test sort reliability finding is resolved by an explicit `localeCompare`
+comparator. Further fixes are prepared for lifecycle-disabled package builds,
+non-root container execution with writable persistent storage, pinned action
+versions, a fixed environment-output path, a fixed Git executable path in the
+baseline generator, and an integer-cents assertion replacing a floating-point
+comparison. Fresh CI and Sonar analysis are still pending; the prepared changes
+are not evidence that the remote quality gate has passed. No alerts were dismissed
+and no quality gate was disabled.
+
+Successful functional CI is not a claim that every quality check passed. The
+SonarCloud findings remain open for review alongside the production gates below.
+
+## Remaining production gates
+
+1. **Verify database protection.** Confirm trusted-source controls and managed
+   backup freshness/retention. Runtime identity, TLS and the migration ledger are
+   verified. No migration or restore rehearsal is needed for this application-only
+   rollout; if later work introduces pending SQL, review it and rehearse it against
+   a restored separate database before applying it.
+2. **Accept paid billing through the provider.** Stripe account authentication and
+   the enabled subscription endpoint are verified; establish checkout, actual
+   signed delivery, activation and cancellation through Stripe sandbox, including
+   retry and renewal/failure handling. Monitor the first genuine authorized live
+   purchase instead of making a synthetic live-card test charge. Verify the live signing-secret match through actual
+   delivery, IntaSend callback configuration and the approved server-defined USD
+   prices. Rotate the IntaSend challenge because historical customer-facing
+   metadata could expose it.
+3. **Resolve all Stripe wallet funding before release.** Stripe credits the application's
+   local KES ledger, but payroll pays from each employer's IntaSend working wallet.
+   No transfer/funding bridge exists. Removing hourly ledger overwrites preserves
+   the credit; it does not fund payroll. No funding arrangement has been verified.
+   The prepared default-off `STRIPE_WALLET_FUNDING_ENABLED` gate blocks new Stripe
+   wallet payments in both KES and EUR. Keep it disabled until the actual funding
+   path is agreed and verified. FX conversion and website subscription
+   billing do not resolve this separate liquidity requirement. The Paydome webhook is
+   missing `payment_intent.succeeded`; add that event only after the corrected
+   backend is deployed and the funding path is agreed. Do not enable event delivery
+   as a substitute for resolving provider funding.
+4. **Complete customer distribution and notifications.** Set approved store or
+   beta links and verify real-device login, payslips, downloads and notifications
+   using the signed Android candidate. Android signing is verified locally;
+   automated signing/Firebase setup and any iOS release remain separate work.
+   Firebase release-secret transfer still awaits the explicit user approval
+   required by automatic approval review; no transfer has occurred.
+   Configure actual email/SMS providers for offered delivery channels. Store-distributed
+   mobile subscription checkout remains disabled pending the chosen distribution/payment path.
+5. **Deploy and verify the hardened release.** Apply the configured
+   `REDIS_PASSWORD` consistently to Redis and the backend. Release only after the above
+   prerequisites and CI gates pass. Preserve old private files, remove cached
+   public copies of sensitive URLs, verify testing routes are absent, run the
+   read-only audit, and confirm health, tenant isolation and checkout on the
+   deployed image. Code rollback does not reverse database migrations.
+
+Use [the release runbook](../../../deploy/PRODUCTION_RELEASE.md) for operational
+steps and [the mobile checklist](../../../mobile/RELEASE_CHECKLIST.md) for signing
+and device acceptance. Production has not been certified launch-ready by local
+tests alone.

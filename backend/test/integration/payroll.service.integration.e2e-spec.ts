@@ -1,13 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
-import { TestDatabaseModule } from '../test-database.module';
+import { AppModule } from '../../src/app.module';
 import { cleanupTestData } from '../test-utils';
-import { WorkersModule } from '../../src/modules/workers/workers.module';
-import { TaxesModule } from '../../src/modules/taxes/taxes.module';
-import { PayrollModule } from '../../src/modules/payroll/payroll.module';
 import { PayrollService } from '../../src/modules/payroll/payroll.service';
 import { WorkersService } from '../../src/modules/workers/workers.service';
 import {
@@ -17,34 +13,9 @@ import {
 } from '../../src/modules/workers/entities/worker.entity';
 import { PayPeriod } from '../../src/modules/payroll/entities/pay-period.entity';
 import { PayrollRecord } from '../../src/modules/payroll/entities/payroll-record.entity';
-import { User } from '../../src/modules/users/entities/user.entity';
-import {
-  TaxConfig,
-  TaxType,
-  RateType,
-} from '../../src/modules/tax-config/entities/tax-config.entity';
-import { MockBullModule } from '../mock-bull.module';
+import { User, UserTier } from '../../src/modules/users/entities/user.entity';
 import { v4 as uuidv4 } from 'uuid';
 import { PayPeriodStatus } from '../../src/modules/payroll/entities/pay-period.entity';
-
-jest.mock('@nestjs/bullmq', () => {
-  const actual = jest.requireActual('@nestjs/bullmq');
-  return {
-    ...actual,
-    BullModule: {
-      forRoot: jest.fn().mockReturnValue({ module: class {}, providers: [] }),
-      forRootAsync: jest
-        .fn()
-        .mockReturnValue({ module: class {}, providers: [] }),
-      registerQueue: jest
-        .fn()
-        .mockReturnValue({ module: class {}, providers: [] }),
-      registerQueueAsync: jest
-        .fn()
-        .mockReturnValue({ module: class {}, providers: [] }),
-    },
-  };
-});
 
 describe('PayrollService Integration', () => {
   let app: INestApplication;
@@ -54,18 +25,10 @@ describe('PayrollService Integration', () => {
   let payPeriodRepo: Repository<PayPeriod>;
   let payrollRecordRepo: Repository<PayrollRecord>;
   let userRepo: Repository<User>;
-  let taxConfigRepo: Repository<TaxConfig>;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [
-        TestDatabaseModule,
-        ConfigModule.forRoot({ isGlobal: true }),
-        MockBullModule,
-        WorkersModule,
-        TaxesModule,
-        PayrollModule,
-      ],
+      imports: [AppModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
@@ -87,9 +50,6 @@ describe('PayrollService Integration', () => {
       getRepositoryToken(PayrollRecord),
     );
     userRepo = moduleFixture.get<Repository<User>>(getRepositoryToken(User));
-    taxConfigRepo = moduleFixture.get<Repository<TaxConfig>>(
-      getRepositoryToken(TaxConfig),
-    );
   });
 
   afterAll(async () => {
@@ -107,71 +67,14 @@ describe('PayrollService Integration', () => {
       const dataSource = app.get(DataSource);
       await cleanupTestData(dataSource);
 
-      const _today = new Date();
-      const startOf2024 = new Date('2024-01-01');
-
-      // Seed required tax configs for Kenya (every time because cleanupTestData truncates them)
-      await taxConfigRepo.save([
-        {
-          taxType: TaxType.SHIF,
-          rateType: RateType.PERCENTAGE,
-          effectiveFrom: startOf2024,
-          configuration: { percentage: 2.75, minAmount: 300 },
-          isActive: true,
-        },
-        {
-          taxType: TaxType.HOUSING_LEVY,
-          rateType: RateType.PERCENTAGE,
-          effectiveFrom: startOf2024,
-          configuration: { percentage: 1.5 },
-          isActive: true,
-        },
-        {
-          taxType: TaxType.NSSF_TIER1,
-          rateType: RateType.TIERED,
-          effectiveFrom: startOf2024,
-          configuration: {
-            tiers: [
-              { name: 'Tier 1', salaryFrom: 0, salaryTo: 7000, rate: 0.06 },
-            ],
-          },
-          isActive: true,
-        },
-        {
-          taxType: TaxType.NSSF_TIER2,
-          rateType: RateType.TIERED,
-          effectiveFrom: startOf2024,
-          configuration: {
-            tiers: [
-              { name: 'Tier 2', salaryFrom: 7001, salaryTo: 36000, rate: 0.06 },
-            ],
-          },
-          isActive: true,
-        },
-        {
-          taxType: TaxType.PAYE,
-          rateType: RateType.GRADUATED,
-          effectiveFrom: startOf2024,
-          configuration: {
-            brackets: [
-              { from: 0, to: 24000, rate: 0.1 },
-              { from: 24001, to: 32333, rate: 0.25 },
-              { from: 32334, to: 500000, rate: 0.3 },
-              { from: 500001, to: 800000, rate: 0.325 },
-              { from: 800001, to: null, rate: 0.35 },
-            ],
-            personalRelief: 2400,
-          },
-          isActive: true,
-        },
-      ]);
+      // cleanupTestData restores the application's effective tax configuration.
 
       testUser = await userRepo.save({
         email: 'integration-test@paykey.com',
         passwordHash: '$2b$10$abcdefghijklmnopqrstuvwxyz',
         firstName: 'Test',
         lastName: 'User',
-        countryCode: 'KE',
+        tier: UserTier.PLATINUM,
         isOnboardingCompleted: true,
       });
 
@@ -211,8 +114,12 @@ describe('PayrollService Integration', () => {
       // 2. Save Draft
       const payPeriod = await payPeriodRepo.save({
         userId: testUser.id,
-        startDate: new Date('2024-01-01'),
-        endDate: new Date('2024-01-31'),
+        startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+        endDate: new Date(
+          new Date().getFullYear(),
+          new Date().getMonth() + 1,
+          0,
+        ),
         status: PayPeriodStatus.ACTIVE,
       });
 
@@ -246,15 +153,19 @@ describe('PayrollService Integration', () => {
       expect(updatedPeriod!.status).toBe('COMPLETED');
 
       const janeRecord = records.find((r) => r.workerId === testWorker2.id);
-      expect(janeRecord!.grossSalary).toBe(24000);
+      expect(Number(janeRecord!.grossSalary)).toBe(24000);
       expect(janeRecord!.taxBreakdown.paye).toBe(0);
     });
 
     it('should update draft payroll item', async () => {
       const payPeriod = await payPeriodRepo.save({
         userId: testUser.id,
-        startDate: new Date('2024-01-01'),
-        endDate: new Date('2024-01-31'),
+        startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+        endDate: new Date(
+          new Date().getFullYear(),
+          new Date().getMonth() + 1,
+          0,
+        ),
         status: PayPeriodStatus.ACTIVE,
       });
 
@@ -277,7 +188,7 @@ describe('PayrollService Integration', () => {
       });
 
       const updatedRecord = await payrollRecordRepo.findOneBy({ id: recordId });
-      expect(updatedRecord!.grossSalary).toBe(60000);
+      expect(Number(updatedRecord!.grossSalary)).toBe(60000);
     });
   });
 
@@ -288,7 +199,7 @@ describe('PayrollService Integration', () => {
         passwordHash: 'hash',
         firstName: 'Empty',
         lastName: 'User',
-        countryCode: 'KE',
+        tier: UserTier.PLATINUM,
       });
 
       // calculatePayrollForUser doesn't throw if 0 workers, just returns empty

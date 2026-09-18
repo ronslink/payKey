@@ -25,7 +25,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { AuthenticatedRequest } from '../../common/interfaces/user.interface';
 
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, DataSource } from 'typeorm';
+import { Repository, In, DataSource, Not, IsNull } from 'typeorm';
 import {
   SubscriptionPayment,
   PaymentMethod,
@@ -34,6 +34,7 @@ import {
 import {
   Subscription,
   SubscriptionStatus,
+  SubscriptionTier,
 } from '../subscriptions/entities/subscription.entity';
 import {
   Transaction,
@@ -41,7 +42,7 @@ import {
   TransactionType,
   PaymentMethodType,
 } from './entities/transaction.entity';
-import { User } from '../users/entities/user.entity';
+import { User, UserTier } from '../users/entities/user.entity';
 import {
   PayrollRecord,
   PayrollStatus,
@@ -52,6 +53,9 @@ import {
 } from '../payroll/entities/pay-period.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { DeviceToken } from '../notifications/entities/device-token.entity';
+import { paymentMetadata } from '../subscriptions/dto/subscription-payment-metadata';
+import { PromotionalItem } from '../subscriptions/entities/promotional-item.entity';
+import { redactProviderSecrets } from '../../common/security/provider-secrets';
 
 @Controller('payments')
 export class PaymentsController {
@@ -170,7 +174,10 @@ export class PaymentsController {
       remarks: string;
     },
   ) {
-    if (process.env.NODE_ENV === 'production') {
+    if (
+      process.env.NODE_ENV === 'production' ||
+      process.env.INTASEND_IS_LIVE === 'true'
+    ) {
       throw new BadRequestException(
         'Direct B2C payouts are disabled in production. Use payroll finalization.',
       );
@@ -211,7 +218,10 @@ export class PaymentsController {
     @Body() body: { amount: number },
   ) {
     // Only allow in development mode
-    if (process.env.NODE_ENV === 'production') {
+    if (
+      process.env.NODE_ENV === 'production' ||
+      process.env.INTASEND_IS_LIVE === 'true'
+    ) {
       throw new Error('This endpoint is only available in development mode');
     }
 
@@ -374,6 +384,12 @@ export class PaymentsController {
     @Headers('x-intasend-signature') signature: string,
     @Body() body: any,
   ) {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      throw new BadRequestException('Invalid webhook payload');
+    }
+    const livePayments =
+      process.env.NODE_ENV === 'production' ||
+      process.env.INTASEND_IS_LIVE === 'true';
     // 0. Robust Signature Retrieval (Headers can be lowercase or different casing via proxies)
     const effectiveSignature =
       signature ||
@@ -386,14 +402,16 @@ export class PaymentsController {
     );
 
     if (!effectiveSignature) {
-      console.warn(
-        '[DEBUG] Webhook missing Signature. Headers:',
-        JSON.stringify(req.headers),
-      );
+      console.warn('[DEBUG] Webhook signature header is absent.');
     }
 
-    // CHECK FOR BYPASS
-    const isBypassed = process.env.INTASEND_DISABLE_SIG_CHECK === 'true';
+    // Signature checks may only be bypassed in explicit non-production testing.
+    const bypassRequested = process.env.INTASEND_DISABLE_SIG_CHECK === 'true';
+    const isBypassed = bypassRequested && !livePayments;
+
+    if (bypassRequested && livePayments) {
+      this.logger.error('INTASEND_DISABLE_SIG_CHECK was ignored in live mode.');
+    }
 
     if (isBypassed) {
       console.warn(
@@ -413,19 +431,28 @@ export class PaymentsController {
             challenge,
           )
         ) {
-          console.error(
-            `⛔ Challenge Verification Failed for signature: ${effectiveSignature}`,
-          );
-          console.log('Headers:', JSON.stringify(req.headers));
+          console.error('⛔ Challenge Verification Failed.');
           throw new BadRequestException('Invalid signature or challenge');
         }
         return { challenge: challenge };
       }
 
       // Check if this is a simulation FIRST
-      const isSimulation =
+      const callbackInvoiceId: unknown = (body as Record<string, unknown>)
+        .invoice_id;
+      const callbackHost: unknown = (body as Record<string, unknown>).host;
+      const simulationRequested =
         process.env.INTASEND_SIMULATE === 'true' ||
-        (body.host === 'localhost' && body.invoice_id?.startsWith('INV_SIM_'));
+        (callbackHost === 'localhost' &&
+          typeof callbackInvoiceId === 'string' &&
+          callbackInvoiceId.startsWith('INV_SIM_'));
+      const isSimulation = simulationRequested && !livePayments;
+
+      if (simulationRequested && livePayments) {
+        this.logger.error(
+          'IntaSend simulation bypass was ignored in live mode.',
+        );
+      }
 
       if (isSimulation) {
         this.logger.log(
@@ -439,22 +466,27 @@ export class PaymentsController {
             challenge,
           )
         ) {
-          console.error(
-            `⛔ Signature Verification Failed. Sig: ${effectiveSignature}`,
-          );
+          console.error('⛔ Signature Verification Failed.');
           throw new BadRequestException('Invalid signature or challenge');
         }
       }
     }
 
-    this.logger.log('🔹 IntaSend Webhook Payload Verified:', body);
+    this.logger.log('🔹 IntaSend webhook payload verified.');
 
-    this.logger.log('🔹 IntaSend Webhook Received:', body);
-
-    this.logger.log('🔹 IntaSend Webhook Received:', body);
-
-    let { invoice_id, tracking_id, state, api_ref, value, from_data, to_data } =
-      body;
+    let { invoice_id, tracking_id, state, api_ref, to_data } = body as {
+      invoice_id?: string;
+      tracking_id?: string;
+      state?: string;
+      api_ref?: string;
+      to_data?: {
+        transaction?: {
+          transaction_id?: string;
+          narrative?: string;
+          status?: string;
+        };
+      };
+    };
 
     // B2C batch webhooks use `status` at the top level (not `state`).
     // STK deposit webhooks use `state`. Normalise so both paths use `state`.
@@ -479,6 +511,41 @@ export class PaymentsController {
 
       this.logger.log(
         `🔹 Detected Intra-Wallet Transfer. ID: ${tracking_id}, Ref: ${api_ref}, Status: ${tx.status}`,
+      );
+    }
+
+    // Subscription collections must resolve one stored invoice before the generic
+    // batch handler, including old requests that shared an api_ref across users.
+    const subscriptionCandidates =
+      invoice_id || api_ref
+        ? await this.transactionsRepository.find({
+            where: [
+              ...(invoice_id
+                ? [
+                    {
+                      type: TransactionType.SUBSCRIPTION,
+                      provider: 'INTASEND',
+                      providerRef: invoice_id,
+                    },
+                  ]
+                : []),
+              ...(api_ref
+                ? [
+                    {
+                      type: TransactionType.SUBSCRIPTION,
+                      provider: 'INTASEND',
+                      accountReference: api_ref,
+                    },
+                  ]
+                : []),
+            ],
+          })
+        : [];
+    if (subscriptionCandidates.length) {
+      return this.settleIntaSendSubscription(
+        subscriptionCandidates,
+        invoice_id,
+        api_ref,
       );
     }
 
@@ -538,6 +605,16 @@ export class PaymentsController {
         return { status: 'ignored', reason: 'Transaction not found' };
       }
 
+      if (
+        transactions.some(
+          (transaction) => transaction.type === TransactionType.SUBSCRIPTION,
+        )
+      ) {
+        throw new BadRequestException(
+          'A subscription invoice is required for verification',
+        );
+      }
+
       // 2. Idempotency Check
       const firstTx = transactions[0];
       const hasOpenTransactions = transactions.some(
@@ -578,6 +655,10 @@ export class PaymentsController {
         );
         const newStatus = itemizedStatus || batchStatus;
 
+        // CLEARING can arrive in state, status or clearing_status. Retries of
+        // the same transition must never credit the clearing balance again.
+        if (newStatus === previousStatus) continue;
+
         if (
           previousStatus === TransactionStatus.CLEARING &&
           newStatus === TransactionStatus.PENDING
@@ -601,13 +682,23 @@ export class PaymentsController {
           tx.paymentMethod = detectedPaymentMethod;
         }
 
-        tx.metadata = {
-          ...(typeof tx.metadata === 'string'
-            ? JSON.parse(tx.metadata)
-            : tx.metadata),
+        let previousMetadata: unknown = tx.metadata;
+        if (typeof previousMetadata === 'string') {
+          try {
+            previousMetadata = JSON.parse(previousMetadata) as unknown;
+          } catch {
+            previousMetadata = {};
+          }
+        }
+        tx.metadata = redactProviderSecrets({
+          ...(previousMetadata &&
+          typeof previousMetadata === 'object' &&
+          !Array.isArray(previousMetadata)
+            ? previousMetadata
+            : {}),
           webhookEvent: body,
           updatedAt: new Date().toISOString(),
-        };
+        });
 
         // Handle Deposit Logic (Only credit once per transaction)
         if (tx.type === TransactionType.DEPOSIT) {
@@ -616,14 +707,14 @@ export class PaymentsController {
               User,
               { id: tx.userId },
               'clearingBalance',
-              Number(value || tx.amount),
+              Number(tx.amount),
             );
           } else if (newStatus === TransactionStatus.SUCCESS) {
             await manager.increment(
               User,
               { id: tx.userId },
               'walletBalance',
-              Number(value || tx.amount),
+              Number(tx.amount),
             );
 
             if (previousStatus === TransactionStatus.CLEARING) {
@@ -631,9 +722,19 @@ export class PaymentsController {
                 User,
                 { id: tx.userId },
                 'clearingBalance',
-                Number(value || tx.amount),
+                Number(tx.amount),
               );
             }
+          } else if (
+            newStatus === TransactionStatus.FAILED &&
+            previousStatus === TransactionStatus.CLEARING
+          ) {
+            await manager.decrement(
+              User,
+              { id: tx.userId },
+              'clearingBalance',
+              Number(tx.amount),
+            );
           }
         }
 
@@ -659,6 +760,9 @@ export class PaymentsController {
         updatedCount++;
       }
 
+      if (updatedCount === 0) {
+        return { status: 'ignored', reason: 'No status transition' };
+      }
       await manager.save(Transaction, transactions);
 
       // 6. Send Push Notifications for status updates
@@ -689,63 +793,197 @@ export class PaymentsController {
         }
       }
 
-      // 7. Subscription Logic (Legacy/Single handling)
-      if (
-        firstTx.metadata?.subscriptionPaymentId &&
-        (firstTx.status === TransactionStatus.SUCCESS ||
-          firstTx.status === TransactionStatus.FAILED)
-      ) {
-        const subPaymentId = firstTx.metadata.subscriptionPaymentId;
-        const isSuccess = firstTx.status === TransactionStatus.SUCCESS;
-        const status = isSuccess
-          ? PaymentStatus.COMPLETED
-          : PaymentStatus.FAILED;
-
-        await manager.update(SubscriptionPayment, subPaymentId, {
-          status,
-          transactionId: invoice_id || tracking_id,
-          paymentMethod: this.toSubscriptionPaymentMethod(
-            firstTx.paymentMethod,
-          ),
-          paidDate: isSuccess ? new Date() : undefined,
-        });
-
-        if (isSuccess) {
-          const payment = await manager.findOne(SubscriptionPayment, {
-            where: { id: subPaymentId },
-          });
-          if (payment) {
-            const subscription = await manager.findOne(Subscription, {
-              where: { id: payment.subscriptionId },
-            });
-            if (subscription) {
-              subscription.status = SubscriptionStatus.ACTIVE;
-              subscription.billingPeriod =
-                payment.billingPeriod || subscription.billingPeriod;
-              subscription.amount = Number(payment.amount);
-              subscription.lockedPrice = Number(payment.amount);
-              subscription.startDate =
-                subscription.startDate || payment.periodStart || new Date();
-              subscription.endDate = payment.periodEnd;
-              subscription.nextBillingDate = payment.periodEnd;
-              subscription.gracePeriodEndDate = null;
-              await manager.save(Subscription, subscription);
-              await manager.update(User, payment.userId, {
-                tier: subscription.tier as any,
-              });
-              console.log(
-                `🎉 Subscription Activated for User ${payment.userId}`,
-              );
-            }
-          }
-        }
-      }
-
       return {
         status: 'success',
         updated: updatedCount,
         challenge: body.challenge, // Echo challenge if present (required by IntaSend)
       };
+    });
+  }
+
+  private async settleIntaSendSubscription(
+    candidates: Transaction[],
+    invoiceId?: string,
+    reference?: string,
+  ) {
+    if (!invoiceId)
+      throw new BadRequestException(
+        'A subscription invoice is required for verification',
+      );
+    const exact = candidates.filter(
+      (transaction) => transaction.providerRef === invoiceId,
+    );
+    const matches = exact.length ? exact : candidates;
+    if (matches.length !== 1)
+      throw new BadRequestException('Ambiguous subscription payment reference');
+    const candidate = matches[0];
+    if (reference && reference !== candidate.accountReference)
+      throw new BadRequestException('Subscription payment reference mismatch');
+    return this.dataSource.transaction(async (manager) => {
+      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+        `stripe-billing:${candidate.userId}`,
+      ]);
+      const transaction = await manager.findOne(Transaction, {
+        where: { id: candidate.id },
+        lock: { mode: 'pessimistic_write' },
+      });
+      const transactionMetadata = transaction?.metadata as
+        | { subscriptionPaymentId?: string; planId?: string }
+        | undefined;
+      if (!transaction || !transactionMetadata?.subscriptionPaymentId)
+        throw new BadRequestException('Subscription receipt not found');
+      const payment = await manager.findOne(SubscriptionPayment, {
+        where: { id: transactionMetadata.subscriptionPaymentId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      const subscription =
+        payment &&
+        (await manager.findOneBy(Subscription, { id: payment.subscriptionId }));
+      if (
+        !payment ||
+        !subscription ||
+        payment.userId !== transaction.userId ||
+        subscription.userId !== transaction.userId ||
+        payment.currency !== transaction.currency ||
+        Number(payment.amount) !== Number(transaction.amount)
+      ) {
+        throw new BadRequestException(
+          'Subscription payment ownership mismatch',
+        );
+      }
+      if (this.isFinalTransactionStatus(transaction.status))
+        return { status: 'ignored', reason: 'Already finalized' };
+      const isMpesa = payment.paymentMethod === 'mpesa';
+      if (
+        isMpesa &&
+        ((transaction.providerRef && transaction.providerRef !== invoiceId) ||
+          (payment.transactionId && payment.transactionId !== invoiceId))
+      )
+        throw new BadRequestException('Subscription invoice mismatch');
+      if (
+        isMpesa &&
+        !transaction.providerRef &&
+        transaction.accountReference !== `SUB-${payment.id}`
+      )
+        throw new BadRequestException(
+          'Subscription invoice binding is missing',
+        );
+      // Bank checkout IDs and M-Pesa invoice IDs are different provider references.
+      // Retrieve using the reference saved by our initiation, never a caller's invoice alone.
+      const result = await this.intaSendService.getPaymentStatus(
+        transaction.providerRef || invoiceId,
+        isMpesa ? 'invoice' : 'checkout',
+      );
+      const invoice = result?.invoice;
+      const value = Number(invoice?.value);
+      const amountMinor = Math.round(Number(payment.amount) * 100);
+      if (
+        !invoice ||
+        invoice.invoice_id !== invoiceId ||
+        invoice.api_ref !== transaction.accountReference ||
+        invoice.currency !== payment.currency ||
+        !Number.isFinite(value) ||
+        value <= 0 ||
+        !Number.isSafeInteger(amountMinor) ||
+        Math.abs(value * 100 - amountMinor) > 0.000001
+      ) {
+        throw new BadRequestException(
+          'Subscription invoice amount, currency or reference mismatch',
+        );
+      }
+      const state = String(invoice.state).toUpperCase();
+      if (state !== 'COMPLETE' && state !== 'FAILED')
+        return { status: 'pending' };
+      if (isMpesa && !transaction.providerRef) {
+        transaction.providerRef = invoiceId;
+        payment.transactionId = invoiceId;
+      }
+      const completed = state === 'COMPLETE';
+      transaction.status = completed
+        ? TransactionStatus.SUCCESS
+        : TransactionStatus.FAILED;
+      payment.status = completed
+        ? PaymentStatus.COMPLETED
+        : PaymentStatus.FAILED;
+      const metadata = {
+        ...paymentMetadata(payment.metadata),
+        verifiedInvoiceId: invoiceId,
+        entitlementApplied: false,
+      };
+      if (completed) {
+        payment.paidDate = new Date();
+        const stripeContracts = await manager.find(Subscription, {
+          where: {
+            userId: payment.userId,
+            stripeSubscriptionId: Not(IsNull()),
+          },
+        });
+        if (
+          stripeContracts.some(
+            (contract) => contract.status !== SubscriptionStatus.CANCELLED,
+          )
+        ) {
+          payment.notes =
+            'Payment received after Stripe billing was linked; reconciliation required. Stripe entitlement unchanged.';
+        } else {
+          const targetTier = String(
+            metadata.targetTier ||
+              metadata.planId ||
+              transactionMetadata.planId ||
+              subscription.tier,
+          ).toUpperCase() as SubscriptionTier;
+          if (
+            !Object.values(SubscriptionTier).includes(targetTier) ||
+            targetTier === SubscriptionTier.FREE ||
+            !['monthly', 'yearly'].includes(payment.billingPeriod) ||
+            !(payment.periodEnd > payment.periodStart)
+          ) {
+            throw new BadRequestException(
+              'Invalid subscription payment period or plan',
+            );
+          }
+          // A late callback must never shorten an entitlement already paid through.
+          if (
+            !subscription.endDate ||
+            payment.periodEnd > subscription.endDate ||
+            subscription.status !== SubscriptionStatus.ACTIVE
+          ) {
+            subscription.tier = targetTier;
+            subscription.status = SubscriptionStatus.ACTIVE;
+            subscription.billingPeriod = payment.billingPeriod;
+            subscription.amount = Number(payment.amount);
+            subscription.currency = payment.currency;
+            subscription.lockedPrice = Number(payment.amount);
+            subscription.startDate = payment.periodStart;
+            subscription.endDate = payment.periodEnd;
+            subscription.nextBillingDate = payment.periodEnd;
+            subscription.gracePeriodEndDate = null;
+            subscription.pendingTier = null;
+            subscription.appliedPromoId = metadata.promoId || null;
+            subscription.promoDiscountAmount = payment.promoDiscountAmount;
+            if (isMpesa) subscription.autoRenewal = false;
+            await manager.save(Subscription, subscription);
+            await manager.update(User, payment.userId, {
+              tier: targetTier as unknown as UserTier,
+            });
+            metadata.entitlementApplied = true;
+          } else {
+            payment.notes =
+              'Verified payment has an older service period; current paid-through date preserved. Reconciliation required.';
+          }
+          if (metadata.promoId)
+            await manager.increment(
+              PromotionalItem,
+              { id: metadata.promoId },
+              'currentUses',
+              1,
+            );
+        }
+      }
+      payment.metadata = metadata;
+      await manager.save(Transaction, transaction);
+      await manager.save(SubscriptionPayment, payment);
+      return { status: 'success', updated: 1 };
     });
   }
 

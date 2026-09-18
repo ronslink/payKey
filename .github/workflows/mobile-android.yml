@@ -1,14 +1,23 @@
-name: Mobile Android CI
+name: Android Production Release Artifact
 
 # Manual trigger only - run from GitHub Actions tab when needed
 on:
   workflow_dispatch:
+    inputs:
+      build_number:
+        description: 'New Google Play version code (greater than the last uploaded build)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
 
 jobs:
   android-build:
-    name: Build Android APK
+    name: Build signed production AAB
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    environment: PROD
     defaults:
       run:
         working-directory: ./mobile
@@ -26,10 +35,50 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
+          flutter-version: '3.41.7'
           cache: true
 
       - name: Install Dependencies
         run: flutter pub get
+
+      - name: Restore Firebase and release signing files
+        env:
+          GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          RELEASE_BUILD_NUMBER: ${{ inputs.build_number }}
+        run: |
+          python3 - <<'PY'
+          import base64, json, os
+          from pathlib import Path
+          required = ['GOOGLE_SERVICES_JSON_BASE64', 'ANDROID_KEYSTORE_BASE64',
+                      'ANDROID_KEY_ALIAS', 'ANDROID_KEY_PASSWORD', 'ANDROID_KEYSTORE_PASSWORD']
+          missing = [name for name in required if not os.environ.get(name)]
+          if missing:
+              raise SystemExit('Missing required PROD secrets: ' + ', '.join(missing))
+          number = os.environ['RELEASE_BUILD_NUMBER']
+          if not number.isdigit() or not 0 < int(number) <= 2100000000:
+              raise SystemExit('build_number must be a positive Android version code')
+          firebase = base64.b64decode(''.join(os.environ['GOOGLE_SERVICES_JSON_BASE64'].split()), validate=True)
+          config = json.loads(firebase)
+          packages = [client.get('client_info', {}).get('android_client_info', {}).get('package_name')
+                      for client in config.get('client', [])]
+          if 'com.payglobus.paydome' not in packages:
+              raise SystemExit('Firebase configuration does not include the production Android package')
+          Path('android/app/google-services.json').write_bytes(firebase)
+          keystore = Path('android/app/release-upload.jks')
+          keystore.write_bytes(base64.b64decode(''.join(os.environ['ANDROID_KEYSTORE_BASE64'].split()), validate=True))
+          def property_value(value):
+              return (value.replace('\\', '\\\\').replace('\n', '\\n').replace('\r', '\\r')
+                      .replace('=', '\\=').replace(':', '\\:').replace(' ', '\\ '))
+          values = {'storeFile': str(keystore.resolve()), 'keyAlias': os.environ['ANDROID_KEY_ALIAS'],
+                    'keyPassword': os.environ['ANDROID_KEY_PASSWORD'],
+                    'storePassword': os.environ['ANDROID_KEYSTORE_PASSWORD']}
+          Path('android/key.properties').write_text(
+              ''.join(f'{key}={property_value(value)}\n' for key, value in values.items()))
+          PY
 
       - name: Run Analysis
         run: flutter analyze --no-fatal-infos
@@ -37,11 +86,30 @@ jobs:
       - name: Run Tests
         run: flutter test --exclude-tags=manual
 
-      - name: Build APK (Release)
-        run: flutter build apk --release
+      - name: Build signed production app bundle
+        env:
+          RELEASE_BUILD_NUMBER: ${{ inputs.build_number }}
+        run: >-
+          flutter build appbundle --release --build-number="$RELEASE_BUILD_NUMBER"
+          --dart-define=APP_ENV=prod
+          --dart-define=API_URL=https://api.paydome.co
+          --dart-define=INTASEND_IS_LIVE=true
+          --dart-define=ENABLE_EXTERNAL_SUBSCRIPTION_CHECKOUT=false
 
-      - name: Upload APK
+      - name: Upload signed release candidate (does not publish to Google Play)
         uses: actions/upload-artifact@v4
         with:
-          name: app-release-apk
-          path: mobile/build/app/outputs/flutter-apk/app-release.apk
+          name: paydome-production-aab-${{ inputs.build_number }}
+          path: mobile/build/app/outputs/bundle/release/*.aab
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Remove temporary signing files
+        if: always()
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          for filename in ('android/key.properties', 'android/app/release-upload.jks',
+                           'android/app/google-services.json'):
+              Path(filename).unlink(missing_ok=True)
+          PY

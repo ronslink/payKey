@@ -24,6 +24,7 @@ import {
 describe('SubscriptionProcessor', () => {
   let processor: SubscriptionProcessor;
   let subscriptionRepository: {
+    manager: { transaction: jest.Mock; query: jest.Mock };
     create: jest.Mock;
     findOne: jest.Mock;
     save: jest.Mock;
@@ -54,8 +55,21 @@ describe('SubscriptionProcessor', () => {
     sendNotification: jest.Mock;
   };
 
+  function mockUnmanagedSubscription(subscription: Subscription) {
+    // This fixture has one non-Stripe row. ID lookups find it; the separate
+    // account lookup for a non-null Stripe contract must return no match.
+    subscriptionRepository.findOne.mockImplementation(
+      ({ where }: { where: { id?: string } }) =>
+        Promise.resolve(where.id === subscription.id ? subscription : null),
+    );
+  }
+
   beforeEach(async () => {
     subscriptionRepository = {
+      manager: {
+        query: jest.fn().mockResolvedValue([]),
+        transaction: jest.fn((work) => work(subscriptionRepository.manager)),
+      },
       create: jest.fn().mockImplementation((entity) => entity),
       findOne: jest.fn(),
       save: jest.fn().mockImplementation((entity) => Promise.resolve(entity)),
@@ -136,6 +150,41 @@ describe('SubscriptionProcessor', () => {
     processor = module.get(SubscriptionProcessor);
   });
 
+  it('rechecks provider ownership after acquiring the billing lock before running an old renewal job', async () => {
+    const subscription = {
+      id: 'subscription-1',
+      userId: 'user-1',
+      stripeSubscriptionId: null,
+      status: SubscriptionStatus.ACTIVE,
+      tier: SubscriptionTier.GOLD,
+      pendingTier: SubscriptionTier.FREE,
+      autoRenewal: false,
+    };
+    subscriptionRepository.findOne.mockImplementation(() =>
+      Promise.resolve({ ...subscription }),
+    );
+    subscriptionRepository.manager.query.mockImplementation(() => {
+      // A Stripe payment completed while this queued renewal waited for its lock.
+      subscription.stripeSubscriptionId = 'sub_active' as any;
+      return Promise.resolve([]);
+    });
+    await processor.process({
+      id: 'queued-job',
+      name: 'renew-subscription',
+      data: { subscriptionId: subscription.id },
+    } as any);
+    expect(subscriptionRepository.manager.query).toHaveBeenCalledWith(
+      'SELECT pg_advisory_xact_lock(hashtext($1))',
+      ['stripe-billing:user-1'],
+    );
+    expect(subscriptionRepository.findOne).toHaveBeenCalledTimes(2);
+    expect(subscriptionRepository.save).not.toHaveBeenCalled();
+    expect(userRepository.update).not.toHaveBeenCalled();
+    expect(paymentRepository.save).not.toHaveBeenCalled();
+    expect(transactionRepository.save).not.toHaveBeenCalled();
+    expect(intaSendService.createCheckoutUrl).not.toHaveBeenCalled();
+  });
+
   it('creates an IntaSend renewal checkout instead of deducting the payroll wallet', async () => {
     const dueDate = new Date('2026-05-14T00:00:00Z');
     const subscription = {
@@ -157,7 +206,7 @@ describe('SubscriptionProcessor', () => {
       walletBalance: 999999,
     } as User;
 
-    subscriptionRepository.findOne.mockResolvedValue(subscription);
+    mockUnmanagedSubscription(subscription);
     userRepository.findOne.mockResolvedValue(user);
     deviceTokenRepository.findOne.mockResolvedValue({
       token: 'fcm-renewal-token',
@@ -244,7 +293,7 @@ describe('SubscriptionProcessor', () => {
       nextBillingDate: new Date('2026-05-14T00:00:00Z'),
     } as Subscription;
 
-    subscriptionRepository.findOne.mockResolvedValue(subscription);
+    mockUnmanagedSubscription(subscription);
     userRepository.findOne.mockResolvedValue({
       id: 'user-1',
       email: 'renewal@example.com',
@@ -291,7 +340,7 @@ describe('SubscriptionProcessor', () => {
       email: 'renewal@example.com',
     } as User;
 
-    subscriptionRepository.findOne.mockResolvedValue(subscription);
+    mockUnmanagedSubscription(subscription);
     userRepository.findOne.mockResolvedValue(user);
 
     const result = await processor.process({
@@ -347,7 +396,7 @@ describe('SubscriptionProcessor', () => {
       email: 'renewal@example.com',
     } as User;
 
-    subscriptionRepository.findOne.mockResolvedValue(subscription);
+    mockUnmanagedSubscription(subscription);
     userRepository.findOne.mockResolvedValue(user);
 
     const result = await processor.process({

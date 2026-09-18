@@ -9,6 +9,9 @@ import Contact from './pages/Contact'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import DeleteMe from './pages/DeleteMe'
 import PaymentSuccess from './pages/PaymentSuccess'
+import GetStarted from './pages/GetStarted'
+import Account from './pages/Account'
+import Checkout from './pages/Checkout'
 
 export default function App() {
   return (
@@ -17,6 +20,9 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/marketing" element={<Home />} />
         <Route path="/pricing" element={<Pricing />} />
+        <Route path="/get-started" element={<GetStarted />} />
+        <Route path="/account" element={<Account />} />
+        <Route path="/checkout" element={<Checkout />} />
         <Route path="/features" element={<Features />} />
         <Route path="/about" element={<About />} />
         <Route path="/help" element={<Help />} />
@@ -26,6 +32,7 @@ export default function App() {
         <Route path="/subscription/success" element={<PaymentSuccess />} />
         {/* Stripe redirects here after checkout — matches backend success_url */}
         <Route path="/payments/subscriptions/success" element={<PaymentSuccess />} />
+        <Route path="/payments/subscriptions/cancel" element={<PaymentSuccess />} />
       </Route>
     </Routes>
   )
