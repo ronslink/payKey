@@ -28,6 +28,8 @@ export default function App() {
         <Route path="/help" element={<Help />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/paydome/privacy_policy" element={<PrivacyPolicy />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/deleteme" element={<DeleteMe />} />
         <Route path="/subscription/success" element={<PaymentSuccess />} />
         {/* Stripe redirects here after checkout — matches backend success_url */}
