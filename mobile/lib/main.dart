@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -92,13 +94,72 @@ void main() async {
   final storageService = StorageService(prefs);
   
   runApp(
-    ProviderScope(
-      overrides: [
-        storageProvider.overrideWithValue(storageService),
-      ],
+    SessionScope(
+      storageService: storageService,
       child: const PaydomeApp(),
     ),
   );
+}
+
+// =============================================================================
+// SESSION SCOPE
+// =============================================================================
+
+/// Rebuilds the provider container whenever the session ends.
+///
+/// Signing out only clears the stored token; every provider still holding data
+/// for the signed-out user (profile, settings, workers, payroll, …) keeps its
+/// cached value, so the next user to sign in on the same device briefly sees the
+/// previous user's data — their first name on the home screen, for example.
+///
+/// Giving [ProviderScope] a new key on sign-out disposes the whole container, so
+/// the next session starts from empty state. The router is recreated with it and
+/// starts at [AppConfig.initialRoute], which is the login page.
+class SessionScope extends StatefulWidget {
+  const SessionScope({
+    super.key,
+    required this.storageService,
+    required this.child,
+  });
+
+  final StorageService storageService;
+  final Widget child;
+
+  @override
+  State<SessionScope> createState() => _SessionScopeState();
+}
+
+class _SessionScopeState extends State<SessionScope> {
+  int _session = 0;
+  StreamSubscription<String?>? _tokenSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    // Emits the new token on sign-in, and null on sign-out or a 401.
+    _tokenSubscription = ApiService().onTokenChanged.listen((token) {
+      if (token == null && mounted) {
+        setState(() => _session++);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _tokenSubscription?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ProviderScope(
+      key: ValueKey('session-$_session'),
+      overrides: [
+        storageProvider.overrideWithValue(widget.storageService),
+      ],
+      child: widget.child,
+    );
+  }
 }
 
 // =============================================================================
@@ -113,20 +174,35 @@ class PaydomeApp extends ConsumerStatefulWidget {
 }
 
 class _PaydomeAppState extends ConsumerState<PaydomeApp> {
+  StreamSubscription<RemoteMessage>? _notificationTapSubscription;
+  StreamSubscription<void>? _unauthorizedSubscription;
+
   @override
   void initState() {
     super.initState();
     // Handle notification taps (background → foreground, terminated → open)
     if (!kIsWeb) {
-      NotificationService().onMessageOpenedApp.listen(_handleNotificationTap);
+      _notificationTapSubscription = NotificationService()
+          .onMessageOpenedApp
+          .listen(_handleNotificationTap);
     }
 
     // Listen for unauthorized events to redirect to login
-    ApiService().onUnauthorized.listen((_) {
+    _unauthorizedSubscription = ApiService().onUnauthorized.listen((_) {
       if (mounted) {
         ref.read(routerProvider).go(AppRoutes.login);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    // SessionScope rebuilds this widget on sign-out, so both subscriptions must
+    // be released here. Without this every logout would add another listener
+    // whose callback captures a disposed ref.
+    _notificationTapSubscription?.cancel();
+    _unauthorizedSubscription?.cancel();
+    super.dispose();
   }
 
   void _handleNotificationTap(RemoteMessage message) {
