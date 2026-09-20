@@ -174,7 +174,7 @@ class FeatureAccessService {
         if (!hasAccess) {
           return FeatureAccessResult.locked(
             data['requiredTier'] ?? 'BASIC',
-            data['reason'] ?? 'Upgrade to access this feature',
+            data['reason'] ?? 'This feature is not included in your current plan',
           );
         }
 
@@ -273,12 +273,12 @@ final featureAccessProvider =
       if (summary.lockedFeatures.contains(featureKey)) {
         return FeatureAccessResult.locked(
           _getRequiredTierForFeature(featureKey),
-          'Upgrade to ${_getRequiredTierForFeature(featureKey)} to access this feature',
+          'This feature requires the ${_getRequiredTierForFeature(featureKey)} plan',
         );
       }
       if (summary.previewFeatures.contains(featureKey)) {
         return FeatureAccessResult.preview(
-          mockNotice: 'This is sample data. Upgrade to see your real data.',
+          mockNotice: 'This is sample data. Your real data is available on a paid plan.',
           requiredTier: _getRequiredTierForFeature(featureKey),
         );
       }

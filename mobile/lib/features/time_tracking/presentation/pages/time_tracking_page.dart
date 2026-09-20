@@ -1,3 +1,4 @@
+import '../../../../core/config/store_policy.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -155,7 +156,7 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
               ),
             ),
           ),
-          TextButton(
+          if (StorePolicy.purchasesAllowed) TextButton(
             onPressed: () {
               // TODO: Navigate to upgrade screen
             },

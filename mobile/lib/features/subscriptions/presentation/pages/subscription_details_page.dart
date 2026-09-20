@@ -1,3 +1,4 @@
+import '../../../../core/config/store_policy.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -139,12 +140,14 @@ class _SubscriptionDetailsPageState
             ),
             const SizedBox(height: 8),
             Text(
-              'Subscribe to a plan to unlock premium features and manage your team more effectively.',
+              StorePolicy.purchasesAllowed
+                  ? 'Subscribe to a plan to unlock premium features and manage your team more effectively.'
+                  : 'You are on the free plan. Core payroll features are available at no cost.',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey.shade600, height: 1.5),
             ),
             const SizedBox(height: 24),
-            SizedBox(
+            if (StorePolicy.purchasesAllowed) SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () => context.push('/pricing'),
@@ -450,16 +453,18 @@ class _SubscriptionDetailsPageState
             const SizedBox(height: 16),
             Row(
               children: [
-                Expanded(
-                  child: _buildActionButton(
-                    context,
-                    'Change Plan',
-                    Icons.swap_horiz,
-                    Colors.blue,
-                    () => context.push('/pricing'),
+                if (StorePolicy.purchasesAllowed) ...[
+                  Expanded(
+                    child: _buildActionButton(
+                      context,
+                      'Change Plan',
+                      Icons.swap_horiz,
+                      Colors.blue,
+                      () => context.push('/pricing'),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
+                  const SizedBox(width: 12),
+                ],
                 Expanded(
                   child: _buildActionButton(
                     context,
@@ -474,18 +479,20 @@ class _SubscriptionDetailsPageState
             const SizedBox(height: 12),
             Row(
               children: [
-                Expanded(
-                  child: _buildActionButton(
-                    context,
-                    subscription.autoRenew
-                        ? 'Cancel Auto-Renew'
-                        : 'Enable Auto-Renew',
-                    subscription.autoRenew ? Icons.cancel : Icons.autorenew,
-                    subscription.autoRenew ? Colors.orange : Colors.green,
-                    () => _toggleAutoRenew(context, subscription),
+                if (StorePolicy.purchasesAllowed || subscription.autoRenew) ...[
+                  Expanded(
+                    child: _buildActionButton(
+                      context,
+                      subscription.autoRenew
+                          ? 'Cancel Auto-Renew'
+                          : 'Enable Auto-Renew',
+                      subscription.autoRenew ? Icons.cancel : Icons.autorenew,
+                      subscription.autoRenew ? Colors.orange : Colors.green,
+                      () => _toggleAutoRenew(context, subscription),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
+                  const SizedBox(width: 12),
+                ],
                 Expanded(
                   child: _buildActionButton(
                     context,
@@ -749,9 +756,12 @@ class _SubscriptionDetailsPageState
             ),
             const SizedBox(height: 12),
             Text(
-              '• Upgrade anytime to unlock more features\n'
-              '• You can cancel or change plans at any time\n'
-              '• Need help? Email support@paydome.co',
+              StorePolicy.purchasesAllowed
+                  ? '• Upgrade anytime to unlock more features\n'
+                      '• You can cancel or change plans at any time\n'
+                      '• Need help? Email support@paydome.co'
+                  : '• You can cancel auto-renewal at any time\n'
+                      '• Need help? Email support@paydome.co',
               style: TextStyle(color: Colors.blue.shade700, height: 1.6),
             ),
           ],

@@ -36,7 +36,7 @@ class TimeTrackingRepository {
     } on DioException catch (e) {
       if (e.response?.statusCode == 403) {
         throw TimeTrackingException(
-          'Upgrade to PLATINUM to use time tracking',
+          'The PLATINUM plan is required to use time tracking',
           statusCode: 403,
         );
       }
@@ -63,7 +63,7 @@ class TimeTrackingRepository {
     } on DioException catch (e) {
       if (e.response?.statusCode == 403) {
         throw TimeTrackingException(
-          'Upgrade to PLATINUM to use time tracking',
+          'The PLATINUM plan is required to use time tracking',
           statusCode: 403,
         );
       }

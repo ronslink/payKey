@@ -56,7 +56,7 @@ class LeaveManagementRepository {
     } on DioException catch (e) {
       if (e.response?.statusCode == 403) {
         // In preview mode, show a message that they can't create real requests
-        throw Exception('Upgrade to PLATINUM to create leave requests');
+        throw Exception('The PLATINUM plan is required to create leave requests');
       }
       rethrow;
     }
@@ -71,7 +71,7 @@ class LeaveManagementRepository {
       return LeaveRequestModel.fromJson(response.data);
     } on DioException catch (e) {
       if (e.response?.statusCode == 403) {
-        throw Exception('Upgrade to PLATINUM to manage leave requests');
+        throw Exception('The PLATINUM plan is required to manage leave requests');
       }
       rethrow;
     }
@@ -82,7 +82,7 @@ class LeaveManagementRepository {
       await _apiService.deleteLeaveRequest(leaveRequestId);
     } on DioException catch (e) {
       if (e.response?.statusCode == 403) {
-        throw Exception('Upgrade to PLATINUM to delete leave requests');
+        throw Exception('The PLATINUM plan is required to delete leave requests');
       }
       rethrow;
     }
@@ -93,7 +93,7 @@ class LeaveManagementRepository {
       await _apiService.approveLeaveRequest(leaveRequestId, approved, comments: comments);
     } on DioException catch (e) {
       if (e.response?.statusCode == 403) {
-        throw Exception('Upgrade to PLATINUM to approve leave requests');
+        throw Exception('The PLATINUM plan is required to approve leave requests');
       }
       rethrow;
     }

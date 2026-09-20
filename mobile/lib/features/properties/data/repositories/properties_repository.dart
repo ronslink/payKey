@@ -84,7 +84,7 @@ class PropertiesRepository {
       return PropertyModel.fromJson(response.data);
     } on DioException catch (e) {
       if (e.response?.statusCode == 403) {
-        throw Exception('Upgrade to PLATINUM to create properties');
+        throw Exception('The PLATINUM plan is required to create properties');
       }
       throw _handleError(e);
     } catch (e) {
@@ -101,7 +101,7 @@ class PropertiesRepository {
       return PropertyModel.fromJson(response.data);
     } on DioException catch (e) {
       if (e.response?.statusCode == 403) {
-        throw Exception('Upgrade to PLATINUM to update properties');
+        throw Exception('The PLATINUM plan is required to update properties');
       }
       throw _handleError(e);
     } catch (e) {
@@ -114,7 +114,7 @@ class PropertiesRepository {
       await _dio.delete('/properties/$id');
     } on DioException catch (e) {
       if (e.response?.statusCode == 403) {
-        throw Exception('Upgrade to PLATINUM to delete properties');
+        throw Exception('The PLATINUM plan is required to delete properties');
       }
       throw _handleError(e);
     } catch (e) {
@@ -128,7 +128,7 @@ class PropertiesRepository {
       return PropertyModel.fromJson(response.data);
     } on DioException catch (e) {
       if (e.response?.statusCode == 403) {
-        throw Exception('Upgrade to PLATINUM to restore properties');
+        throw Exception('The PLATINUM plan is required to restore properties');
       }
       throw _handleError(e);
     } catch (e) {
@@ -141,7 +141,7 @@ class PropertiesRepository {
       await _dio.delete('/properties/$id/permanent');
     } on DioException catch (e) {
       if (e.response?.statusCode == 403) {
-        throw Exception('Upgrade to PLATINUM to permanently delete properties');
+        throw Exception('The PLATINUM plan is required to permanently delete properties');
       }
       throw _handleError(e);
     } catch (e) {

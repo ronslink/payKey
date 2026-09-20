@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'core/config/store_policy.dart';
 import 'package:flutter/foundation.dart';
 
 // Features
@@ -267,6 +268,16 @@ Future<String?> _handleRedirect(
 ) async {
   final currentPath = state.matchedLocation;
   final isAuthPage = _isAuthRoute(currentPath);
+
+  // iOS: plans are not sold in the app (App Store Guideline 3.1.1).
+  // Send any plan/checkout route to the read-only plan details page.
+  if (!StorePolicy.purchasesAllowed &&
+      (currentPath == AppRoutes.pricing ||
+          currentPath == AppRoutes.subscriptions ||
+          currentPath == AppRoutes.subscriptionPayment ||
+          currentPath == AppRoutes.settingsSubscription)) {
+    return AppRoutes.subscriptionDetails;
+  }
 
   // Check authentication status
   final token = await ApiService().getToken();

@@ -1,3 +1,4 @@
+import '../../../../core/config/store_policy.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/leave_request_model.dart';
@@ -586,7 +587,7 @@ class _LeaveBalancePageState extends ConsumerState<LeaveBalancePage> {
               ),
             ),
           ),
-          TextButton(
+          if (StorePolicy.purchasesAllowed) TextButton(
             onPressed: () {
               // TODO: Navigate to upgrade screen
             },

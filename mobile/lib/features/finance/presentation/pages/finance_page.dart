@@ -683,7 +683,7 @@ class _FinancePageState extends ConsumerState<FinancePage>
                   Expanded(
                     child: Text(
                       access.mockNotice ??
-                          'This is sample data. Upgrade to see your real data.',
+                          'This is sample data. Your real data is available on a paid plan.',
                       style: TextStyle(fontSize: 13),
                     ),
                   ),

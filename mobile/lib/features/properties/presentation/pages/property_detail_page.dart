@@ -50,7 +50,7 @@ class PropertyDetailPage extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: const Text(
-                    'Sample Data - Upgrade to PLATINUM for real properties',
+                    'Sample Data - real properties are available on the PLATINUM plan',
                     style: TextStyle(color: Colors.orange, fontSize: 12),
                   ),
                 ),

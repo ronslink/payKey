@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/subscriptions/presentation/providers/feature_access_provider.dart';
+import '../config/store_policy.dart';
 
 /// Access level for a feature (internal to this widget)
 enum FeatureAccessLevelLocal {
@@ -221,7 +222,9 @@ class PreviewBanner extends StatelessWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Viewing sample data. Upgrade to $requiredTier for real $featureName.',
+                    StorePolicy.purchasesAllowed
+                        ? 'Viewing sample data. Upgrade to $requiredTier for real $featureName.'
+                        : 'Viewing sample data. Real $featureName is included in the $requiredTier plan.',
                     style: const TextStyle(
                       fontSize: 12,
                       color: Color(0xFFB45309),
@@ -230,8 +233,8 @@ class PreviewBanner extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            TextButton(
+            if (StorePolicy.purchasesAllowed) const SizedBox(width: 8),
+            if (StorePolicy.purchasesAllowed) TextButton(
               onPressed: onUpgrade,
               style: TextButton.styleFrom(
                 backgroundColor: const Color(0xFFD97706),
@@ -325,7 +328,9 @@ class FeatureLockedScreen extends StatelessWidget {
 
               // Description
               Text(
-                reason ?? 'This feature requires a $requiredTier subscription or higher.',
+                (StorePolicy.purchasesAllowed || !(reason ?? '').toLowerCase().contains('upgrade'))
+                    ? (reason ?? 'This feature requires a $requiredTier subscription or higher.')
+                    : 'This feature requires a $requiredTier subscription or higher.',
                 style: const TextStyle(
                   fontSize: 16,
                   color: Color(0xFF6B7280),
@@ -370,7 +375,7 @@ class FeatureLockedScreen extends StatelessWidget {
               const SizedBox(height: 48),
 
               // Upgrade Button
-              SizedBox(
+              if (StorePolicy.purchasesAllowed) SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: onUpgrade,
@@ -498,8 +503,8 @@ class InlineUpgradePrompt extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 12),
-          ElevatedButton(
+          if (StorePolicy.purchasesAllowed) const SizedBox(width: 12),
+          if (StorePolicy.purchasesAllowed) ElevatedButton(
             onPressed: onUpgrade,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF3B82F6),
@@ -561,8 +566,8 @@ class FeatureUpgradeDialog extends StatelessWidget {
             const SizedBox(height: 20),
 
             // Title
-            const Text(
-              'Upgrade Required',
+            Text(
+              StorePolicy.purchasesAllowed ? 'Upgrade Required' : 'Not in your plan',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -573,8 +578,11 @@ class FeatureUpgradeDialog extends StatelessWidget {
 
             // Description
             Text(
-              '$featureName is available on ${requiredTier ?? 'GOLD'} and higher plans. '
-              'Upgrade your subscription to unlock this feature.',
+              StorePolicy.purchasesAllowed
+                  ? '$featureName is available on ${requiredTier ?? 'GOLD'} and higher plans. '
+                      'Upgrade your subscription to unlock this feature.'
+                  : '$featureName is available on ${requiredTier ?? 'GOLD'} and higher plans. '
+                      'It is not included in your current plan.',
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 14,
@@ -626,11 +634,11 @@ class FeatureUpgradeDialog extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text('Maybe Later'),
+                    child: Text(StorePolicy.purchasesAllowed ? 'Maybe Later' : 'OK'),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
+                if (StorePolicy.purchasesAllowed) const SizedBox(width: 12),
+                if (StorePolicy.purchasesAllowed) Expanded(
                   child: ElevatedButton(
                     onPressed: onUpgrade,
                     style: ElevatedButton.styleFrom(

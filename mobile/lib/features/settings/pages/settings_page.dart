@@ -18,6 +18,7 @@ import '../models/setting_item.dart';
 import '../widgets/settings_widgets.dart';
 import '../widgets/settings_bottom_sheets.dart';
 import '../widgets/settings_dialogs.dart';
+import '../widgets/delete_account_dialog.dart';
 
 /// Settings page with organized sections
 ///
@@ -559,7 +560,31 @@ class _SettingsContent extends ConsumerWidget {
         titleColor: SettingsTheme.dangerColor,
         onTap: () => _handleLogout(context, ref),
       ),
+      SettingItem(
+        icon: Icons.delete_forever_outlined,
+        title: 'Delete Account',
+        subtitle: 'Permanently delete your account and data',
+        iconColor: SettingsTheme.dangerColor,
+        titleColor: SettingsTheme.dangerColor,
+        onTap: () => _handleDeleteAccount(context, ref),
+      ),
     ];
+  }
+
+  Future<void> _handleDeleteAccount(BuildContext context, WidgetRef ref) async {
+    final deleted = await DeleteAccountDialog.show(context);
+    if (deleted != true || !context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Your account deletion request was received. '
+            'Your account and data will be deleted shortly.'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+    await ref.read(authStateProvider.notifier).logout();
+    if (context.mounted) {
+      context.go(SettingsRoutes.login);
+    }
   }
 
   Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
