@@ -6,7 +6,7 @@ class AppInfo {
 
   static const String appName = 'payDome';
   static const String version = '1.1.6';
-  static const String copyright = '© 2024 payDome Kenya';
+  static String get copyright => '© ${DateTime.now().year} payDome Kenya';
   static const String tagline = 'Your all-in-one payroll solution for domestic workers.';
 
   static String get fullVersion => '$appName v$version';
@@ -133,6 +133,7 @@ class PaymentMethodLabels {
   static const Map<String, String> labels = {
     'BANK': 'Bank Transfer',
     'MPESA': 'M-Pesa',
+    'CASH': 'Cash',
   };
 
   static String format(String method) => labels[method] ?? method;
