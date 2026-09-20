@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Input, Typography, Tag, Button, Select, Space, Tooltip, Card, Row, Col, Avatar } from 'antd';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Input, Typography, Tag, Button, Select, Space, Tooltip, Card, Row, Col, Avatar, Modal, message } from 'antd';
 import {
     SearchOutlined, EyeOutlined, CrownOutlined, StarOutlined,
     TrophyOutlined, WalletOutlined, UserOutlined, CheckCircleOutlined, ClockCircleOutlined,
-    ExclamationCircleOutlined, StopOutlined,
+    ExclamationCircleOutlined, StopOutlined, DeleteOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { adminUsers } from '../api/client';
+import { adminUsers, adminOperations } from '../api/client';
+import { useAuth } from '../contexts/AuthContext';
 
 const { Title, Text } = Typography;
 
@@ -56,7 +57,7 @@ const initials = (name: string) => name?.split(' ').map(w => w[0]).join('').toUp
 
 // ─── Employer card row ────────────────────────────────────────────────────────
 
-function EmployerRow({ r, onClick, mobile }: { r: any; onClick: () => void; mobile?: boolean }) {
+function EmployerRow({ r, onClick, onDelete, canDelete, mobile }: { r: any; onClick: () => void; onDelete: () => void; canDelete: boolean; mobile?: boolean }) {
     const tier   = TIER[r.subscription_tier || 'FREE'];
     const status = SUB_STATUS[r.subscription_status] || null;
     const color  = employerColor(r.id || r.email || '');
@@ -141,11 +142,22 @@ function EmployerRow({ r, onClick, mobile }: { r: any; onClick: () => void; mobi
                 </div>
             )}
 
-            {/* View button */}
-            <div style={{ flexShrink: 0 }}>
+            {/* Row actions */}
+            <div style={{ flexShrink: 0, display: 'flex', gap: 2 }}>
                 <Tooltip title="View employer details">
                     <Button icon={<EyeOutlined />} size="small" type="text" onClick={e => { e.stopPropagation(); }} />
                 </Tooltip>
+                {canDelete && (
+                    <Tooltip title="Delete employer and all their data">
+                        <Button
+                            icon={<DeleteOutlined />}
+                            size="small"
+                            type="text"
+                            danger
+                            onClick={e => { e.stopPropagation(); onDelete(); }}
+                        />
+                    </Tooltip>
+                )}
             </div>
         </div>
     );
@@ -165,7 +177,7 @@ function TableHeader({ mobile }: { mobile?: boolean }) {
                 { label: 'Workers', w: 64 },
                 { label: 'Wallet', w: 110, right: true },
                 { label: 'Joined', w: 84, right: true },
-                { label: '', w: 32 },
+                { label: '', w: 64 },
             ].map(({ label, w, flex, right }, i) => (
                 <div key={i} style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 0.8, minWidth: w, flex: flex || undefined, textAlign: right ? 'right' : 'left', flexShrink: 0 }}>
                     {label}
@@ -177,8 +189,72 @@ function TableHeader({ mobile }: { mobile?: boolean }) {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
+// Deleting an employer removes every record the account owns, so the operator has
+// to retype the account email before the destructive action becomes available.
+function confirmEmployerDeletion(employer: any, onDone: () => void) {
+    const email = employer.email || employer.employer_email || '';
+    let typed = '';
+    const modal = Modal.confirm({
+        title: 'Delete this employer and all their data?',
+        icon: <ExclamationCircleOutlined style={{ color: '#ef4444' }} />,
+        okText: 'Delete permanently',
+        okButtonProps: { danger: true, disabled: true },
+        cancelText: 'Cancel',
+        width: 520,
+        content: (
+            <div>
+                <p style={{ marginTop: 8 }}>
+                    This permanently deletes <strong>{email}</strong> and everything belonging to
+                    the account: workers, employee portal logins, pay periods, payroll records,
+                    payslips, documents, transactions, tax records and the subscription. It cannot
+                    be undone.
+                </p>
+                <p style={{ margin: '12px 0 6px', fontSize: 12, color: '#64748b' }}>
+                    Type <strong>{email}</strong> to confirm:
+                </p>
+                <Input
+                    placeholder={email}
+                    onChange={e => {
+                        typed = e.target.value.trim();
+                        modal.update({
+                            okButtonProps: {
+                                danger: true,
+                                disabled: typed.toLowerCase() !== email.toLowerCase(),
+                            },
+                        });
+                    }}
+                />
+            </div>
+        ),
+        onOk: async () => {
+            try {
+                const result = await adminOperations.triggerDeletion({
+                    email,
+                    reason: 'Deleted by admin from the Employers page',
+                    processNow: true,
+                });
+                if (result?.status === 'COMPLETED') {
+                    message.success(`${email} and all related data were deleted`);
+                } else if (result?.status === 'FAILED') {
+                    message.error(`Deletion failed: ${result.errorMessage || 'unknown error'}`, 10);
+                } else {
+                    message.info(`Deletion queued for ${email}`);
+                }
+                onDone();
+            } catch (e: any) {
+                const detail = e?.response?.data?.message ?? e?.message ?? 'Deletion failed';
+                message.error(Array.isArray(detail) ? detail.join(', ') : detail, 10);
+                throw e; // keep the dialog open so the operator sees the failure
+            }
+        },
+    });
+}
+
 export default function UsersPage() {
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
+    const { user } = useAuth();
+    const canDelete = user?.role === 'SUPER_ADMIN';
     const isMobile = useIsMobile();
     const [search, setSearch] = useState('');
     const [tier, setTier]     = useState<string | undefined>();
@@ -294,7 +370,17 @@ export default function UsersPage() {
                     <div style={{ padding: 56, textAlign: 'center', color: '#94a3b8' }}>No employers found</div>
                 ) : (
                     employers.map((r: any) => (
-                        <EmployerRow key={r.id} r={r} onClick={() => navigate(`/users/${r.id}`)} mobile={isMobile} />
+                        <EmployerRow
+                            key={r.id}
+                            r={r}
+                            onClick={() => navigate(`/users/${r.id}`)}
+                            onDelete={() => confirmEmployerDeletion(r, () => {
+                                queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+                                queryClient.invalidateQueries({ queryKey: ['admin-users-summary'] });
+                            })}
+                            canDelete={canDelete}
+                            mobile={isMobile}
+                        />
                     ))
                 )}
 

@@ -169,7 +169,7 @@ export const adminOperations = {
     // Deletion requests
     listDeletions: (params?: { page?: number; limit?: number; status?: string }) =>
         api.get('/api/admin/operations/deletion-requests', { params }).then(r => r.data),
-    triggerDeletion: (data: { email: string; reason?: string }) =>
+    triggerDeletion: (data: { email: string; reason?: string; processNow?: boolean }) =>
         api.post('/api/admin/operations/deletion-requests', data).then(r => r.data),
     retryDeletion: (id: string) =>
         api.post(`/api/admin/operations/deletion-requests/${id}/retry`).then(r => r.data),

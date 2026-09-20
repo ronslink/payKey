@@ -148,7 +148,7 @@ export class AdminOperationsController {
   @Post('deletion-requests')
   @Roles(UserRole.SUPER_ADMIN)
   async triggerDeletion(
-    @Body() body: { email: string; reason?: string },
+    @Body() body: { email: string; reason?: string; processNow?: boolean },
     @Req() req: any,
   ) {
     if (!body.email) {
@@ -168,22 +168,50 @@ export class AdminOperationsController {
       );
     }
 
-    const request = await this.dataDeletionService.createRequest({
-      email: body.email,
-      reason: body.reason || 'Admin-initiated account deletion',
-    });
+    // This route is already behind JwtAuthGuard + AdminGuard, restricted to
+    // SUPER_ADMIN, and audit-logged below, so the self-service ownership and
+    // password checks are skipped for it.
+    const request = await this.dataDeletionService.createRequest(
+      {
+        email: body.email,
+        reason: body.reason || 'Admin-initiated account deletion',
+      },
+      undefined,
+      { adminOverride: true },
+    );
 
-    this.adminService.logAction({
+    // Run it now and report the real outcome. Queuing would leave the operator
+    // believing a failed deletion succeeded. Pass processNow:false to defer to
+    // the hourly scheduler instead.
+    let outcome = request;
+    if (body.processNow !== false) {
+      outcome = await this.dataDeletionService.processRequestById(request.id);
+    }
+
+    await this.adminService.logAction({
       adminUserId: req.user.userId,
-      action: 'CREATE',
+      action: 'DELETE',
       entityType: 'DELETION_REQUEST',
       entityId: request.id,
       oldValues: null,
-      newValues: { email: body.email, reason: request.reason },
+      newValues: {
+        email: request.email,
+        reason: request.reason,
+        status: outcome.status,
+        errorMessage: outcome.errorMessage ?? null,
+        processedNow: body.processNow !== false,
+      },
       ipAddress: req.ip,
     });
 
-    return request;
+    return {
+      id: outcome.id,
+      email: outcome.email,
+      status: outcome.status,
+      errorMessage: outcome.errorMessage ?? null,
+      processedAt: outcome.processedAt ?? null,
+      success: outcome.status === DeletionStatus.COMPLETED,
+    };
   }
 
   @Post('deletion-requests/:id/retry')
