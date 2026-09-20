@@ -5,7 +5,7 @@ class AppInfo {
   AppInfo._();
 
   static const String appName = 'payDome';
-  static const String version = '2.1.0';
+  static const String version = '1.1.6';
   static const String copyright = '© 2024 payDome Kenya';
   static const String tagline = 'Your all-in-one payroll solution for domestic workers.';
 
