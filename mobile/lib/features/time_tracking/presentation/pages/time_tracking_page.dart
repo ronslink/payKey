@@ -651,8 +651,9 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
   }
 
   Future<void> _handleClockOut(TimeEntry entry) async {
+    // Clock-out is worker-scoped: the backend finds the open entry itself.
     await ref.read(timeTrackingProvider.notifier).clockOut(
-          entry.id,
+          entry.workerId,
           notes: _notesController.text.isEmpty ? null : _notesController.text,
         );
     _notesController.clear();

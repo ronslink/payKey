@@ -37,8 +37,8 @@ abstract class TimeEntry with _$TimeEntry {
 abstract class ClockInRequest with _$ClockInRequest {
   const factory ClockInRequest({
     required String workerId,
-    required double latitude,
-    required double longitude,
+    required double lat,
+    required double lng,
     String? notes,
   }) = _ClockInRequest;
 
@@ -46,12 +46,14 @@ abstract class ClockInRequest with _$ClockInRequest {
       _$ClockInRequestFromJson(json);
 }
 
+/// Clock-out is addressed by worker, not by time entry: the backend locates the
+/// worker's open entry itself, so a timeEntryId was never read from the body.
 @freezed
 abstract class ClockOutRequest with _$ClockOutRequest {
   const factory ClockOutRequest({
-    required String timeEntryId,
-    required double latitude,
-    required double longitude,
+    required String workerId,
+    required double lat,
+    required double lng,
     String? notes,
   }) = _ClockOutRequest;
 

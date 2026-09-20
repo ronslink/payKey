@@ -23,7 +23,7 @@ class TimeTrackingRepository {
   Future<TimeEntry> clockIn(ClockInRequest request) async {
     try {
       final response = await _apiService.post(
-        '/time-tracking/clock-in',
+        '/time-tracking/clock-in/${request.workerId}',
         data: request.toJson(),
       );
 
@@ -50,7 +50,7 @@ class TimeTrackingRepository {
   Future<TimeEntry> clockOut(ClockOutRequest request) async {
     try {
       final response = await _apiService.post(
-        '/time-tracking/clock-out',
+        '/time-tracking/clock-out/${request.workerId}',
         data: request.toJson(),
       );
 

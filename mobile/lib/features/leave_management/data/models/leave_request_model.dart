@@ -121,13 +121,21 @@ abstract class LeaveBalanceModel with _$LeaveBalanceModel {
       _$LeaveBalanceModelFromJson(json);
 }
 
+/// Leave types exactly as the API defines them.
+///
+/// The wire value is uppercase. Sending `LeaveType.annual.name` produces
+/// "annual", which the API's enum rejects, so request bodies must use [value].
 enum LeaveType {
-  annual,
-  sick,
-  maternity,
-  paternity,
-  emergency,
-  unpaid,
+  annual('ANNUAL'),
+  sick('SICK'),
+  maternity('MATERNITY'),
+  paternity('PATERNITY'),
+  emergency('EMERGENCY'),
+  unpaid('UNPAID');
+
+  const LeaveType(this.value);
+
+  final String value;
 }
 
 enum LeaveRequestStatus {

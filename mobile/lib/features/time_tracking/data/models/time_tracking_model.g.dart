@@ -49,31 +49,31 @@ const _$TimeEntryStatusEnumMap = {
 _ClockInRequest _$ClockInRequestFromJson(Map<String, dynamic> json) =>
     _ClockInRequest(
       workerId: json['workerId'] as String,
-      latitude: (json['latitude'] as num).toDouble(),
-      longitude: (json['longitude'] as num).toDouble(),
+      lat: (json['lat'] as num).toDouble(),
+      lng: (json['lng'] as num).toDouble(),
       notes: json['notes'] as String?,
     );
 
 Map<String, dynamic> _$ClockInRequestToJson(_ClockInRequest instance) =>
     <String, dynamic>{
       'workerId': instance.workerId,
-      'latitude': instance.latitude,
-      'longitude': instance.longitude,
+      'lat': instance.lat,
+      'lng': instance.lng,
       'notes': instance.notes,
     };
 
 _ClockOutRequest _$ClockOutRequestFromJson(Map<String, dynamic> json) =>
     _ClockOutRequest(
-      timeEntryId: json['timeEntryId'] as String,
-      latitude: (json['latitude'] as num).toDouble(),
-      longitude: (json['longitude'] as num).toDouble(),
+      workerId: json['workerId'] as String,
+      lat: (json['lat'] as num).toDouble(),
+      lng: (json['lng'] as num).toDouble(),
       notes: json['notes'] as String?,
     );
 
 Map<String, dynamic> _$ClockOutRequestToJson(_ClockOutRequest instance) =>
     <String, dynamic>{
-      'timeEntryId': instance.timeEntryId,
-      'latitude': instance.latitude,
-      'longitude': instance.longitude,
+      'workerId': instance.workerId,
+      'lat': instance.lat,
+      'lng': instance.lng,
       'notes': instance.notes,
     };

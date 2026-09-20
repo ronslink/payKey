@@ -47,22 +47,22 @@ class TimeTrackingNotifier extends AsyncNotifier<TimeEntry?> {
       final position = await _getCurrentLocation();
       final request = ClockInRequest(
         workerId: workerId,
-        latitude: position.latitude,
-        longitude: position.longitude,
+        lat: position.latitude,
+        lng: position.longitude,
         notes: notes,
       );
       return _repository.clockIn(request);
     });
   }
 
-  Future<void> clockOut(String timeEntryId, {String? notes}) async {
+  Future<void> clockOut(String workerId, {String? notes}) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final position = await _getCurrentLocation();
       final request = ClockOutRequest(
-        timeEntryId: timeEntryId,
-        latitude: position.latitude,
-        longitude: position.longitude,
+        workerId: workerId,
+        lat: position.latitude,
+        lng: position.longitude,
         notes: notes,
       );
       return _repository.clockOut(request);

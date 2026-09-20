@@ -439,7 +439,7 @@ String _getLeaveTypeDisplayName(LeaveType type) {
   Future<void> _createLeaveRequest() async {
     try {
       final leaveRequestData = {
-        'leaveType': _selectedLeaveType.name,
+        'leaveType': _selectedLeaveType.value,
         'startDate': DateFormat('yyyy-MM-dd').format(_startDate!),
         'endDate': DateFormat('yyyy-MM-dd').format(_endDate!),
         'reason': _reasonController.text.trim(),
