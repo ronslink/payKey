@@ -334,7 +334,9 @@ abstract class PayrollSummary with _$PayrollSummary {
 
 /// Result of pre-payroll fund verification check.
 class FundVerificationResult {
-  /// Total amount required to process payroll (net pay + estimated fees)
+  /// Amount that must be funded from the wallet (net pay + estimated fees for
+  /// non-cash workers only — the backend excludes cash workers because their
+  /// pay is handed over instead, so this is 0.0 for an all-cash run)
   final double requiredAmount;
 
   /// User's current available wallet balance

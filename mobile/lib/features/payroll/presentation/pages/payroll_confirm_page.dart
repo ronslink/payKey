@@ -284,11 +284,17 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
     });
 
     try {
+      // Send the workers actually shown on this screen. Submitting the raw
+      // widget.workerIds is unsafe: the backend reads an empty list as "every
+      // worker", so a confirmation with no resolved selection would run payroll
+      // for the entire workforce.
+      final workerIds = _preparedPayouts!.map((p) => p.workerId).toList();
+
       // Process payroll via backend API (returns jobId for async processing)
       final response = await ref
           .read(payrollProvider.notifier)
           .processPayroll(
-            widget.workerIds,
+            workerIds,
             widget.payPeriodId,
             skipPayout: false,
           );
@@ -850,6 +856,16 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
     required BuildContext context,
     required FundVerificationResult verification,
   }) {
+    // Derive the money rows from the same calculations the payout and tax
+    // sections use. The fund-verification result cannot supply them: the
+    // backend computes it over non-cash workers only (cash pay is handed over
+    // rather than funded from the wallet), so an all-cash run reports 0.00 for
+    // every amount while still counting the cash workers.
+    final totalNet = _calculations.fold<double>(
+      0,
+      (sum, c) => sum + c.netPay,
+    );
+
     return Container(
       padding: const EdgeInsets.all(20),
       // Use context.surfacePrimary directly since backgroundColor didn't exist in theme
@@ -868,13 +884,9 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
           ),
           const SizedBox(height: 16),
-          _row(context, 'Workers', '${verification.workerCount}'),
+          _row(context, 'Workers', '${_calculations.length}'),
           const Divider(height: 24),
-          _row(
-            context,
-            'Net Pay',
-            'KES ${verification.netPayTotal.toStringAsFixed(2)}',
-          ),
+          _row(context, 'Net Pay', 'KES ${totalNet.toStringAsFixed(2)}'),
           if (verification.estimatedFees > 0) ...[
             const SizedBox(height: 8),
             _row(
@@ -884,12 +896,20 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
             ),
           ],
           const Divider(height: 24),
-          _row(
-            context,
-            'Total Required',
-            verification.formattedRequired,
-            bold: true,
-          ),
+          if (_isAllCash)
+            _row(
+              context,
+              'Total to Disburse',
+              'KES ${totalNet.toStringAsFixed(2)}',
+              bold: true,
+            )
+          else
+            _row(
+              context,
+              'Wallet Funding Required',
+              verification.formattedRequired,
+              bold: true,
+            ),
         ],
       ),
     );
