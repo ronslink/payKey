@@ -102,7 +102,7 @@ class PayrollCompleteDialog extends StatelessWidget {
           Text('Successfully processed $totalProcessed workers.'),
           const SizedBox(height: 8),
           const Text('• Payslips generated'),
-          const Text('• Tax returns filed'),
+          const Text('• Statutory deductions recorded'),
           const Text('• Records finalized'),
         ],
       ),

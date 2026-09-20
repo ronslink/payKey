@@ -231,7 +231,7 @@ class _PayrollProcessingDialogState
               const SizedBox(height: 12),
               _buildChecklistItem('Payments initiated', true),
               _buildChecklistItem('Payslips generated', true),
-              _buildChecklistItem('Tax returns filed', true),
+              _buildChecklistItem('Statutory deductions recorded', true),
               _buildChecklistItem('Records finalized', true),
             ],
 
