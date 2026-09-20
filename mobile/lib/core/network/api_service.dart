@@ -1042,20 +1042,6 @@ class SubscriptionEndpoints extends BaseEndpoints {
     });
   }
 
-  Future<Response> cancel(String subscriptionId) {
-    return _api.post('/subscriptions/$subscriptionId/cancel');
-  }
-
-  Future<Response> resume(String subscriptionId) {
-    return _api.post('/subscriptions/$subscriptionId/resume');
-  }
-
-  Future<Response> upgrade(String subscriptionId, String newPlanId) {
-    return _api.post('/subscriptions/$subscriptionId/upgrade', data: {
-      'newPlanId': newPlanId,
-    });
-  }
-
   Future<Response> update(String subscriptionId, Map<String, dynamic> updates) {
     return _api.patch('/subscriptions/$subscriptionId', data: updates);
   }
