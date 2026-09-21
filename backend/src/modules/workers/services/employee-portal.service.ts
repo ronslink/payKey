@@ -165,10 +165,13 @@ export class EmployeePortalService {
 
     const savedUser = await this.usersRepository.save(user);
 
-    // Link worker to user
+    // Link worker to user. The invite fields are cleared with `null`, not
+    // `undefined`: TypeORM reads undefined as "leave this column alone", so the
+    // code and its expiry would survive claiming and the employer would keep
+    // seeing an invite pending for an account that already exists.
     worker.linkedUserId = savedUser.id;
-    worker.inviteCode = undefined as any; // Clear invite code
-    worker.inviteCodeExpiry = undefined as any;
+    worker.inviteCode = null;
+    worker.inviteCodeExpiry = null;
     await this.workersRepository.save(worker);
 
     // Get employer info to inherit their subscription tier

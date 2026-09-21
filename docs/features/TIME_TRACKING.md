@@ -54,6 +54,13 @@ A property's geofence measures from its pin (`latitude`/`longitude`) with a
 radius in metres (10–5000). Without a pin the property cannot be geofenced and
 every clock-in is accepted regardless of location.
 
+The employee dashboard pre-selects the site on the worker's own record
+(`GET /employee-portal/my-property`), falling back to the only property when the
+employer has just one. Someone assigned to a site is not asked which site they
+are at, and the assigned site is the one whose geofence is meant to apply to
+them. This also means an employer can keep a geofenced site for the staff who
+work there and an unpinned site for remote or field staff.
+
 Employers set the pin from the mobile property form by capturing their current
 location at the site, resolving a what3words address (needs `W3W_API_KEY`
 server-side), or typing the coordinates. `GET /property-location/what3words`

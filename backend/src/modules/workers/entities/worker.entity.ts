@@ -110,11 +110,13 @@ export class Worker {
   @Column({ nullable: true })
   linkedUserId: string; // Links to User account if employee has logged in
 
-  @Column({ nullable: true })
-  inviteCode: string; // 6-digit code for employee to claim account
+  // An explicit type is required on a union type: TypeORM reads the design type
+  // as `Object` for `string | null` and refuses to map it.
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  inviteCode: string | null; // 6-digit code for employee to claim account
 
   @Column({ type: 'timestamp', nullable: true })
-  inviteCodeExpiry: Date;
+  inviteCodeExpiry: Date | null;
 
   @Column({ nullable: true })
   email: string;

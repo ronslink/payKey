@@ -125,18 +125,48 @@ class _EmployeeDashboardPageState extends ConsumerState<EmployeeDashboardPage> {
   Future<void> _fetchEmployerProperties() async {
     try {
       final response = await ApiService().employeePortal.getEmployerProperties();
-      if (response.statusCode == 200 && mounted) {
-        final data = response.data as List<dynamic>?;
-        setState(() {
-          _properties = data?.map((p) => p as Map<String, dynamic>).toList() ?? [];
-          // Auto-select if only one property
-          if (_properties.length == 1) {
-            _selectedPropertyId = _properties.first['id'] as String?;
+      if (response.statusCode != 200 || !mounted) return;
+
+      final data = response.data as List<dynamic>?;
+      final properties =
+          data?.map((p) => p as Map<String, dynamic>).toList() ?? [];
+
+      // Prefer the site this employee is actually assigned to. Someone who works
+      // at one site should not be asked which site they are at, and the assigned
+      // site is the one whose geofence is meant to apply to them.
+      final assignedId = await _fetchAssignedPropertyId();
+
+      if (!mounted) return;
+      setState(() {
+        _properties = properties;
+
+        if (_selectedPropertyId == null) {
+          final assignedIsListed = assignedId != null &&
+              properties.any((p) => p['id'] == assignedId);
+          if (assignedIsListed) {
+            _selectedPropertyId = assignedId;
+          } else if (properties.length == 1) {
+            // Only one choice to make, so make it.
+            _selectedPropertyId = properties.first['id'] as String?;
           }
-        });
-      }
+        }
+      });
     } catch (_) {
       // Properties are optional - may fail for non Gold/Platinum
+    }
+  }
+
+  /// The property on the worker's own record, or null when they have none.
+  Future<String?> _fetchAssignedPropertyId() async {
+    try {
+      final response = await ApiService().employeePortal.getMyProperty();
+      if (response.statusCode != 200) return null;
+      final data = response.data;
+      if (data is! Map<String, dynamic>) return null;
+      return data['id'] as String?;
+    } catch (_) {
+      // Assigning a site is optional; the property list is the fallback.
+      return null;
     }
   }
 

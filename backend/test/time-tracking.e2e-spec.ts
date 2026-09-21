@@ -20,6 +20,7 @@ describe('Time tracking (e2e)', () => {
   let employerToken: string;
   let workerId: string;
   let employeeToken: string;
+  let geofencedPropertyId: string;
 
   // Property coordinates (Nairobi CBD) with a 100m geofence.
   const propertyLat = -1.286389;
@@ -80,6 +81,7 @@ describe('Time tracking (e2e)', () => {
     expect(Number(property.body.latitude)).toBeCloseTo(propertyLat, 5);
     expect(Number(property.body.longitude)).toBeCloseTo(propertyLng, 5);
     expect(property.body.what3words).toBe('filled.count.soap');
+    geofencedPropertyId = property.body.id;
 
     const worker = await request(app.getHttpServer())
       .post('/workers')
@@ -115,6 +117,18 @@ describe('Time tracking (e2e)', () => {
     expect(claim.status).toBe(201);
     employeeToken = claim.body.accessToken;
     expect(employeeToken).toBeDefined();
+
+    // Claiming must consume the invite. Clearing it with `undefined` left the
+    // code and its expiry on the worker (TypeORM skips undefined), so the
+    // employer kept seeing an invite pending for an account that already exists.
+    const claimedWorker = await request(app.getHttpServer())
+      .get(`/workers/${workerId}`)
+      .set('Authorization', `Bearer ${employerToken}`);
+
+    expect(claimedWorker.status).toBe(200);
+    expect(claimedWorker.body.inviteCode ?? null).toBeNull();
+    expect(claimedWorker.body.inviteCodeExpiry ?? null).toBeNull();
+    expect(claimedWorker.body.linkedUserId).toBeTruthy();
   }, 60000);
 
   afterAll(async () => {
@@ -209,6 +223,47 @@ describe('Time tracking (e2e)', () => {
 
       expect(res.status).toBe(400);
       expect(String(res.body.message)).toMatch(/Clock-in rejected/i);
+    });
+
+    it('accepts a clock-in at a site with no pin, without a location', async () => {
+      // A site with no coordinates cannot be geofenced. That is the intended
+      // remote/field path, so the API must not demand a location for it.
+      const site = await request(app.getHttpServer())
+        .post('/properties')
+        .set('Authorization', `Bearer ${employerToken}`)
+        .send({
+          name: 'Demo Field Site',
+          address: 'No fixed site',
+          geofenceRadius: 100,
+        });
+
+      expect(site.status).toBe(201);
+      expect(site.body.latitude).toBeNull();
+
+      const clockIn = await request(app.getHttpServer())
+        .post(`/time-tracking/clock-in/${workerId}`)
+        .set('Authorization', `Bearer ${employeeToken}`)
+        .send({ propertyId: site.body.id });
+
+      expect(clockIn.status).toBe(201);
+      expect(clockIn.body.propertyId).toBe(site.body.id);
+
+      const clockOut = await request(app.getHttpServer())
+        .post(`/time-tracking/clock-out/${workerId}`)
+        .set('Authorization', `Bearer ${employeeToken}`)
+        .send({});
+
+      expect(clockOut.status).toBe(201);
+    });
+
+    it('reports the site the worker is assigned to, which the app pre-selects', async () => {
+      const mine = await request(app.getHttpServer())
+        .get('/employee-portal/my-property')
+        .set('Authorization', `Bearer ${employeeToken}`);
+
+      expect(mine.status).toBe(200);
+      expect(mine.body.id).toBe(geofencedPropertyId);
+      expect(Number(mine.body.latitude)).toBeCloseTo(propertyLat, 5);
     });
   });
 
