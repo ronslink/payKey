@@ -43,23 +43,40 @@ class PaymentResultsPage extends StatelessWidget {
           _buildStatusIcon(),
           const SizedBox(height: 16),
           Text(
-            result.allSuccess
-                ? 'All Payments Initiated'
-                : 'Payments Completed with Errors',
+            _title(),
             style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           Text(
-            result.allSuccess
-                ? 'Workers will receive M-Pesa notifications shortly.'
-                : '${result.successCount} successful, ${result.failureCount} failed.',
+            _subtitle(),
             textAlign: TextAlign.center,
             style: TextStyle(color: context.textSecondary),
           ),
         ],
       ),
     );
+  }
+
+  String _title() {
+    if (!result.allSuccess) return 'Payments Completed with Errors';
+    if (result.allCash) return 'Cash Payroll Recorded';
+    if (result.anyCash) return 'Payroll Completed';
+    return 'All Payments Initiated';
+  }
+
+  String _subtitle() {
+    if (!result.allSuccess) {
+      return '${result.successCount} successful, ${result.failureCount} failed.';
+    }
+    if (result.allCash) {
+      return 'No electronic payment was sent. Hand each worker the amount below.';
+    }
+    if (result.anyCash) {
+      return 'M-Pesa workers will receive notifications shortly. '
+          'Hand cash workers the amount shown.';
+    }
+    return 'Workers will receive M-Pesa notifications shortly.';
   }
 
   Widget _buildStatusIcon() {
@@ -149,8 +166,9 @@ class WorkerResultTile extends StatelessWidget {
 
   Widget _buildSubtitle() {
     if (result.success) {
+      final label = result.isCash ? 'Pay in cash' : 'Net Pay';
       return Text(
-        'Net Pay: ${PayrollConfirmConstants.currencyCode} ${_currencyFormat.format(result.netPay)}',
+        '$label: ${PayrollConfirmConstants.currencyCode} ${_currencyFormat.format(result.netPay)}',
       );
     }
 

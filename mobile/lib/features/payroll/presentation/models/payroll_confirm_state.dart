@@ -86,6 +86,12 @@ class PayrollBatchResult {
   bool get allSuccess => failureCount == 0;
   bool get hasFailures => failureCount > 0;
 
+  /// True when every worker in this run was paid in cash (no electronic payout).
+  bool get allCash => results.isNotEmpty && results.every((r) => r.isCash);
+
+  /// True when at least one worker in this run was paid in cash.
+  bool get anyCash => results.any((r) => r.isCash);
+
   /// Create from Map (API response)
   factory PayrollBatchResult.fromMap(Map<String, dynamic> map) {
     final resultsList = (map['results'] as List<dynamic>?) ?? [];
@@ -121,11 +127,15 @@ class PayrollWorkerResult {
   final double netPay;
   final String? error;
 
+  /// Worker is paid in cash by the employer; no M-Pesa/bank payout was sent.
+  final bool isCash;
+
   const PayrollWorkerResult({
     required this.success,
     required this.workerName,
     required this.netPay,
     this.error,
+    this.isCash = false,
   });
 
   factory PayrollWorkerResult.fromMap(Map<String, dynamic> map) {
@@ -134,6 +144,7 @@ class PayrollWorkerResult {
       workerName: map['workerName'] as String? ?? 'Unknown',
       netPay: (map['netPay'] as num?)?.toDouble() ?? 0.0,
       error: map['error'] as String?,
+      isCash: map['isCash'] as bool? ?? false,
     );
   }
 
@@ -143,6 +154,7 @@ class PayrollWorkerResult {
       'workerName': workerName,
       'netPay': netPay,
       'error': error,
+      'isCash': isCash,
     };
   }
 }

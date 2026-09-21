@@ -48,6 +48,7 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
 
   Map<String, String> _workerPhones = {};
   List<String> _cashWorkerNames = [];
+  Set<String> _cashWorkerIds = {};
   List<PayrollCalculation> _calculations = [];
 
   @override
@@ -96,6 +97,10 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
           .where((w) => w.paymentMethod.toUpperCase() == 'CASH')
           .map((w) => w.name)
           .toList();
+      _cashWorkerIds = workers
+          .where((w) => w.paymentMethod.toUpperCase() == 'CASH')
+          .map((w) => w.id)
+          .toSet();
 
       // 2. Calculate payroll
       // FIX: Try to get draft payroll first to respect any user edits (e.g. partial salary)
@@ -326,10 +331,11 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
               failedWorkerIds: processResult.failedWorkerIds,
               results: processResult.results
                   .map(
-                    (r) => PayrollWorkerResult(
-                      success: r.success,
+                    (r) => _workerResult(
+                      workerId: r.workerId,
                       workerName: r.workerName,
-                      netPay: r.netPay ?? 0,
+                      success: r.success,
+                      netPay: r.netPay,
                       error: r.error,
                     ),
                   )
@@ -344,11 +350,11 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
               failedWorkerIds: [],
               results: _preparedPayouts!
                   .map(
-                    (p) => PayrollWorkerResult(
-                      success: true,
+                    (p) => _workerResult(
+                      workerId: p.workerId,
                       workerName: p.name,
+                      success: true,
                       netPay: p.amount,
-                      error: null,
                     ),
                   )
                   .toList(),
@@ -381,11 +387,11 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
           failedWorkerIds: [],
           results: _preparedPayouts!
               .map(
-                (p) => PayrollWorkerResult(
-                  success: true,
+                (p) => _workerResult(
+                  workerId: p.workerId,
                   workerName: p.name,
+                  success: true,
                   netPay: p.amount,
-                  error: null,
                 ),
               )
               .toList(),
@@ -987,6 +993,34 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Builds a result row. Cash workers are flagged, and their amount comes from
+  /// the payroll calculation because no payout (and so no payout amount) exists.
+  PayrollWorkerResult _workerResult({
+    required String workerId,
+    required String workerName,
+    required bool success,
+    double? netPay,
+    String? error,
+  }) {
+    final isCash = _cashWorkerIds.contains(workerId);
+    var amount = netPay ?? 0;
+    if (isCash) {
+      for (final calc in _calculations) {
+        if (calc.workerId == workerId) {
+          amount = calc.netPay;
+          break;
+        }
+      }
+    }
+    return PayrollWorkerResult(
+      success: success,
+      workerName: workerName,
+      netPay: amount,
+      error: error,
+      isCash: isCash,
     );
   }
 
