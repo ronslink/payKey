@@ -60,6 +60,24 @@ server-side), or typing the coordinates. `GET /property-location/what3words`
 and `GET /property-location/words` perform the what3words lookups; without a key
 they answer 503 so the app falls back to GPS or manual coordinates.
 
+### what3words plan requirement
+
+Conversions are **not** part of what3words' Free plan. A Free key authenticates
+fine — `available-languages` answers 200 — but both `convert-to-coordinates` and
+`convert-to-3wa` answer `402 QuotaExceeded` ("API plan does not have access to
+this feature"). Their support article states that a small number of conversions
+per month requires the paid Basic plan (~£7.99/month):
+<https://support.what3words.com/en/articles/2589058>
+
+So a 402 from these endpoints means the plan, not the key or the code. The
+service reports it as a 503 carrying the upstream message, and the app carries
+on with GPS or manually entered coordinates. Everything else stays wired: add a
+key with conversion access and the lookup works with no code change.
+
+For a free workflow, the employer can read the coordinates off the what3words
+app or mapsite and type them into the property form's latitude/longitude fields,
+which is exactly what those fields are for.
+
 ## Payroll
 
 `payroll.service.ts` sums only entries whose `payrollDecision` is `INCLUDED`
