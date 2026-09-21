@@ -47,6 +47,13 @@ export class What3wordsService {
     return !!process.env.W3W_API_KEY;
   }
 
+  /**
+   * The key is required for every lookup.
+   *
+   * The public docs also allow the key in an `X-Api-Key` header, but the query
+   * parameter is the form verified against the live API for this account
+   * (it answers 402 plan/quota errors rather than 401 InvalidKey), so it stays.
+   */
   private requireKey(): string {
     const key = process.env.W3W_API_KEY;
     if (!key) {
@@ -68,10 +75,7 @@ export class What3wordsService {
       );
     }
 
-    const body = await this.request('convert-to-coordinates', {
-      words,
-      key,
-    });
+    const body = await this.request('convert-to-coordinates', { words, key });
 
     const latitude = body.coordinates?.lat;
     const longitude = body.coordinates?.lng;
@@ -148,6 +152,14 @@ export class What3wordsService {
     if (!response.ok) {
       const detail = asString(body.error?.message);
 
+      // 400 BadWords (and similar) means the request itself is wrong: a
+      // well-formed address that does not exist, for example. That is the
+      // caller's error, not a gateway fault.
+      if (response.status === 400) {
+        throw new BadRequestException(
+          detail ?? 'That what3words address could not be resolved.',
+        );
+      }
       if (response.status === 404) {
         throw new NotFoundException(
           detail ?? 'That what3words address does not exist.',
