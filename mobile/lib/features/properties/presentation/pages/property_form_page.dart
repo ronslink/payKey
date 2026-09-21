@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 // Core imports
 import '../../../../core/network/api_service.dart';
 import '../../../../core/utils/location_utils.dart';
+import '../../../../core/utils/plus_code.dart';
 
 // Domain imports
 import '../../data/models/property_model.dart';
@@ -475,6 +476,7 @@ class _PropertyFormPageState extends ConsumerState<PropertyFormPage>
         _controllers.longitude,
         _controllers.geofence,
         _controllers.what3words,
+        _controllers.address,
       ]),
       builder: (context, _) {
         return PropertyPinSummary(
@@ -484,9 +486,31 @@ class _PropertyFormPageState extends ConsumerState<PropertyFormPage>
               PropertyFormConstants.defaultGeofenceRadius,
           what3words: _controllers.what3words.text.trim(),
           resolvedPlace: _resolvedPlace,
+          onAddToAddress: _addPlusCodeToAddress,
         );
       },
     );
+  }
+
+  /// Folds the pin's Plus Code into the address text.
+  ///
+  /// The address is already stored, so this is how a precise, shareable
+  /// location survives without a schema change. It is idempotent: adding the
+  /// same code twice does nothing.
+  void _addPlusCodeToAddress() {
+    final latitude = double.tryParse(_controllers.latitude.text.trim());
+    final longitude = double.tryParse(_controllers.longitude.text.trim());
+    if (latitude == null || longitude == null) return;
+
+    final code = PlusCode.encode(latitude, longitude);
+    final address = _controllers.address.text.trim();
+    if (address.contains(code)) {
+      _showMessage('That Plus Code is already in the address.', isError: false);
+      return;
+    }
+
+    _controllers.address.text = address.isEmpty ? code : '$address ($code)';
+    _showMessage('Plus Code added to the address.', isError: false);
   }
 
   Widget _buildWhat3WordsField() {

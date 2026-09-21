@@ -60,6 +60,22 @@ server-side), or typing the coordinates. `GET /property-location/what3words`
 and `GET /property-location/words` perform the what3words lookups; without a key
 they answer 503 so the app falls back to GPS or manual coordinates.
 
+### Plus Codes
+
+Once a pin exists the form also shows its **Plus Code** (Open Location Code),
+for example `6GCRPR78+CV` — a short address computed on the device from the
+latitude and longitude, with no API, key, quota or network call. It is the free
+answer to the same problem what3words solves: a precise, shareable location where
+a street address does not identify a gate. The form offers **Copy** and **Add to
+address**, the latter folding the code into the stored address text so it
+survives without a schema change.
+
+The encoder lives in `mobile/lib/core/utils/plus_code.dart` and its arithmetic is
+integer-based, mirroring Google's reference implementation; the values are
+checked against the published grid by `mobile/test/plus_code_test.dart`. Use the
+10-digit form: it decodes without a reference location, and at roughly 13 m it is
+finer than any geofence we allow.
+
 ### what3words plan requirement
 
 Conversions are **not** part of what3words' Free plan. A Free key authenticates

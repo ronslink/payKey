@@ -1,5 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../../../core/utils/plus_code.dart';
 import '../constants/property_form_constants.dart';
 
 /// Gradient background with decorative orbs
@@ -434,6 +436,10 @@ class PropertyPinSummary extends StatelessWidget {
   final String? what3words;
   final String? resolvedPlace;
 
+  /// Offers to fold the Plus Code into the address text, which is how it gets
+  /// saved without a schema change.
+  final VoidCallback? onAddToAddress;
+
   const PropertyPinSummary({
     super.key,
     required this.latitude,
@@ -441,9 +447,23 @@ class PropertyPinSummary extends StatelessWidget {
     required this.radiusMeters,
     this.what3words,
     this.resolvedPlace,
+    this.onAddToAddress,
   });
 
   bool get _hasPin => latitude != null && longitude != null;
+
+  /// A shareable address for the pin, computed on the device with no service.
+  String? get _plusCode => _hasPin
+      ? PlusCode.encode(latitude!, longitude!)
+      : null;
+
+  Future<void> _copyPlusCode(BuildContext context, String code) async {
+    await Clipboard.setData(ClipboardData(text: code));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Plus Code $code copied')),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -451,6 +471,7 @@ class PropertyPinSummary extends StatelessWidget {
         ? PropertyFormTheme.successGreen
         : PropertyFormTheme.errorRed;
     final icon = _hasPin ? Icons.my_location : Icons.location_off;
+    final plusCode = _plusCode;
 
     return Container(
       width: double.infinity,
@@ -498,6 +519,44 @@ class PropertyPinSummary extends StatelessWidget {
                       color: Colors.white.withValues(alpha: 0.55),
                       fontSize: 12,
                     ),
+                  ),
+                ],
+                if (plusCode != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Plus Code: $plusCode',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                  Wrap(
+                    spacing: 4,
+                    children: [
+                      TextButton.icon(
+                        onPressed: () => _copyPlusCode(context, plusCode),
+                        icon: const Icon(Icons.copy, size: 15),
+                        label: const Text('Copy'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: PropertyFormTheme.lightBlue,
+                          visualDensity: VisualDensity.compact,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                        ),
+                      ),
+                      if (onAddToAddress != null)
+                        TextButton.icon(
+                          onPressed: onAddToAddress,
+                          icon: const Icon(Icons.playlist_add, size: 15),
+                          label: const Text('Add to address'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: PropertyFormTheme.lightBlue,
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                          ),
+                        ),
+                    ],
                   ),
                 ],
               ],
