@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../workers/data/models/worker_model.dart';
-import '../../data/models/time_tracking_model.dart';
+import '../../data/models/time_entry_model.dart';
 import '../providers/time_tracking_provider.dart';
 
 class WorkerTimesheetPage extends ConsumerStatefulWidget {
@@ -96,10 +96,10 @@ class _WorkerTimesheetPageState extends ConsumerState<WorkerTimesheetPage> {
     );
   }
 
-  Map<DateTime, List<TimeEntry>> _groupEntriesByDate(List<TimeEntry> entries) {
-    final Map<DateTime, List<TimeEntry>> grouped = {};
+  Map<DateTime, List<TimeEntryModel>> _groupEntriesByDate(List<TimeEntryModel> entries) {
+    final Map<DateTime, List<TimeEntryModel>> grouped = {};
     for (var entry in entries) {
-      final date = DateTime.parse(entry.clockInTime);
+      final date = entry.clockIn.toLocal();
       final key = DateTime(date.year, date.month, date.day);
       if (!grouped.containsKey(key)) {
         grouped[key] = [];
@@ -109,7 +109,7 @@ class _WorkerTimesheetPageState extends ConsumerState<WorkerTimesheetPage> {
     return grouped;
   }
 
-  Widget _buildDayCard(DateTime date, List<TimeEntry> entries) {
+  Widget _buildDayCard(DateTime date, List<TimeEntryModel> entries) {
     double totalHours = 0;
     for (var e in entries) {
       if (e.totalHours != null) totalHours += e.totalHours!;
@@ -170,10 +170,10 @@ class _WorkerTimesheetPageState extends ConsumerState<WorkerTimesheetPage> {
     );
   }
 
-  Widget _buildEntryItem(TimeEntry entry) {
-    final startTime = DateFormat('h:mm a').format(DateTime.parse(entry.clockInTime));
-    final endTime = entry.clockOutTime != null 
-        ? DateFormat('h:mm a').format(DateTime.parse(entry.clockOutTime!))
+  Widget _buildEntryItem(TimeEntryModel entry) {
+    final startTime = DateFormat('h:mm a').format(entry.clockIn.toLocal());
+    final endTime = entry.clockOut != null 
+        ? DateFormat('h:mm a').format(entry.clockOut!.toLocal())
         : 'Active';
 
     return Padding(
@@ -183,7 +183,7 @@ class _WorkerTimesheetPageState extends ConsumerState<WorkerTimesheetPage> {
           Icon(
             Icons.access_time, 
             size: 16, 
-            color: entry.clockOutTime == null ? Colors.green : Colors.grey[400]
+            color: entry.clockOut == null ? Colors.green : Colors.grey[400]
           ),
           const SizedBox(width: 12),
           Expanded(

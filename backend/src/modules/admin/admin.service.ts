@@ -1,4 +1,9 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  Inject,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -26,8 +31,65 @@ import { ExchangeRateService } from '../payments/exchange-rate.service';
 
 const execAsync = promisify(exec);
 
-// Docker client using dockerode - connects via Docker socket
-const docker = new Dockerode({ socketPath: '/var/run/docker.sock' });
+/**
+ * Docker access for the admin container and log views.
+ *
+ * Production never mounts the Docker socket into the backend. A dedicated
+ * docker-socket-proxy sidecar exposes the container endpoints read-only on the
+ * internal network and the backend talks to that over TCP. The raw socket is
+ * still supported for local development, where no proxy is configured.
+ */
+function createDockerClient(): Dockerode {
+  const proxyUrl = process.env.DOCKER_PROXY_URL;
+  if (proxyUrl) {
+    try {
+      const url = new URL(proxyUrl);
+      return new Dockerode({
+        host: url.hostname,
+        port: Number(url.port || 2375),
+        protocol: url.protocol === 'https:' ? 'https' : 'http',
+      });
+    } catch {
+      // Unusable URL: fall through to the socket path below.
+    }
+  }
+
+  return new Dockerode({
+    socketPath: process.env.DOCKER_SOCKET_PATH || '/var/run/docker.sock',
+  });
+}
+
+const docker = createDockerClient();
+
+/**
+ * Container logs come back as a multiplexed stream: each frame is prefixed with
+ * an 8 byte header (stream type, three padding bytes, big-endian payload
+ * length). Containers created with a TTY send plain text instead, so the header
+ * is stripped only while the buffer actually starts with one.
+ */
+function decodeDockerLogs(buffer: Buffer): string {
+  const frames: string[] = [];
+  let offset = 0;
+
+  while (offset + 8 <= buffer.length) {
+    const isFrameHeader =
+      buffer[offset] <= 2 &&
+      buffer[offset + 1] === 0 &&
+      buffer[offset + 2] === 0 &&
+      buffer[offset + 3] === 0;
+    if (!isFrameHeader) break;
+
+    const size = buffer.readUInt32BE(offset + 4);
+    const start = offset + 8;
+    const end = start + size;
+    if (end > buffer.length) break;
+
+    frames.push(buffer.subarray(start, end).toString('utf8'));
+    offset = end;
+  }
+
+  return frames.length > 0 ? frames.join('') : buffer.toString('utf8');
+}
 
 @Injectable()
 export class AdminService {
@@ -551,15 +613,39 @@ export class AdminService {
     }
   }
 
+  /**
+   * Container control needs write access to the Docker API. Production grants
+   * the backend read-only access through docker-socket-proxy, which answers
+   * 403, so say that plainly instead of surfacing the proxy's HTML body.
+   */
+  private containerControlFailure(
+    action: 'restart' | 'stop',
+    name: string,
+    cause: unknown,
+  ): never {
+    const error = cause as { statusCode?: number; message?: string };
+    const message =
+      typeof error.message === 'string' ? error.message : 'unknown error';
+    this.logger.error(`Failed to ${action} container ${name}: ${message}`);
+
+    if (error.statusCode === 403 || /403|forbidden/i.test(message)) {
+      throw new ServiceUnavailableException(
+        `Container ${action} is disabled: this deployment gives the backend read-only Docker access, so containers cannot be ${action}ed from the admin dashboard.`,
+      );
+    }
+    throw new ServiceUnavailableException(
+      `Failed to ${action} container ${name}: ${message}`,
+    );
+  }
+
   async restartContainer(name: string) {
     try {
       const container = docker.getContainer(name);
       await container.restart();
       this.logger.log(`Container ${name} restarted by admin`);
       return { success: true, message: `Container ${name} restarted` };
-    } catch (error: any) {
-      this.logger.error(`Failed to restart container ${name}`, error);
-      throw new Error(`Failed to restart container: ${error.message}`);
+    } catch (error) {
+      this.containerControlFailure('restart', name, error);
     }
   }
 
@@ -569,9 +655,8 @@ export class AdminService {
       await container.stop();
       this.logger.log(`Container ${name} stopped by admin`);
       return { success: true, message: `Container ${name} stopped` };
-    } catch (error: any) {
-      this.logger.error(`Failed to stop container ${name}`, error);
-      throw new Error(`Failed to stop container: ${error.message}`);
+    } catch (error) {
+      this.containerControlFailure('stop', name, error);
     }
   }
 
@@ -590,7 +675,7 @@ export class AdminService {
           timestamps: true,
         });
         // Convert buffer to string
-        logs = logStream.toString('utf8');
+        logs = decodeDockerLogs(logStream);
       } else {
         // Get logs from all running containers
         const containers = await docker.listContainers({ all: false });
@@ -606,7 +691,7 @@ export class AdminService {
               timestamps: true,
             });
             logParts.push(
-              `[${c.Names[0]?.replace(/^\//, '')}]\n${logStream.toString('utf8')}`,
+              `[${c.Names[0]?.replace(/^\//, '')}]\n${decodeDockerLogs(logStream)}`,
             );
           } catch (e) {
             // Skip containers that can't be accessed

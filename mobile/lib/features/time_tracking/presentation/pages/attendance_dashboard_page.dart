@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_service.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/utils/api_date_range.dart';
+import '../../../../core/utils/location_utils.dart';
 import '../../data/models/time_entry_model.dart';
 
 // ============================================================================
@@ -81,8 +83,8 @@ class _AttendanceDashboardPageState extends ConsumerState<AttendanceDashboardPag
       final results = await Future.wait([
         ApiService().timeTracking.getLiveStatus(),
         ApiService().timeTracking.getAttendanceSummary(
-          startDate: _startDate.toIso8601String(),
-          endDate: _endDate.toIso8601String(),
+          startDate: ApiDateRange.startOfDay(_startDate),
+          endDate: ApiDateRange.endOfDay(_endDate),
         ),
       ]);
 
@@ -111,11 +113,22 @@ class _AttendanceDashboardPageState extends ConsumerState<AttendanceDashboardPag
 
   Future<void> _handleClockAction(String workerId, bool isClockedIn) async {
     try {
+      // Send the location when it is available: the API requires coordinates
+      // for geofenced properties and rejects a clock-in without them.
+      final position = await LocationUtils.currentPositionOrNull();
       if (isClockedIn) {
-        await ApiService().timeTracking.clockOut(workerId);
+        await ApiService().timeTracking.clockOut(
+          workerId,
+          lat: position?.latitude,
+          lng: position?.longitude,
+        );
         _showSnackBar('Worker clocked out', AppColors.warning);
       } else {
-        await ApiService().timeTracking.clockIn(workerId);
+        await ApiService().timeTracking.clockIn(
+          workerId,
+          lat: position?.latitude,
+          lng: position?.longitude,
+        );
         _showSnackBar('Worker clocked in', AppColors.success);
       }
       await _loadData();

@@ -27,7 +27,7 @@ if ! docker network inspect paykey-network-prod >/dev/null 2>&1; then
   docker network create paykey-network-prod >/dev/null
 fi
 "${backend[@]}" pull backend
-"${infra[@]}" pull redis
+"${infra[@]}" pull redis docker-proxy
 
 # The image runs as node (uid/gid 1000). Prepare only its dedicated data paths;
 # do not change the live container, source uploads, or retained rollback copies.
@@ -52,10 +52,12 @@ fi
 
 old_backend=""
 old_redis=""
+old_proxy=""
 has_uploads=false
 has_exports=false
 backend_was_running=false
 redis_was_running=false
+proxy_was_running=false
 rollback_needed=false
 environment_promoted=false
 if [[ -f /opt/paykey/.env ]]; then
@@ -84,6 +86,10 @@ export REDIS_DATA_VOLUME
 # Persist the discovered volume name so later operations cannot silently select
 # an empty volume under a different Compose project name.
 printf "REDIS_DATA_VOLUME='%s'\n" "$REDIS_DATA_VOLUME" >> "$candidate"
+if docker container inspect paykey_docker_proxy_prod >/dev/null 2>&1; then
+  [[ $(docker inspect --format '{{.State.Running}}' paykey_docker_proxy_prod) == true ]] || { echo 'Existing Docker socket proxy is stopped; recover it before releasing'; exit 1; }
+  proxy_was_running=true
+fi
 "${infra[@]}" config --quiet
 
 remove_new_container() {
@@ -98,11 +104,14 @@ rollback() {
   trap - ERR INT TERM
   set +e
   if [[ "$rollback_needed" == true ]]; then
-    echo 'Release failed. Restoring retained application/Redis containers; database migrations are not automatically reversed.'
+    echo 'Release failed. Restoring retained application/Redis/proxy containers; database migrations are not automatically reversed.'
     remove_new_container paykey_backend_prod
     remove_new_container paykey_redis_prod
+    remove_new_container paykey_docker_proxy_prod
     if [[ -n "$old_redis" ]]; then docker rename "$old_redis" paykey_redis_prod; fi
     if [[ "$redis_was_running" == true ]]; then docker start paykey_redis_prod >/dev/null; fi
+    if [[ -n "$old_proxy" ]]; then docker rename "$old_proxy" paykey_docker_proxy_prod; fi
+    if [[ "$proxy_was_running" == true ]]; then docker start paykey_docker_proxy_prod >/dev/null; fi
     if [[ -n "$old_backend" ]]; then docker rename "$old_backend" paykey_backend_prod; fi
     if [[ "$backend_was_running" == true ]]; then docker start paykey_backend_prod >/dev/null; fi
     if [[ "$environment_promoted" == true ]]; then
@@ -176,15 +185,20 @@ if [[ "$redis_was_running" == true ]]; then
   old_redis="paykey_redis_rollback_${release_id}"
   docker rename paykey_redis_prod "$old_redis"
 fi
+if [[ "$proxy_was_running" == true ]]; then
+  docker stop --time 10 paykey_docker_proxy_prod >/dev/null
+  old_proxy="paykey_docker_proxy_rollback_${release_id}"
+  docker rename paykey_docker_proxy_prod "$old_proxy"
+fi
 
-"${infra[@]}" up -d --wait --wait-timeout 90 redis
+"${infra[@]}" up -d --wait --wait-timeout 90 redis docker-proxy
 # Schema changes are deliberately outside this application release. The
 # read-only preflight already required the complete migration ledger to match.
 "${backend[@]}" up -d --wait --wait-timeout 120 backend
 docker exec paykey_backend_prod node scripts/audit-production.cjs --require-migrations-current
 
 # Only promote validated environment configuration after dependency readiness.
-printf 'backend=%s\nredis=%s\n' "$old_backend" "$old_redis" > "$release_dir/rollback-containers.txt"
+printf 'backend=%s\nredis=%s\ndocker-proxy=%s\n' "$old_backend" "$old_redis" "$old_proxy" > "$release_dir/rollback-containers.txt"
 cp "$candidate" "/opt/paykey/.env.next-${release_id}"
 chmod 600 "/opt/paykey/.env.next-${release_id}"
 mv "/opt/paykey/.env.next-${release_id}" /opt/paykey/.env

@@ -1,161 +1,164 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_service.dart';
-import '../models/time_tracking_model.dart';
+import '../../../../core/utils/api_date_range.dart';
 import '../mock/time_tracking_mock_data.dart';
+import '../models/time_entry_model.dart';
 
 final timeTrackingRepositoryProvider = Provider<TimeTrackingRepository>((ref) {
-  return TimeTrackingRepository(ApiService());
+  return TimeTrackingRepository();
 });
 
-/// Repository for time tracking with 403 fallback to mock data.
-/// 
-/// When the user doesn't have PLATINUM subscription, the backend returns 403.
-/// This repository catches those errors and returns mock data for preview mode.
+/// Time-tracking data layer used by the employer screens.
+///
+/// Every call is worker-scoped, because that is what the API exposes:
+///
+///   POST /time-tracking/clock-in/:workerId
+///   POST /time-tracking/clock-out/:workerId
+///   GET  /time-tracking/status/:workerId
+///   GET  /time-tracking/entries/:workerId
+///   GET  /time-tracking/entries
+///
+/// There is no `/time-tracking/active` route, so "is this worker on the clock?"
+/// is answered with `/status/:workerId`
+/// (`{ isClockedIn, currentEntry, todayTotal }`).
+///
+/// A 403 response means the employer's plan does not include time tracking;
+/// preview (mock) data is returned so the screen still renders.
 class TimeTrackingRepository {
-  final ApiService _apiService;
+  ApiService get _api => ApiService();
 
-  /// Feature key for gating
-  static const String featureKey = 'time_tracking';
-
-  TimeTrackingRepository(this._apiService);
-
-  Future<TimeEntry> clockIn(ClockInRequest request) async {
+  /// The worker's open entry, or null when the worker is not clocked in.
+  Future<TimeEntryModel?> getActiveEntry(String workerId) async {
     try {
-      final response = await _apiService.post(
-        '/time-tracking/clock-in/${request.workerId}',
-        data: request.toJson(),
-      );
-
+      final response = await _api.timeTracking.getStatus(workerId);
       final data = response.data;
-      if (data == null) {
-        throw TimeTrackingException('No data received from clock-in request');
-      }
-
-      return TimeEntry.fromJson(data as Map<String, dynamic>);
+      if (data is! Map<String, dynamic>) return null;
+      return ClockStatus.fromJson(data).currentEntry;
     } on DioException catch (e) {
       if (e.response?.statusCode == 403) {
-        throw TimeTrackingException(
-          'The PLATINUM plan is required to use time tracking',
-          statusCode: 403,
-        );
-      }
-      throw _handleDioError(e);
-    } catch (e) {
-      if (e is TimeTrackingException) rethrow;
-      throw TimeTrackingException('Failed to clock in: ${e.toString()}');
-    }
-  }
-
-  Future<TimeEntry> clockOut(ClockOutRequest request) async {
-    try {
-      final response = await _apiService.post(
-        '/time-tracking/clock-out/${request.workerId}',
-        data: request.toJson(),
-      );
-
-      final data = response.data;
-      if (data == null) {
-        throw TimeTrackingException('No data received from clock-out request');
-      }
-
-      return TimeEntry.fromJson(data as Map<String, dynamic>);
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 403) {
-        throw TimeTrackingException(
-          'The PLATINUM plan is required to use time tracking',
-          statusCode: 403,
-        );
-      }
-      throw _handleDioError(e);
-    } catch (e) {
-      if (e is TimeTrackingException) rethrow;
-      throw TimeTrackingException('Failed to clock out: ${e.toString()}');
-    }
-  }
-
-  Future<TimeEntry?> getActiveEntry(String workerId) async {
-    try {
-      final response = await _apiService.get(
-        '/time-tracking/active',
-        queryParams: {'workerId': workerId},
-      );
-
-      final data = response.data;
-      if (data == null) {
-        return null;
-      }
-
-      return TimeEntry.fromJson(data as Map<String, dynamic>);
-    } on DioException catch (e) {
-      // 404 means no active entry exists - this is expected
-      if (e.response?.statusCode == 404) {
-        return null;
-      }
-
-      // 403 means feature is gated - return mock active entry
-      if (e.response?.statusCode == 403) {
-        print('[$featureKey] 403 Forbidden - returning mock active entry');
         return TimeTrackingMockData.getActiveEntry(workerId);
       }
-
-      // For timeout/connection errors, throw with network flag
-      if (_isNetworkError(e)) {
-        throw TimeTrackingException(
-          'Unable to check active entry. Please check your connection.',
-          isNetworkError: true,
-        );
-      }
-
+      // An unknown worker means "not clocked in" rather than an error.
+      if (e.response?.statusCode == 404) return null;
       throw _handleDioError(e);
     } catch (e) {
       if (e is TimeTrackingException) rethrow;
-      throw TimeTrackingException('Failed to get active entry: ${e.toString()}');
+      throw TimeTrackingException('Failed to check clock-in status: $e');
     }
   }
 
-  Future<List<TimeEntry>> getTimeEntries({
+  /// Clock a worker in.
+  ///
+  /// Location is best effort: the API only rejects a clock-in without
+  /// coordinates when the employer's plan enables geofencing for the property.
+  Future<TimeEntryModel> clockIn(
+    String workerId, {
+    double? lat,
+    double? lng,
+  }) async {
+    try {
+      final response = await _api.timeTracking.clockIn(
+        workerId,
+        lat: lat,
+        lng: lng,
+      );
+      return _entryFrom(response.data, 'clock-in');
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 403) {
+        throw const TimeTrackingException(
+          'The PLATINUM plan is required to use time tracking',
+          statusCode: 403,
+        );
+      }
+      throw _handleDioError(e);
+    } catch (e) {
+      if (e is TimeTrackingException) rethrow;
+      throw TimeTrackingException('Failed to clock in: $e');
+    }
+  }
+
+  /// Clock a worker out. The API finds the worker's open entry itself, so
+  /// clock-out is addressed by worker rather than by time entry.
+  Future<TimeEntryModel> clockOut(
+    String workerId, {
+    int? breakMinutes,
+    String? notes,
+    double? lat,
+    double? lng,
+  }) async {
+    try {
+      final response = await _api.timeTracking.clockOut(
+        workerId,
+        breakMinutes: breakMinutes,
+        notes: notes,
+        lat: lat,
+        lng: lng,
+      );
+      return _entryFrom(response.data, 'clock-out');
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 403) {
+        throw const TimeTrackingException(
+          'The PLATINUM plan is required to use time tracking',
+          statusCode: 403,
+        );
+      }
+      throw _handleDioError(e);
+    } catch (e) {
+      if (e is TimeTrackingException) rethrow;
+      throw TimeTrackingException('Failed to clock out: $e');
+    }
+  }
+
+  /// Time entries for one worker, or for the whole business when [workerId] is
+  /// null. With no range the last 30 days are used, because the API requires
+  /// both bounds. Bounds are widened to whole local days and sent as UTC
+  /// instants — see [ApiDateRange].
+  Future<List<TimeEntryModel>> getTimeEntries({
     String? workerId,
     DateTime? startDate,
     DateTime? endDate,
   }) async {
+    final endDay = endDate ?? DateTime.now();
+    final startDay = startDate ?? endDay.subtract(const Duration(days: 30));
+    final start = ApiDateRange.startOfDay(startDay);
+    final end = ApiDateRange.endOfDay(endDay);
     try {
-      final queryParams = <String, dynamic>{};
-      if (workerId != null) queryParams['workerId'] = workerId;
-      if (startDate != null) queryParams['startDate'] = startDate.toIso8601String();
-      if (endDate != null) queryParams['endDate'] = endDate.toIso8601String();
-
-      final response = await _apiService.get(
-        '/time-tracking/entries',
-        queryParams: queryParams,
-      );
+      final Response response = workerId != null
+          ? await _api.timeTracking.getEntriesForWorker(
+              workerId,
+              startDate: start,
+              endDate: end,
+            )
+          : await _api.timeTracking.getAllEntries(
+              startDate: start,
+              endDate: end,
+            );
 
       final data = response.data;
-      if (data == null) {
-        return [];
-      }
-
-      if (data is! List) {
-        throw TimeTrackingException('Invalid response format: expected list');
-      }
-
+      if (data is! List) return [];
       return data
-          .map((json) => TimeEntry.fromJson(json as Map<String, dynamic>))
+          .whereType<Map<String, dynamic>>()
+          .map(TimeEntryModel.fromJson)
           .toList();
     } on DioException catch (e) {
-      // 403 means feature is gated - return mock entries
       if (e.response?.statusCode == 403) {
-        print('[$featureKey] 403 Forbidden - returning mock time entries');
-        if (workerId != null) {
-          return TimeTrackingMockData.getEntriesForWorker(workerId);
-        }
-        return TimeTrackingMockData.timeEntries;
+        return workerId != null
+            ? TimeTrackingMockData.getEntriesForWorker(workerId)
+            : TimeTrackingMockData.timeEntries;
       }
       throw _handleDioError(e);
     } catch (e) {
       if (e is TimeTrackingException) rethrow;
-      throw TimeTrackingException('Failed to get time entries: ${e.toString()}');
+      throw TimeTrackingException('Failed to get time entries: $e');
     }
+  }
+
+  TimeEntryModel _entryFrom(Object? data, String action) {
+    if (data is! Map<String, dynamic>) {
+      throw TimeTrackingException('No data received from $action request');
+    }
+    return TimeEntryModel.fromJson(data);
   }
 
   bool _isNetworkError(DioException e) {
@@ -172,6 +175,8 @@ class TimeTrackingRepository {
 
       if (data is Map<String, dynamic>) {
         message = data['message'] as String? ?? message;
+      } else if (data is String && data.isNotEmpty) {
+        message = data;
       }
 
       return TimeTrackingException(
@@ -181,7 +186,7 @@ class TimeTrackingRepository {
     }
 
     if (_isNetworkError(error)) {
-      return TimeTrackingException(
+      return const TimeTrackingException(
         'Network error. Please check your connection.',
         isNetworkError: true,
       );
@@ -199,7 +204,7 @@ class TimeTrackingException implements Exception {
   final int? statusCode;
   final bool isNetworkError;
 
-  TimeTrackingException(
+  const TimeTrackingException(
     this.message, {
     this.statusCode,
     this.isNetworkError = false,

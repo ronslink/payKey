@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/network/api_service.dart';
+import '../../../../core/utils/api_date_range.dart';
 import '../../data/models/employee_models.dart';
 
 /// Page showing employee's timesheet / clock history
@@ -48,8 +49,8 @@ class _EmployeeTimesheetPageState extends ConsumerState<EmployeeTimesheetPage> {
 
       final response = await ApiService().timeTracking.getEntriesForWorker(
         profile.workerId!,
-        startDate: startDate.toIso8601String().split('T')[0],
-        endDate: endDate.toIso8601String().split('T')[0],
+        startDate: ApiDateRange.startOfDay(startDate),
+        endDate: ApiDateRange.endOfDay(endDate),
       );
 
       if (response.statusCode == 200 && response.data != null) {

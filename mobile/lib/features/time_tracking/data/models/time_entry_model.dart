@@ -51,6 +51,7 @@ class TimeEntryModel {
   final TimeEntryStatus status;
   final String? notes;
   final String? adjustmentReason;
+  final String? propertyId;
   final DateTime createdAt;
   final DateTime updatedAt;
   
@@ -73,6 +74,7 @@ class TimeEntryModel {
     required this.status,
     this.notes,
     this.adjustmentReason,
+    this.propertyId,
     required this.createdAt,
     required this.updatedAt,
     this.workerName,
@@ -107,6 +109,7 @@ class TimeEntryModel {
       status: TimeEntryStatus.fromString(json['status'] as String? ?? 'ACTIVE'),
       notes: json['notes'] as String?,
       adjustmentReason: json['adjustmentReason'] as String?,
+      propertyId: json['propertyId'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
       workerName: json['worker']?['name'] as String?,

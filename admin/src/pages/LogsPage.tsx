@@ -29,6 +29,8 @@ interface LogsResponse {
     total: number;
     container: string;
     lines: number;
+    /** Set when the API could not reach the log source (for example no Docker access). */
+    error?: string;
 }
 
 const PAGE_SIZE = 50;
@@ -338,6 +340,18 @@ export default function LogsPage() {
                 />
             )}
 
+            {/* The API reports an unreachable log source inside the response */}
+            {!error && data?.error && (
+                <Alert
+                    message="Log source unavailable"
+                    description={data.error}
+                    type="warning"
+                    showIcon
+                    style={{ marginBottom: 16 }}
+                    closable
+                />
+            )}
+
             {/* Statistics Cards */}
             <Row gutter={16} style={{ marginBottom: 24 }}>
                 <Col span={6}>
@@ -431,7 +445,12 @@ export default function LogsPage() {
 
             {/* Logs Table */}
             {filteredLogs.length === 0 && !isLoading ? (
-                <Empty description="No logs found matching your filters" style={{ marginTop: 40 }} />
+                <Empty
+                    description={data?.error
+                        ? 'Logs are unavailable: the API could not read them from the log source'
+                        : 'No logs found matching your filters'}
+                    style={{ marginTop: 40 }}
+                />
             ) : (
                 <Table
                     columns={columns}

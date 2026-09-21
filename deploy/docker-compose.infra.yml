@@ -22,6 +22,26 @@ services:
       retries: 12
       start_period: 5s
 
+  # Read-only Docker API for the admin container and log views. The backend
+  # never mounts the raw Docker socket: this proxy publishes only the container
+  # endpoints on the internal network and refuses everything else. `POST` stays
+  # disabled, so container control (`docker exec`, create, start, stop) is
+  # answered with 403 even for someone who reaches the proxy.
+  docker-proxy:
+    image: tecnativa/docker-socket-proxy:0.2.0
+    container_name: paykey_docker_proxy_prod
+    restart: always
+    stop_grace_period: 10s
+    environment:
+      CONTAINERS: '1'
+      POST: '0'
+      EXEC: '0'
+      LOG_LEVEL: warning
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - paykey-network-prod
+
 volumes:
   redis_data_prod:
     name: ${REDIS_DATA_VOLUME:-paykey_redis_data_prod}

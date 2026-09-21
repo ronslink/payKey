@@ -134,21 +134,28 @@ Failure to copy aborts replacement. New private/public storage is persisted at
 named volume is discovered and reused, including when the Redis password is
 changed. No volume, old container or rollback image is pruned.
 
-The script then starts Redis and the new backend, requires PostgreSQL/Redis
-readiness at `/health/ready`, and verifies the migration ledger again through the
-read-only audit. It never runs migration SQL. Only after success does it promote
-`.env.candidate` to `/opt/paykey/.env` and update `current-release`. Keep any
-separate migration operation's output private because SQL output may contain
-sensitive values. Never print `.env`, `docker inspect` environment contents, or
-unrestricted `docker compose config` in CI logs.
+The script then starts Redis, the read-only Docker socket proxy and the new
+backend, requires PostgreSQL/Redis readiness at `/health/ready`, and verifies the
+migration ledger again through the read-only audit. It never runs migration SQL.
+Only after success does it promote `.env.candidate` to `/opt/paykey/.env` and
+update `current-release`. Keep any separate migration operation's output private
+because SQL output may contain sensitive values. Never print `.env`,
+`docker inspect` environment contents, or unrestricted `docker compose config` in
+CI logs.
+
+The `docker-proxy` service (`tecnativa/docker-socket-proxy`) is the only
+container that mounts `/var/run/docker.sock`, and it mounts it read-only. It
+publishes just the container endpoints, with `POST` and `EXEC` disabled, so the
+admin log viewer works while the backend keeps no ability to control, create or
+exec into containers. The backend reaches it through `DOCKER_PROXY_URL`.
 
 ## Rollback and verification
 
 On a replacement failure the script removes only containers bearing the current
-release's Compose project label and restarts retained backend/Redis containers.
-It **does not reverse database migrations**. If a separate SQL operation is
-introduced, review backward compatibility and rehearse recovery before that
-operation; the current application release requires no SQL.
+release's Compose project label and restarts retained backend/Redis/proxy
+containers. It **does not reverse database migrations**. If a separate SQL
+operation is introduced, review backward compatibility and rehearse recovery
+before that operation; the current application release requires no SQL.
 
 Previous image IDs, container names, `.env` and upload snapshots are retained in
 the release directory. Keep enough disk capacity for them; perform separately

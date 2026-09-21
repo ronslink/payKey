@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/time_tracking_provider.dart';
-import '../../data/models/time_tracking_model.dart';
+import '../../data/models/time_entry_model.dart';
 
 import '../../../properties/presentation/providers/properties_provider.dart';
 
@@ -124,16 +124,14 @@ class _TimeTrackingHistoryPageState extends ConsumerState<TimeTrackingHistoryPag
 }
 
 class _TimeEntryCard extends StatelessWidget {
-  final TimeEntry entry;
+  final TimeEntryModel entry;
 
   const _TimeEntryCard({required this.entry});
 
   @override
   Widget build(BuildContext context) {
-    final clockInTime = DateTime.parse(entry.clockInTime);
-    final clockOutTime = entry.clockOutTime != null
-        ? DateTime.parse(entry.clockOutTime!)
-        : null;
+    final clockInTime = entry.clockIn.toLocal();
+    final clockOutTime = entry.clockOut?.toLocal();
     final isCompleted = entry.status == TimeEntryStatus.completed;
 
     return Card(

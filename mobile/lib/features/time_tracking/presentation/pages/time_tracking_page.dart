@@ -6,7 +6,7 @@ import '../../../workers/presentation/providers/workers_provider.dart';
 import '../../../workers/data/models/worker_model.dart';
 import '../../../subscriptions/presentation/providers/feature_access_provider.dart';
 import '../providers/time_tracking_provider.dart';
-import '../../data/models/time_tracking_model.dart';
+import '../../data/models/time_entry_model.dart';
 import 'worker_timesheet_page.dart';
 
 class TimeTrackingPage extends ConsumerStatefulWidget {
@@ -269,7 +269,7 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
     );
   }
 
-  Widget _buildOverviewContent(List<TimeEntry> entries, List<WorkerModel> workers) {
+  Widget _buildOverviewContent(List<TimeEntryModel> entries, List<WorkerModel> workers) {
     // aggregation logic
     double totalHours = 0;
     int activeWorkersCount = 0;
@@ -599,7 +599,7 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
     );
   }
 
-  Widget _buildClockedInCard(TimeEntry entry) {
+  Widget _buildClockedInCard(TimeEntryModel entry) {
      return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -617,7 +617,7 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
         children: [
             const Icon(Icons.timer, size: 48, color: Colors.orange),
             const SizedBox(height: 16),
-            Text('Clocked In at ${DateFormat('h:mm a').format(DateTime.parse(entry.clockInTime))}', 
+            Text('Clocked In at ${DateFormat('h:mm a').format(entry.clockIn.toLocal())}', 
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
              TextField(
@@ -645,17 +645,18 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
     if (_selectedLiveWorkerId == null) return;
     await ref.read(timeTrackingProvider.notifier).clockIn(
           _selectedLiveWorkerId!,
-          notes: _notesController.text.isEmpty ? null : _notesController.text,
         );
     _notesController.clear();
+    _fetchOverviewData();
   }
 
-  Future<void> _handleClockOut(TimeEntry entry) async {
+  Future<void> _handleClockOut(TimeEntryModel entry) async {
     // Clock-out is worker-scoped: the backend finds the open entry itself.
     await ref.read(timeTrackingProvider.notifier).clockOut(
           entry.workerId,
           notes: _notesController.text.isEmpty ? null : _notesController.text,
         );
     _notesController.clear();
+    _fetchOverviewData();
   }
 }

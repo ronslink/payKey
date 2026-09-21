@@ -183,6 +183,28 @@ test("production Compose models require immutable image/password and isolate hos
           model.services.redis.environment.REDIS_PASSWORD,
           fixture.REDIS_PASSWORD,
         );
+        // The backend reads container logs through this proxy, so it must stay
+        // read-only, keep the socket out of the backend, and never expose the
+        // control endpoints that would hand out root on the host.
+        const proxy = model.services["docker-proxy"];
+        assert.ok(proxy, "the read-only Docker socket proxy must be modelled");
+        assert.equal(proxy.environment.CONTAINERS, "1");
+        assert.equal(proxy.environment.POST, "0");
+        assert.equal(proxy.environment.EXEC, "0");
+        assert.ok(
+          proxy.volumes.some(
+            (volume) =>
+              volume.source === "/var/run/docker.sock" && volume.read_only,
+          ),
+          "only the proxy may mount the Docker socket, and read-only",
+        );
+        assert.ok(
+          !model.services.backend ||
+            !model.services.backend.volumes.some(
+              (volume) => volume.source === "/var/run/docker.sock",
+            ),
+          "the backend must never mount the Docker socket",
+        );
       }
     }
   } finally {

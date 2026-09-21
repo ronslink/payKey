@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 // Core imports
 import '../../../../core/network/api_service.dart';
+import '../../../../core/utils/api_date_range.dart';
 
 // Domain imports
 import '../../data/models/pay_period_model.dart';
@@ -79,10 +80,9 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
   /// and pre-populate hours for hourly workers
   Future<void> _fetchAttendanceData(PayPeriod period) async {
     try {
-      final dateFormatter = DateFormat('yyyy-MM-dd');
       final response = await ApiService().timeTracking.getAttendanceSummary(
-        startDate: dateFormatter.format(period.startDate),
-        endDate: dateFormatter.format(period.endDate),
+        startDate: ApiDateRange.startOfDay(period.startDate),
+        endDate: ApiDateRange.endOfDay(period.endDate),
       );
       
       if (response.statusCode == 200 && response.data != null) {
