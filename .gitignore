@@ -121,3 +121,10 @@ mobile/build_log*.txt
 mobile/android/signing_report.txt
 mobile/analyze_output.txt
 export_service_verify.ts
+
+# Local AI-agent working folders (worktrees, patches, review frames)
+.claude/
+Claude outputs/
+
+# Private SSH key - must never be committed
+deploy_key
