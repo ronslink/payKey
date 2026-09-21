@@ -161,6 +161,18 @@ export class What3wordsService {
           'what3words rejected the configured API key; enter the coordinates directly.',
         );
       }
+      // 402/429 mean the key is fine but the account cannot make lookups right
+      // now (plan or quota). That is a configuration problem, not a gateway
+      // fault, and the upstream message says exactly what to change.
+      if (response.status === 402 || response.status === 429) {
+        this.logger.warn(
+          'what3words plan or quota does not permit lookups; falling back is expected',
+        );
+        throw new ServiceUnavailableException(
+          detail ??
+            'The what3words plan for this deployment cannot look up addresses right now. Use your current location or enter the coordinates directly.',
+        );
+      }
 
       throw new BadGatewayException(
         detail ?? `what3words lookup failed (${response.status}).`,

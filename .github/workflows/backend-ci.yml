@@ -205,6 +205,7 @@ jobs:
           SMS_PROVIDER: ${{ vars.SMS_PROVIDER }}
           AFRICANSTALKING_API_KEY: ${{ secrets.AFRICANSTALKING_API_KEY }}
           AFRICANSTALKING_USERNAME: ${{ vars.AFRICANSTALKING_USERNAME }}
+          W3W_API_KEY: ${{ secrets.W3W_API_KEY }}
         run: node deploy/create-production-env.cjs
       - name: Upload staged release without touching live environment
         env:

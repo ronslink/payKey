@@ -30,6 +30,10 @@ const optional = [
   "SMS_PROVIDER",
   "AFRICANSTALKING_API_KEY",
   "AFRICANSTALKING_USERNAME",
+  // Optional: enables the what3words lookup used to pin a property's geofence.
+  // Without it the endpoint answers 503 and the app falls back to GPS or
+  // manual coordinates, so a release must not require it.
+  "W3W_API_KEY",
 ];
 
 function createProductionEnvironment(source) {
