@@ -18,6 +18,27 @@ export enum TimeEntryStatus {
   CANCELLED = 'CANCELLED', // Entry was cancelled
 }
 
+/** Where the hours came from. */
+export enum TimeEntrySource {
+  /** The employee's own geofenced clock-in/out. */
+  CLOCK = 'CLOCK',
+  /** Typed in by the employer, or closed by the stale-shift job. */
+  ENTERED = 'ENTERED',
+}
+
+/**
+ * Whether payroll may count these hours.
+ *
+ * Only INCLUDED hours are paid. Clocked hours are included on creation because
+ * the device on site is the evidence; anything typed in or guessed starts as
+ * PENDING so the employer decides before it becomes pay.
+ */
+export enum TimeEntryPayrollDecision {
+  PENDING = 'PENDING',
+  INCLUDED = 'INCLUDED',
+  EXCLUDED = 'EXCLUDED',
+}
+
 @Entity('time_entries')
 @Index(['workerId', 'clockIn'])
 @Index(['userId', 'clockIn'])
@@ -79,6 +100,33 @@ export class TimeEntry {
     default: TimeEntryStatus.ACTIVE,
   })
   status: TimeEntryStatus;
+
+  // Provenance and payroll inclusion
+  @Column({
+    type: 'enum',
+    enum: TimeEntrySource,
+    default: TimeEntrySource.CLOCK,
+  })
+  source: TimeEntrySource;
+
+  /**
+   * Only INCLUDED hours are paid. A geofenced clock-in is included on creation
+   * because the device on site is the evidence; hours typed in by the employer,
+   * or guessed by the stale-shift job, stay PENDING so they cannot become pay
+   * without a decision.
+   */
+  @Column({
+    type: 'enum',
+    enum: TimeEntryPayrollDecision,
+    default: TimeEntryPayrollDecision.PENDING,
+  })
+  payrollDecision: TimeEntryPayrollDecision;
+
+  @Column({ type: 'timestamp', nullable: true })
+  payrollDecidedAt: Date | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  payrollDecidedBy: string | null;
 
   // Metadata
   @Column({ type: 'text', nullable: true })

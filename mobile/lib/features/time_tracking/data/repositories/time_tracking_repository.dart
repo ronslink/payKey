@@ -48,65 +48,103 @@ class TimeTrackingRepository {
     }
   }
 
-  /// Clock a worker in.
+  /// Record time for a worker.
   ///
-  /// Location is best effort: the API only rejects a clock-in without
-  /// coordinates when the employer's plan enables geofencing for the property.
-  Future<TimeEntryModel> clockIn(
-    String workerId, {
-    double? lat,
-    double? lng,
+  /// Only the employee can clock themselves in; the employer records the hours
+  /// they know about. The API keeps these hours PENDING for payroll so they are
+  /// paid only once the employer decides to include them.
+  Future<TimeEntryModel> createEntry({
+    required String workerId,
+    required DateTime clockIn,
+    required DateTime clockOut,
+    int? breakMinutes,
+    String? notes,
   }) async {
     try {
-      final response = await _api.timeTracking.clockIn(
-        workerId,
-        lat: lat,
-        lng: lng,
+      final response = await _api.timeTracking.createEntry(
+        workerId: workerId,
+        clockIn: clockIn.toUtc().toIso8601String(),
+        clockOut: clockOut.toUtc().toIso8601String(),
+        breakMinutes: breakMinutes,
+        notes: notes,
       );
-      return _entryFrom(response.data, 'clock-in');
+      return _entryFrom(response.data, 'time entry');
     } on DioException catch (e) {
-      if (e.response?.statusCode == 403) {
-        throw const TimeTrackingException(
-          'The PLATINUM plan is required to use time tracking',
-          statusCode: 403,
-        );
-      }
       throw _handleDioError(e);
     } catch (e) {
       if (e is TimeTrackingException) rethrow;
-      throw TimeTrackingException('Failed to clock in: $e');
+      throw TimeTrackingException('Failed to record time: $e');
     }
   }
 
-  /// Clock a worker out. The API finds the worker's open entry itself, so
-  /// clock-out is addressed by worker rather than by time entry.
-  Future<TimeEntryModel> clockOut(
-    String workerId, {
+  /// Correct an existing entry. The API recalculates the hours and the entry
+  /// returns to PENDING, because the earlier payroll decision was about
+  /// different numbers.
+  Future<TimeEntryModel> correctEntry(
+    String entryId, {
+    DateTime? clockIn,
+    DateTime? clockOut,
     int? breakMinutes,
-    String? notes,
-    double? lat,
-    double? lng,
+    required String reason,
   }) async {
     try {
-      final response = await _api.timeTracking.clockOut(
-        workerId,
+      final response = await _api.timeTracking.adjustEntry(
+        entryId,
+        clockIn: clockIn?.toUtc().toIso8601String(),
+        clockOut: clockOut?.toUtc().toIso8601String(),
         breakMinutes: breakMinutes,
-        notes: notes,
-        lat: lat,
-        lng: lng,
+        reason: reason,
       );
-      return _entryFrom(response.data, 'clock-out');
+      return _entryFrom(response.data, 'correction');
     } on DioException catch (e) {
-      if (e.response?.statusCode == 403) {
-        throw const TimeTrackingException(
-          'The PLATINUM plan is required to use time tracking',
-          statusCode: 403,
-        );
-      }
       throw _handleDioError(e);
     } catch (e) {
       if (e is TimeTrackingException) rethrow;
-      throw TimeTrackingException('Failed to clock out: $e');
+      throw TimeTrackingException('Failed to correct the entry: $e');
+    }
+  }
+
+  /// What payroll would pay for a period, and what still needs a decision.
+  Future<PayrollReview> getPayrollReview({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    try {
+      final response = await _api.timeTracking.getPayrollReview(
+        startDate: ApiDateRange.startOfDay(startDate),
+        endDate: ApiDateRange.endOfDay(endDate),
+      );
+      final data = response.data;
+      if (data is! Map<String, dynamic>) return const PayrollReview();
+      return PayrollReview.fromJson(data);
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      if (e is TimeTrackingException) rethrow;
+      throw TimeTrackingException('Failed to load the payroll review: $e');
+    }
+  }
+
+  /// Include or exclude entries from payroll. Returns how many were updated.
+  Future<int> decidePayroll({
+    required List<String> entryIds,
+    required bool include,
+  }) async {
+    try {
+      final response = await _api.timeTracking.decidePayroll(
+        entryIds: entryIds,
+        decision: include ? 'INCLUDED' : 'EXCLUDED',
+      );
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        return (data['updated'] as num?)?.toInt() ?? entryIds.length;
+      }
+      return entryIds.length;
+    } on DioException catch (e) {
+      throw _handleDioError(e);
+    } catch (e) {
+      if (e is TimeTrackingException) rethrow;
+      throw TimeTrackingException('Failed to save the payroll decision: $e');
     }
   }
 

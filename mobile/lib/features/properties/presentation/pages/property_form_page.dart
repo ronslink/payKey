@@ -1,6 +1,11 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+// Core imports
+import '../../../../core/network/api_service.dart';
+import '../../../../core/utils/location_utils.dart';
 
 // Domain imports
 import '../../data/models/property_model.dart';
@@ -29,6 +34,9 @@ class _PropertyFormPageState extends ConsumerState<PropertyFormPage>
 
   late AnimationController _animationController;
   bool _isLoading = false;
+  bool _isLocating = false;
+  bool _isLookingUpWords = false;
+  String? _resolvedPlace;
 
   /// Whether we're editing an existing property
   bool get _isEditing => widget.propertyId != null;
@@ -74,9 +82,131 @@ class _PropertyFormPageState extends ConsumerState<PropertyFormPage>
            geofenceRadius: selectedProperty.geofenceRadius,
            what3words: selectedProperty.what3words,
            isActive: selectedProperty.isActive,
+           latitude: selectedProperty.latitude,
+           longitude: selectedProperty.longitude,
          );
        });
     });
+  }
+
+  // ===========================================================================
+  // LOCATION CAPTURE
+  // ===========================================================================
+
+  /// Capture the pin by standing at the site — the most reliable option where
+  /// street addresses are not enough to find a workplace.
+  Future<void> _useCurrentLocation() async {
+    setState(() => _isLocating = true);
+    try {
+      final position = await LocationUtils.currentPosition();
+      _controllers.setPin(position.latitude, position.longitude);
+      setState(() {});
+      _showMessage(
+        'Pin captured within about ${position.accuracy.round()} m. '
+        'Check it matches the gate or entrance.',
+        isError: false,
+      );
+
+      // Best effort: label the pin with its what3words address so it can be
+      // shared with staff. The lookup needs a server API key and is optional.
+      if (_controllers.what3words.text.trim().isEmpty) {
+        await _describePinWithWhat3words(
+          position.latitude,
+          position.longitude,
+          silent: true,
+        );
+      }
+    } on LocationException catch (e) {
+      _showMessage(e.message, isError: true);
+    } finally {
+      if (mounted) setState(() => _isLocating = false);
+    }
+  }
+
+  /// Turn a what3words address into the coordinates the geofence measures from.
+  Future<void> _lookUpWhat3words() async {
+    final words = _controllers.what3words.text.trim();
+    if (words.isEmpty) {
+      _showMessage(
+        'Enter the three words for this site, for example filled.count.soap.',
+        isError: true,
+      );
+      return;
+    }
+
+    setState(() => _isLookingUpWords = true);
+    try {
+      final response = await ApiService().properties.resolveWhat3words(words);
+      final data = response.data as Map<String, dynamic>;
+      final latitude = (data['latitude'] as num).toDouble();
+      final longitude = (data['longitude'] as num).toDouble();
+
+      _controllers.setPin(latitude, longitude);
+      setState(() {
+        _resolvedPlace = data['nearestPlace'] as String?;
+      });
+      _showMessage(
+        _resolvedPlace == null
+            ? 'Pin set from what3words.'
+            : 'Pin set near $_resolvedPlace.',
+        isError: false,
+      );
+    } on DioException catch (e) {
+      _showMessage(
+        _messageFromDio(e) ??
+            'Could not look up those words. Use your current location instead.',
+        isError: true,
+      );
+    } catch (e) {
+      _showMessage('Could not look up those words: $e', isError: true);
+    } finally {
+      if (mounted) setState(() => _isLookingUpWords = false);
+    }
+  }
+
+  Future<void> _describePinWithWhat3words(
+    double latitude,
+    double longitude, {
+    bool silent = false,
+  }) async {
+    try {
+      final response = await ApiService().properties.resolveWords(
+        latitude,
+        longitude,
+      );
+      final data = response.data as Map<String, dynamic>;
+      final words = data['words'] as String?;
+      if (words == null || !mounted) return;
+
+      _controllers.what3words.text = words;
+      setState(() {
+        _resolvedPlace = data['nearestPlace'] as String?;
+      });
+    } on DioException catch (e) {
+      final message = _messageFromDio(e);
+      if (!silent && message != null) _showMessage(message, isError: true);
+    } catch (_) {
+      // The pin is already captured; the label is a convenience.
+    }
+  }
+
+  String? _messageFromDio(DioException error) {
+    final data = error.response?.data;
+    if (data is Map<String, dynamic>) {
+      final message = data['message'];
+      if (message is String) return message;
+      if (message is List && message.isNotEmpty) return message.first.toString();
+    }
+    return null;
+  }
+
+  void _showMessage(String message, {required bool isError}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      isError
+          ? PropertyFormSnackbars.error(message)
+          : PropertyFormSnackbars.success(message),
+    );
   }
 
   @override
@@ -92,6 +222,15 @@ class _PropertyFormPageState extends ConsumerState<PropertyFormPage>
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // A geofence measures from one pin, so half a pin is not usable.
+    if (_controllers.formData.hasPartialPin) {
+      _showMessage(
+        'A geofence pin needs both a latitude and a longitude.',
+        isError: true,
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
 
@@ -120,6 +259,8 @@ class _PropertyFormPageState extends ConsumerState<PropertyFormPage>
           geofenceRadius: formData.geofenceRadius,
           what3words: formData.what3words,
           isActive: formData.isActive,
+          latitude: formData.latitude,
+          longitude: formData.longitude,
         ),
       );
     } else {
@@ -129,6 +270,8 @@ class _PropertyFormPageState extends ConsumerState<PropertyFormPage>
           address: formData.address,
           geofenceRadius: formData.geofenceRadius,
           what3words: formData.what3words,
+          latitude: formData.latitude,
+          longitude: formData.longitude,
           // isActive is not supported in Create DTO yet, defaults to true
         ),
       );
@@ -204,10 +347,22 @@ class _PropertyFormPageState extends ConsumerState<PropertyFormPage>
             _buildNameField(),
             const SizedBox(height: PropertyFormTheme.fieldSpacing),
             _buildAddressField(),
+            const SizedBox(height: PropertyFormTheme.sectionSpacing),
+            const FormSectionHeader(
+              icon: Icons.my_location,
+              title: 'Location & Geofence',
+              subtitle: 'Where employees must be to clock in',
+            ),
+            const SizedBox(height: PropertyFormTheme.fieldSpacing),
+            _buildLocationCapture(),
+            const SizedBox(height: PropertyFormTheme.fieldSpacing),
+            _buildWhat3WordsField(),
+            const SizedBox(height: PropertyFormTheme.fieldSpacing),
+            _buildCoordinatesFields(),
             const SizedBox(height: PropertyFormTheme.fieldSpacing),
             _buildGeofenceField(),
             const SizedBox(height: PropertyFormTheme.fieldSpacing),
-            _buildWhat3WordsField(),
+            _buildPinSummary(),
             if (_isEditing) ...[
               const SizedBox(height: PropertyFormTheme.fieldSpacing),
               _buildIsActiveSwitch(),
@@ -246,10 +401,91 @@ class _PropertyFormPageState extends ConsumerState<PropertyFormPage>
       controller: _controllers.geofence,
       label: 'Geofence Radius (meters)',
       hint: '${PropertyFormConstants.defaultGeofenceRadius}',
-      icon: Icons.my_location,
+      icon: Icons.radar,
       keyboardType: TextInputType.number,
-      helperText: 'Radius for worker check-in',
+      helperText: 'How far from the pin a clock-in is still accepted',
       validator: PropertyFormValidators.geofenceRadius,
+    );
+  }
+
+  Widget _buildLocationCapture() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        PropertyActionButton(
+          icon: Icons.gps_fixed,
+          label: 'Use my current location',
+          busy: _isLocating,
+          onPressed: _useCurrentLocation,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Stand at the gate or entrance of the site when you capture the pin, '
+          'or set it from a what3words address below.',
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.55),
+            fontSize: 12,
+            height: 1.3,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCoordinatesFields() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: PropertyTextField(
+            controller: _controllers.latitude,
+            label: 'Latitude',
+            hint: '-1.286389',
+            icon: Icons.pin_drop,
+            keyboardType: const TextInputType.numberWithOptions(
+              decimal: true,
+              signed: true,
+            ),
+            validator: PropertyFormValidators.latitude,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: PropertyTextField(
+            controller: _controllers.longitude,
+            label: 'Longitude',
+            hint: '36.817223',
+            icon: Icons.pin_drop_outlined,
+            keyboardType: const TextInputType.numberWithOptions(
+              decimal: true,
+              signed: true,
+            ),
+            validator: PropertyFormValidators.longitude,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPinSummary() {
+    // Rebuild whenever anything the summary describes changes.
+    return ListenableBuilder(
+      listenable: Listenable.merge([
+        _controllers.latitude,
+        _controllers.longitude,
+        _controllers.geofence,
+        _controllers.what3words,
+      ]),
+      builder: (context, _) {
+        return PropertyPinSummary(
+          latitude: double.tryParse(_controllers.latitude.text.trim()),
+          longitude: double.tryParse(_controllers.longitude.text.trim()),
+          radiusMeters: int.tryParse(_controllers.geofence.text) ??
+              PropertyFormConstants.defaultGeofenceRadius,
+          what3words: _controllers.what3words.text.trim(),
+          resolvedPlace: _resolvedPlace,
+        );
+      },
     );
   }
 
@@ -261,6 +497,9 @@ class _PropertyFormPageState extends ConsumerState<PropertyFormPage>
       icon: Icons.grid_3x3,
       helperText: 'Precise location identifier',
       validator: PropertyFormValidators.what3words,
+      actionLabel: 'Look up coordinates',
+      actionBusy: _isLookingUpWords,
+      onAction: _lookUpWhat3words,
     );
   }
 

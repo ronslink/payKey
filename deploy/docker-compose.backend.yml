@@ -18,6 +18,10 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
       # Read-only Docker API for the admin container/log views (docker-socket-proxy).
       DOCKER_PROXY_URL: http://paykey_docker_proxy_prod:2375
+      # Shifts left open longer than this are capped and flagged for review.
+      TIME_TRACKING_MAX_SHIFT_HOURS: ${TIME_TRACKING_MAX_SHIFT_HOURS:-12}
+      # Optional: enables what3words -> coordinates lookup for geofence setup.
+      W3W_API_KEY: ${W3W_API_KEY:-}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       INTASEND_PUBLISHABLE_KEY: ${INTASEND_PUBLISHABLE_KEY:?A live publishable key is required}
       INTASEND_SECRET_KEY: ${INTASEND_SECRET_KEY:?A live secret key is required}

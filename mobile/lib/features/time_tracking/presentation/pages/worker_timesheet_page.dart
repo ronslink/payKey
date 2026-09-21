@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../workers/data/models/worker_model.dart';
 import '../../data/models/time_entry_model.dart';
+import '../../data/repositories/time_tracking_repository.dart';
 import '../providers/time_tracking_provider.dart';
+import '../widgets/time_entry_sheets.dart';
 
 class WorkerTimesheetPage extends ConsumerStatefulWidget {
   final WorkerModel worker;
@@ -201,6 +203,11 @@ class _WorkerTimesheetPageState extends ConsumerState<WorkerTimesheetPage> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
+                if (entry.isEntered || !entry.payrollIncluded)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: _buildPayrollChip(entry),
+                  ),
               ],
             ),
           ),
@@ -209,8 +216,92 @@ class _WorkerTimesheetPageState extends ConsumerState<WorkerTimesheetPage> {
               '${entry.totalHours!.toStringAsFixed(1)}h',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
+          PopupMenuButton<String>(
+            tooltip: 'Entry actions',
+            onSelected: (value) => _handleEntryAction(value, entry),
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'correct',
+                child: Text('Correct the times'),
+              ),
+              if (!entry.payrollIncluded)
+                const PopupMenuItem(
+                  value: 'include',
+                  child: Text('Include in pay'),
+                ),
+              if (!entry.payrollExcluded)
+                const PopupMenuItem(
+                  value: 'exclude',
+                  child: Text('Exclude from pay'),
+                ),
+            ],
+          ),
         ],
       ),
     );
+  }
+
+  /// Employers decide here whether hand-recorded hours reach payroll.
+  Widget _buildPayrollChip(TimeEntryModel entry) {
+    // Preview/mock entries carry no decision; nothing to say about them.
+    if (entry.payrollDecision == null) return const SizedBox.shrink();
+
+    final (label, color) = switch (entry.payrollDecision) {
+      'PENDING' => ('Waiting for your pay decision', Colors.orange),
+      'EXCLUDED' => ('Excluded from pay', Colors.redAccent),
+      _ => ('Included in pay', Colors.green),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+
+  Future<void> _handleEntryAction(String action, TimeEntryModel entry) async {
+    if (action == 'correct') {
+      final saved = await showCorrectTimeSheet(context, ref, entry: entry);
+      if (saved) {
+        _reload();
+        _notify('Correction saved. The hours need your pay decision again.');
+      }
+      return;
+    }
+
+    final include = action == 'include';
+    try {
+      await ref.read(timeTrackingRepositoryProvider).decidePayroll(
+            entryIds: [entry.id],
+            include: include,
+          );
+      _reload();
+      _notify(
+        include
+            ? 'These hours will be paid.'
+            : 'These hours were excluded from pay.',
+      );
+    } on TimeTrackingException catch (e) {
+      _notify(e.message);
+    }
+  }
+
+  void _reload() {
+    ref.read(workerTimeEntriesProvider.notifier).fetchTimeEntries(
+          workerId: widget.worker.id,
+          startDate: widget.startDate,
+          endDate: widget.endDate,
+        );
+  }
+
+  void _notify(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 }

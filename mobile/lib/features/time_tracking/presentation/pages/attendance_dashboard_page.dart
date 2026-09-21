@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_service.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/utils/api_date_range.dart';
-import '../../../../core/utils/location_utils.dart';
 import '../../data/models/time_entry_model.dart';
+import '../widgets/time_entry_sheets.dart';
 
 // ============================================================================
 // Constants
@@ -111,30 +111,24 @@ class _AttendanceDashboardPageState extends ConsumerState<AttendanceDashboardPag
   // Actions
   // --------------------------------------------------------------------------
 
-  Future<void> _handleClockAction(String workerId, bool isClockedIn) async {
-    try {
-      // Send the location when it is available: the API requires coordinates
-      // for geofenced properties and rejects a clock-in without them.
-      final position = await LocationUtils.currentPositionOrNull();
-      if (isClockedIn) {
-        await ApiService().timeTracking.clockOut(
-          workerId,
-          lat: position?.latitude,
-          lng: position?.longitude,
-        );
-        _showSnackBar('Worker clocked out', AppColors.warning);
-      } else {
-        await ApiService().timeTracking.clockIn(
-          workerId,
-          lat: position?.latitude,
-          lng: position?.longitude,
-        );
-        _showSnackBar('Worker clocked in', AppColors.success);
-      }
-      await _loadData();
-    } catch (e) {
-      _showSnackBar('Error: $e', AppColors.error);
-    }
+  /// Record hours for a worker. Employees clock themselves in at the site, so
+  /// the employer's tool here is a time entry, which payroll asks about.
+  Future<void> _handleRecordTime(String workerId, String workerName) async {
+    final saved = await showRecordTimeSheet(
+      context,
+      ref,
+      workerId: workerId,
+      workerName: workerName,
+    );
+
+    if (!saved || !mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Time recorded. Approve it in payroll when you run it.'),
+      ),
+    );
+    await _loadData();
   }
 
   // --------------------------------------------------------------------------
@@ -143,13 +137,6 @@ class _AttendanceDashboardPageState extends ConsumerState<AttendanceDashboardPag
 
   void _setLoading(bool value) {
     if (mounted) setState(() => _isLoading = value);
-  }
-
-  void _showSnackBar(String message, Color color) {
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: color),
-    );
   }
 
   // --------------------------------------------------------------------------
@@ -187,7 +174,7 @@ class _AttendanceDashboardPageState extends ConsumerState<AttendanceDashboardPag
                     const SizedBox(height: _AttendanceStyles.sectionSpacing),
                     _LiveStatusSection(
                       workers: _liveStatus,
-                      onClockAction: _handleClockAction,
+                      onRecordTime: _handleRecordTime,
                     ),
                     const SizedBox(height: _AttendanceStyles.sectionSpacing),
                     _MonthlySummarySection(
@@ -330,11 +317,11 @@ class _SummaryCard extends StatelessWidget {
 
 class _LiveStatusSection extends StatelessWidget {
   final List<WorkerLiveStatus> workers;
-  final Future<void> Function(String, bool) onClockAction;
+  final void Function(String workerId, String workerName) onRecordTime;
 
   const _LiveStatusSection({
     required this.workers,
-    required this.onClockAction,
+    required this.onRecordTime,
   });
 
   @override
@@ -373,7 +360,7 @@ class _LiveStatusSection extends StatelessWidget {
           const Divider(height: 1, color: AppColors.background),
       itemBuilder: (context, index) => _WorkerStatusTile(
         worker: workers[index],
-        onClockAction: onClockAction,
+        onRecordTime: onRecordTime,
       ),
     );
   }
@@ -417,11 +404,11 @@ class _LiveIndicator extends StatelessWidget {
 
 class _WorkerStatusTile extends StatelessWidget {
   final WorkerLiveStatus worker;
-  final Future<void> Function(String, bool) onClockAction;
+  final void Function(String workerId, String workerName) onRecordTime;
 
   const _WorkerStatusTile({
     required this.worker,
-    required this.onClockAction,
+    required this.onRecordTime,
   });
 
   bool get _isClockedIn => worker.isClockedIn;
@@ -445,7 +432,7 @@ class _WorkerStatusTile extends StatelessWidget {
           fontSize: 13,
         ),
       ),
-      trailing: _buildClockButton(),
+      trailing: _buildRecordTimeButton(),
     );
   }
 
@@ -464,15 +451,16 @@ class _WorkerStatusTile extends StatelessWidget {
     );
   }
 
-  Widget _buildClockButton() {
-    return TextButton(
-      onPressed: () => onClockAction(worker.workerId, _isClockedIn),
+  Widget _buildRecordTimeButton() {
+    return TextButton.icon(
+      onPressed: () => onRecordTime(worker.workerId, worker.workerName),
+      icon: const Icon(Icons.edit_calendar, size: 16),
+      label: const Text('Record Time'),
       style: TextButton.styleFrom(
-        backgroundColor: _isClockedIn ? AppColors.warningLight : AppColors.successLight,
-        foregroundColor: _isClockedIn ? AppColors.warning : AppColors.success,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        backgroundColor: AppColors.background,
+        foregroundColor: AppColors.primary,
+        padding: const EdgeInsets.symmetric(horizontal: 10),
       ),
-      child: Text(_isClockedIn ? 'Clock Out' : 'Clock In'),
     );
   }
 }

@@ -2,20 +2,53 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, IsNull, Not } from 'typeorm';
-import { TimeEntry, TimeEntryStatus } from './entities/time-entry.entity';
+import { Repository, Between, IsNull, Not, LessThan, In } from 'typeorm';
+import {
+  TimeEntry,
+  TimeEntryPayrollDecision,
+  TimeEntrySource,
+  TimeEntryStatus,
+} from './entities/time-entry.entity';
 import { Worker } from '../workers/entities/worker.entity';
+
+/** One entry an employer has to decide on (or has already decided on). */
+export interface PayrollReviewEntry {
+  id: string;
+  workerId: string;
+  workerName: string | null;
+  clockIn: Date;
+  clockOut: Date | null;
+  totalHours: number;
+  source: TimeEntrySource;
+  payrollDecision: TimeEntryPayrollDecision;
+  notes: string | null;
+  adjustmentReason: string | null;
+}
 
 @Injectable()
 export class TimeTrackingService {
+  private readonly logger = new Logger(TimeTrackingService.name);
+
   constructor(
     @InjectRepository(TimeEntry)
     private timeEntryRepository: Repository<TimeEntry>,
     @InjectRepository(Worker)
     private workersRepository: Repository<Worker>,
   ) {}
+
+  /**
+   * A shift longer than this cannot be trusted: the employee almost certainly
+   * forgot to clock out. Stale entries are closed at the cap and flagged for
+   * review instead of staying open forever.
+   */
+  private get maxShiftHours(): number {
+    const configured = Number(process.env.TIME_TRACKING_MAX_SHIFT_HOURS ?? 12);
+    return Number.isFinite(configured) && configured > 0 ? configured : 12;
+  }
 
   /**
    * Clock in a worker
@@ -89,14 +122,172 @@ export class TimeTrackingService {
       workerId,
       userId,
       recordedById,
-      propertyId: activePropertyId,
       clockIn: new Date(),
       status: TimeEntryStatus.ACTIVE,
       clockInLat: location?.lat,
       clockInLng: location?.lng,
+      // Observed on the employee's own device, so it is evidence and counts for
+      // payroll without a separate decision.
+      source: TimeEntrySource.CLOCK,
+      payrollDecision: TimeEntryPayrollDecision.INCLUDED,
+      payrollDecidedAt: new Date(),
+      payrollDecidedBy: recordedById,
+      ...(activePropertyId ? { propertyId: activePropertyId } : {}),
     });
 
     return this.timeEntryRepository.save(entry);
+  }
+
+  /**
+   * Employer-recorded hours.
+   *
+   * Both bounds are required: a manual entry is a complete record, so it can
+   * never leave a shift hanging open for the auto-close job to guess at. The
+   * employer is stored as the recorder, which is how a manual entry stays
+   * distinguishable from a geofenced clock-in.
+   */
+  async createEntry(
+    userId: string,
+    recordedById: string,
+    input: {
+      workerId: string;
+      clockIn: Date;
+      clockOut: Date;
+      breakMinutes?: number;
+      notes?: string;
+      propertyId?: string;
+    },
+  ): Promise<TimeEntry> {
+    const worker = await this.workersRepository.findOne({
+      where: { id: input.workerId, userId },
+    });
+
+    if (!worker) {
+      throw new NotFoundException('Worker not found');
+    }
+
+    const { clockIn, clockOut } = input;
+    if (
+      !(clockIn instanceof Date) ||
+      Number.isNaN(clockIn.getTime()) ||
+      !(clockOut instanceof Date) ||
+      Number.isNaN(clockOut.getTime())
+    ) {
+      throw new BadRequestException(
+        'A valid clock-in and clock-out time are required',
+      );
+    }
+    if (clockOut.getTime() <= clockIn.getTime()) {
+      throw new BadRequestException('Clock-out must be after clock-in');
+    }
+
+    let propertyId = worker.propertyId;
+    if (input.propertyId) {
+      const property = await this.workersRepository.manager.findOne(
+        'properties',
+        { where: { id: input.propertyId, userId } },
+      );
+      if (!property) {
+        throw new BadRequestException('Invalid property selected');
+      }
+      propertyId = input.propertyId;
+    }
+
+    const breakMinutes = Math.max(0, Math.floor(input.breakMinutes ?? 0));
+    const workedMs =
+      clockOut.getTime() - clockIn.getTime() - breakMinutes * 60_000;
+    if (workedMs <= 0) {
+      throw new BadRequestException(
+        'Break time cannot be longer than the shift',
+      );
+    }
+
+    const entry = this.timeEntryRepository.create({
+      workerId: worker.id,
+      userId,
+      recordedById,
+      clockIn,
+      clockOut,
+      breakMinutes,
+      totalHours: Math.round((workedMs / 3_600_000) * 100) / 100,
+      status: TimeEntryStatus.COMPLETED,
+      notes: input.notes ?? null,
+      // Typed in by the employer, so payroll must decide on it explicitly.
+      source: TimeEntrySource.ENTERED,
+      payrollDecision: TimeEntryPayrollDecision.PENDING,
+      ...(propertyId ? { propertyId } : {}),
+    });
+
+    return this.timeEntryRepository.save(entry);
+  }
+
+  /**
+   * Closes shifts that were never clocked out.
+   *
+   * A forgotten clock-out blocks the employee from clocking in again
+   * ("Worker is already clocked in") for as long as the entry stays open, so
+   * entries older than [maxShiftHours] are capped, completed and flagged for
+   * the employer to review. They are not cancelled, because the employee did
+   * start work and payroll should see the capped hours rather than nothing.
+   */
+  @Cron(CronExpression.EVERY_HOUR)
+  async closeStaleEntriesOnSchedule(): Promise<void> {
+    try {
+      const { closed, maxShiftHours } = await this.autoCloseStaleEntries();
+      if (closed > 0) {
+        this.logger.warn(
+          `Auto-closed ${closed} time ${closed === 1 ? 'entry' : 'entries'} left open longer than ${maxShiftHours}h`,
+        );
+      }
+    } catch (error) {
+      this.logger.error(
+        'Failed to auto-close stale time entries',
+        error as Error,
+      );
+    }
+  }
+
+  async autoCloseStaleEntries(
+    reference: Date = new Date(),
+  ): Promise<{ closed: number; maxShiftHours: number }> {
+    const maxShiftHours = this.maxShiftHours;
+    const cutoff = new Date(reference.getTime() - maxShiftHours * 3_600_000);
+
+    const stale = await this.timeEntryRepository.find({
+      where: {
+        status: TimeEntryStatus.ACTIVE,
+        clockIn: LessThan(cutoff),
+      },
+    });
+
+    for (const entry of stale) {
+      const clockIn = new Date(entry.clockIn);
+      const capped = new Date(clockIn.getTime() + maxShiftHours * 3_600_000);
+      const clockOut =
+        capped.getTime() < reference.getTime() ? capped : reference;
+      const workedMs =
+        clockOut.getTime() -
+        clockIn.getTime() -
+        (entry.breakMinutes || 0) * 60_000;
+
+      entry.clockOut = clockOut;
+      entry.totalHours = Math.max(
+        0,
+        Math.round((workedMs / 3_600_000) * 100) / 100,
+      );
+      entry.status = TimeEntryStatus.COMPLETED;
+      entry.adjustmentReason = `Auto-closed after ${maxShiftHours}h without a clock-out; review and correct if needed.`;
+      // The clock-out time was never observed, so the hours are a guess: payroll
+      // must not count them until the employer decides.
+      entry.source = TimeEntrySource.CLOCK;
+      entry.payrollDecision = TimeEntryPayrollDecision.PENDING;
+      entry.payrollDecidedAt = null;
+      entry.payrollDecidedBy = null;
+
+      await this.timeEntryRepository.save(entry);
+    }
+
+    return { closed: stale.length, maxShiftHours };
   }
 
   private calculateDistanceMeters(
@@ -476,8 +667,193 @@ export class TimeTrackingService {
 
     entry.status = TimeEntryStatus.ADJUSTED;
     entry.adjustmentReason = adjustments.reason;
+    // The hours were changed by hand, so any earlier payroll decision was made
+    // about different numbers and must be made again.
+    entry.payrollDecision = TimeEntryPayrollDecision.PENDING;
+    entry.payrollDecidedAt = null;
+    entry.payrollDecidedBy = null;
 
     return this.timeEntryRepository.save(entry);
+  }
+
+  /**
+   * What payroll would pay for a period, split by provenance, plus the entries
+   * an employer still has to decide on.
+   *
+   * `includedHours` is the number payroll uses: observed clock-ins plus whatever
+   * the employer has explicitly included.
+   */
+  async getPayrollReview(
+    userId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<{
+    workers: Array<{
+      workerId: string;
+      workerName: string;
+      clockedHours: number;
+      includedEnteredHours: number;
+      pendingHours: number;
+      excludedHours: number;
+      includedHours: number;
+      pendingEntries: PayrollReviewEntry[];
+      excludedEntries: PayrollReviewEntry[];
+    }>;
+    totals: {
+      clockedHours: number;
+      includedEnteredHours: number;
+      pendingHours: number;
+      excludedHours: number;
+      includedHours: number;
+      pendingEntries: number;
+      workersWithPendingHours: number;
+    };
+  }> {
+    const entries = await this.timeEntryRepository.find({
+      where: {
+        userId,
+        clockIn: Between(startDate, endDate),
+        status: Not(TimeEntryStatus.CANCELLED),
+      },
+      relations: ['worker'],
+      order: { clockIn: 'DESC' },
+    });
+
+    const byWorker = new Map<
+      string,
+      {
+        workerId: string;
+        workerName: string;
+        clockedHours: number;
+        includedEnteredHours: number;
+        pendingHours: number;
+        excludedHours: number;
+        pendingEntries: PayrollReviewEntry[];
+        excludedEntries: PayrollReviewEntry[];
+      }
+    >();
+
+    for (const entry of entries) {
+      // An open shift has no hours yet; it is not a payroll decision.
+      if (entry.status === TimeEntryStatus.ACTIVE) continue;
+
+      const hours = Number(entry.totalHours) || 0;
+      const worker = byWorker.get(entry.workerId) ?? {
+        workerId: entry.workerId,
+        workerName: entry.worker?.name || 'Unknown',
+        clockedHours: 0,
+        includedEnteredHours: 0,
+        pendingHours: 0,
+        excludedHours: 0,
+        pendingEntries: [],
+        excludedEntries: [],
+      };
+
+      if (entry.payrollDecision === TimeEntryPayrollDecision.EXCLUDED) {
+        worker.excludedHours += hours;
+        worker.excludedEntries.push(this.toPayrollReviewEntry(entry));
+      } else if (entry.payrollDecision === TimeEntryPayrollDecision.PENDING) {
+        worker.pendingHours += hours;
+        worker.pendingEntries.push(this.toPayrollReviewEntry(entry));
+      } else if (entry.source === TimeEntrySource.ENTERED) {
+        worker.includedEnteredHours += hours;
+      } else {
+        worker.clockedHours += hours;
+      }
+
+      byWorker.set(entry.workerId, worker);
+    }
+
+    const round = (value: number) => Math.round(value * 100) / 100;
+    const workers = Array.from(byWorker.values()).map((worker) => ({
+      ...worker,
+      clockedHours: round(worker.clockedHours),
+      includedEnteredHours: round(worker.includedEnteredHours),
+      pendingHours: round(worker.pendingHours),
+      excludedHours: round(worker.excludedHours),
+      includedHours: round(worker.clockedHours + worker.includedEnteredHours),
+    }));
+
+    const sum = (pick: (worker: (typeof workers)[number]) => number) =>
+      round(workers.reduce((total, worker) => total + pick(worker), 0));
+
+    return {
+      workers,
+      totals: {
+        clockedHours: sum((w) => w.clockedHours),
+        includedEnteredHours: sum((w) => w.includedEnteredHours),
+        pendingHours: sum((w) => w.pendingHours),
+        excludedHours: sum((w) => w.excludedHours),
+        includedHours: sum((w) => w.includedHours),
+        pendingEntries: workers.reduce(
+          (total, worker) => total + worker.pendingEntries.length,
+          0,
+        ),
+        workersWithPendingHours: workers.filter((w) => w.pendingHours > 0)
+          .length,
+      },
+    };
+  }
+
+  /**
+   * Records the employer's payroll decision for one or more entries. Entries
+   * must belong to the employer; an open shift cannot be decided because it has
+   * no hours yet.
+   */
+  async decideEntries(
+    userId: string,
+    entryIds: string[],
+    decision: TimeEntryPayrollDecision,
+  ): Promise<{ updated: number; decision: TimeEntryPayrollDecision }> {
+    const uniqueIds = Array.from(new Set(entryIds ?? [])).filter(Boolean);
+    if (uniqueIds.length === 0) {
+      throw new BadRequestException('Select at least one time entry');
+    }
+
+    const entries = await this.timeEntryRepository.find({
+      where: { id: In(uniqueIds), userId },
+    });
+
+    if (entries.length !== uniqueIds.length) {
+      throw new NotFoundException('One or more time entries were not found');
+    }
+
+    const open = entries.filter(
+      (entry) => entry.status === TimeEntryStatus.ACTIVE,
+    );
+    if (open.length > 0) {
+      throw new BadRequestException(
+        'A shift that is still running has no hours to decide on yet',
+      );
+    }
+
+    const decidedAt = new Date();
+    for (const entry of entries) {
+      entry.payrollDecision = decision;
+      entry.payrollDecidedAt =
+        decision === TimeEntryPayrollDecision.PENDING ? null : decidedAt;
+      entry.payrollDecidedBy =
+        decision === TimeEntryPayrollDecision.PENDING ? null : userId;
+    }
+
+    await this.timeEntryRepository.save(entries);
+
+    return { updated: entries.length, decision };
+  }
+
+  private toPayrollReviewEntry(entry: TimeEntry): PayrollReviewEntry {
+    return {
+      id: entry.id,
+      workerId: entry.workerId,
+      workerName: entry.worker?.name ?? null,
+      clockIn: entry.clockIn,
+      clockOut: entry.clockOut,
+      totalHours: Number(entry.totalHours) || 0,
+      source: entry.source,
+      payrollDecision: entry.payrollDecision,
+      notes: entry.notes,
+      adjustmentReason: entry.adjustmentReason,
+    };
   }
 
   /**

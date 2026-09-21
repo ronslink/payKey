@@ -285,6 +285,11 @@ class PropertyTextField extends StatelessWidget {
   final String? helperText;
   final String? Function(String?)? validator;
 
+  /// Optional action shown under the field, e.g. "Look up coordinates".
+  final String? actionLabel;
+  final VoidCallback? onAction;
+  final bool actionBusy;
+
   const PropertyTextField({
     super.key,
     required this.controller,
@@ -296,6 +301,9 @@ class PropertyTextField extends StatelessWidget {
     this.keyboardType,
     this.helperText,
     this.validator,
+    this.actionLabel,
+    this.onAction,
+    this.actionBusy = false,
   });
 
   @override
@@ -306,6 +314,7 @@ class PropertyTextField extends StatelessWidget {
         _buildLabel(),
         const SizedBox(height: 8),
         _buildTextField(),
+        if (actionLabel != null && onAction != null) _buildAction(),
       ],
     );
   }
@@ -350,6 +359,153 @@ class PropertyTextField extends StatelessWidget {
       return 'This field is required';
     }
     return null;
+  }
+
+  Widget _buildAction() {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: TextButton.icon(
+        onPressed: actionBusy ? null : onAction,
+        icon: actionBusy
+            ? const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.travel_explore, size: 18),
+        label: Text(actionLabel!),
+        style: TextButton.styleFrom(
+          foregroundColor: PropertyFormTheme.lightBlue,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          visualDensity: VisualDensity.compact,
+        ),
+      ),
+    );
+  }
+}
+
+/// Action button used for location capture, with a busy state
+class PropertyActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback? onPressed;
+  final bool busy;
+
+  const PropertyActionButton({
+    super.key,
+    required this.icon,
+    required this.label,
+    this.onPressed,
+    this.busy = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: busy ? null : onPressed,
+        icon: busy
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Icon(icon, size: 18),
+        label: Text(label),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.white,
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Summary of the captured pin, or a warning when there is none
+class PropertyPinSummary extends StatelessWidget {
+  final double? latitude;
+  final double? longitude;
+  final int radiusMeters;
+  final String? what3words;
+  final String? resolvedPlace;
+
+  const PropertyPinSummary({
+    super.key,
+    required this.latitude,
+    required this.longitude,
+    required this.radiusMeters,
+    this.what3words,
+    this.resolvedPlace,
+  });
+
+  bool get _hasPin => latitude != null && longitude != null;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _hasPin
+        ? PropertyFormTheme.successGreen
+        : PropertyFormTheme.errorRed;
+    final icon = _hasPin ? Icons.my_location : Icons.location_off;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(PropertyFormTheme.chipBorderRadius),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _hasPin ? 'Geofence pin set' : 'No geofence pin yet',
+                  style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _hasPin
+                      ? '${latitude!.toStringAsFixed(6)}, ${longitude!.toStringAsFixed(6)}'
+                          '${what3words != null && what3words!.isNotEmpty ? '  ·  $what3words' : ''}'
+                          '\nWorkers must be within $radiusMeters m of this pin to clock in.'
+                      : 'Without a pin this property cannot be geofenced: every clock-in '
+                          'is accepted regardless of where the employee is.',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.75),
+                    fontSize: 12.5,
+                    height: 1.35,
+                  ),
+                ),
+                if (resolvedPlace != null && resolvedPlace!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'what3words: $resolvedPlace',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.55),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

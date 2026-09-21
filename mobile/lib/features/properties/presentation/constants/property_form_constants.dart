@@ -29,6 +29,7 @@ class PropertyFormTheme {
   static const double cardBorderRadius = 24.0;
   static const double cardPadding = 24.0;
   static const double fieldSpacing = 20.0;
+  static const double sectionSpacing = 32.0;
   static const double headerIconRadius = 12.0;
   static const double sectionIconRadius = 14.0;
   static const double chipBorderRadius = 8.0;

@@ -1412,6 +1412,48 @@ class TimeTrackingEndpoints extends BaseEndpoints {
     });
   }
 
+  /// Record time for a worker (employer only).
+  ///
+  /// Both bounds are required: a manually recorded shift is a complete record.
+  /// The hours start as PENDING for payroll until the employer includes them.
+  Future<Response> createEntry({
+    required String workerId,
+    required String clockIn,
+    required String clockOut,
+    int? breakMinutes,
+    String? notes,
+  }) {
+    return _api.post('/time-tracking/entries', data: {
+      'workerId': workerId,
+      'clockIn': clockIn,
+      'clockOut': clockOut,
+      if (breakMinutes != null) 'breakMinutes': breakMinutes,
+      if (notes != null && notes.isNotEmpty) 'notes': notes,
+    });
+  }
+
+  /// Hours by source plus the entries still awaiting a payroll decision.
+  Future<Response> getPayrollReview({
+    required String startDate,
+    required String endDate,
+  }) {
+    return _api.get('/time-tracking/payroll-review', queryParams: {
+      'startDate': startDate,
+      'endDate': endDate,
+    });
+  }
+
+  /// Include or exclude time entries from payroll (employer only).
+  Future<Response> decidePayroll({
+    required List<String> entryIds,
+    required String decision,
+  }) {
+    return _api.post('/time-tracking/payroll-review/decision', data: {
+      'entryIds': entryIds,
+      'decision': decision,
+    });
+  }
+
   /// Adjust a time entry (employer only)
   Future<Response> adjustEntry(
     String entryId, {
@@ -1449,6 +1491,22 @@ class PropertyEndpoints extends BaseEndpoints {
   Future<Response> delete(String id) => _api.delete('/properties/$id');
 
   Future<Response> getWorkers(String id) => _api.get('/properties/$id/workers');
+
+  /// Resolve a what3words address (three words) into coordinates.
+  ///
+  /// The lookup needs a server-side API key: when a deployment has none the API
+  /// answers 503 with a message telling the employer to use their current
+  /// location or enter coordinates instead.
+  Future<Response> resolveWhat3words(String words) => _api.get(
+        '/property-location/what3words',
+        queryParams: {'words': words},
+      );
+
+  /// Resolve coordinates into a what3words address, to label a captured pin.
+  Future<Response> resolveWords(double latitude, double longitude) => _api.get(
+        '/property-location/words',
+        queryParams: {'lat': latitude, 'lng': longitude},
+      );
 }
 
 // -----------------------------------------------------------------------------

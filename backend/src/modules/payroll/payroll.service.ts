@@ -37,6 +37,7 @@ import { Termination } from '../workers/entities/termination.entity';
 import { PayPeriod, PayPeriodStatus } from './entities/pay-period.entity';
 import {
   TimeEntry,
+  TimeEntryPayrollDecision,
   TimeEntryStatus,
 } from '../time-tracking/entities/time-entry.entity';
 import { PayrollRecord, PayrollStatus } from './entities/payroll-record.entity';
@@ -372,12 +373,15 @@ export class PayrollService {
       // HOURLY: Calculate from Time Entries + Paid Leave
       const hourlyRate = this.parseNumber(worker.hourlyRate) || 0;
 
-      // Fetch valid time entries
+      // Fetch valid time entries. Only entries the employer has decided to
+      // include are paid: hours typed in by hand, or guessed when a shift was
+      // auto-closed, stay out of payroll until that decision is made.
       const timeEntries = await this.timeEntryRepository.find({
         where: {
           workerId: worker.id,
           clockIn: Between(startDate, endDate),
           status: In([TimeEntryStatus.COMPLETED, TimeEntryStatus.ADJUSTED]),
+          payrollDecision: TimeEntryPayrollDecision.INCLUDED,
         },
       });
 

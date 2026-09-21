@@ -1,7 +1,5 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:geolocator/geolocator.dart';
-import '../../../../core/utils/location_utils.dart';
 import '../../data/models/time_entry_model.dart';
 import '../../data/repositories/time_tracking_repository.dart';
 
@@ -45,42 +43,49 @@ class TimeTrackingNotifier extends AsyncNotifier<TimeEntryModel?> {
     });
   }
 
-  Future<void> clockIn(String workerId) async {
-    state = const AsyncValue.loading();
+  /// Record hours for a worker. The hours arrive in payroll as PENDING.
+  Future<TimeEntryModel?> createEntry({
+    required String workerId,
+    required DateTime clockIn,
+    required DateTime clockOut,
+    int? breakMinutes,
+    String? notes,
+  }) async {
+    TimeEntryModel? created;
     state = await AsyncValue.guard(() async {
-      final position = await _tryGetCurrentLocation();
-      return _repository.clockIn(
-        workerId,
-        lat: position?.latitude,
-        lng: position?.longitude,
-      );
-    });
-  }
-
-  Future<void> clockOut(String workerId, {String? notes}) async {
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async {
-      final position = await _tryGetCurrentLocation();
-      await _repository.clockOut(
-        workerId,
+      created = await _repository.createEntry(
+        workerId: workerId,
+        clockIn: clockIn,
+        clockOut: clockOut,
+        breakMinutes: breakMinutes,
         notes: notes,
-        lat: position?.latitude,
-        lng: position?.longitude,
       );
-      // The worker is no longer on the clock, so the card must offer CLOCK IN
-      // again instead of showing the entry that was just completed.
-      return null;
+      return created;
     });
+    return created;
   }
 
-  /// Reads the current position for geofenced properties.
-  ///
-  /// Location is optional here on purpose. The API decides whether it is
-  /// required (PLATINUM plan plus a property with coordinates) and answers with
-  /// a precise message when it is missing, so an unavailable fix, a denied
-  /// permission or a device with location switched off must not make the
-  /// clock-in button unusable.
-  Future<Position?> _tryGetCurrentLocation() => LocationUtils.currentPositionOrNull();
+  /// Correct an existing entry; its payroll decision returns to PENDING.
+  Future<TimeEntryModel?> correctEntry(
+    String entryId, {
+    DateTime? clockIn,
+    DateTime? clockOut,
+    int? breakMinutes,
+    required String reason,
+  }) async {
+    TimeEntryModel? corrected;
+    state = await AsyncValue.guard(() async {
+      corrected = await _repository.correctEntry(
+        entryId,
+        clockIn: clockIn,
+        clockOut: clockOut,
+        breakMinutes: breakMinutes,
+        reason: reason,
+      );
+      return corrected;
+    });
+    return corrected;
+  }
 
   void reset() {
     state = const AsyncValue.data(null);

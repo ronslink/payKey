@@ -123,16 +123,32 @@ async function seedCompleteDemoData() {
         
         for (const timeEntry of timeEntries) {
           try {
-            const timeResponse = await fetch('http://localhost:3000/time-tracking/clock-in', {
+            // Employees clock themselves in, so demo data is recorded the way an
+            // employer would: a time entry, then the payroll decision to pay it.
+            const timeResponse = await fetch('http://localhost:3000/time-tracking/entries', {
               method: 'POST',
               headers: { 
                 'Authorization': `Bearer ${access_token}`,
                 'Content-Type': 'application/json'
               },
-              body: JSON.stringify(timeEntry)
+              body: JSON.stringify({
+                workerId: timeEntry.workerId,
+                clockIn: timeEntry.clockIn,
+                clockOut: timeEntry.clockOut,
+                notes: timeEntry.notes
+              })
             });
             
             if (timeResponse.ok) {
+              const entry = await timeResponse.json();
+              await fetch('http://localhost:3000/time-tracking/payroll-review/decision', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${access_token}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ entryIds: [entry.id], decision: 'INCLUDED' })
+              });
               timeRecordsCreated++;
               console.log(`✅ Added time record for ${worker.name} on ${timeEntry.date}`);
             } else {

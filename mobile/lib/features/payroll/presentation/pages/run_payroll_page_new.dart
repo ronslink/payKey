@@ -4,10 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-// Core imports
-import '../../../../core/network/api_service.dart';
-import '../../../../core/utils/api_date_range.dart';
-
 // Domain imports
 import '../../data/models/pay_period_model.dart';
 import '../../data/utils/pay_period_utils.dart';
@@ -19,6 +15,9 @@ import '../../data/repositories/payroll_repository.dart';
 import '../../data/models/payroll_model.dart';
 import '../../../properties/presentation/providers/properties_provider.dart';
 import '../../../subscriptions/presentation/providers/subscription_provider.dart';
+import '../../../time_tracking/data/models/time_entry_model.dart';
+import '../../../time_tracking/data/repositories/time_tracking_repository.dart';
+import '../../../time_tracking/presentation/widgets/time_entry_sheets.dart';
 
 // Local imports
 import '../constants/payroll_constants.dart';
@@ -52,6 +51,10 @@ class RunPayrollPageNew extends ConsumerStatefulWidget {
 class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
   // State
   PayPeriod? _selectedPayPeriod;
+
+  /// Hours by source for the selected period, refreshed whenever hours or a
+  /// payroll decision change.
+  PayrollReview? _payrollReview;
   int _expandedWorkerIndex = -1;
   bool _isAutomatedMode = true;
   bool _isProcessing = false;
@@ -76,39 +79,90 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
     super.dispose();
   }
 
-  /// Fetch attendance data from time tracking for the selected pay period
-  /// and pre-populate hours for hourly workers
+  /// Fetch the hours payroll will use for the selected pay period.
+  ///
+  /// Only DECIDED hours count: hours the employer typed in, or that were
+  /// auto-closed, stay out of pay until the employer includes them, so they are
+  /// surfaced for review instead of being pre-filled as payable.
   Future<void> _fetchAttendanceData(PayPeriod period) async {
     try {
-      final response = await ApiService().timeTracking.getAttendanceSummary(
-        startDate: ApiDateRange.startOfDay(period.startDate),
-        endDate: ApiDateRange.endOfDay(period.endDate),
-      );
-      
-      if (response.statusCode == 200 && response.data != null) {
-        final data = response.data as Map<String, dynamic>;
-        final workers = data['workers'] as List<dynamic>? ?? [];
-        
-        // Build map of workerId -> totalHours
-        final attendanceHours = <String, double>{};
-        for (final worker in workers) {
-          final workerId = worker['workerId'] as String?;
-          final totalHours = (worker['totalHours'] as num?)?.toDouble() ?? 0.0;
-          if (workerId != null && totalHours > 0) {
-            attendanceHours[workerId] = totalHours;
-          }
+      final review = await ref
+          .read(timeTrackingRepositoryProvider)
+          .getPayrollReview(startDate: period.startDate, endDate: period.endDate);
+
+      if (!mounted) return;
+      setState(() => _payrollReview = review);
+
+      final attendanceHours = <String, double>{};
+      for (final worker in review.workers) {
+        if (worker.includedHours > 0) {
+          attendanceHours[worker.workerId] = worker.includedHours;
         }
-        
-        if (attendanceHours.isNotEmpty) {
-          debugPrint('Loaded ${attendanceHours.length} workers\' attendance data');
-          _controllerManager.setAttendanceData(attendanceHours);
-        }
+      }
+
+      if (attendanceHours.isNotEmpty) {
+        debugPrint('Loaded ${attendanceHours.length} workers\' attendance data');
+        _controllerManager.setAttendanceData(attendanceHours);
       }
     } catch (e) {
       // Time tracking may not be available (not Platinum) or failed
       // This is fine - we'll just use defaults
       debugPrint('Could not fetch attendance data: $e');
     }
+  }
+
+  /// Let the employer include or exclude the hours awaiting a decision, then
+  /// pick up the new payable totals.
+  Future<void> _openPayrollReview() async {
+    final period = _selectedPayPeriod;
+    if (period == null) return;
+
+    final changed = await showPayrollReviewSheet(
+      context,
+      ref,
+      startDate: period.startDate,
+      endDate: period.endDate,
+    );
+
+    if (!changed || !mounted) return;
+    await _fetchAttendanceData(period);
+  }
+
+  /// Warns when hours are waiting, because silence here means they are silently
+  /// not paid.
+  Widget _buildPendingPayrollBanner() {
+    final review = _payrollReview;
+    if (review == null || !review.hasPending) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.orange.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.orange.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.rule_folder_outlined, color: Colors.orange),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              '${review.pendingHours.toStringAsFixed(1)}h across '
+              '${review.workersWithPendingHours} worker'
+              '${review.workersWithPendingHours == 1 ? '' : 's'} '
+              '${review.workersWithPendingHours == 1 ? 'is' : 'are'} not being paid yet. '
+              'Include or exclude them before you process.',
+              style: const TextStyle(fontSize: 12.5, height: 1.3),
+            ),
+          ),
+          TextButton(
+            onPressed: _openPayrollReview,
+            child: const Text('Review'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -133,6 +187,7 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildPeriodSelector(context, payPeriodsAsync),
+                  _buildPendingPayrollBanner(),
                   _buildWorkersSection(
                     context,
                     workersAsync,

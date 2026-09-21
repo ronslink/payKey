@@ -13,6 +13,8 @@ class PropertyFormData {
   final int geofenceRadius;
   final String? what3words;
   final bool isActive;
+  final double? latitude;
+  final double? longitude;
 
   const PropertyFormData({
     required this.name,
@@ -20,6 +22,8 @@ class PropertyFormData {
     required this.geofenceRadius,
     this.what3words,
     this.isActive = true,
+    this.latitude,
+    this.longitude,
   });
 
   /// Create from controllers
@@ -28,6 +32,8 @@ class PropertyFormData {
     required TextEditingController addressController,
     required TextEditingController geofenceController,
     required TextEditingController what3wordsController,
+    required TextEditingController latitudeController,
+    required TextEditingController longitudeController,
     required ValueNotifier<bool> isActiveController,
   }) {
     return PropertyFormData(
@@ -39,8 +45,19 @@ class PropertyFormData {
           ? null
           : what3wordsController.text.trim(),
       isActive: isActiveController.value,
+      latitude: double.tryParse(latitudeController.text.trim()),
+      longitude: double.tryParse(longitudeController.text.trim()),
     );
   }
+
+  /// A geofence needs both coordinates or neither; one alone is unusable.
+  bool get hasCompletePin => latitude != null && longitude != null;
+
+  bool get hasPartialPin =>
+      (latitude != null) != (longitude != null);
+
+  /// True when these hours can be geofenced (a pin has been captured).
+  bool get isGeofenced => hasCompletePin;
 
   /// Check if address appears to be coordinates
   bool get addressIsCoordinates {
@@ -56,6 +73,8 @@ class PropertyFormControllers {
     text: PropertyFormConstants.defaultGeofenceRadius.toString(),
   );
   final TextEditingController what3words = TextEditingController();
+  final TextEditingController latitude = TextEditingController();
+  final TextEditingController longitude = TextEditingController();
   final ValueNotifier<bool> isActive = ValueNotifier<bool>(true);
 
   /// Populate controllers from existing property
@@ -65,12 +84,23 @@ class PropertyFormControllers {
     required int geofenceRadius,
     String? what3words,
     bool isActive = true,
+    double? latitude,
+    double? longitude,
   }) {
     this.name.text = name;
     this.address.text = address;
     geofence.text = geofenceRadius.toString();
     this.what3words.text = what3words ?? '';
     this.isActive.value = isActive;
+    setPin(latitude, longitude);
+  }
+
+  /// Write a captured pin into the visible fields.
+  void setPin(double? latitude, double? longitude) {
+    this.latitude.text =
+        latitude == null ? '' : latitude.toStringAsFixed(6);
+    this.longitude.text =
+        longitude == null ? '' : longitude.toStringAsFixed(6);
   }
 
   /// Get form data from current controller values
@@ -79,6 +109,8 @@ class PropertyFormControllers {
         addressController: address,
         geofenceController: geofence,
         what3wordsController: what3words,
+        latitudeController: latitude,
+        longitudeController: longitude,
         isActiveController: isActive,
       );
 
@@ -88,6 +120,8 @@ class PropertyFormControllers {
     address.dispose();
     geofence.dispose();
     what3words.dispose();
+    latitude.dispose();
+    longitude.dispose();
     isActive.dispose();
   }
 }
@@ -138,6 +172,28 @@ class PropertyFormValidators {
       return 'Format: ///word.word.word';
     }
 
+    return null;
+  }
+
+  /// Validate a latitude in decimal degrees
+  static String? latitude(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+
+    final parsed = double.tryParse(value.trim());
+    if (parsed == null || parsed < -90 || parsed > 90) {
+      return 'Latitude must be between -90 and 90';
+    }
+    return null;
+  }
+
+  /// Validate a longitude in decimal degrees
+  static String? longitude(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
+
+    final parsed = double.tryParse(value.trim());
+    if (parsed == null || parsed < -180 || parsed > 180) {
+      return 'Longitude must be between -180 and 180';
+    }
     return null;
   }
 }

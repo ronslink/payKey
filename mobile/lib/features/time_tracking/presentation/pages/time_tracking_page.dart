@@ -7,6 +7,7 @@ import '../../../workers/data/models/worker_model.dart';
 import '../../../subscriptions/presentation/providers/feature_access_provider.dart';
 import '../providers/time_tracking_provider.dart';
 import '../../data/models/time_entry_model.dart';
+import '../widgets/time_entry_sheets.dart';
 import 'worker_timesheet_page.dart';
 
 class TimeTrackingPage extends ConsumerStatefulWidget {
@@ -26,7 +27,6 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
   late TabController _tabController;
   DateTimeRange? _selectedDateRange;
   String? _selectedLiveWorkerId;
-  final _notesController = TextEditingController();
 
   @override
   void initState() {
@@ -61,7 +61,6 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
   @override
   void dispose() {
     _tabController.dispose();
-    _notesController.dispose();
     super.dispose();
   }
 
@@ -86,7 +85,7 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
           indicatorColor: const Color(0xFFF59E0B),
           tabs: const [
             Tab(text: 'Overview'),
-            Tab(text: 'Live Actions'),
+            Tab(text: 'Enter Time'),
           ],
         ),
       ),
@@ -458,7 +457,12 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
   }
 
   // ===========================================================================
-  // LIVE ACTIONS TAB (Original Logic)
+  // ENTER TIME TAB
+  //
+  // Employers do not clock anybody in: the employee's own geofenced device is
+  // the evidence for attendance. What an employer can do is record hours they
+  // know about and correct an entry, and those hours only reach payroll once
+  // the employer includes them there.
   // ===========================================================================
 
   Widget _buildLiveActionsTab() {
@@ -470,7 +474,6 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Worker Selection
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
@@ -488,11 +491,17 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Live Clock In/Out',
+                  'Enter Time',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Employees clock themselves in and out at the site. Record the '
+                  'hours they could not, or correct an entry.',
+                  style: TextStyle(fontSize: 12.5, color: Colors.grey.shade600),
                 ),
                 const SizedBox(height: 16),
                 workersState.when(
@@ -538,17 +547,14 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
               ],
             ),
           ),
-          
+
           if (_selectedLiveWorkerId != null) ...[
             const SizedBox(height: 24),
             timeTrackingState.when(
-              data: (activeEntry) {
-                if (activeEntry == null) {
-                  return _buildClockInCard();
-                } else {
-                  return _buildClockedInCard(activeEntry);
-                }
-              },
+              data: (activeEntry) => _buildWorkerTimeCard(
+                workerName: _selectedWorkerName(),
+                activeEntry: activeEntry,
+              ),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => Text('Error: $error'),
             ),
@@ -558,7 +564,18 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
     );
   }
 
-  Widget _buildClockInCard() {
+  String _selectedWorkerName() {
+    final workers = ref.read(workersProvider).value ?? const [];
+    for (final worker in workers) {
+      if (worker.id == _selectedLiveWorkerId) return worker.name;
+    }
+    return 'this worker';
+  }
+
+  Widget _buildWorkerTimeCard({
+    required String workerName,
+    required TimeEntryModel? activeEntry,
+  }) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -573,90 +590,87 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
         ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-            const Icon(Icons.login, size: 48, color: Colors.green),
-            const SizedBox(height: 16),
-            const Text('Ready to Clock In', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            TextField(
-                controller: _notesController,
-                decoration: const InputDecoration(
-                    labelText: 'Notes',
-                    border: OutlineInputBorder(),
+          Row(
+            children: [
+              Icon(
+                activeEntry == null ? Icons.pause_circle_outline : Icons.timer,
+                size: 40,
+                color: activeEntry == null ? Colors.grey : Colors.orange,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      activeEntry == null
+                          ? '$workerName is not clocked in'
+                          : '$workerName is on the clock',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (activeEntry != null)
+                      Text(
+                        'Since ${DateFormat('EEE d MMM, HH:mm').format(activeEntry.clockIn.toLocal())}',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                  ],
                 ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _recordTime,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF2563EB),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.all(16),
+              ),
+              icon: const Icon(Icons.edit_calendar),
+              label: const Text('RECORD TIME'),
             ),
-            const SizedBox(height: 16),
-            SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                    onPressed: _handleClockIn,
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white, padding: const EdgeInsets.all(16)),
-                    child: const Text('CLOCK IN'),
-                ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildClockedInCard(TimeEntryModel entry) {
-     return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Recorded hours wait for your approval in payroll before they are paid.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 11.5, color: Colors.grey.shade600),
           ),
         ],
       ),
-      child: Column(
-        children: [
-            const Icon(Icons.timer, size: 48, color: Colors.orange),
-            const SizedBox(height: 16),
-            Text('Clocked In at ${DateFormat('h:mm a').format(entry.clockIn.toLocal())}', 
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-             TextField(
-                controller: _notesController,
-                decoration: const InputDecoration(
-                    labelText: 'Out Notes',
-                    border: OutlineInputBorder(),
-                ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                    onPressed: () => _handleClockOut(entry),
-                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white, padding: const EdgeInsets.all(16)),
-                    child: const Text('CLOCK OUT'),
-                ),
-            ),
-        ],
-      ),
     );
   }
 
-  Future<void> _handleClockIn() async {
-    if (_selectedLiveWorkerId == null) return;
-    await ref.read(timeTrackingProvider.notifier).clockIn(
-          _selectedLiveWorkerId!,
-        );
-    _notesController.clear();
-    _fetchOverviewData();
-  }
+  Future<void> _recordTime() async {
+    final workerId = _selectedLiveWorkerId;
+    if (workerId == null) return;
 
-  Future<void> _handleClockOut(TimeEntryModel entry) async {
-    // Clock-out is worker-scoped: the backend finds the open entry itself.
-    await ref.read(timeTrackingProvider.notifier).clockOut(
-          entry.workerId,
-          notes: _notesController.text.isEmpty ? null : _notesController.text,
-        );
-    _notesController.clear();
+    final saved = await showRecordTimeSheet(
+      context,
+      ref,
+      workerId: workerId,
+      workerName: _selectedWorkerName(),
+    );
+
+    if (!saved || !mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Time recorded. Approve it in payroll when you run it.',
+        ),
+      ),
+    );
     _fetchOverviewData();
   }
 }

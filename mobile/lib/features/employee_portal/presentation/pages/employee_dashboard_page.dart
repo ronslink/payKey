@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/network/api_service.dart';
 import '../../../../core/services/geofence_service.dart';
+import '../../../../core/utils/location_utils.dart';
 import '../../data/models/employee_models.dart';
 
 // ============================================================================
@@ -174,8 +175,17 @@ class _EmployeeDashboardPageState extends ConsumerState<EmployeeDashboardPage> {
     try {
       final workerId = await _getWorkerId();
 
+      // The API geofences a clock-in against the property pin, so the
+      // employee's own coordinates have to travel with the request. Without
+      // them a geofenced property rejects the clock-in.
+      final position = await LocationUtils.currentPositionOrNull();
+
       if (isClockedIn) {
-        await ApiService().timeTracking.clockOut(workerId);
+        await ApiService().timeTracking.clockOut(
+          workerId,
+          lat: position?.latitude,
+          lng: position?.longitude,
+        );
         await GeofenceService.instance.stopMonitoring();
         _showSnackBar('Clocked out successfully!', Colors.orange);
         _selectedPropertyId = null; // Reset selection
@@ -183,6 +193,8 @@ class _EmployeeDashboardPageState extends ConsumerState<EmployeeDashboardPage> {
         await ApiService().timeTracking.clockIn(
           workerId,
           propertyId: _selectedPropertyId,
+          lat: position?.latitude,
+          lng: position?.longitude,
         );
         _showSnackBar('Clocked in successfully!', Colors.green);
         
