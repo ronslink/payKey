@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 
-/// App-wide color system following the HomePage styling.
+/// Brand and status colors. Use Theme.of(context).colorScheme for UI surfaces
+/// and primary/onPrimary pairs so controls follow the active brightness.
 abstract class AppColors {
   // Brand
-  static const primary = Color(0xFF111827); // Cool Gray 900
+  static const brandBlue = Color(0xFF3B82F6);
+  static const primary = Color(0xFF2563EB); // Blue 600, readable with white
+  static const onPrimary = Colors.white;
+  static const primaryDark = Color(0xFF60A5FA);
+  static const onPrimaryDark = Color(0xFF111827);
   static const accent = Color(0xFF6366F1); // Indigo 500
 
   // Backgrounds

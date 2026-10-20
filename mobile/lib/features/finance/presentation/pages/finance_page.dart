@@ -8,6 +8,8 @@ import '../../../../core/network/api_service.dart';
 import '../../../settings/providers/settings_provider.dart';
 import '../../../subscriptions/presentation/providers/feature_access_provider.dart';
 import '../../../../core/utils/download_utils.dart';
+import '../../../../core/widgets/responsive_card_grid.dart';
+import '../../widgets/finance_quick_actions.dart';
 import '../../widgets/funding_sources_section.dart';
 import '../../../profile/presentation/providers/profile_provider.dart';
 import '../../../payroll/presentation/providers/pay_period_provider.dart';
@@ -122,7 +124,12 @@ class _FinancePageState extends ConsumerState<FinancePage>
             ),
 
             // Quick Actions Grid
-            SliverToBoxAdapter(child: _buildQuickActionsGrid(context)),
+            const SliverToBoxAdapter(child: SizedBox(height: 20)),
+            SliverToBoxAdapter(
+              child: FinanceQuickActions(
+                onNavigate: (route) => context.push(route),
+              ),
+            ),
 
             // Financial Overview
             SliverToBoxAdapter(child: _buildFinancialOverview(payPeriodsAsync)),
@@ -132,9 +139,6 @@ class _FinancePageState extends ConsumerState<FinancePage>
 
             // Account Mappings
             SliverToBoxAdapter(child: _buildAccountMappingsCard()),
-
-            // Integrations Coming Soon
-            SliverToBoxAdapter(child: _buildIntegrationsCard()),
 
             // Bottom padding
             const SliverToBoxAdapter(child: SizedBox(height: 100)),
@@ -157,16 +161,9 @@ class _FinancePageState extends ConsumerState<FinancePage>
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF0891B2), Color(0xFF0E7490)],
+            colors: [Color(0xFF0E7490), Color(0xFF155E75)],
           ),
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF0891B2).withValues(alpha: 0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -174,23 +171,25 @@ class _FinancePageState extends ConsumerState<FinancePage>
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Finance',
-                      style: TextStyle(color: Colors.white70, fontSize: 14),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Overview',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Finance',
+                        style: TextStyle(color: Colors.white, fontSize: 14),
                       ),
-                    ),
-                  ],
+                      SizedBox(height: 4),
+                      Text(
+                        'Overview',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -241,49 +240,35 @@ class _FinancePageState extends ConsumerState<FinancePage>
       (sum, p) => sum + (p.totalNetAmount ?? 0),
     );
 
-    return Row(
+    return ResponsiveCardGrid(
+      minColumnWidth: 92,
       children: [
-        Expanded(
-          child: _buildStatItem(
-            Icons.trending_up_rounded,
-            _formatAmount(totalGross),
-            'Total Gross',
-          ),
+        _buildStatItem(
+          Icons.trending_up_rounded,
+          _formatAmount(totalGross),
+          'Total Gross',
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildStatItem(
-            Icons.receipt_long_rounded,
-            _formatAmount(totalDeductions),
-            'Deductions',
-          ),
+        _buildStatItem(
+          Icons.receipt_long_rounded,
+          _formatAmount(totalDeductions),
+          'Deductions',
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildStatItem(
-            Icons.payments_rounded,
-            _formatAmount(totalNet),
-            'Net Paid',
-          ),
+        _buildStatItem(
+          Icons.payments_rounded,
+          _formatAmount(totalNet),
+          'Net Paid',
         ),
       ],
     );
   }
 
   Widget _buildStatsRowLoading() {
-    return Row(
+    return ResponsiveCardGrid(
+      minColumnWidth: 92,
       children: [
-        Expanded(
-          child: _buildStatItem(Icons.trending_up_rounded, '--', 'Total Gross'),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildStatItem(Icons.receipt_long_rounded, '--', 'Deductions'),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildStatItem(Icons.payments_rounded, '--', 'Net Paid'),
-        ),
+        _buildStatItem(Icons.trending_up_rounded, '--', 'Total Gross'),
+        _buildStatItem(Icons.receipt_long_rounded, '--', 'Deductions'),
+        _buildStatItem(Icons.payments_rounded, '--', 'Net Paid'),
       ],
     );
   }
@@ -292,13 +277,13 @@ class _FinancePageState extends ConsumerState<FinancePage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.15),
+        color: Colors.black.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: Colors.white70, size: 18),
+          Icon(icon, color: Colors.white, size: 18),
           const SizedBox(height: 8),
           Text(
             value,
@@ -311,112 +296,9 @@ class _FinancePageState extends ConsumerState<FinancePage>
           const SizedBox(height: 2),
           Text(
             label,
-            style: const TextStyle(color: Colors.white60, fontSize: 10),
+            style: const TextStyle(color: Colors.white, fontSize: 12),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildQuickActionsGrid(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildActionCard(
-              icon: Icons.receipt_long_rounded,
-              title: 'Tax Filing',
-              subtitle: 'KRA submissions',
-              gradient: const [Color(0xFFF59E0B), Color(0xFFD97706)],
-              onTap: () => context.push('/taxes'),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _buildActionCard(
-              icon: Icons.description_rounded,
-              title: 'Reports',
-              subtitle: 'Financial reports',
-              gradient: const [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
-              onTap: () => context.push('/reports'),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: _buildActionCard(
-              icon: Icons.account_balance_wallet_rounded,
-              title: 'Top Up',
-              subtitle: 'Add funds',
-              gradient: const [Color(0xFF10B981), Color(0xFF059669)],
-              onTap: () => context.push('/finance/top-up'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required List<Color> gradient,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: gradient,
-            ),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: gradient[0].withValues(alpha: 0.3),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: Colors.white, size: 22),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.8),
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -444,21 +326,19 @@ class _FinancePageState extends ConsumerState<FinancePage>
                 ),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Financial Breakdown',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF111827),
-                      ),
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
                     Text(
                       'This year\'s payroll allocation',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
@@ -489,17 +369,22 @@ class _FinancePageState extends ConsumerState<FinancePage>
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFFF3F4F6),
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: const Row(
+        child: Row(
           children: [
-            Icon(Icons.info_outline, color: Color(0xFF9CA3AF)),
-            SizedBox(width: 12),
+            Icon(
+              Icons.info_outline,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 'Complete a pay period to see breakdown',
-                style: TextStyle(color: Color(0xFF6B7280)),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
           ],
@@ -551,13 +436,12 @@ class _FinancePageState extends ConsumerState<FinancePage>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          spacing: 12,
+          runSpacing: 4,
           children: [
-            Text(
-              label,
-              style: const TextStyle(fontSize: 13, color: Color(0xFF374151)),
-            ),
+            Text(label, style: Theme.of(context).textTheme.bodyMedium),
             Text(
               'KES ${_formatAmount(value)} (${(percent * 100).toStringAsFixed(0)}%)',
               style: TextStyle(
@@ -632,14 +516,13 @@ class _FinancePageState extends ConsumerState<FinancePage>
                   children: [
                     Text(
                       'Export to Accounting',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
                     Text(
                       'Download payroll CSV',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
@@ -739,6 +622,7 @@ class _FinancePageState extends ConsumerState<FinancePage>
         return Column(
           children: [
             DropdownButtonFormField<String>(
+              isExpanded: true,
               initialValue: _selectedPayPeriodId,
               hint: const Text('Select pay period'),
               decoration: InputDecoration(
@@ -746,7 +630,6 @@ class _FinancePageState extends ConsumerState<FinancePage>
                   borderRadius: BorderRadius.circular(12),
                 ),
                 filled: true,
-                fillColor: const Color(0xFFF9FAFB),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 14,
@@ -768,19 +651,17 @@ class _FinancePageState extends ConsumerState<FinancePage>
               child: ElevatedButton.icon(
                 onPressed: _isExporting ? null : _exportPayroll,
                 icon: _isExporting
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                       )
                     : const Icon(Icons.download_rounded, size: 20),
                 label: Text(_isExporting ? 'Exporting...' : 'Download CSV'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF3B82F6),
-                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -814,7 +695,7 @@ class _FinancePageState extends ConsumerState<FinancePage>
           InkWell(
             onTap: () =>
                 setState(() => _showAccountMappings = !_showAccountMappings),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Row(
@@ -832,23 +713,22 @@ class _FinancePageState extends ConsumerState<FinancePage>
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'Chart of Accounts',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: Theme.of(context).textTheme.titleMedium,
                         ),
                         Text(
                           'Configure ledger mappings',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF6B7280),
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
                         ),
                       ],
                     ),
@@ -857,7 +737,7 @@ class _FinancePageState extends ConsumerState<FinancePage>
                     _showAccountMappings
                         ? Icons.keyboard_arrow_up_rounded
                         : Icons.keyboard_arrow_down_rounded,
-                    color: const Color(0xFF9CA3AF),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ],
               ),
@@ -910,8 +790,6 @@ class _FinancePageState extends ConsumerState<FinancePage>
                         child: ElevatedButton(
                           onPressed: _saveMappings,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF8B5CF6),
-                            foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -936,148 +814,13 @@ class _FinancePageState extends ConsumerState<FinancePage>
     );
   }
 
-  Widget _buildIntegrationsCard() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(20),
-      decoration: _cardDecoration(context),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.grey.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.cloud_sync_rounded,
-                  color: Color(0xFF9CA3AF),
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Integrations',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      'Coming soon',
-                      style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _buildIntegrationItem(
-            'QuickBooks Online',
-            'Automatic sync',
-            Icons.sync_rounded,
-            Colors.green,
-          ),
-          const SizedBox(height: 10),
-          _buildIntegrationItem(
-            'Xero',
-            'Direct connection',
-            Icons.link_rounded,
-            Colors.blue,
-          ),
-          const SizedBox(height: 10),
-          _buildIntegrationItem(
-            'Sage',
-            'Export support',
-            Icons.upload_file_rounded,
-            Colors.orange,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildIntegrationItem(
-    String name,
-    String desc,
-    IconData icon,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFB),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: color.withValues(alpha: 0.5), size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF6B7280),
-                  ),
-                ),
-                Text(
-                  desc,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Color(0xFF9CA3AF),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.grey.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Text(
-              'Soon',
-              style: TextStyle(
-                fontSize: 10,
-                color: Color(0xFF9CA3AF),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   BoxDecoration _cardDecoration(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return BoxDecoration(
       color:
           Theme.of(context).cardTheme.color ??
-          (isDark ? const Color(0xFF1E1E1E) : Colors.white),
-      borderRadius: BorderRadius.circular(20),
-      boxShadow: isDark
-          ? null
-          : [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
+          Theme.of(context).colorScheme.surface,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: Theme.of(context).dividerColor),
     );
   }
 

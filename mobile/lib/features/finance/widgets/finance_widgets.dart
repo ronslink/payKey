@@ -6,7 +6,10 @@ import '../constants/finance_constants.dart';
 final _currencyFormatter = NumberFormat('#,###');
 
 /// Format amount with currency
-String formatCurrency(num amount, {String currency = FinanceConstants.currencyCode}) {
+String formatCurrency(
+  num amount, {
+  String currency = FinanceConstants.currencyCode,
+}) {
   return '$currency ${_currencyFormatter.format(amount)}';
 }
 
@@ -28,10 +31,10 @@ class FinanceSectionLabel extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: Colors.grey.shade600,
-              letterSpacing: 1,
-              fontWeight: FontWeight.w600,
-            ),
+          color: Colors.grey.shade600,
+          letterSpacing: 1,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -63,9 +66,9 @@ class QuickActionButton extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500),
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -83,11 +86,7 @@ class QuickActionButton extends StatelessWidget {
         color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Icon(
-        icon,
-        size: 20,
-        color: Theme.of(context).primaryColor,
-      ),
+      child: Icon(icon, size: 20, color: Theme.of(context).primaryColor),
     );
   }
 }
@@ -174,15 +173,17 @@ class FundingSourceCard extends StatelessWidget {
   }
 
   Widget _buildHeader(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Wrap(
+      alignment: WrapAlignment.spaceBetween,
+      spacing: 8,
+      runSpacing: 8,
       children: [
         Icon(
           icon,
           size: 22,
           color: isDefault
               ? Theme.of(context).primaryColor
-              : Colors.grey.shade600,
+              : Theme.of(context).colorScheme.onSurfaceVariant,
         ),
         if (isDefault) _buildDefaultBadge(),
       ],
@@ -210,9 +211,9 @@ class FundingSourceCard extends StatelessWidget {
   Widget _buildLabel(BuildContext context) {
     return Text(
       label,
-      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+      style: Theme.of(
+        context,
+      ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
     );
   }
 
@@ -220,9 +221,8 @@ class FundingSourceCard extends StatelessWidget {
     return Text(
       value,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Colors.grey.shade500,
-          ),
-      overflow: TextOverflow.ellipsis,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
     );
   }
 }
@@ -231,10 +231,7 @@ class FundingSourceCard extends StatelessWidget {
 class EmptyTransactionsState extends StatelessWidget {
   final VoidCallback onRunPayroll;
 
-  const EmptyTransactionsState({
-    super.key,
-    required this.onRunPayroll,
-  });
+  const EmptyTransactionsState({super.key, required this.onRunPayroll});
 
   @override
   Widget build(BuildContext context) {
@@ -328,15 +325,15 @@ class TransactionListItem extends StatelessWidget {
       children: [
         Text(
           title,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
         ),
         Text(
           DateFormat('MMM d, yyyy').format(date),
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.grey.shade500,
-              ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: Colors.grey.shade500),
         ),
       ],
     );
@@ -346,9 +343,9 @@ class TransactionListItem extends StatelessWidget {
     return Text(
       formatCurrency(amount),
       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).primaryColor,
-          ),
+        fontWeight: FontWeight.bold,
+        color: Theme.of(context).primaryColor,
+      ),
     );
   }
 }
@@ -372,10 +369,7 @@ class FinanceErrorState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              message,
-              style: TextStyle(color: Colors.grey.shade600),
-            ),
+            Text(message, style: TextStyle(color: Colors.grey.shade600)),
             if (onRetry != null) ...[
               const SizedBox(height: 8),
               TextButton.icon(
@@ -396,21 +390,13 @@ class FinanceLoadingState extends StatelessWidget {
   final double height;
   final Color? color;
 
-  const FinanceLoadingState({
-    super.key,
-    this.height = 100,
-    this.color,
-  });
+  const FinanceLoadingState({super.key, this.height = 100, this.color});
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: height,
-      child: Center(
-        child: CircularProgressIndicator(
-          color: color,
-        ),
-      ),
+      child: Center(child: CircularProgressIndicator(color: color)),
     );
   }
 }

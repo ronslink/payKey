@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/responsive_card_grid.dart';
 import '../constants/finance_constants.dart';
 import 'finance_widgets.dart';
 
@@ -54,35 +55,29 @@ class FundingSourcesSection extends StatelessWidget {
     }
 
     if (error != null) {
-      return FinanceErrorState(
-        message: error!,
-        onRetry: onRetry,
-      );
+      return FinanceErrorState(message: error!, onRetry: onRetry);
     }
 
     final sourceData = data ?? const FundingSourceData();
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: FinanceTheme.pagePadding),
-      child: Row(
+      child: ResponsiveCardGrid(
+        maxColumns: 2,
+        minColumnWidth: 136,
         children: [
-          Expanded(
-            child: FundingSourceCard(
-              icon: Icons.account_balance_outlined,
-              label: 'Bank',
-              value: sourceData.bankDisplayValue,
-              isDefault: sourceData.isBankDefault,
-            ),
+          FundingSourceCard(
+            icon: Icons.account_balance_outlined,
+            label: 'Bank',
+            value: sourceData.bankDisplayValue,
+            isDefault: sourceData.isBankDefault,
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: FundingSourceCard(
-              icon: Icons.phone_android_outlined,
-              label: sourceData.isDirectMPesa ? 'Direct M-Pesa' : 'M-Pesa',
-              value: sourceData.mpesaDisplayValue,
-              isDefault: sourceData.isMpesaDefault,
-              isDirect: sourceData.isDirectMPesa,
-            ),
+          FundingSourceCard(
+            icon: Icons.phone_android_outlined,
+            label: sourceData.isDirectMPesa ? 'Direct M-Pesa' : 'M-Pesa',
+            value: sourceData.mpesaDisplayValue,
+            isDefault: sourceData.isMpesaDefault,
+            isDirect: sourceData.isDirectMPesa,
           ),
         ],
       ),

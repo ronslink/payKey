@@ -8,8 +8,10 @@ import '../config/store_policy.dart';
 enum FeatureAccessLevelLocal {
   /// Full access to the feature
   fullAccess,
+
   /// Preview mode with mock data (during trial)
   preview,
+
   /// Feature is locked
   locked,
 }
@@ -36,10 +38,8 @@ class FeatureAccess {
     return FeatureAccessLevelLocal.locked;
   }
 
-  factory FeatureAccess.fullAccess() => const FeatureAccess(
-        hasAccess: true,
-        isPreview: false,
-      );
+  factory FeatureAccess.fullAccess() =>
+      const FeatureAccess(hasAccess: true, isPreview: false);
 
   factory FeatureAccess.preview({String? requiredTier, String? featureName}) =>
       FeatureAccess(
@@ -58,11 +58,11 @@ class FeatureAccess {
       );
 
   factory FeatureAccess.fromResult(FeatureAccessResult result) => FeatureAccess(
-        hasAccess: result.hasAccess,
-        isPreview: result.isPreview,
-        requiredTier: result.requiredTier,
-        reason: result.reason,
-      );
+    hasAccess: result.hasAccess,
+    isPreview: result.isPreview,
+    requiredTier: result.requiredTier,
+    reason: result.reason,
+  );
 }
 
 /// A widget that gates access to features based on subscription tier
@@ -121,9 +121,14 @@ class FeatureGate extends ConsumerWidget {
         return Column(
           children: [
             PreviewBanner(
-              featureName: access.featureName ?? _getFeatureDisplayName(featureKey),
+              featureName:
+                  access.featureName ?? _getFeatureDisplayName(featureKey),
               requiredTier: access.requiredTier ?? 'BASIC',
-              onUpgrade: onUpgrade ?? () => context.go('/subscriptions?returnPath=${Uri.encodeComponent(currentRoute)}'),
+              onUpgrade:
+                  onUpgrade ??
+                  () => context.go(
+                    '/subscriptions?returnPath=${Uri.encodeComponent(currentRoute)}',
+                  ),
             ),
             Expanded(child: child),
           ],
@@ -135,7 +140,11 @@ class FeatureGate extends ConsumerWidget {
               featureKey: featureKey,
               requiredTier: access.requiredTier,
               reason: access.reason,
-              onUpgrade: onUpgrade ?? () => context.go('/subscriptions?returnPath=${Uri.encodeComponent(currentRoute)}'),
+              onUpgrade:
+                  onUpgrade ??
+                  () => context.go(
+                    '/subscriptions?returnPath=${Uri.encodeComponent(currentRoute)}',
+                  ),
             );
     }
   }
@@ -144,9 +153,11 @@ class FeatureGate extends ConsumerWidget {
     return key
         .replaceAll('_', ' ')
         .split(' ')
-        .map((word) => word.isNotEmpty
-            ? '${word[0].toUpperCase()}${word.substring(1)}'
-            : '')
+        .map(
+          (word) => word.isNotEmpty
+              ? '${word[0].toUpperCase()}${word.substring(1)}'
+              : '',
+        )
         .join(' ');
   }
 }
@@ -234,21 +245,25 @@ class PreviewBanner extends StatelessWidget {
               ),
             ),
             if (StorePolicy.purchasesAllowed) const SizedBox(width: 8),
-            if (StorePolicy.purchasesAllowed) TextButton(
-              onPressed: onUpgrade,
-              style: TextButton.styleFrom(
-                backgroundColor: const Color(0xFFD97706),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+            if (StorePolicy.purchasesAllowed)
+              TextButton(
+                onPressed: onUpgrade,
+                style: TextButton.styleFrom(
+                  backgroundColor: const Color(0xFFD97706),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text(
+                  'Upgrade',
+                  style: TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
-              child: const Text(
-                'Upgrade',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
           ],
         ),
       ),
@@ -276,9 +291,11 @@ class FeatureLockedScreen extends StatelessWidget {
     return featureKey
         .replaceAll('_', ' ')
         .split(' ')
-        .map((word) => word.isNotEmpty
-            ? '${word[0].toUpperCase()}${word.substring(1)}'
-            : '')
+        .map(
+          (word) => word.isNotEmpty
+              ? '${word[0].toUpperCase()}${word.substring(1)}'
+              : '',
+        )
         .join(' ');
   }
 
@@ -328,8 +345,10 @@ class FeatureLockedScreen extends StatelessWidget {
 
               // Description
               Text(
-                (StorePolicy.purchasesAllowed || !(reason ?? '').toLowerCase().contains('upgrade'))
-                    ? (reason ?? 'This feature requires a $requiredTier subscription or higher.')
+                (StorePolicy.purchasesAllowed ||
+                        !(reason ?? '').toLowerCase().contains('upgrade'))
+                    ? (reason ??
+                          'This feature requires a $requiredTier subscription or higher.')
                     : 'This feature requires a $requiredTier subscription or higher.',
                 style: const TextStyle(
                   fontSize: 16,
@@ -375,28 +394,29 @@ class FeatureLockedScreen extends StatelessWidget {
               const SizedBox(height: 48),
 
               // Upgrade Button
-              if (StorePolicy.purchasesAllowed) SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: onUpgrade,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF3B82F6),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+              if (StorePolicy.purchasesAllowed)
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: onUpgrade,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF3B82F6),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
                     ),
-                    elevation: 0,
-                  ),
-                  child: const Text(
-                    'View Plans & Upgrade',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                    child: const Text(
+                      'View Plans & Upgrade',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
-              ),
               const SizedBox(height: 16),
 
               // Back Button
@@ -404,10 +424,7 @@ class FeatureLockedScreen extends StatelessWidget {
                 onPressed: () => Navigator.of(context).pop(),
                 child: const Text(
                   'Go Back',
-                  style: TextStyle(
-                    color: Color(0xFF6B7280),
-                    fontSize: 16,
-                  ),
+                  style: TextStyle(color: Color(0xFF6B7280), fontSize: 16),
                 ),
               ),
             ],
@@ -420,11 +437,11 @@ class FeatureLockedScreen extends StatelessWidget {
   List<Color> _getTierGradient(String tier) {
     switch (tier.toUpperCase()) {
       case 'BASIC':
-        return [const Color(0xFF3B82F6), const Color(0xFF2563EB)];
+        return [const Color(0xFF2563EB), const Color(0xFF1D4ED8)];
       case 'GOLD':
         return [const Color(0xFFF59E0B), const Color(0xFFD97706)];
       case 'PLATINUM':
-        return [const Color(0xFF8B5CF6), const Color(0xFF7C3AED)];
+        return [const Color(0xFF7C3AED), const Color(0xFF6D28D9)];
       default:
         return [const Color(0xFF6B7280), const Color(0xFF4B5563)];
     }
@@ -486,37 +503,34 @@ class InlineUpgradePrompt extends StatelessWidget {
                 color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(
-                icon,
-                color: const Color(0xFF3B82F6),
-                size: 20,
-              ),
+              child: Icon(icon, color: const Color(0xFF3B82F6), size: 20),
             ),
             const SizedBox(width: 12),
           ],
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(
-                color: Color(0xFF374151),
-                fontSize: 14,
-              ),
+              style: const TextStyle(color: Color(0xFF374151), fontSize: 14),
             ),
           ),
           if (StorePolicy.purchasesAllowed) const SizedBox(width: 12),
-          if (StorePolicy.purchasesAllowed) ElevatedButton(
-            onPressed: onUpgrade,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF3B82F6),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+          if (StorePolicy.purchasesAllowed)
+            ElevatedButton(
+              onPressed: onUpgrade,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF3B82F6),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                elevation: 0,
               ),
-              elevation: 0,
+              child: Text(buttonText),
             ),
-            child: Text(buttonText),
-          ),
         ],
       ),
     );
@@ -541,9 +555,10 @@ class FeatureUpgradeDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -559,7 +574,7 @@ class FeatureUpgradeDialog extends StatelessWidget {
               ),
               child: Icon(
                 _getTierIcon(requiredTier ?? 'GOLD'),
-                color: Colors.white,
+                color: _tierForeground(requiredTier ?? 'GOLD'),
                 size: 32,
               ),
             ),
@@ -567,12 +582,11 @@ class FeatureUpgradeDialog extends StatelessWidget {
 
             // Title
             Text(
-              StorePolicy.purchasesAllowed ? 'Upgrade Required' : 'Not in your plan',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF111827),
-              ),
+              StorePolicy.purchasesAllowed
+                  ? 'Upgrade Required'
+                  : 'Not in your plan',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleLarge,
             ),
             const SizedBox(height: 12),
 
@@ -580,13 +594,12 @@ class FeatureUpgradeDialog extends StatelessWidget {
             Text(
               StorePolicy.purchasesAllowed
                   ? '$featureName is available on ${requiredTier ?? 'GOLD'} and higher plans. '
-                      'Upgrade your subscription to unlock this feature.'
+                        'Upgrade your subscription to unlock this feature.'
                   : '$featureName is available on ${requiredTier ?? 'GOLD'} and higher plans. '
-                      'It is not included in your current plan.',
+                        'It is not included in your current plan.',
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Color(0xFF6B7280),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colors.onSurfaceVariant,
                 height: 1.5,
               ),
             ),
@@ -596,20 +609,30 @@ class FeatureUpgradeDialog extends StatelessWidget {
             if (requiredTier != null)
               Container(
                 margin: const EdgeInsets.only(top: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: _getTierGradient(requiredTier!)),
+                  gradient: LinearGradient(
+                    colors: _getTierGradient(requiredTier!),
+                  ),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Icon(_getTierIcon(requiredTier!), color: Colors.white, size: 14),
+                    Icon(
+                      _getTierIcon(requiredTier!),
+                      color: _tierForeground(requiredTier!),
+                      size: 14,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       'Requires $requiredTier',
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: _tierForeground(requiredTier!),
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
@@ -621,38 +644,34 @@ class FeatureUpgradeDialog extends StatelessWidget {
             const SizedBox(height: 24),
 
             // Buttons
-            Row(
+            OverflowBar(
+              alignment: MainAxisAlignment.center,
+              spacing: 12,
+              overflowSpacing: 8,
               children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: onCancel ?? () => Navigator.of(context).pop(),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF6B7280),
-                      side: const BorderSide(color: Color(0xFFE5E7EB)),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                OutlinedButton(
+                  onPressed: onCancel ?? () => Navigator.of(context).pop(),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 14,
                     ),
-                    child: Text(StorePolicy.purchasesAllowed ? 'Maybe Later' : 'OK'),
+                  ),
+                  child: Text(
+                    StorePolicy.purchasesAllowed ? 'Maybe Later' : 'OK',
                   ),
                 ),
-                if (StorePolicy.purchasesAllowed) const SizedBox(width: 12),
-                if (StorePolicy.purchasesAllowed) Expanded(
-                  child: ElevatedButton(
+                if (StorePolicy.purchasesAllowed)
+                  ElevatedButton(
                     onPressed: onUpgrade,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF6366F1),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 14,
                       ),
-                      elevation: 0,
                     ),
                     child: const Text('Upgrade Now'),
                   ),
-                ),
               ],
             ),
           ],
@@ -661,14 +680,17 @@ class FeatureUpgradeDialog extends StatelessWidget {
     );
   }
 
+  Color _tierForeground(String tier) =>
+      tier.toUpperCase() == 'GOLD' ? const Color(0xFF111827) : Colors.white;
+
   List<Color> _getTierGradient(String tier) {
     switch (tier.toUpperCase()) {
       case 'BASIC':
-        return [const Color(0xFF3B82F6), const Color(0xFF2563EB)];
+        return [const Color(0xFF2563EB), const Color(0xFF1D4ED8)];
       case 'GOLD':
         return [const Color(0xFFF59E0B), const Color(0xFFD97706)];
       case 'PLATINUM':
-        return [const Color(0xFF8B5CF6), const Color(0xFF7C3AED)];
+        return [const Color(0xFF7C3AED), const Color(0xFF6D28D9)];
       default:
         return [const Color(0xFF6B7280), const Color(0xFF4B5563)];
     }
@@ -701,11 +723,13 @@ void showFeatureUpgradeDialog(
     builder: (ctx) => FeatureUpgradeDialog(
       featureName: featureName,
       requiredTier: requiredTier ?? 'GOLD',
-      onUpgrade: onUpgrade ?? () {
-        Navigator.of(ctx).pop();
-        // Default: navigate to subscription settings
-        // Assumes GoRouter is used and settingsSubscription route exists
-      },
+      onUpgrade:
+          onUpgrade ??
+          () {
+            Navigator.of(ctx).pop();
+            // Default: navigate to subscription settings
+            // Assumes GoRouter is used and settingsSubscription route exists
+          },
     ),
   );
 }

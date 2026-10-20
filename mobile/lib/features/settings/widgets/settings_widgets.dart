@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/pay_colors.dart';
+import '../../../core/widgets/responsive_card_grid.dart';
 import '../constants/settings_constants.dart';
 import '../models/setting_item.dart';
 
@@ -20,10 +22,10 @@ class SettingsSectionLabel extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: Colors.grey.shade600,
-              letterSpacing: 1,
-              fontWeight: FontWeight.w600,
-            ),
+          color: context.textSecondary,
+          letterSpacing: 1,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -33,10 +35,7 @@ class SettingsSectionLabel extends StatelessWidget {
 class SettingsCard extends StatelessWidget {
   final List<SettingItem> items;
 
-  const SettingsCard({
-    super.key,
-    required this.items,
-  });
+  const SettingsCard({super.key, required this.items});
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +50,7 @@ class SettingsCard extends StatelessWidget {
             children: [
               SettingTile(item: item),
               if (index < items.length - 1)
-                Divider(height: 1, indent: 56, color: Colors.grey.shade200),
+                Divider(height: 1, indent: 56, color: context.borderMuted),
             ],
           );
         }).toList(),
@@ -64,10 +63,7 @@ class SettingsCard extends StatelessWidget {
 class SettingTile extends StatelessWidget {
   final SettingItem item;
 
-  const SettingTile({
-    super.key,
-    required this.item,
-  });
+  const SettingTile({super.key, required this.item});
 
   @override
   Widget build(BuildContext context) {
@@ -95,7 +91,7 @@ class SettingTile extends StatelessWidget {
   }
 
   Widget _buildIconContainer(BuildContext context) {
-    final iconColor = item.iconColor ?? Colors.grey.shade700;
+    final iconColor = item.iconColor ?? context.iconDefault;
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
@@ -116,19 +112,16 @@ class SettingTile extends StatelessWidget {
       children: [
         Text(
           item.title,
-          style: TextStyle(
-            fontWeight: FontWeight.w500,
-            fontSize: 15,
-            color: item.titleColor ?? Colors.grey.shade900,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            color: item.titleColor ?? context.textPrimary,
           ),
         ),
         if (item.subtitle != null)
           Text(
             item.subtitle!,
-            style: TextStyle(
-              color: Colors.grey.shade500,
-              fontSize: 13,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: context.textSecondary),
           ),
       ],
     );
@@ -140,11 +133,7 @@ class SettingTile extends StatelessWidget {
     }
 
     if (item.isTappable) {
-      return Icon(
-        Icons.chevron_right,
-        color: Colors.grey.shade400,
-        size: 22,
-      );
+      return Icon(Icons.chevron_right, color: context.iconMuted, size: 22);
     }
 
     return const SizedBox.shrink();
@@ -156,56 +145,43 @@ class QuickAccessTile extends StatelessWidget {
   final QuickAccessItem item;
   final VoidCallback onTap;
 
-  const QuickAccessTile({
-    super.key,
-    required this.item,
-    required this.onTap,
-  });
+  const QuickAccessTile({super.key, required this.item, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(SettingsTheme.cardBorderRadius),
-          border: Border.all(color: Colors.grey.shade200),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: item.color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(SettingsTheme.cardBorderRadius),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: SettingsTheme.cardDecoration(context),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: item.color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  item.icon,
+                  color: item.color,
+                  size: SettingsTheme.quickAccessIconSize,
+                ),
               ),
-              child: Icon(
-                item.icon,
-                color: item.color,
-                size: SettingsTheme.quickAccessIconSize,
+              const SizedBox(height: 8),
+              Text(
+                item.label,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500),
+                textAlign: TextAlign.center,
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              item.label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -226,24 +202,16 @@ class QuickAccessGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: SettingsTheme.pagePadding),
-      child: GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: SettingsTheme.quickAccessColumns,
-          childAspectRatio: 1.0,
-          crossAxisSpacing: SettingsTheme.quickAccessSpacing,
-          mainAxisSpacing: SettingsTheme.quickAccessSpacing,
-        ),
-        itemCount: items.length,
-        itemBuilder: (context, index) {
-          final item = items[index];
-          return QuickAccessTile(
-            item: item,
-            onTap: () => onItemTap(item.route),
-          );
-        },
+      padding: const EdgeInsets.symmetric(
+        horizontal: SettingsTheme.pagePadding,
+      ),
+      child: ResponsiveCardGrid(
+        maxColumns: SettingsTheme.quickAccessColumns,
+        spacing: SettingsTheme.quickAccessSpacing,
+        children: [
+          for (final item in items)
+            QuickAccessTile(item: item, onTap: () => onItemTap(item.route)),
+        ],
       ),
     );
   }
@@ -266,42 +234,39 @@ class ProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).primaryColor;
+    final colors = Theme.of(context).colorScheme;
 
     return Container(
       margin: const EdgeInsets.all(SettingsTheme.pagePadding),
       padding: const EdgeInsets.all(SettingsTheme.cardPadding),
       decoration: BoxDecoration(
-        gradient: SettingsTheme.profileGradient(primaryColor),
-        borderRadius: BorderRadius.circular(SettingsTheme.profileCardBorderRadius),
-        boxShadow: [
-          BoxShadow(
-            color: primaryColor.withValues(alpha: 0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        color: colors.primary,
+        borderRadius: BorderRadius.circular(
+          SettingsTheme.profileCardBorderRadius,
+        ),
       ),
       child: Row(
         children: [
-          _buildAvatar(),
+          _buildAvatar(colors.onPrimary),
           const SizedBox(width: 16),
-          Expanded(child: _buildInfo()),
-          _buildEditButton(context),
+          Expanded(child: _buildInfo(colors.onPrimary)),
+          _buildEditButton(context, colors.onPrimary),
         ],
       ),
     );
   }
 
-  Widget _buildAvatar() {
+  Widget _buildAvatar(Color foreground) {
     return GestureDetector(
       onTap: onAvatarTap,
       child: Container(
         width: SettingsTheme.iconContainerSize,
         height: SettingsTheme.iconContainerSize,
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(SettingsTheme.iconContainerRadius),
+          color: foreground.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(
+            SettingsTheme.iconContainerRadius,
+          ),
           image: photoUrl != null
               ? DecorationImage(
                   image: NetworkImage(photoUrl!),
@@ -309,21 +274,21 @@ class ProfileCard extends StatelessWidget {
                 )
               : null,
         ),
-        child: photoUrl == null 
-            ? const Icon(Icons.person, color: Colors.white, size: 28)
+        child: photoUrl == null
+            ? Icon(Icons.person, color: foreground, size: 28)
             : null,
       ),
     );
   }
 
-  Widget _buildInfo() {
+  Widget _buildInfo(Color foreground) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'My Profile',
           style: TextStyle(
-            color: Colors.white,
+            color: foreground,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -332,13 +297,13 @@ class ProfileCard extends StatelessWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.2),
+            color: foreground.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
             tier.toUpperCase(),
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: foreground,
               fontSize: 11,
               fontWeight: FontWeight.bold,
               letterSpacing: 1,
@@ -349,16 +314,16 @@ class ProfileCard extends StatelessWidget {
     );
   }
 
-  Widget _buildEditButton(BuildContext context) {
+  Widget _buildEditButton(BuildContext context, Color foreground) {
     return GestureDetector(
       onTap: onEditTap,
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(10),
+          color: foreground.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
         ),
-        child: const Icon(Icons.edit_outlined, color: Colors.white, size: 20),
+        child: Icon(Icons.edit_outlined, color: foreground, size: 20),
       ),
     );
   }

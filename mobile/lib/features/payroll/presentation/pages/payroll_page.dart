@@ -18,7 +18,7 @@ class PayrollPage extends ConsumerStatefulWidget {
   ConsumerState<PayrollPage> createState() => _PayrollPageState();
 }
 
-class _PayrollPageState extends ConsumerState<PayrollPage> 
+class _PayrollPageState extends ConsumerState<PayrollPage>
     with SingleTickerProviderStateMixin {
   PayPeriodStatus? _selectedStatus;
   bool _isInitializing = false;
@@ -47,24 +47,17 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
         : ref.watch(payPeriodsByStatusProvider(_selectedStatus!));
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F4F6),
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
             // Hero Header
-            SliverToBoxAdapter(
-              child: _buildHeroHeader(payPeriodsState),
-            ),
+            SliverToBoxAdapter(child: _buildHeroHeader(payPeriodsState)),
 
             // Status Filter Tabs
-            SliverToBoxAdapter(
-              child: _buildStatusTabs(),
-            ),
+            SliverToBoxAdapter(child: _buildStatusTabs()),
 
             // Quick Actions
-            SliverToBoxAdapter(
-              child: _buildQuickActions(context),
-            ),
+            SliverToBoxAdapter(child: _buildQuickActions(context)),
 
             // Active Payroll Alert (if any)
             SliverToBoxAdapter(
@@ -77,11 +70,13 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
 
             // Show Initialize New Year card when applicable
             SliverToBoxAdapter(
-              child: ref.watch(payPeriodsProvider).when(
-                data: (periods) => _buildInitializeYearCard(periods),
-                loading: () => const SizedBox.shrink(),
-                error: (_, _) => const SizedBox.shrink(),
-              ),
+              child: ref
+                  .watch(payPeriodsProvider)
+                  .when(
+                    data: (periods) => _buildInitializeYearCard(periods),
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, _) => const SizedBox.shrink(),
+                  ),
             ),
 
             // Section Header
@@ -91,14 +86,16 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      _selectedStatus == null 
-                          ? 'All Pay Periods' 
-                          : '${_getStatusLabel(_selectedStatus!)} Periods',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1F2937),
+                    Expanded(
+                      child: Text(
+                        _selectedStatus == null
+                            ? 'All Pay Periods'
+                            : '${_getStatusLabel(_selectedStatus!)} Periods',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: context.textPrimary,
+                            ),
                       ),
                     ),
                     IconButton(
@@ -106,11 +103,13 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
                         if (_selectedStatus == null) {
                           ref.invalidate(payPeriodsProvider);
                         } else {
-                          ref.invalidate(payPeriodsByStatusProvider(_selectedStatus!));
+                          ref.invalidate(
+                            payPeriodsByStatusProvider(_selectedStatus!),
+                          );
                         }
                       },
                       icon: const Icon(Icons.refresh_rounded),
-                      color: const Color(0xFF6366F1),
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ],
                 ),
@@ -128,9 +127,7 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
             ),
 
             // Bottom padding
-            const SliverToBoxAdapter(
-              child: SizedBox(height: 100),
-            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 100)),
           ],
         ),
       ),
@@ -145,21 +142,14 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
       ),
       child: Container(
         margin: const EdgeInsets.all(20),
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+            colors: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
           ),
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF6366F1).withValues(alpha: 0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -167,27 +157,30 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Payroll',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Payroll',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Colors.white,
+                          fontSize: 14,
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Management',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
+                      SizedBox(height: 4),
+                      Text(
+                        'Management',
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 12),
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -216,64 +209,87 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
   }
 
   Widget _buildStatsRow(List<PayPeriod> periods) {
-    final activePeriods = periods.where(
-      (p) => p.status == PayPeriodStatus.active || p.status == PayPeriodStatus.processing
-    ).length;
-    final completedPeriods = periods.where(
-      (p) => p.status == PayPeriodStatus.completed || p.status == PayPeriodStatus.closed
-    ).length;
+    final activePeriods = periods
+        .where(
+          (p) =>
+              p.status == PayPeriodStatus.active ||
+              p.status == PayPeriodStatus.processing,
+        )
+        .length;
+    final completedPeriods = periods
+        .where(
+          (p) =>
+              p.status == PayPeriodStatus.completed ||
+              p.status == PayPeriodStatus.closed,
+        )
+        .length;
     final totalNet = periods.fold<double>(
-      0, (sum, p) => sum + (p.totalNetAmount ?? 0)
+      0,
+      (sum, p) => sum + (p.totalNetAmount ?? 0),
     );
 
-    return Row(
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
       children: [
         _buildStatItem(
           icon: Icons.hourglass_top_rounded,
           label: 'Active',
           value: activePeriods.toString(),
         ),
-        const SizedBox(width: 16),
         _buildStatItem(
           icon: Icons.check_circle_rounded,
           label: 'Completed',
           value: completedPeriods.toString(),
         ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildStatItem(
-            icon: Icons.payments_rounded,
-            label: 'Total Paid',
-            value: _formatAmount(totalNet),
-          ),
+        _buildStatItem(
+          icon: Icons.payments_rounded,
+          label: 'Total Paid',
+          value: _formatAmount(totalNet),
         ),
       ],
     );
   }
 
   Widget _buildStatsRowLoading() {
-    return Row(
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
       children: [
-        _buildStatItem(icon: Icons.hourglass_top_rounded, label: 'Active', value: '--'),
-        const SizedBox(width: 16),
-        _buildStatItem(icon: Icons.check_circle_rounded, label: 'Completed', value: '--'),
-        const SizedBox(width: 16),
-        Expanded(child: _buildStatItem(icon: Icons.payments_rounded, label: 'Total Paid', value: '--')),
+        _buildStatItem(
+          icon: Icons.hourglass_top_rounded,
+          label: 'Active',
+          value: '--',
+        ),
+        _buildStatItem(
+          icon: Icons.check_circle_rounded,
+          label: 'Completed',
+          value: '--',
+        ),
+        _buildStatItem(
+          icon: Icons.payments_rounded,
+          label: 'Total Paid',
+          value: '--',
+        ),
       ],
     );
   }
 
-  Widget _buildStatItem({required IconData icon, required String label, required String value}) {
+  Widget _buildStatItem({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.15),
+        color: Colors.black.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: Colors.white70, size: 18),
+          Icon(icon, color: Colors.white, size: 18),
           const SizedBox(height: 6),
           Text(
             value,
@@ -285,10 +301,7 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
           ),
           Text(
             label,
-            style: const TextStyle(
-              color: Colors.white60,
-              fontSize: 11,
-            ),
+            style: const TextStyle(color: Colors.white, fontSize: 11),
           ),
         ],
       ),
@@ -297,9 +310,9 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
 
   Widget _buildStatusTabs() {
     final statuses = [null, ...PayPeriodStatus.values];
-    
+
     return Container(
-      height: 44,
+      height: 24 + MediaQuery.textScalerOf(context).scale(20),
       margin: const EdgeInsets.symmetric(horizontal: 20),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
@@ -308,7 +321,7 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
           final status = statuses[index];
           final isSelected = _selectedStatus == status;
           final label = status == null ? 'All' : _getStatusLabel(status);
-          
+
           return GestureDetector(
             onTap: () => setState(() => _selectedStatus = status),
             child: AnimatedContainer(
@@ -316,31 +329,23 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
               margin: const EdgeInsets.only(right: 8),
               padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
-                gradient: isSelected
-                    ? const LinearGradient(
-                        colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-                      )
-                    : null,
-                color: isSelected ? null : Colors.white,
-                borderRadius: BorderRadius.circular(22),
+                color: isSelected
+                    ? Theme.of(context).colorScheme.primary
+                    : context.surfacePrimary,
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: isSelected ? Colors.transparent : const Color(0xFFE5E7EB),
+                  color: isSelected
+                      ? Colors.transparent
+                      : context.borderDefault,
                 ),
-                boxShadow: isSelected
-                    ? [
-                        BoxShadow(
-                          color: const Color(0xFF6366F1).withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ]
-                    : null,
               ),
               alignment: Alignment.center,
               child: Text(
                 label,
                 style: TextStyle(
-                  color: isSelected ? Colors.white : const Color(0xFF6B7280),
+                  color: isSelected
+                      ? Theme.of(context).colorScheme.onPrimary
+                      : context.textSecondary,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                   fontSize: 13,
                 ),
@@ -355,39 +360,56 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
   Widget _buildQuickActions(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(20),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildActionCard(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final actions = [
+            _buildActionCard(
               icon: Icons.play_circle_fill_rounded,
               title: 'Run Payroll',
               subtitle: 'Regular cycle',
-              gradient: const [Color(0xFF10B981), Color(0xFF059669)],
+              accentColor: const Color(0xFF059669),
               onTap: () => context.push('/payroll/run'),
             ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: _buildActionCard(
+            _buildActionCard(
               icon: Icons.bolt_rounded,
               title: 'Off-Cycle',
               subtitle: 'On-demand run',
-              gradient: const [Color(0xFFF59E0B), Color(0xFFD97706)],
+              accentColor: const Color(0xFFD97706),
               onTap: () => context.push('/payroll/off-cycle'),
             ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: _buildActionCard(
+            _buildActionCard(
               icon: Icons.history_rounded,
               title: 'History',
               subtitle: 'Past payrolls',
-              gradient: const [Color(0xFF3B82F6), Color(0xFF2563EB)],
-              onTap: () => setState(
-                  () => _selectedStatus = PayPeriodStatus.completed),
+              accentColor: const Color(0xFF2563EB),
+              onTap: () =>
+                  setState(() => _selectedStatus = PayPeriodStatus.completed),
             ),
-          ),
-        ],
+          ];
+          if (constraints.maxWidth <
+              360 * MediaQuery.textScalerOf(context).scale(1)) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var index = 0; index < actions.length; index++) ...[
+                  if (index > 0) const SizedBox(height: 12),
+                  actions[index],
+                ],
+              ],
+            );
+          }
+          return IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var index = 0; index < actions.length; index++) ...[
+                  if (index > 0) const SizedBox(width: 12),
+                  Expanded(child: actions[index]),
+                ],
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -396,7 +418,7 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
     required IconData icon,
     required String title,
     required String subtitle,
-    required List<Color> gradient,
+    required Color accentColor,
     required VoidCallback onTap,
   }) {
     return Material(
@@ -407,19 +429,9 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: gradient,
-            ),
+            color: context.surfacePrimary,
             borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: gradient[0].withValues(alpha: 0.3),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
+            border: Border.all(color: context.borderDefault),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -427,27 +439,25 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(10),
+                  color: accentColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: Colors.white, size: 22),
+                child: Icon(icon, color: accentColor, size: 22),
               ),
               const SizedBox(height: 12),
               Text(
                 title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 15,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  color: context.textPrimary,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.8),
-                  fontSize: 12,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: context.textSecondary),
               ),
             ],
           ),
@@ -456,49 +466,50 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
     );
   }
 
-  Widget _buildActivePayrollAlert(BuildContext context, List<PayPeriod> periods) {
+  Widget _buildActivePayrollAlert(
+    BuildContext context,
+    List<PayPeriod> periods,
+  ) {
     final activePeriod = periods.firstWhere(
-      (p) => p.status == PayPeriodStatus.active || p.status == PayPeriodStatus.processing,
-      orElse: () => periods.isNotEmpty ? periods.first : PayPeriod(
-        id: '',
-        name: '',
-        frequency: PayPeriodFrequency.monthly,
-        startDate: DateTime.now(),
-        endDate: DateTime.now(),
-        status: PayPeriodStatus.draft,
-      ),
+      (p) =>
+          p.status == PayPeriodStatus.active ||
+          p.status == PayPeriodStatus.processing,
+      orElse: () => periods.isNotEmpty
+          ? periods.first
+          : PayPeriod(
+              id: '',
+              name: '',
+              frequency: PayPeriodFrequency.monthly,
+              startDate: DateTime.now(),
+              endDate: DateTime.now(),
+              status: PayPeriodStatus.draft,
+            ),
     );
 
-    if (activePeriod.id.isEmpty || 
-        (activePeriod.status != PayPeriodStatus.active && 
-         activePeriod.status != PayPeriodStatus.processing)) {
+    if (activePeriod.id.isEmpty ||
+        (activePeriod.status != PayPeriodStatus.active &&
+            activePeriod.status != PayPeriodStatus.processing)) {
       return const SizedBox.shrink();
     }
 
-    final progress = (activePeriod.processedWorkers ?? 0) / 
+    final progress =
+        (activePeriod.processedWorkers ?? 0) /
         (activePeriod.totalWorkers ?? 1).clamp(1, double.infinity);
 
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.surfacePrimary,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: const Color(0xFF10B981).withValues(alpha: 0.3),
           width: 2,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: InkWell(
         onTap: () => context.push('/payroll/review/${activePeriod.id}'),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         child: Column(
           children: [
             Row(
@@ -520,7 +531,9 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
                         children: [
                           const Text(
                             'Payroll In Progress',
@@ -529,14 +542,15 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
                               color: Color(0xFF10B981),
                             ),
                           ),
-                          const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                              color: const Color(
+                                0xFF10B981,
+                              ).withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
@@ -553,18 +567,18 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
                       const SizedBox(height: 2),
                       Text(
                         activePeriod.name,
-                        style: const TextStyle(
-                          color: Color(0xFF6B7280),
+                        style: TextStyle(
+                          color: context.textSecondary,
                           fontSize: 13,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const Icon(
+                Icon(
                   Icons.arrow_forward_ios_rounded,
                   size: 16,
-                  color: Color(0xFF9CA3AF),
+                  color: context.iconMuted,
                 ),
               ],
             ),
@@ -575,27 +589,28 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
               child: LinearProgressIndicator(
                 value: progress.toDouble(),
                 minHeight: 6,
-                backgroundColor: const Color(0xFFE5E7EB),
-                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
+                backgroundColor: context.borderMuted,
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  Color(0xFF10B981),
+                ),
               ),
             ),
             const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              spacing: 16,
+              runSpacing: 8,
               children: [
                 Text(
                   '${activePeriod.processedWorkers ?? 0}/${activePeriod.totalWorkers ?? 0} workers',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF6B7280),
-                  ),
+                  style: TextStyle(fontSize: 12, color: context.textSecondary),
                 ),
                 Text(
                   'Net: KES ${_formatAmount(activePeriod.totalNetAmount ?? 0)}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF374151),
+                    color: context.textPrimary,
                   ),
                 ),
               ],
@@ -611,19 +626,19 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
   /// 2. All current year periods are completed/closed and we're near year end or in new year
   Widget _buildInitializeYearCard(List<PayPeriod> periods) {
     final yearToInitialize = PayPeriodUtils.getYearToInitialize(periods);
-    
+
     if (yearToInitialize != null) {
-      final subtitle = yearToInitialize == DateTime.now().year 
-          ? 'No pay periods for $yearToInitialize' 
+      final subtitle = yearToInitialize == DateTime.now().year
+          ? 'No pay periods for $yearToInitialize'
           : 'Ready for $yearToInitialize payroll';
-      
+
       return InitializePayPeriodsCard(
         year: yearToInitialize,
         subtitle: subtitle,
         onPressed: () => _initializeYearSpecific(yearToInitialize),
       );
     }
-    
+
     return const SizedBox.shrink();
   }
 
@@ -642,7 +657,9 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
               content: Text('Pay periods already exist for $year'),
               backgroundColor: Colors.orange[600],
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
           );
         }
@@ -662,7 +679,9 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
             content: Text('Generated payroll periods for $year'),
             backgroundColor: const Color(0xFF10B981),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
         ref.invalidate(payPeriodsProvider);
@@ -685,7 +704,9 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
               content: Text('Error: $e'),
               backgroundColor: Colors.red,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
           );
         }
@@ -716,19 +737,13 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
 
   Widget _buildPayPeriodCard(BuildContext context, PayPeriod period) {
     final statusColor = _getStatusColor(period.status);
-    
+
     final cardContent = Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.surfacePrimary,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: context.borderDefault),
       ),
       child: Material(
         color: Colors.transparent,
@@ -761,11 +776,11 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
                         children: [
                           Text(
                             period.name,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                              color: Color(0xFF1F2937),
-                            ),
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: context.textPrimary,
+                                ),
                           ),
                           const SizedBox(height: 4),
                           Row(
@@ -776,11 +791,16 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
                                 color: context.iconMuted,
                               ),
                               const SizedBox(width: 4),
-                              Text(
-                                _formatDateRange(period.startDate, period.endDate),
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: context.textSecondary,
+                              Flexible(
+                                child: Text(
+                                  _formatDateRange(
+                                    period.startDate,
+                                    period.endDate,
+                                  ),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: context.textSecondary,
+                                  ),
                                 ),
                               ),
                             ],
@@ -788,11 +808,14 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
                         ],
                       ),
                     ),
-                    _buildStatusBadge(period.status, statusColor),
-                    if (period.status == PayPeriodStatus.draft && period.isOffCycle) ...[
+                    if (period.status == PayPeriodStatus.draft &&
+                        period.isOffCycle) ...[
                       const SizedBox(width: 8),
                       IconButton(
-                        icon: const Icon(Icons.delete_outline, color: Colors.red),
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.red,
+                        ),
                         onPressed: () => _confirmAndDelete(context, period),
                         tooltip: 'Delete Draft',
                         padding: EdgeInsets.zero,
@@ -801,35 +824,32 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
                     ],
                   ],
                 ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: _buildStatusBadge(period.status, statusColor),
+                ),
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF9FAFB),
-                    borderRadius: BorderRadius.circular(10),
+                    color: context.surfaceMuted,
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  child: Wrap(
+                    alignment: WrapAlignment.spaceAround,
+                    spacing: 16,
+                    runSpacing: 12,
                     children: [
                       _buildMiniStat(
                         Icons.people_outline_rounded,
                         '${period.totalWorkers ?? 0}',
                         'Workers',
                       ),
-                      Container(
-                        width: 1,
-                        height: 30,
-                        color: const Color(0xFFE5E7EB),
-                      ),
                       _buildMiniStat(
                         Icons.attach_money_rounded,
                         _formatAmount(period.totalGrossAmount ?? 0),
                         'Gross',
-                      ),
-                      Container(
-                        width: 1,
-                        height: 30,
-                        color: const Color(0xFFE5E7EB),
                       ),
                       _buildMiniStat(
                         Icons.account_balance_wallet_outlined,
@@ -869,7 +889,9 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Delete Draft?'),
-            content: const Text('Are you sure you want to delete this draft pay period?'),
+            content: const Text(
+              'Are you sure you want to delete this draft pay period?',
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
@@ -886,17 +908,19 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
       },
       onDismissed: (direction) async {
         try {
-          await ref.read(payPeriodsProvider.notifier).deletePayPeriod(period.id);
+          await ref
+              .read(payPeriodsProvider.notifier)
+              .deletePayPeriod(period.id);
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Pay period deleted')),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Pay period deleted')));
           }
         } catch (e) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Failed to delete: $e')),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('Failed to delete: $e')));
             ref.invalidate(payPeriodsProvider);
           }
         }
@@ -911,14 +935,14 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14, color: const Color(0xFF6366F1)),
+            Icon(icon, size: 14, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 4),
             Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 13,
-                color: Color(0xFF374151),
+                color: context.textPrimary,
               ),
             ),
           ],
@@ -926,10 +950,7 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
         const SizedBox(height: 2),
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 10,
-            color: Color(0xFF9CA3AF),
-          ),
+          style: TextStyle(fontSize: 10, color: context.textSecondary),
         ),
       ],
     );
@@ -958,7 +979,9 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Draft?'),
-        content: const Text('Are you sure you want to delete this draft pay period?'),
+        content: const Text(
+          'Are you sure you want to delete this draft pay period?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -978,15 +1001,15 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
     try {
       await ref.read(payPeriodsProvider.notifier).deletePayPeriod(period.id);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Pay period deleted')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Pay period deleted')));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to delete: $e')));
         ref.invalidate(payPeriodsProvider);
       }
     }
@@ -1000,7 +1023,7 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: const Color(0xFFF3F4F6),
+              color: context.surfaceAlt,
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -1010,32 +1033,29 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
             ),
           ),
           const SizedBox(height: 20),
-          const Text(
+          Text(
             'No Pay Periods',
-            style: TextStyle(
-              fontSize: 18,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              color: Color(0xFF374151),
+              color: context.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Initialize your payroll calendar to get started',
-            style: TextStyle(
-              fontSize: 14,
-              color: context.textSecondary,
-            ),
+            style: TextStyle(fontSize: 14, color: context.textSecondary),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
-          if (_selectedStatus == null) // Only show initialize button when viewing all
+          if (_selectedStatus ==
+              null) // Only show initialize button when viewing all
             _isInitializing
                 ? const CircularProgressIndicator()
                 : ElevatedButton.icon(
                     onPressed: _initializeYear,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF6366F1),
-                      foregroundColor: Colors.white,
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 24,
                         vertical: 14,
@@ -1075,21 +1095,17 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
                 ),
               ),
               const SizedBox(height: 20),
-              const Text(
+              Text(
                 'Something went wrong',
-                style: TextStyle(
-                  fontSize: 18,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF374151),
+                  color: context.textPrimary,
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 error.toString(),
-                style: TextStyle(
-                  fontSize: 13,
-                  color: context.textSecondary,
-                ),
+                style: TextStyle(fontSize: 13, color: context.textSecondary),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 20),
@@ -1098,15 +1114,20 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
                   if (_selectedStatus == null) {
                     ref.invalidate(payPeriodsProvider);
                   } else {
-                    ref.invalidate(payPeriodsByStatusProvider(_selectedStatus!));
+                    ref.invalidate(
+                      payPeriodsByStatusProvider(_selectedStatus!),
+                    );
                   }
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6366F1),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
                 icon: const Icon(Icons.refresh_rounded),
@@ -1181,7 +1202,20 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
   }
 
   String _formatDateRange(DateTime start, DateTime end) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return '${months[start.month - 1]} ${start.day} - ${months[end.month - 1]} ${end.day}';
   }
 
@@ -1201,7 +1235,9 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
               content: const Text('Pay periods already exist for this year'),
               backgroundColor: Colors.orange[600],
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
           );
         }
@@ -1221,7 +1257,9 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
             content: Text('Generated payroll periods for ${now.year}'),
             backgroundColor: const Color(0xFF10B981),
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
         ref.invalidate(payPeriodsProvider);
@@ -1233,7 +1271,9 @@ class _PayrollPageState extends ConsumerState<PayrollPage>
             content: Text('Error: $e'),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
       }

@@ -35,15 +35,18 @@ class PayrollConfirmTheme {
 
   // Background colors
   static const Color successBgLight = Color(0xFFF0FDF4); // Green-50
-  static const Color errorBgLight = Color(0xFFFEF2F2);   // Red-50
+  static const Color errorBgLight = Color(0xFFFEF2F2); // Red-50
 
   // Card styling
   static const double cardBorderRadius = 16.0;
   static const double bottomSheetRadius = 24.0;
-  static const double buttonRadius = 16.0;
+  static const double buttonRadius = 12.0;
 
   // Wallet card decoration
-  static BoxDecoration walletCardDecoration(BuildContext context, {required bool isSufficient}) {
+  static BoxDecoration walletCardDecoration(
+    BuildContext context, {
+    required bool isSufficient,
+  }) {
     return BoxDecoration(
       color: context.surfacePrimary,
       borderRadius: BorderRadius.circular(cardBorderRadius),
@@ -51,47 +54,43 @@ class PayrollConfirmTheme {
         color: isSufficient ? context.borderMuted : Colors.red.shade200,
         width: 2,
       ),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.05),
-          blurRadius: 10,
-          offset: const Offset(0, 4),
-        ),
-      ],
     );
   }
 
   // Bottom sheet decoration
   static const BoxDecoration bottomSheetDecoration = BoxDecoration(
     color: Colors.white,
-    borderRadius: BorderRadius.vertical(top: Radius.circular(bottomSheetRadius)),
+    borderRadius: BorderRadius.vertical(
+      top: Radius.circular(bottomSheetRadius),
+    ),
   );
 
   // M-Pesa button style
   static ButtonStyle get mpesaButtonStyle => ElevatedButton.styleFrom(
-        backgroundColor: mpesaGreen,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 18),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(buttonRadius),
-        ),
-        elevation: 0,
-      );
+    backgroundColor: mpesaGreen,
+    foregroundColor: Colors.white,
+    padding: const EdgeInsets.symmetric(vertical: 18),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(buttonRadius),
+    ),
+    elevation: 0,
+  );
 
   // Primary action button style
-  static ButtonStyle primaryButtonStyle(BuildContext context) => ElevatedButton.styleFrom(
-        backgroundColor: successGreen,
-        foregroundColor: Colors.white,
+  static ButtonStyle primaryButtonStyle(BuildContext context) =>
+      ElevatedButton.styleFrom(
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
         padding: const EdgeInsets.symmetric(vertical: 16),
         disabledBackgroundColor: context.borderMuted,
       );
 
   // Dark button style (for results page)
   static ButtonStyle get darkButtonStyle => ElevatedButton.styleFrom(
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.all(16),
-      );
+    backgroundColor: Colors.black,
+    foregroundColor: Colors.white,
+    padding: const EdgeInsets.all(16),
+  );
 }
 
 /// Snackbar helpers

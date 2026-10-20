@@ -298,11 +298,7 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
       // Process payroll via backend API (returns jobId for async processing)
       final response = await ref
           .read(payrollProvider.notifier)
-          .processPayroll(
-            workerIds,
-            widget.payPeriodId,
-            skipPayout: false,
-          );
+          .processPayroll(workerIds, widget.payPeriodId, skipPayout: false);
 
       // If we have a jobId, show the progress dialog
       if (response.isAsync && response.jobId != null && mounted) {
@@ -442,7 +438,6 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
     }
 
     return Scaffold(
-      backgroundColor: context.surfaceMuted,
       appBar: AppBar(
         title: const Text('Confirm Payroll'),
         leading: IconButton(
@@ -494,7 +489,7 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
     if (verification == null) return const SizedBox();
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -821,7 +816,7 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
                       child: Text(
                         'Funds are clearing. You have enough to cover this payment once settled.',
                         style: TextStyle(
-                          color: Colors.blue.shade900,
+                          color: context.textPrimary,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -867,10 +862,7 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
     // backend computes it over non-cash workers only (cash pay is handed over
     // rather than funded from the wallet), so an all-cash run reports 0.00 for
     // every amount while still counting the cash workers.
-    final totalNet = _calculations.fold<double>(
-      0,
-      (sum, c) => sum + c.netPay,
-    );
+    final totalNet = _calculations.fold<double>(0, (sum, c) => sum + c.netPay);
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -971,7 +963,7 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
                 _isAllCash ? 'Cash Payment' : 'Cash Workers',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: Colors.amber.shade900,
+                  color: context.textPrimary,
                 ),
               ),
             ],
@@ -986,7 +978,7 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
                       'No wallet deduction for cash workers. '
                       'Please disburse their pay manually.',
             style: TextStyle(
-              color: Colors.amber.shade900,
+              color: context.textSecondary,
               fontSize: 13,
               height: 1.4,
             ),
@@ -1043,33 +1035,21 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
         : 'Insufficient Funds';
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: context.surfacePrimary,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
-          ),
-        ],
+        border: Border(top: BorderSide(color: context.borderDefault)),
       ),
       child: SafeArea(
         child: ElevatedButton(
           onPressed: canProceed && !isProcessing ? _processPayroll : null,
-          style: PayrollConfirmTheme.primaryButtonStyle(context).copyWith(
-            backgroundColor: WidgetStateProperty.resolveWith((states) {
-              if (states.contains(WidgetState.disabled))
-                return context.borderMuted;
-              return PayrollConfirmTheme.successGreen;
-            }),
-          ),
+          style: PayrollConfirmTheme.primaryButtonStyle(context),
           child: isProcessing
-              ? const SizedBox(
+              ? SizedBox(
                   width: 24,
                   height: 24,
                   child: CircularProgressIndicator(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onPrimary,
                     strokeWidth: 2,
                   ),
                 )

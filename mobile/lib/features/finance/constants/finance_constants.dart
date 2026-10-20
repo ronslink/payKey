@@ -27,16 +27,17 @@ class FinanceTheme {
       Theme.of(context).scaffoldBackgroundColor;
 
   static Color cardBackground(BuildContext context) =>
-      Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface;
+      Theme.of(context).cardTheme.color ??
+      Theme.of(context).colorScheme.surface;
 
   static const Color successColor = Colors.green;
   static const Color trendUpColor = Colors.greenAccent;
   static const Color trendDownColor = Colors.redAccent;
 
   // Dimensions
-  static const double cardBorderRadius = 12.0;
+  static const double cardBorderRadius = 16.0;
   static const double statusCardBorderRadius = 16.0;
-  static const double pagePadding = 16.0;
+  static const double pagePadding = 20.0;
   static const double cardPadding = 20.0;
   static const double actionButtonPadding = 14.0;
   static const double progressBarHeight = 6.0;
@@ -51,43 +52,32 @@ class FinanceTheme {
     bool isActive = false,
     Color? activeColor,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return BoxDecoration(
       color: cardBackground(context),
       borderRadius: BorderRadius.circular(cardBorderRadius),
       border: Border.all(
-        color: isActive ? (activeColor ?? Colors.blue) : (isDark ? Colors.grey.shade800 : Colors.grey.shade200),
+        color: isActive
+            ? (activeColor ?? Theme.of(context).colorScheme.primary)
+            : Theme.of(context).dividerColor,
       ),
-      boxShadow: isDark
-          ? null
-          : [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
     );
   }
 
   // Status card gradient
   static LinearGradient statusGradient(Color primaryColor) => LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          primaryColor,
-          primaryColor.withValues(alpha: 0.85),
-        ],
-      );
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [primaryColor, primaryColor.withValues(alpha: 0.85)],
+  );
 
   // Status card shadow
   static List<BoxShadow> statusCardShadow(Color primaryColor) => [
-        BoxShadow(
-          color: primaryColor.withValues(alpha: 0.3),
-          blurRadius: 15,
-          offset: const Offset(0, 8),
-        ),
-      ];
+    BoxShadow(
+      color: primaryColor.withValues(alpha: 0.3),
+      blurRadius: 15,
+      offset: const Offset(0, 8),
+    ),
+  ];
 }
 
 /// Quick action item model

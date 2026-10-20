@@ -43,11 +43,8 @@ class SettingsPage extends ConsumerWidget {
         error: (error, _) => _buildErrorState(context, error),
         data: (settings) {
           final tier = _extractTier(subscriptionAsync);
-          
-          return _SettingsContent(
-            settings: settings,
-            tier: tier,
-          );
+
+          return _SettingsContent(settings: settings, tier: tier);
         },
       ),
     );
@@ -113,15 +110,15 @@ class _SettingsContent extends ConsumerWidget {
   final UserSettings settings;
   final String tier;
 
-  const _SettingsContent({
-    required this.settings,
-    required this.tier,
-  });
+  const _SettingsContent({required this.settings, required this.tier});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final displayPhotoUrl = settings.photoUrl ?? 
-        (settings.googleId != null ? 'https://lh3.googleusercontent.com/a/${settings.googleId}' : null);
+    final displayPhotoUrl =
+        settings.photoUrl ??
+        (settings.googleId != null
+            ? 'https://lh3.googleusercontent.com/a/${settings.googleId}'
+            : null);
 
     return SingleChildScrollView(
       child: Column(
@@ -144,21 +141,15 @@ class _SettingsContent extends ConsumerWidget {
 
           // Preferences
           const SettingsSectionLabel('PREFERENCES'),
-          SettingsCard(
-            items: _buildPreferencesItems(context, ref),
-          ),
+          SettingsCard(items: _buildPreferencesItems(context, ref)),
 
           // Payment
           const SettingsSectionLabel('PAYMENT & BILLING'),
-          SettingsCard(
-            items: _buildPaymentItems(context, ref),
-          ),
+          SettingsCard(items: _buildPaymentItems(context, ref)),
 
           // Account
           const SettingsSectionLabel('ACCOUNT'),
-          SettingsCard(
-            items: _buildAccountItems(context, ref),
-          ),
+          SettingsCard(items: _buildAccountItems(context, ref)),
 
           const SizedBox(height: 100),
         ],
@@ -178,7 +169,7 @@ class _SettingsContent extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(vertical: 16),
               child: Column(
                 children: [
-                   Text(
+                  Text(
                     'Photo Guidelines',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.bold,
@@ -225,22 +216,21 @@ class _SettingsContent extends ConsumerWidget {
     try {
       final bytes = await pickedFile.readAsBytes();
       if (!context.mounted) return;
-      
-      await ref.read(settingsProvider.notifier).uploadProfilePhoto(
-        bytes, 
-        pickedFile.name,
-      );
-      
+
+      await ref
+          .read(settingsProvider.notifier)
+          .uploadProfilePhoto(bytes, pickedFile.name);
+
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile photo updated')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Profile photo updated')));
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Upload failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
       }
     }
   }
@@ -249,7 +239,14 @@ class _SettingsContent extends ConsumerWidget {
   // PREFERENCES SECTION
   // ===========================================================================
 
-  List<SettingItem> _buildPreferencesItems(BuildContext context, WidgetRef ref) {
+  List<SettingItem> _buildPreferencesItems(
+    BuildContext context,
+    WidgetRef ref,
+  ) {
+    final followsSystemTheme = settings.themeMode == ThemeMode.system;
+    final isDarkMode = followsSystemTheme
+        ? Theme.of(context).brightness == Brightness.dark
+        : settings.themeMode == ThemeMode.dark;
     final subscriptionAsync = ref.watch(userSubscriptionProvider);
     final isPlatinum = subscriptionAsync.when(
       data: (sub) => sub?.plan.tier == 'PLATINUM',
@@ -261,13 +258,15 @@ class _SettingsContent extends ConsumerWidget {
       SettingItem(
         icon: Icons.dark_mode_outlined,
         title: 'Dark Mode',
-        subtitle: settings.themeMode == ThemeMode.dark ? 'Enabled' : 'Disabled',
+        subtitle: followsSystemTheme
+            ? 'Following system (${isDarkMode ? 'dark' : 'light'})'
+            : (isDarkMode ? 'Enabled' : 'Disabled'),
         trailing: Switch(
-          value: settings.themeMode == ThemeMode.dark,
+          value: isDarkMode,
           onChanged: (value) {
-            ref.read(settingsProvider.notifier).updateThemeMode(
-                  value ? ThemeMode.dark : ThemeMode.light,
-                );
+            ref
+                .read(settingsProvider.notifier)
+                .updateThemeMode(value ? ThemeMode.dark : ThemeMode.light);
           },
         ),
       ),
@@ -345,21 +344,25 @@ class _SettingsContent extends ConsumerWidget {
   }
 
   void _showBankAccountEditor(BuildContext context, WidgetRef ref) {
-    final accountController = TextEditingController(text: settings.bankAccount ?? '');
+    final accountController = TextEditingController(
+      text: settings.bankAccount ?? '',
+    );
     String? selectedBankCode = settings.bankCode;
     String? selectedBankName = settings.bankName;
 
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
+      backgroundColor:
+          Theme.of(context).cardTheme.color ??
+          Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) => StatefulBuilder(
         builder: (context, setModalState) {
           final banksAsync = ref.watch(supportedBanksProvider);
-          
+
           return Padding(
             padding: EdgeInsets.only(
               left: 20,
@@ -378,23 +381,31 @@ class _SettingsContent extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 20),
-                
+
                 // Bank Dropdown
                 banksAsync.when(
                   data: (banks) {
                     // Try to find current bank by code or name
                     if (selectedBankCode == null && selectedBankName != null) {
                       final matchedBank = banks.firstWhere(
-                        (b) => b['bank_name']?.toString().toLowerCase() == selectedBankName?.toLowerCase(),
+                        (b) =>
+                            b['bank_name']?.toString().toLowerCase() ==
+                            selectedBankName?.toLowerCase(),
                         orElse: () => {},
                       );
                       if (matchedBank.isNotEmpty) {
                         selectedBankCode = matchedBank['bank_code']?.toString();
                       }
                     }
-                    
+
                     return DropdownButtonFormField<String>(
-                      initialValue: selectedBankCode != null && banks.any((b) => b['bank_code'].toString() == selectedBankCode)
+                      initialValue:
+                          selectedBankCode != null &&
+                              banks.any(
+                                (b) =>
+                                    b['bank_code'].toString() ==
+                                    selectedBankCode,
+                              )
                           ? selectedBankCode
                           : null,
                       decoration: const InputDecoration(
@@ -427,10 +438,13 @@ class _SettingsContent extends ConsumerWidget {
                     );
                   },
                   loading: () => const LinearProgressIndicator(),
-                  error: (e, _) => Text('Error loading banks: $e', style: const TextStyle(color: Colors.red)),
+                  error: (e, _) => Text(
+                    'Error loading banks: $e',
+                    style: const TextStyle(color: Colors.red),
+                  ),
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Account Number
                 TextFormField(
                   controller: accountController,
@@ -442,18 +456,21 @@ class _SettingsContent extends ConsumerWidget {
                   keyboardType: TextInputType.number,
                 ),
                 const SizedBox(height: 24),
-                
+
                 // Save Button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      if (selectedBankName != null && selectedBankName!.isNotEmpty) {
-                        ref.read(settingsProvider.notifier).updateBankAccount(
-                          selectedBankName!,
-                          selectedBankCode,
-                          accountController.text,
-                        );
+                      if (selectedBankName != null &&
+                          selectedBankName!.isNotEmpty) {
+                        ref
+                            .read(settingsProvider.notifier)
+                            .updateBankAccount(
+                              selectedBankName!,
+                              selectedBankCode,
+                              accountController.text,
+                            );
                         Navigator.pop(ctx);
                         _showSavedSnackbar(context, 'Bank account saved');
                       } else {
@@ -477,8 +494,12 @@ class _SettingsContent extends ConsumerWidget {
   }
 
   void _showMpesaEditor(BuildContext context, WidgetRef ref) {
-    final phoneController = TextEditingController(text: settings.mpesaPhone ?? '');
-    final paybillController = TextEditingController(text: settings.mpesaPaybill ?? '');
+    final phoneController = TextEditingController(
+      text: settings.mpesaPhone ?? '',
+    );
+    final paybillController = TextEditingController(
+      text: settings.mpesaPaybill ?? '',
+    );
 
     SettingsBottomSheet.show(
       context: context,
@@ -505,7 +526,9 @@ class _SettingsContent extends ConsumerWidget {
         ],
         submitLabel: 'Save',
         onSubmit: () {
-          ref.read(settingsProvider.notifier).updateMpesaSettings(
+          ref
+              .read(settingsProvider.notifier)
+              .updateMpesaSettings(
                 paybillController.text.isEmpty ? null : paybillController.text,
                 null,
                 phoneController.text.isEmpty ? null : phoneController.text,
@@ -534,12 +557,6 @@ class _SettingsContent extends ConsumerWidget {
 
   List<SettingItem> _buildAccountItems(BuildContext context, WidgetRef ref) {
     return [
-      SettingItem(
-        icon: Icons.notifications_outlined,
-        title: 'Notifications',
-        subtitle: 'Push, email & SMS alerts',
-        onTap: () => _showComingSoon(context, 'Notification settings'),
-      ),
       SettingItem(
         icon: Icons.help_outline,
         title: 'Help & Support',
@@ -576,8 +593,10 @@ class _SettingsContent extends ConsumerWidget {
     if (deleted != true || !context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Your account has been scheduled for deletion. '
-            'Your account and data will be permanently deleted shortly.'),
+        content: Text(
+          'Your account has been scheduled for deletion. '
+          'Your account and data will be permanently deleted shortly.',
+        ),
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -604,19 +623,7 @@ class _SettingsContent extends ConsumerWidget {
 
   void _showSavedSnackbar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  void _showComingSoon(BuildContext context, String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$feature coming soon'),
-        behavior: SnackBarBehavior.floating,
-      ),
+      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
     );
   }
 
@@ -626,7 +633,7 @@ class _SettingsContent extends ConsumerWidget {
 
   void _showPropertyPicker(BuildContext context, WidgetRef ref) {
     final propertiesAsync = ref.watch(propertiesProvider);
-    
+
     propertiesAsync.when(
       data: (properties) {
         if (properties.isEmpty) {
@@ -634,26 +641,30 @@ class _SettingsContent extends ConsumerWidget {
           _showNoPropertiesDialog(context);
           return;
         }
-        
+
         if (properties.length == 1) {
           // Single property - auto-select it
-          ref.read(settingsProvider.notifier).updateDefaultProperty(properties.first.id);
+          ref
+              .read(settingsProvider.notifier)
+              .updateDefaultProperty(properties.first.id);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Default property set to: ${properties.first.name}'),
+              content: Text(
+                'Default property set to: ${properties.first.name}',
+              ),
               behavior: SnackBarBehavior.floating,
             ),
           );
           return;
         }
-        
+
         // Multiple properties - show picker
         _showPropertySelectionSheet(context, ref, properties);
       },
       loading: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Loading properties...')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Loading properties...')));
       },
       error: (error, _) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -668,7 +679,9 @@ class _SettingsContent extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('No Properties'),
-        content: const Text('You need to add a property first to set it as default.'),
+        content: const Text(
+          'You need to add a property first to set it as default.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -687,13 +700,15 @@ class _SettingsContent extends ConsumerWidget {
   }
 
   void _showPropertySelectionSheet(
-    BuildContext context, 
-    WidgetRef ref, 
-    List<PropertyModel> properties
+    BuildContext context,
+    WidgetRef ref,
+    List<PropertyModel> properties,
   ) {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
+      backgroundColor:
+          Theme.of(context).cardTheme.color ??
+          Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -706,9 +721,9 @@ class _SettingsContent extends ConsumerWidget {
             children: [
               Text(
                 'Select Default Property',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
               ...properties.map((property) {
@@ -729,7 +744,9 @@ class _SettingsContent extends ConsumerWidget {
                   title: Text(
                     property.name,
                     style: TextStyle(
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      fontWeight: isSelected
+                          ? FontWeight.bold
+                          : FontWeight.normal,
                     ),
                   ),
                   subtitle: Text(
@@ -737,11 +754,16 @@ class _SettingsContent extends ConsumerWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  trailing: isSelected 
+                  trailing: isSelected
                       ? const Icon(Icons.check_circle, color: Color(0xFF10B981))
-                      : const Icon(Icons.radio_button_unchecked, color: Colors.grey),
+                      : const Icon(
+                          Icons.radio_button_unchecked,
+                          color: Colors.grey,
+                        ),
                   onTap: () {
-                    ref.read(settingsProvider.notifier).updateDefaultProperty(property.id);
+                    ref
+                        .read(settingsProvider.notifier)
+                        .updateDefaultProperty(property.id);
                     Navigator.pop(ctx);
                     _showSavedSnackbar(context, 'Default property updated');
                   },
@@ -754,9 +776,10 @@ class _SettingsContent extends ConsumerWidget {
       },
     );
   }
+
   SettingItem _buildDefaultPropertyItem(BuildContext context, WidgetRef ref) {
     final propertiesAsync = ref.watch(propertiesProvider);
-    
+
     return SettingItem(
       icon: Icons.home_outlined,
       title: 'Default Property',
@@ -791,7 +814,7 @@ class _SettingsContent extends ConsumerWidget {
           }
           return 'Tap to select';
         }
-        
+
         // Find the selected property
         final selectedProperty = properties.firstWhere(
           (p) => p.id == settings.defaultPropertyId,
@@ -804,5 +827,3 @@ class _SettingsContent extends ConsumerWidget {
     );
   }
 }
-
-

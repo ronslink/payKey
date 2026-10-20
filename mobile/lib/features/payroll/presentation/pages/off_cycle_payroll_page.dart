@@ -45,8 +45,7 @@ class _OffCyclePayrollPageState extends ConsumerState<OffCyclePayrollPage> {
     final now = DateTime.now();
     _startDate = DateTime(now.year, now.month, 1);
     _endDate = DateTime(now.year, now.month + 1, 0);
-    _periodName =
-        'Off-Cycle — ${DateFormat('MMM yyyy').format(now)}';
+    _periodName = 'Off-Cycle — ${DateFormat('MMM yyyy').format(now)}';
 
     if (widget.preSelectedWorkerId != null) {
       _allWorkers = false;
@@ -76,21 +75,21 @@ class _OffCyclePayrollPageState extends ConsumerState<OffCyclePayrollPage> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     if (_startDate.isAfter(_endDate)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('End date cannot be before start date')),
       );
       return;
     }
-    
+
     if (!_allWorkers && _selectedWorkerIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select at least one worker')),
       );
       return;
     }
-    
+
     setState(() => _isSubmitting = true);
 
     try {
@@ -119,9 +118,7 @@ class _OffCyclePayrollPageState extends ConsumerState<OffCyclePayrollPage> {
       // Pass worker filter if not all workers
       await context.push(
         '/payroll/confirm/${created.id}',
-        extra: {
-          'workerIds': _allWorkers ? <String>[] : _selectedWorkerIds,
-        },
+        extra: {'workerIds': _allWorkers ? <String>[] : _selectedWorkerIds},
       );
 
       if (mounted) context.pop();
@@ -139,11 +136,7 @@ class _OffCyclePayrollPageState extends ConsumerState<OffCyclePayrollPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Off-Cycle Payroll'),
-        backgroundColor: const Color(0xFFF59E0B),
-        foregroundColor: Colors.white,
-      ),
+      appBar: AppBar(title: const Text('Off-Cycle Payroll')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(
@@ -169,7 +162,6 @@ class _OffCyclePayrollPageState extends ConsumerState<OffCyclePayrollPage> {
                 initialValue: _periodName,
                 decoration: const InputDecoration(
                   labelText: 'Period Name',
-                  border: OutlineInputBorder(),
                   hintText: 'e.g. Bonus Run March 2026',
                 ),
                 onChanged: (v) => _periodName = v,
@@ -177,59 +169,76 @@ class _OffCyclePayrollPageState extends ConsumerState<OffCyclePayrollPage> {
               const SizedBox(height: 16),
 
               // Date range
-              Row(
-                children: [
-                  Expanded(
-                    child: _DateField(
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final dates = [
+                    _DateField(
                       label: 'Start Date',
                       value: _startDate,
                       onTap: () => _selectDate(context, true),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _DateField(
+                    _DateField(
                       label: 'End Date',
                       value: _endDate,
                       onTap: () => _selectDate(context, false),
                     ),
-                  ),
-                ],
+                  ];
+                  if (constraints.maxWidth <
+                      320 * MediaQuery.textScalerOf(context).scale(1)) {
+                    return Column(
+                      children: [
+                        dates.first,
+                        const SizedBox(height: 16),
+                        dates.last,
+                      ],
+                    );
+                  }
+                  return Row(
+                    children: [
+                      Expanded(child: dates.first),
+                      const SizedBox(width: 12),
+                      Expanded(child: dates.last),
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 24),
 
               // Worker selection
               _SectionTitle('Workers'),
               const SizedBox(height: 12),
-              SwitchListTile.adaptive(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('All Workers'),
-                subtitle: const Text(
-                  'Pay all active workers in this off-cycle run',
+              if (widget.preSelectedWorkerId != null)
+                SwitchListTile.adaptive(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('All Workers'),
+                  subtitle: const Text(
+                    'Include all workers instead of the selected worker',
+                  ),
+                  value: _allWorkers,
+                  onChanged: (v) => setState(() => _allWorkers = v),
+                )
+              else
+                const ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text('All Workers'),
+                  subtitle: Text(
+                    'Review the workers before confirming payroll',
+                  ),
                 ),
-                value: _allWorkers,
-                activeTrackColor: const Color(0xFFF59E0B),
-                onChanged: (v) => setState(() => _allWorkers = v),
-              ),
 
               if (!_allWorkers) ...[
                 const SizedBox(height: 8),
-                if (widget.preSelectedWorkerName != null)
-                  _WorkerChip(
-                    name: widget.preSelectedWorkerName!,
-                    onRemove: () => setState(() {
-                      _selectedWorkerIds.remove(widget.preSelectedWorkerId);
-                    }),
-                  )
-                else
-                  Text(
-                    'Worker selection from multi-select coming soon. '
-                    'Return here from a worker\'s profile to pre-select.',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: context.textSecondary,
-                    ),
+                Chip(
+                  label: Text(
+                    widget.preSelectedWorkerName ?? 'Selected worker',
                   ),
+                  backgroundColor: Theme.of(
+                    context,
+                  ).colorScheme.primaryContainer,
+                  labelStyle: TextStyle(
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  ),
+                ),
               ],
 
               const SizedBox(height: 32),
@@ -238,26 +247,27 @@ class _OffCyclePayrollPageState extends ConsumerState<OffCyclePayrollPage> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed:
-                      _isSubmitting ? null : _submit,
+                  onPressed: _isSubmitting ? null : _submit,
                   icon: _isSubmitting
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 18,
                           height: 18,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                           ),
                         )
                       : const Icon(Icons.bolt_rounded),
-                  label: const Text('Create & Run Off-Cycle Payroll'),
+                  label: const Text(
+                    'Create & Run Off-Cycle Payroll',
+                    textAlign: TextAlign.center,
+                  ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFF59E0B),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    textStyle: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 16,
                     ),
                   ),
                 ),
@@ -277,29 +287,31 @@ class _SectionTitle extends StatelessWidget {
   const _SectionTitle(this.text);
   @override
   Widget build(BuildContext context) => Text(
-        text,
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF1F2937),
-        ),
-      );
+    text,
+    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+      fontWeight: FontWeight.bold,
+      color: context.textPrimary,
+    ),
+  );
 }
 
 class _InfoBanner extends StatelessWidget {
   final IconData icon;
   final Color color;
   final String message;
-  const _InfoBanner(
-      {required this.icon, required this.color, required this.message});
+  const _InfoBanner({
+    required this.icon,
+    required this.color,
+    required this.message,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: color.withValues(alpha: 0.35)),
       ),
       child: Row(
@@ -308,9 +320,10 @@ class _InfoBanner extends StatelessWidget {
           Icon(icon, color: color, size: 20),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(message,
-                style:
-                    TextStyle(fontSize: 13, color: context.textSecondary)),
+            child: Text(
+              message,
+              style: TextStyle(fontSize: 13, color: context.textSecondary),
+            ),
           ),
         ],
       ),
@@ -322,8 +335,11 @@ class _DateField extends StatelessWidget {
   final String label;
   final DateTime value;
   final VoidCallback onTap;
-  const _DateField(
-      {required this.label, required this.value, required this.onTap});
+  const _DateField({
+    required this.label,
+    required this.value,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -332,7 +348,6 @@ class _DateField extends StatelessWidget {
       child: InputDecorator(
         decoration: InputDecoration(
           labelText: label,
-          border: const OutlineInputBorder(),
           suffixIcon: const Icon(Icons.calendar_today, size: 18),
         ),
         child: Text(
@@ -340,22 +355,6 @@ class _DateField extends StatelessWidget {
           style: const TextStyle(fontSize: 15),
         ),
       ),
-    );
-  }
-}
-
-class _WorkerChip extends StatelessWidget {
-  final String name;
-  final VoidCallback onRemove;
-  const _WorkerChip({required this.name, required this.onRemove});
-
-  @override
-  Widget build(BuildContext context) {
-    return Chip(
-      label: Text(name),
-      deleteIcon: const Icon(Icons.close, size: 16),
-      onDeleted: onRemove,
-      backgroundColor: const Color(0xFFFEF3C7),
     );
   }
 }

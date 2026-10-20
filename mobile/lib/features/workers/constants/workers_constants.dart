@@ -37,37 +37,38 @@ class WorkersTheme {
   WorkersTheme._();
 
   // Colors
-  static Color backgroundColor(BuildContext context) => Theme.of(context).colorScheme.surfaceContainerHighest;
-  static Color cardBackground(BuildContext context) => Theme.of(context).colorScheme.surface;
-  
+  static Color backgroundColor(BuildContext context) =>
+      Theme.of(context).scaffoldBackgroundColor;
+  static Color cardBackground(BuildContext context) =>
+      Theme.of(context).cardTheme.color ??
+      Theme.of(context).colorScheme.surface;
+
   static const Color activeColor = Colors.green;
   static const Color inactiveColor = Colors.grey;
   static const MaterialColor warningColor = Colors.orange;
   static const Color totalColor = Colors.blue;
 
   // Dimensions
-  static const double cardBorderRadius = 12.0;
+  static const double cardBorderRadius = 16.0;
   static const double chipBorderRadius = 20.0;
   static const double avatarSize = 48.0;
   static const double avatarBorderRadius = 12.0;
   static const double statusIndicatorSize = 14.0;
-  static const double pagePadding = 16.0;
+  static const double pagePadding = 20.0;
 
   // Card decoration
-  static BoxDecoration cardDecoration(BuildContext context, {bool hasWarning = false}) {
+  static BoxDecoration cardDecoration(
+    BuildContext context, {
+    bool hasWarning = false,
+  }) {
     return BoxDecoration(
       color: cardBackground(context),
       borderRadius: BorderRadius.circular(cardBorderRadius),
       border: Border.all(
-        color: hasWarning ? warningColor.shade200 : Theme.of(context).dividerColor,
+        color: hasWarning
+            ? warningColor.shade200
+            : Theme.of(context).dividerColor,
       ),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.03),
-          blurRadius: 8,
-          offset: const Offset(0, 2),
-        ),
-      ],
     );
   }
 }

@@ -30,7 +30,7 @@ import '../utils/payroll_calculator.dart';
 // import '../widgets/payment_results_page.dart';
 
 /// Run Payroll page - Employee inputs flow (Step 1 of 3)
-/// 
+///
 /// This page allows users to:
 /// - Select a pay period
 /// - Enter hours/overtime for each worker
@@ -39,10 +39,7 @@ import '../utils/payroll_calculator.dart';
 class RunPayrollPageNew extends ConsumerStatefulWidget {
   final String? payPeriodId;
 
-  const RunPayrollPageNew({
-    super.key,
-    this.payPeriodId,
-  });
+  const RunPayrollPageNew({super.key, this.payPeriodId});
 
   @override
   ConsumerState<RunPayrollPageNew> createState() => _RunPayrollPageNewState();
@@ -69,8 +66,8 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
 
   bool get _isPeriodClosed {
     if (_selectedPayPeriod == null) return false;
-    return _selectedPayPeriod!.status == PayPeriodStatus.completed || 
-           _selectedPayPeriod!.status == PayPeriodStatus.closed;
+    return _selectedPayPeriod!.status == PayPeriodStatus.completed ||
+        _selectedPayPeriod!.status == PayPeriodStatus.closed;
   }
 
   @override
@@ -88,7 +85,10 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
     try {
       final review = await ref
           .read(timeTrackingRepositoryProvider)
-          .getPayrollReview(startDate: period.startDate, endDate: period.endDate);
+          .getPayrollReview(
+            startDate: period.startDate,
+            endDate: period.endDate,
+          );
 
       if (!mounted) return;
       setState(() => _payrollReview = review);
@@ -101,7 +101,9 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
       }
 
       if (attendanceHours.isNotEmpty) {
-        debugPrint('Loaded ${attendanceHours.length} workers\' attendance data');
+        debugPrint(
+          'Loaded ${attendanceHours.length} workers\' attendance data',
+        );
         _controllerManager.setAttendanceData(attendanceHours);
       }
     } catch (e) {
@@ -192,13 +194,21 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
                     context,
                     workersAsync,
                     propertiesAsync.value ?? [],
-                    userSubscriptionAsync.value?.plan.name.toUpperCase() == 'PLATINUM',
+                    userSubscriptionAsync.value?.plan.name.toUpperCase() ==
+                        'PLATINUM',
                   ),
                 ],
               ),
             ),
           ),
-          _buildBottomActions(context, workersAsync.when(data: (w) => w, loading: () => [], error: (_, _) => [])),
+          _buildBottomActions(
+            context,
+            workersAsync.when(
+              data: (w) => w,
+              loading: () => [],
+              error: (_, _) => [],
+            ),
+          ),
         ],
       ),
     );
@@ -337,9 +347,9 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
     return Text(
       label,
       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            letterSpacing: 1,
-          ),
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+        letterSpacing: 1,
+      ),
     );
   }
 
@@ -359,7 +369,9 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
           padding: EdgeInsets.symmetric(vertical: 12),
           child: LinearProgressIndicator(),
         ),
-        error: (err, stack) => _buildErrorRow('Error loading periods: ${err.toString().length > 50 ? err.toString().substring(0, 50) : err}'),
+        error: (err, stack) => _buildErrorRow(
+          'Error loading periods: ${err.toString().length > 50 ? err.toString().substring(0, 50) : err}',
+        ),
         data: (periods) => _buildPeriodDropdownContent(context, periods),
       ),
     );
@@ -381,23 +393,22 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
   ) {
     // Use centralized logic to determine if initialization is needed
     final yearToInitialize = PayPeriodUtils.getYearToInitialize(periods);
-    
+
     if (yearToInitialize != null) {
       debugPrint('Dropdown: Suggesting init for year $yearToInitialize');
       // Case 1: Initialize Current/Next Year if suggested by utils
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-            InitializePayPeriodsCard(
+          InitializePayPeriodsCard(
             year: yearToInitialize,
-            subtitle: yearToInitialize == DateTime.now().year 
-                ? 'No pay periods for $yearToInitialize' 
+            subtitle: yearToInitialize == DateTime.now().year
+                ? 'No pay periods for $yearToInitialize'
                 : 'Ready for $yearToInitialize payroll',
             onPressed: () => _handleInitializeYear(context, yearToInitialize),
           ),
           const SizedBox(height: 8),
-          if (periods.isNotEmpty)
-            _buildPeriodDropdownWidget(context, periods),
+          if (periods.isNotEmpty) _buildPeriodDropdownWidget(context, periods),
         ],
       );
     }
@@ -406,32 +417,39 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
     // This allows access to history across year boundaries (e.g. accessing Jan 2025 from Mar 2026)
     final now = DateTime.now();
     final cutoffDate = DateTime(now.year, now.month - 36, 1);
-    
+
     // Filter periods within the window
     List<PayPeriod> visiblePeriods = periods.where((p) {
       // Include if it starts after the cutoff (last 15 months)
       // OR if it's active/processing/draft (don't hide active work)
       final isRecent = p.startDate.isAfter(cutoffDate);
-      final isActiveWork = !['CLOSED', 'CANCELLED'].contains(p.status.name.toUpperCase());
+      final isActiveWork = ![
+        'CLOSED',
+        'CANCELLED',
+      ].contains(p.status.name.toUpperCase());
       return isRecent || isActiveWork;
     }).toList();
-    
-    debugPrint('Dropdown: All Periods: ${periods.length}, Visible: ${visiblePeriods.length}');
+
+    debugPrint(
+      'Dropdown: All Periods: ${periods.length}, Visible: ${visiblePeriods.length}',
+    );
     if (visiblePeriods.isNotEmpty) {
-      debugPrint('Dropdown: First Visible: ${visiblePeriods.first.name}, Last: ${visiblePeriods.last.name}');
+      debugPrint(
+        'Dropdown: First Visible: ${visiblePeriods.first.name}, Last: ${visiblePeriods.last.name}',
+      );
     }
-    
+
     // Sort: open/draft periods first by date ascending, then closed periods by date descending
     final closedStatuses2 = ['CLOSED', 'COMPLETED'];
     visiblePeriods.sort((a, b) {
       final aIsClosed = closedStatuses2.contains(a.status.name.toUpperCase());
       final bIsClosed = closedStatuses2.contains(b.status.name.toUpperCase());
-      
+
       if (aIsClosed != bIsClosed) {
         // Open periods come first
         return aIsClosed ? 1 : -1;
       }
-      
+
       if (aIsClosed) {
         // Both closed: newest first (for viewing history)
         return b.startDate.compareTo(a.startDate);
@@ -453,7 +471,10 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
     return _buildPeriodDropdownWidget(context, visiblePeriods);
   }
 
-  Widget _buildPeriodDropdownWidget(BuildContext context, List<PayPeriod> periods) {
+  Widget _buildPeriodDropdownWidget(
+    BuildContext context,
+    List<PayPeriod> periods,
+  ) {
     // Auto-select first period if none selected
     _autoSelectFirstPeriod(periods);
 
@@ -465,7 +486,11 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
         value: selectedId,
         isExpanded: true,
         items: periods.map((period) {
-          final isClosed = ['CLOSED', 'COMPLETED', 'FINALIZED'].contains(period.status.name.toUpperCase());
+          final isClosed = [
+            'CLOSED',
+            'COMPLETED',
+            'FINALIZED',
+          ].contains(period.status.name.toUpperCase());
           return DropdownMenuItem<String>(
             value: period.id,
             child: Row(
@@ -474,14 +499,17 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
                   child: Text(
                     period.name,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.w500,
-                          color: isClosed ? context.textSecondary : null,
-                        ),
+                      fontWeight: FontWeight.w500,
+                      color: isClosed ? context.textSecondary : null,
+                    ),
                   ),
                 ),
                 if (isClosed)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.green.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
@@ -498,7 +526,8 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
         onChanged: (String? selectedId) {
           if (selectedId != null) {
             final period = periods.firstWhere((p) => p.id == selectedId);
-            final periodDays = period.endDate.difference(period.startDate).inDays + 1;
+            final periodDays =
+                period.endDate.difference(period.startDate).inDays + 1;
             setState(() {
               _selectedPayPeriod = period;
               _controllerManager.clearDaysWorkedControllers();
@@ -513,18 +542,18 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
     );
   }
 
-
-
   void _autoSelectFirstPeriod(List<PayPeriod> periods) {
     if (_selectedPayPeriod == null && periods.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           PayPeriod selectedPeriod;
-          
+
           // If a specific ID was requested, try to find it
           if (widget.payPeriodId != null) {
             try {
-              selectedPeriod = periods.firstWhere((p) => p.id == widget.payPeriodId);
+              selectedPeriod = periods.firstWhere(
+                (p) => p.id == widget.payPeriodId,
+              );
             } catch (_) {
               // Period not found, fall back to first
               selectedPeriod = periods.first;
@@ -532,14 +561,18 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
           } else {
             selectedPeriod = periods.first;
           }
-          
-          final periodDays = selectedPeriod.endDate.difference(selectedPeriod.startDate).inDays + 1;
+
+          final periodDays =
+              selectedPeriod.endDate
+                  .difference(selectedPeriod.startDate)
+                  .inDays +
+              1;
           setState(() {
             _selectedPayPeriod = selectedPeriod;
             _controllerManager.clearDaysWorkedControllers();
             _controllerManager.setPayPeriodDays(periodDays);
           });
-          
+
           // Fetch attendance data for the selected period
           _fetchAttendanceData(selectedPeriod);
         }
@@ -569,7 +602,8 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
           style: const TextStyle(color: Colors.red),
         ),
       ),
-      data: (workers) => _buildWorkersList(context, workers, properties, isPlatinum),
+      data: (workers) =>
+          _buildWorkersList(context, workers, properties, isPlatinum),
     );
   }
 
@@ -618,7 +652,13 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               children: workers.asMap().entries.map((entry) {
-                return _buildWorkerCard(context, entry.key, entry.value, properties, isPlatinum);
+                return _buildWorkerCard(
+                  context,
+                  entry.key,
+                  entry.value,
+                  properties,
+                  isPlatinum,
+                );
               }).toList(),
             ),
           ),
@@ -636,7 +676,9 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
     final allSelected = _selectedWorkerIds.length == count && count > 0;
 
     return InkWell(
-      onTap: () => setState(() => _isWorkersSectionExpanded = !_isWorkersSectionExpanded),
+      onTap: () => setState(
+        () => _isWorkersSectionExpanded = !_isWorkersSectionExpanded,
+      ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(8, 8, 20, 12),
         child: Row(
@@ -656,18 +698,20 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
                     });
                   },
                   activeColor: Theme.of(context).primaryColor,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4),
+                  ),
                 ),
                 Text(
                   'Employee Inputs',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Icon(
-                  _isWorkersSectionExpanded 
-                      ? Icons.keyboard_arrow_up_rounded 
+                  _isWorkersSectionExpanded
+                      ? Icons.keyboard_arrow_up_rounded
                       : Icons.keyboard_arrow_down_rounded,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -676,8 +720,8 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
             Text(
               '${_selectedWorkerIds.length} / $count Selected',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -693,7 +737,7 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
     bool isPlatinum,
   ) {
     final isHourly = worker.employmentType == EmploymentType.hourly;
-    
+
     // Calculate total days in the selected pay period
     final periodStart = _selectedPayPeriod?.startDate ?? DateTime.now();
     final periodEnd = _selectedPayPeriod?.endDate ?? DateTime.now();
@@ -723,9 +767,13 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
       ),
       overtimeController: _controllerManager.getOvertimeController(worker.id),
       bonusesController: _controllerManager.getBonusesController(worker.id),
-      nonCashBenefitsController: _controllerManager.getNonCashBenefitsController(worker.id),
-      taxExemptAllowancesController: _controllerManager.getTaxExemptAllowancesController(worker.id),
-      deductionsController: _controllerManager.getDeductionsController(worker.id),
+      nonCashBenefitsController: _controllerManager
+          .getNonCashBenefitsController(worker.id),
+      taxExemptAllowancesController: _controllerManager
+          .getTaxExemptAllowancesController(worker.id),
+      deductionsController: _controllerManager.getDeductionsController(
+        worker.id,
+      ),
       daysWorkedController: _controllerManager.getDaysWorkedController(
         worker.id,
         worker: worker,
@@ -752,7 +800,6 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
     );
   }
 
-
   // ============================================================
   // BOTTOM ACTIONS
   // ============================================================
@@ -762,16 +809,10 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
         _selectedPayPeriod == null || workers.isEmpty || _isProcessing;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -4),
-          ),
-        ],
+        border: Border(top: BorderSide(color: context.borderDefault)),
       ),
       child: SafeArea(
         top: false,
@@ -799,9 +840,11 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
           activeThumbColor: Theme.of(context).primaryColor,
         ),
         const SizedBox(width: 8),
-        Text(
-          _isAutomatedMode ? 'Automated (Skip Review)' : 'Manual Review',
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+        Flexible(
+          child: Text(
+            _isAutomatedMode ? 'Automated (Skip Review)' : 'Manual Review',
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+          ),
         ),
       ],
     );
@@ -819,7 +862,9 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
       children: [
         Expanded(
           child: OutlinedButton(
-            onPressed: effectivelyDisabled ? null : () => _handleSaveDraft(workers),
+            onPressed: effectivelyDisabled
+                ? null
+                : () => _handleSaveDraft(workers),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
@@ -833,21 +878,23 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
         Expanded(
           flex: 2,
           child: ElevatedButton(
-            onPressed: effectivelyDisabled ? null : () => _handleRunPayroll(workers),
+            onPressed: effectivelyDisabled
+                ? null
+                : () => _handleRunPayroll(workers),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).primaryColor,
-              foregroundColor: Colors.white,
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
             child: _isProcessing
-                ? const SizedBox(
+                ? SizedBox(
                     height: 20,
                     width: 20,
                     child: CircularProgressIndicator(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onPrimary,
                       strokeWidth: 2,
                     ),
                   )
@@ -855,15 +902,24 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        _isPeriodClosed 
-                          ? Icons.visibility 
-                          : (_isAutomatedMode ? Icons.bolt : Icons.arrow_forward),
+                        _isPeriodClosed
+                            ? Icons.visibility
+                            : (_isAutomatedMode
+                                  ? Icons.bolt
+                                  : Icons.arrow_forward),
                         size: 18,
                       ),
                       const SizedBox(width: 8),
-                      Text(_isPeriodClosed 
-                        ? 'View Summary' 
-                        : (_isAutomatedMode ? 'Run Payroll' : 'Review Payroll')),
+                      Flexible(
+                        child: Text(
+                          _isPeriodClosed
+                              ? 'View Summary'
+                              : (_isAutomatedMode
+                                    ? 'Run Payroll'
+                                    : 'Review Payroll'),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
                     ],
                   ),
           ),
@@ -887,7 +943,9 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
       final startDate = dateFormatter.format(DateTime(year, 1, 1));
       final endDate = dateFormatter.format(DateTime(year, 12, 31));
 
-      await ref.read(payPeriodsProvider.notifier).generatePayPeriods(
+      await ref
+          .read(payPeriodsProvider.notifier)
+          .generatePayPeriods(
             frequency: PayPeriodFrequency.monthly,
             startDate: startDate,
             endDate: endDate,
@@ -917,7 +975,9 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
     try {
       final payrollRepo = ref.read(payrollRepositoryProvider);
 
-      final selectedWorkers = workers.where((w) => _selectedWorkerIds.contains(w.id)).toList();
+      final selectedWorkers = workers
+          .where((w) => _selectedWorkerIds.contains(w.id))
+          .toList();
       final calculations = await payrollRepo.calculatePayroll(
         selectedWorkers.map((w) => w.id).toList(),
         startDate: _selectedPayPeriod!.startDate,
@@ -928,7 +988,9 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
       await payrollRepo.saveDraftPayroll(_selectedPayPeriod!.id, itemsToSave);
 
       if (mounted) {
-        _showSuccessSnackbar('Draft saved for ${selectedWorkers.length} workers');
+        _showSuccessSnackbar(
+          'Draft saved for ${selectedWorkers.length} workers',
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -956,7 +1018,9 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
       final payrollRepo = ref.read(payrollRepositoryProvider);
 
       // Calculate payroll
-      final selectedWorkers = workers.where((w) => _selectedWorkerIds.contains(w.id)).toList();
+      final selectedWorkers = workers
+          .where((w) => _selectedWorkerIds.contains(w.id))
+          .toList();
       final calculations = await payrollRepo.calculatePayroll(
         selectedWorkers.map((w) => w.id).toList(),
         startDate: _selectedPayPeriod!.startDate,
@@ -988,9 +1052,9 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
   Future<void> _processAutomatedPayroll(List<WorkerModel> workers) async {
     // Automated mode simply skips the Review Page.
     // We still must go to the Confirmation Page to verify IntaSend funds and disburse.
-    
+
     if (!mounted) return;
-    
+
     context.pushNamed(
       'payrollConfirm',
       pathParameters: {'id': _selectedPayPeriod!.id},
@@ -998,12 +1062,8 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
     );
   }
 
-
   void _navigateToReview(List<WorkerModel> workers) {
-    context.push(
-      '/payroll/review/${_selectedPayPeriod!.id}',
-      extra: workers,
-    );
+    context.push('/payroll/review/${_selectedPayPeriod!.id}', extra: workers);
   }
 
   List<Map<String, dynamic>> _buildPayrollItems(
@@ -1013,17 +1073,19 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
     final periodStart = _selectedPayPeriod?.startDate ?? DateTime.now();
     final periodEnd = _selectedPayPeriod?.endDate ?? DateTime.now();
     final totalDaysInPeriod = periodEnd.difference(periodStart).inDays + 1;
-    
+
     return calculations.map((calc) {
       final worker = workers.firstWhere((w) => w.id == calc.workerId);
       final hours = _controllerManager.getHours(worker.id);
       final overtime = _controllerManager.getOvertime(worker.id);
       final bonuses = _controllerManager.getBonuses(worker.id);
       final nonCashBenefits = _controllerManager.getNonCashBenefits(worker.id);
-      final taxExemptAllowances = _controllerManager.getTaxExemptAllowances(worker.id);
+      final taxExemptAllowances = _controllerManager.getTaxExemptAllowances(
+        worker.id,
+      );
       final deductions = _controllerManager.getDeductions(worker.id);
       final daysWorked = _controllerManager.getDaysWorked(worker.id);
-      
+
       // Calculate proration factor
       final isHourly = worker.employmentType == EmploymentType.hourly;
       final prorationFactor = isHourly ? 1.0 : daysWorked / totalDaysInPeriod;
@@ -1055,7 +1117,6 @@ class _RunPayrollPageNewState extends ConsumerState<RunPayrollPageNew> {
       };
     }).toList();
   }
-
 
   // ============================================================
   // UI HELPERS

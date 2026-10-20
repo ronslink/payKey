@@ -55,16 +55,18 @@ class WorkerPayrollCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isHourly = worker.employmentType == EmploymentType.hourly;
-    final daysWorked = int.tryParse(daysWorkedController.text) ?? totalDaysInPeriod;
+    final daysWorked =
+        int.tryParse(daysWorkedController.text) ?? totalDaysInPeriod;
     final prorationFactor = isHourly ? 1.0 : daysWorked / totalDaysInPeriod;
-    
+
     final estimatedPay = PayrollCalculator.calculateEstimatedPay(
       worker: worker,
       hours: double.tryParse(hoursController.text) ?? 0,
       overtime: double.tryParse(overtimeController.text) ?? 0,
       bonuses: double.tryParse(bonusesController.text) ?? 0,
       nonCashBenefits: double.tryParse(nonCashBenefitsController.text) ?? 0,
-      taxExemptAllowances: double.tryParse(taxExemptAllowancesController.text) ?? 0,
+      taxExemptAllowances:
+          double.tryParse(taxExemptAllowancesController.text) ?? 0,
       deductions: double.tryParse(deductionsController.text) ?? 0,
       prorationFactor: prorationFactor,
     );
@@ -79,21 +81,15 @@ class WorkerPayrollCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isSelected ? context.surfacePrimary : context.surfaceMuted,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isExpanded 
-                ? Theme.of(context).primaryColor 
-                : (isPartialPeriod ? Colors.orange.shade300 : context.borderMuted),
+            color: isExpanded
+                ? Theme.of(context).primaryColor
+                : (isPartialPeriod
+                      ? Colors.orange.shade300
+                      : context.borderMuted),
             width: isPartialPeriod ? 2 : 1,
           ),
-          boxShadow: [
-            if (isSelected)
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-          ],
         ),
         child: Column(
           children: [
@@ -110,7 +106,8 @@ class WorkerPayrollCard extends StatelessWidget {
   }
 
   Widget _buildPartialBadge() {
-    final daysWorked = int.tryParse(daysWorkedController.text) ?? totalDaysInPeriod;
+    final daysWorked =
+        int.tryParse(daysWorkedController.text) ?? totalDaysInPeriod;
     return Padding(
       padding: const EdgeInsets.only(top: 8),
       child: Container(
@@ -184,7 +181,10 @@ class WorkerPayrollCard extends StatelessWidget {
                   color: Theme.of(context).primaryColor,
                 ),
               ),
-              Text('Est.', style: TextStyle(color: context.textTertiary, fontSize: 11)),
+              Text(
+                'Est.',
+                style: TextStyle(color: context.textTertiary, fontSize: 11),
+              ),
             ],
           ),
         const SizedBox(width: 8),
@@ -308,7 +308,6 @@ class WorkerPayrollCard extends StatelessWidget {
     );
   }
 
-
   Widget _buildPropertySelector(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
@@ -321,22 +320,34 @@ class WorkerPayrollCard extends StatelessWidget {
         child: DropdownButton<String>(
           value: selectedPropertyId,
           isExpanded: true,
-          hint: Text('Select Property (Default: Global)', style: TextStyle(fontSize: 13, color: context.textSecondary)),
+          hint: Text(
+            'Select Property (Default: Global)',
+            style: TextStyle(fontSize: 13, color: context.textSecondary),
+          ),
           icon: Icon(Icons.arrow_drop_down, color: context.iconDefault),
           onChanged: onPropertyIdChanged,
           items: [
             DropdownMenuItem<String>(
               value: null,
-              child: Text('All Properties (Global)', style: TextStyle(
-                fontSize: 13,
-                color: selectedPropertyId == null ? context.textPrimary : context.textSecondary,
-                fontWeight: selectedPropertyId == null ? FontWeight.w500 : FontWeight.normal,
-              )),
+              child: Text(
+                'All Properties (Global)',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: selectedPropertyId == null
+                      ? context.textPrimary
+                      : context.textSecondary,
+                  fontWeight: selectedPropertyId == null
+                      ? FontWeight.w500
+                      : FontWeight.normal,
+                ),
+              ),
             ),
-            ...properties.map((p) => DropdownMenuItem<String>(
-              value: p.id,
-              child: Text(p.name, style: const TextStyle(fontSize: 13)),
-            )),
+            ...properties.map(
+              (p) => DropdownMenuItem<String>(
+                value: p.id,
+                child: Text(p.name, style: const TextStyle(fontSize: 13)),
+              ),
+            ),
           ],
         ),
       ),
@@ -344,9 +355,10 @@ class WorkerPayrollCard extends StatelessWidget {
   }
 
   Widget _buildDaysWorkedSection(BuildContext context) {
-    final daysWorked = int.tryParse(daysWorkedController.text) ?? totalDaysInPeriod;
+    final daysWorked =
+        int.tryParse(daysWorkedController.text) ?? totalDaysInPeriod;
     final isFullPeriod = daysWorked == totalDaysInPeriod;
-    
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -364,14 +376,18 @@ class WorkerPayrollCard extends StatelessWidget {
               Icon(
                 Icons.calendar_month,
                 size: 16,
-                color: isFullPeriod ? Colors.green.shade700 : Colors.orange.shade700,
+                color: isFullPeriod
+                    ? Colors.green.shade700
+                    : Colors.orange.shade700,
               ),
               const SizedBox(width: 8),
               Text(
                 'Days Worked',
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  color: isFullPeriod ? Colors.green.shade700 : Colors.orange.shade700,
+                  color: isFullPeriod
+                      ? Colors.green.shade700
+                      : Colors.orange.shade700,
                 ),
               ),
             ],
@@ -392,19 +408,14 @@ class WorkerPayrollCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              Expanded(
-                child: _buildPartialOption(context, isFullPeriod),
-              ),
+              Expanded(child: _buildPartialOption(context, isFullPeriod)),
             ],
           ),
           if (!isFullPeriod) ...[
             const SizedBox(height: 8),
             Text(
               'Prorated: ${formatter.format(worker.salaryGross)} × ($daysWorked/$totalDaysInPeriod)',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.orange.shade700,
-              ),
+              style: TextStyle(fontSize: 12, color: Colors.orange.shade700),
             ),
           ],
         ],
@@ -445,7 +456,9 @@ class WorkerPayrollCard extends StatelessWidget {
                 Text(
                   label,
                   style: TextStyle(
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    fontWeight: isSelected
+                        ? FontWeight.w600
+                        : FontWeight.normal,
                     fontSize: 13,
                   ),
                 ),
@@ -484,10 +497,7 @@ class WorkerPayrollCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Partial',
-                  style: TextStyle(fontSize: 13),
-                ),
+                const Text('Partial', style: TextStyle(fontSize: 13)),
                 SizedBox(
                   height: 24,
                   child: TextField(
@@ -517,9 +527,10 @@ class WorkerPayrollCard extends StatelessWidget {
   }
 
   Widget _buildBaseRateInfo(BuildContext context, bool isHourly) {
-    final daysWorked = int.tryParse(daysWorkedController.text) ?? totalDaysInPeriod;
+    final daysWorked =
+        int.tryParse(daysWorkedController.text) ?? totalDaysInPeriod;
     final isFullPeriod = daysWorked == totalDaysInPeriod || isHourly;
-    
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -545,10 +556,16 @@ class WorkerPayrollCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('Prorated', style: TextStyle(color: Colors.orange.shade700)),
+                Text(
+                  'Prorated',
+                  style: TextStyle(color: Colors.orange.shade700),
+                ),
                 Text(
                   'KES ${formatter.format(worker.salaryGross * daysWorked / totalDaysInPeriod)}',
-                  style: TextStyle(fontWeight: FontWeight.w500, color: Colors.orange.shade700),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w500,
+                    color: Colors.orange.shade700,
+                  ),
                 ),
               ],
             ),
@@ -585,9 +602,12 @@ class WorkerPayrollCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide.none,
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            prefixIcon: icon != null 
-                ? Icon(icon, size: 16, color: iconColor) 
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
+            prefixIcon: icon != null
+                ? Icon(icon, size: 16, color: iconColor)
                 : null,
           ),
           onChanged: (_) => onInputChanged(),
@@ -598,7 +618,11 @@ class WorkerPayrollCard extends StatelessWidget {
 
   String _getInitials(String name) {
     if (name.isEmpty) return 'W';
-    return name.split(' ').map((n) => n.isNotEmpty ? n[0] : '').take(2).join().toUpperCase();
+    return name
+        .split(' ')
+        .map((n) => n.isNotEmpty ? n[0] : '')
+        .take(2)
+        .join()
+        .toUpperCase();
   }
 }
-

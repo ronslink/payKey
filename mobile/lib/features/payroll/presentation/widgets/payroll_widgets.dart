@@ -28,7 +28,9 @@ class PayrollProgressIndicator extends StatelessWidget {
               return Expanded(
                 child: Container(
                   height: 4,
-                  margin: EdgeInsets.only(right: index < totalSteps - 1 ? 4 : 0),
+                  margin: EdgeInsets.only(
+                    right: index < totalSteps - 1 ? 4 : 0,
+                  ),
                   decoration: BoxDecoration(
                     color: isActive
                         ? Theme.of(context).primaryColor
@@ -37,7 +39,9 @@ class PayrollProgressIndicator extends StatelessWidget {
                     boxShadow: isCurrent
                         ? [
                             BoxShadow(
-                              color: Theme.of(context).primaryColor.withValues(alpha: 0.4),
+                              color: Theme.of(
+                                context,
+                              ).primaryColor.withValues(alpha: 0.4),
                               blurRadius: 4,
                               offset: const Offset(0, 2),
                             ),
@@ -51,9 +55,9 @@ class PayrollProgressIndicator extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             stepLabel,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: context.textSecondary,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: context.textSecondary),
           ),
         ],
       ),
@@ -107,9 +111,9 @@ class NoWorkersEmptyState extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             'No Workers Found',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: context.textSecondary,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(color: context.textSecondary),
           ),
           const SizedBox(height: 8),
           Text(
@@ -144,67 +148,60 @@ class InitializePayPeriodsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      elevation: 0,
-      color: Theme.of(context).primaryColor.withValues(alpha: 0.05),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-        ),
-      ),
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.calendar_today,
-                color: Theme.of(context).primaryColor,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Initialize $year',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Theme.of(
+                      context,
+                    ).primaryColor.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
                   ),
-                  if (subtitle != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle!,
-                      style: TextStyle(
-                        color: context.textSecondary,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            ElevatedButton(
-              onPressed: onPressed,
-              style: ElevatedButton.styleFrom(
-                elevation: 0,
-                backgroundColor: Theme.of(context).primaryColor,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  child: Icon(
+                    Icons.calendar_today,
+                    color: Theme.of(context).primaryColor,
+                    size: 24,
+                  ),
                 ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Initialize $year',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          subtitle!,
+                          style: TextStyle(
+                            color: context.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Align(
+              alignment: Alignment.centerRight,
+              child: ElevatedButton(
+                onPressed: onPressed,
+                child: const Text('Initialize'),
               ),
-              child: const Text('Initialize'),
             ),
           ],
         ),

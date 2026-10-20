@@ -17,6 +17,8 @@ import '../../../onboarding/presentation/models/tour_models.dart';
 import '../providers/statutory_deadlines_provider.dart';
 import '../../../../integrations/intasend/providers/intasend_providers.dart';
 import '../../../settings/providers/settings_provider.dart';
+import '../../../../core/widgets/responsive_card_grid.dart';
+
 /// New Home page with the redesigned dashboard UI
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -33,7 +35,6 @@ class _HomePageState extends ConsumerState<HomePage> {
   final _supportKey = GlobalKey();
   final _deadlinesKey = GlobalKey();
   final _walletKey = GlobalKey();
-
 
   @override
   Widget build(BuildContext context) {
@@ -73,7 +74,8 @@ class _HomePageState extends ConsumerState<HomePage> {
     // hasn't been completed yet.
     final tourProgress = ref.watch(tourProgressProvider);
     // ignore: unused_local_variable
-    final showTour = tourProgress.isLoaded &&
+    final showTour =
+        tourProgress.isLoaded &&
         tourProgress.onboardingCompleted &&
         !tourProgress.hasSeen(TourKeys.dashboardTour);
 
@@ -85,21 +87,24 @@ class _HomePageState extends ConsumerState<HomePage> {
       TourStep(
         targetKey: _payrollKey,
         title: 'Runs Payroll',
-        description: 'Process payments, generate payslips, and manage pay periods here.',
+        description:
+            'Process payments, generate payslips, and manage pay periods here.',
         icon: Icons.payments_outlined,
         position: TourStepPosition.below,
       ),
       TourStep(
         targetKey: _workersKey,
         title: 'Manage Workers',
-        description: 'Add new employees, view profiles, and track compliance status.',
+        description:
+            'Add new employees, view profiles, and track compliance status.',
         icon: Icons.people_outline,
         position: TourStepPosition.below,
       ),
       TourStep(
         targetKey: _walletKey,
         title: 'Payment Processing',
-        description: 'Top up your wallet here. Payments process automatically if funded, or switch to manual in Settings.',
+        description:
+            'Top up your wallet here. Payments process automatically if funded, or switch to manual in Settings.',
         icon: Icons.account_balance_wallet_outlined,
         position: TourStepPosition.above,
       ),
@@ -113,21 +118,24 @@ class _HomePageState extends ConsumerState<HomePage> {
       TourStep(
         targetKey: _supportKey,
         title: 'Support Tickets',
-        description: 'Need help? Create a support ticket here and our team will assist you.',
+        description:
+            'Need help? Create a support ticket here and our team will assist you.',
         icon: Icons.support_agent_rounded,
         position: TourStepPosition.above,
       ),
       TourStep(
         targetKey: _deadlinesKey,
         title: 'Tax Filing & Deadlines',
-        description: 'Track statutory deadlines here. We help you stay compliant with KRA, NSSF, and SHIF.',
+        description:
+            'Track statutory deadlines here. We help you stay compliant with KRA, NSSF, and SHIF.',
         icon: Icons.event_note_outlined,
         position: TourStepPosition.above,
       ),
       TourStep(
         targetKey: _settingsKey,
         title: 'Profile & Settings',
-        description: 'Update your bank details, M-Pesa phone, and preferences here. Let\'s get started!',
+        description:
+            'Update your bank details, M-Pesa phone, and preferences here. Let\'s get started!',
         icon: Icons.settings_outlined,
         position: TourStepPosition.below,
         isLast: true,
@@ -137,8 +145,12 @@ class _HomePageState extends ConsumerState<HomePage> {
     return GuidedTour(
       tourKey: TourKeys.dashboardTour,
       steps: steps,
-      onComplete: () => ref.read(tourProgressProvider.notifier).completeTour(TourKeys.dashboardTour),
-      onSkip: () => ref.read(tourProgressProvider.notifier).completeTour(TourKeys.dashboardTour),
+      onComplete: () => ref
+          .read(tourProgressProvider.notifier)
+          .completeTour(TourKeys.dashboardTour),
+      onSkip: () => ref
+          .read(tourProgressProvider.notifier)
+          .completeTour(TourKeys.dashboardTour),
     );
   }
 
@@ -146,13 +158,16 @@ class _HomePageState extends ConsumerState<HomePage> {
     final theme = Theme.of(context);
     final greeting = _getGreeting();
     final settingsAsync = ref.watch(settingsProvider);
-    
+
     // Fallback to Google Avatar if photoUrl is null but we have a googleId
     final settings = settingsAsync.value;
     final photoUrl = settings?.photoUrl;
     final googleId = settings?.googleId;
-    final displayPhotoUrl = photoUrl ?? 
-        (googleId != null ? 'https://lh3.googleusercontent.com/a/$googleId' : null);
+    final displayPhotoUrl =
+        photoUrl ??
+        (googleId != null
+            ? 'https://lh3.googleusercontent.com/a/$googleId'
+            : null);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
@@ -209,30 +224,40 @@ class _HomePageState extends ConsumerState<HomePage> {
                       ),
                       ListTile(
                         leading: const Icon(Icons.logout, color: Colors.red),
-                        title: const Text('Logout', style: TextStyle(color: Colors.red)),
+                        title: const Text(
+                          'Logout',
+                          style: TextStyle(color: Colors.red),
+                        ),
                         onTap: () async {
                           Navigator.pop(sheetContext);
                           final confirm = await showDialog<bool>(
                             context: context,
                             builder: (dialogContext) => AlertDialog(
                               title: const Text('Logout'),
-                              content: const Text('Are you sure you want to logout?'),
+                              content: const Text(
+                                'Are you sure you want to logout?',
+                              ),
                               actions: [
                                 TextButton(
-                                  onPressed: () => Navigator.pop(dialogContext, false),
+                                  onPressed: () =>
+                                      Navigator.pop(dialogContext, false),
                                   child: const Text('Cancel'),
                                 ),
                                 TextButton(
-                                  onPressed: () => Navigator.pop(dialogContext, true),
-                                  child: const Text('Logout', style: TextStyle(color: Colors.red)),
+                                  onPressed: () =>
+                                      Navigator.pop(dialogContext, true),
+                                  child: const Text(
+                                    'Logout',
+                                    style: TextStyle(color: Colors.red),
+                                  ),
                                 ),
                               ],
                             ),
                           );
-                          
+
                           if (confirm == true) {
-                             ref.read(authStateProvider.notifier).logout();
-                             if (context.mounted) context.go('/login');
+                            ref.read(authStateProvider.notifier).logout();
+                            if (context.mounted) context.go('/login');
                           }
                         },
                       ),
@@ -246,9 +271,14 @@ class _HomePageState extends ConsumerState<HomePage> {
                 CircleAvatar(
                   radius: 24,
                   backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                  backgroundImage: displayPhotoUrl != null ? NetworkImage(displayPhotoUrl) : null,
-                  child: displayPhotoUrl == null 
-                      ? Icon(Icons.person, color: theme.colorScheme.onSurfaceVariant)
+                  backgroundImage: displayPhotoUrl != null
+                      ? NetworkImage(displayPhotoUrl)
+                      : null,
+                  child: displayPhotoUrl == null
+                      ? Icon(
+                          Icons.person,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        )
                       : null,
                 ),
                 Positioned(
@@ -273,7 +303,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Widget _buildHeroSection(
-    BuildContext context, 
+    BuildContext context,
     AsyncValue<List<PayPeriod>> payPeriodsAsync,
     AsyncValue<List<WorkerModel>> workersAsync,
   ) {
@@ -284,13 +314,17 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
 
     final periodName = activePeriod?.name ?? 'No Active Payroll';
-    
+
     int daysUntilDue = 0;
     if (activePeriod != null) {
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
       final targetDate = activePeriod.payDate ?? activePeriod.endDate;
-      final target = DateTime(targetDate.year, targetDate.month, targetDate.day);
+      final target = DateTime(
+        targetDate.year,
+        targetDate.month,
+        targetDate.day,
+      );
       daysUntilDue = target.difference(today).inDays;
     }
 
@@ -310,16 +344,9 @@ class _HomePageState extends ConsumerState<HomePage> {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+          colors: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
         ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF6366F1).withValues(alpha: 0.4),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -327,27 +354,27 @@ class _HomePageState extends ConsumerState<HomePage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Payroll',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.8),
-                      fontSize: 14,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Payroll',
+                      style: TextStyle(color: Colors.white, fontSize: 14),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    periodName,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                    const SizedBox(height: 4),
+                    Text(
+                      periodName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 12),
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -364,11 +391,11 @@ class _HomePageState extends ConsumerState<HomePage> {
           ),
           const SizedBox(height: 20),
           Text(
-            daysUntilDue < 0 
+            daysUntilDue < 0
                 ? 'Overdue by ${-daysUntilDue} days'
-                : daysUntilDue == 0 
-                    ? 'Due Today!' 
-                    : 'Due in $daysUntilDue days',
+                : daysUntilDue == 0
+                ? 'Due Today!'
+                : 'Due in $daysUntilDue days',
             style: const TextStyle(
               color: Colors.white,
               fontSize: 28,
@@ -379,29 +406,42 @@ class _HomePageState extends ConsumerState<HomePage> {
           Row(
             children: [
               // Show up to 3 worker avatars
-              ...List.generate(workerCount.clamp(0, 3), (i) => Align(
-                widthFactor: 0.7,
-                child: CircleAvatar(
-                  radius: 16,
-                  backgroundColor: Colors.white,
+              ...List.generate(
+                workerCount.clamp(0, 3),
+                (i) => Align(
+                  widthFactor: 0.7,
                   child: CircleAvatar(
-                    radius: 14,
-                    backgroundColor: Colors.grey.shade300,
-                    child: Text(
-                      activeWorkers.isNotEmpty && i < activeWorkers.length
-                        ? activeWorkers[i].name.substring(0, 1).toUpperCase()
-                        : '?',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    radius: 16,
+                    backgroundColor: Colors.white,
+                    child: CircleAvatar(
+                      radius: 14,
+                      backgroundColor: Colors.grey.shade300,
+                      child: Text(
+                        activeWorkers.isNotEmpty && i < activeWorkers.length
+                            ? activeWorkers[i].name
+                                  .substring(0, 1)
+                                  .toUpperCase()
+                            : '?',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF111827),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              )),
+              ),
               const SizedBox(width: 8),
-              Text(
-                workerCount > 3 
-                  ? '+ ${workerCount - 3} more workers'
-                  : workerCount > 0 ? '$workerCount workers ready' : 'No workers yet',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 12),
+              Expanded(
+                child: Text(
+                  workerCount > 3
+                      ? '+ ${workerCount - 3} more workers'
+                      : workerCount > 0
+                      ? '$workerCount workers ready'
+                      : 'No workers yet',
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                ),
               ),
             ],
           ),
@@ -411,16 +451,22 @@ class _HomePageState extends ConsumerState<HomePage> {
             child: ElevatedButton(
               onPressed: () => context.push('/payroll/run'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF6366F1),
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 elevation: 0,
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('Process Payroll Now', style: TextStyle(fontWeight: FontWeight.w600)),
+                  const Flexible(
+                    child: Text(
+                      'Process Payroll Now',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
                   const SizedBox(width: 8),
                   const Icon(Icons.arrow_forward, size: 18),
                 ],
@@ -433,7 +479,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 
   Widget _buildStatsRow(
-    BuildContext context, 
+    BuildContext context,
     AsyncValue<List<WorkerModel>> workersAsync,
     AsyncValue<List<PayPeriod>> payPeriodsAsync,
   ) {
@@ -444,18 +490,25 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
     final workerCount = workers.length;
     final activeWorkers = workers.where((w) => w.isActive).length;
-    
+
     // Calculate pending (workers with compliance issues)
-    final pendingCount = workers.where((w) => 
-      w.nssfNumber == null || w.nhifNumber == null || w.kraPin == null
-    ).length;
+    final pendingCount = workers
+        .where(
+          (w) =>
+              w.nssfNumber == null || w.nhifNumber == null || w.kraPin == null,
+        )
+        .length;
 
     // Get last completed payroll net pay (most recent) instead of all-time
     final lastPayrollNet = payPeriodsAsync.when(
       data: (periods) {
-        final completed = periods.where((p) =>
-          p.status == PayPeriodStatus.completed || p.status == PayPeriodStatus.closed
-        ).toList();
+        final completed = periods
+            .where(
+              (p) =>
+                  p.status == PayPeriodStatus.completed ||
+                  p.status == PayPeriodStatus.closed,
+            )
+            .toList();
         if (completed.isEmpty) return 0.0;
         // Sort by end date descending and take the first
         completed.sort((a, b) => b.endDate.compareTo(a.endDate));
@@ -467,42 +520,32 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     final formatter = NumberFormat('#,###');
 
-    return SizedBox(
+    return Padding(
       key: _workersKey,
-      height: 90,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: ResponsiveCardGrid(
         children: [
-          SizedBox(
-            width: 120,
-            child: _buildColorfulStatCard(
-              icon: Icons.payments_outlined, 
-              label: 'Last Payroll', 
-              value: 'KES ${formatter.format(lastPayrollNet)}',
-              gradient: const [Color(0xFF10B981), Color(0xFF059669)],
-            ),
+          _buildColorfulStatCard(
+            icon: Icons.payments_outlined,
+            label: 'Last Payroll',
+            value: 'KES ${formatter.format(lastPayrollNet)}',
+            gradient: const [Color(0xFF10B981), Color(0xFF059669)],
+            foreground: const Color(0xFF111827),
           ),
-          const SizedBox(width: 10),
-          SizedBox(
-            width: 110,
-            child: _buildColorfulStatCard(
-              icon: Icons.people_outline, 
-              label: 'Employees', 
-              value: '$workerCount',
-              subtitle: '$activeWorkers Active',
-              gradient: const [Color(0xFF3B82F6), Color(0xFF2563EB)],
-            ),
+          _buildColorfulStatCard(
+            icon: Icons.people_outline,
+            label: 'Employees',
+            value: '$workerCount',
+            subtitle: '$activeWorkers Active',
+            gradient: const [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+            foreground: Colors.white,
           ),
-          const SizedBox(width: 10),
-          SizedBox(
-            width: 100,
-            child: _buildColorfulStatCard(
-              icon: Icons.pending_actions, 
-              label: 'Pending', 
-              value: '$pendingCount',
-              gradient: const [Color(0xFFF59E0B), Color(0xFFD97706)],
-            ),
+          _buildColorfulStatCard(
+            icon: Icons.pending_actions,
+            label: 'Pending',
+            value: '$pendingCount',
+            gradient: const [Color(0xFFF59E0B), Color(0xFFD97706)],
+            foreground: const Color(0xFF111827),
           ),
         ],
       ),
@@ -515,23 +558,17 @@ class _HomePageState extends ConsumerState<HomePage> {
     required String value,
     String? subtitle,
     required List<Color> gradient,
+    required Color foreground,
   }) {
     return Container(
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: gradient,
         ),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: gradient[0].withValues(alpha: 0.3),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -540,33 +577,27 @@ class _HomePageState extends ConsumerState<HomePage> {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: foreground.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: Icon(icon, color: Colors.white, size: 14),
+            child: Icon(icon, color: foreground, size: 18),
           ),
           const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
+            style: TextStyle(
+              color: foreground,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
           ),
-          Text(
-            label,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.8),
-              fontSize: 9,
-            ),
-          ),
+          Text(label, style: TextStyle(color: foreground, fontSize: 12)),
           if (subtitle != null) ...[
             Text(
               subtitle,
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.9),
-                fontSize: 8,
+                color: foreground,
+                fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -578,6 +609,67 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   Widget _buildWalletCard(BuildContext context) {
     final walletAsync = ref.watch(walletBalanceProvider);
+    final balance = Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: const Color(0xFF6366F1).withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Icon(
+            Icons.account_balance_wallet,
+            color: Color(0xFF6366F1),
+            size: 24,
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Wallet Balance',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              walletAsync.when(
+                data: (wallet) => Text(
+                  wallet.formattedBalance,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                loading: () => const SizedBox(
+                  height: 24,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+                error: (_, __) => Text(
+                  'Error loading',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+    final topUp = ElevatedButton(
+      onPressed: () => context.push('/finance/top-up'),
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      ),
+      child: const Text('Top Up'),
+    );
 
     return Padding(
       key: _walletKey,
@@ -587,80 +679,26 @@ class _HomePageState extends ConsumerState<HomePage> {
           color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Theme.of(context).dividerColor),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF6366F1).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.account_balance_wallet, color: Color(0xFF6366F1), size: 24),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Wallet Balance',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    walletAsync.when(
-                      data: (wallet) => Text(
-                        wallet.formattedBalance,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      loading: () => const SizedBox(
-                        height: 24,
-                        width: 100,
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      ),
-                      error: (_, __) => Text(
-                        'Error loading',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.red,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              ElevatedButton(
-                onPressed: () => context.push('/finance/top-up'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1E293B),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  minimumSize: Size.zero,
-                  elevation: 0,
-                ),
-                child: const Text('Top Up', style: TextStyle(fontWeight: FontWeight.w600)),
-              ),
-            ],
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final textScale = MediaQuery.textScalerOf(context).scale(16) / 16;
+              if (constraints.maxWidth < 300 * textScale) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [balance, const SizedBox(height: 12), topUp],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: balance),
+                  const SizedBox(width: 12),
+                  topUp,
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -674,28 +712,33 @@ class _HomePageState extends ConsumerState<HomePage> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-          child: Text('Quick Actions', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
+          child: Text(
+            'Quick Actions',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(
+          child: ResponsiveCardGrid(
+            maxColumns: 2,
+            minColumnWidth: 136,
             children: [
-              Expanded(
-                child: _buildGradientActionCard(
-                  icon: Icons.home_work_outlined,
-                  label: 'Properties',
-                  gradient: const [Color(0xFF10B981), Color(0xFF059669)],
-                  onTap: () => context.push('/properties'),
-                ),
+              _buildGradientActionCard(
+                icon: Icons.home_work_outlined,
+                label: 'Properties',
+                gradient: const [Color(0xFF10B981), Color(0xFF059669)],
+                foreground: const Color(0xFF111827),
+                onTap: () => context.push('/properties'),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildGradientActionCard(
-                  icon: Icons.access_time_outlined,
-                  label: 'Time Tracking',
-                  gradient: const [Color(0xFF3B82F6), Color(0xFF2563EB)],
-                  onTap: () => context.push('/time-tracking'),
-                ),
+              _buildGradientActionCard(
+                icon: Icons.access_time_outlined,
+                label: 'Time Tracking',
+                gradient: const [Color(0xFF2563EB), Color(0xFF1D4ED8)],
+                foreground: Colors.white,
+                onTap: () => context.push('/time-tracking'),
               ),
             ],
           ),
@@ -703,23 +746,24 @@ class _HomePageState extends ConsumerState<HomePage> {
         const SizedBox(height: 12),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(
+          child: ResponsiveCardGrid(
+            maxColumns: 2,
+            minColumnWidth: 136,
             children: [
-              Expanded(
-                child: _buildGradientActionCard(
-                  icon: Icons.event_note_outlined,
-                  label: 'Leave Mgmt',
-                  gradient: const [Color(0xFFF59E0B), Color(0xFFD97706)],
-                  onTap: () => context.push('/leave'),
-                ),
+              _buildGradientActionCard(
+                icon: Icons.event_note_outlined,
+                label: 'Leave Mgmt',
+                gradient: const [Color(0xFFF59E0B), Color(0xFFD97706)],
+                foreground: const Color(0xFF111827),
+                onTap: () => context.push('/leave'),
               ),
-              const SizedBox(width: 12),
-              Expanded(
+              KeyedSubtree(
                 key: _supportKey,
                 child: _buildGradientActionCard(
                   icon: Icons.support_agent_rounded,
                   label: 'Support',
-                  gradient: const [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+                  gradient: const [Color(0xFF7C3AED), Color(0xFF6D28D9)],
+                  foreground: Colors.white,
                   onTap: () => context.push('/support'),
                 ),
               ),
@@ -734,6 +778,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     required IconData icon,
     required String label,
     required List<Color> gradient,
+    required Color foreground,
     required VoidCallback onTap,
   }) {
     return Material(
@@ -750,13 +795,6 @@ class _HomePageState extends ConsumerState<HomePage> {
               colors: gradient,
             ),
             borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: gradient[0].withValues(alpha: 0.3),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -764,16 +802,16 @@ class _HomePageState extends ConsumerState<HomePage> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(10),
+                  color: foreground.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(icon, color: Colors.white, size: 22),
+                child: Icon(icon, color: foreground, size: 22),
               ),
               const SizedBox(height: 12),
               Text(
                 label,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: foreground,
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
@@ -794,41 +832,54 @@ class _HomePageState extends ConsumerState<HomePage> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 12,
             children: [
-              Text('Statutory Deadlines', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-              TextButton(onPressed: () => context.push('/taxes'), child: const Text('View Calendar')),
+              Text(
+                'Statutory Deadlines',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              TextButton(
+                onPressed: () => context.push('/taxes'),
+                child: const Text('View Calendar'),
+              ),
             ],
           ),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           child: deadlinesAsync.when(
             data: (deadlines) => deadlines.isEmpty
-              ? _buildEmptyDeadlines(context)
-              : Column(
-                  children: deadlines.take(3).map((deadline) {
-                    final iconData = _getDeadlineIcon(deadline.title);
-                    final iconColor = _getDeadlineColor(deadline);
-                    final statusLabel = _getDeadlineStatus(deadline);
-                    final statusColor = deadline.isPastDue ? Colors.red : 
-                      (deadline.daysUntilDue <= 3 ? Colors.orange : Colors.green);
-                    
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _buildDeadlineItemFromData(
-                        context,
-                        icon: iconData,
-                        iconColor: iconColor,
-                        title: deadline.title,
-                        subtitle: deadline.description,
-                        statusLabel: statusLabel,
-                        statusColor: statusColor,
-                      ),
-                    );
-                  }).toList(),
-                ),
+                ? _buildEmptyDeadlines(context)
+                : Column(
+                    children: deadlines.take(3).map((deadline) {
+                      final iconData = _getDeadlineIcon(deadline.title);
+                      final iconColor = _getDeadlineColor(deadline);
+                      final statusLabel = _getDeadlineStatus(deadline);
+                      final statusColor = deadline.isPastDue
+                          ? Colors.red
+                          : (deadline.daysUntilDue <= 3
+                                ? Colors.orange
+                                : Colors.green);
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _buildDeadlineItemFromData(
+                          context,
+                          icon: iconData,
+                          iconColor: iconColor,
+                          title: deadline.title,
+                          subtitle: deadline.description,
+                          statusLabel: statusLabel,
+                          statusColor: statusColor,
+                        ),
+                      );
+                    }).toList(),
+                  ),
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (_, __) => _buildEmptyDeadlines(context),
           ),
@@ -842,13 +893,14 @@ class _HomePageState extends ConsumerState<HomePage> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: const Row(
         children: [
           Icon(Icons.check_circle, color: Colors.green),
           SizedBox(width: 12),
-          Text('No upcoming deadlines'),
+          Expanded(child: Text('No upcoming deadlines')),
         ],
       ),
     );
@@ -858,7 +910,8 @@ class _HomePageState extends ConsumerState<HomePage> {
     final lower = title.toLowerCase();
     if (lower.contains('paye')) return Icons.warning_amber_rounded;
     if (lower.contains('nssf')) return Icons.account_balance;
-    if (lower.contains('shif') || lower.contains('nhif')) return Icons.health_and_safety;
+    if (lower.contains('shif') || lower.contains('nhif'))
+      return Icons.health_and_safety;
     if (lower.contains('housing')) return Icons.home;
     return Icons.calendar_today;
   }
@@ -893,7 +946,7 @@ class _HomePageState extends ConsumerState<HomePage> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Row(
@@ -912,18 +965,38 @@ class _HomePageState extends ConsumerState<HomePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-                Text(subtitle, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                Text(
+                  title,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  subtitle,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    statusLabel,
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: statusColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
               ],
             ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(statusLabel, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: statusColor, fontWeight: FontWeight.w600)),
           ),
         ],
       ),

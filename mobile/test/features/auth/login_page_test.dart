@@ -7,17 +7,16 @@ void main() {
   group('LoginPage Widget Tests', () {
     testWidgets('should display all UI elements', (WidgetTester tester) async {
       await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            home: LoginPage(),
-          ),
-        ),
+        ProviderScope(child: MaterialApp(home: LoginPage())),
       );
       await tester.pumpAndSettle();
 
       // Verify header elements
       expect(find.text('payDome'), findsOneWidget);
-      expect(find.byIcon(Icons.account_balance_wallet), findsOneWidget);
+      expect(
+        find.image(const AssetImage('assets/icon/app_icon.jpg')),
+        findsOneWidget,
+      );
 
       // Verify input fields exist
       expect(find.byType(TextFormField), findsNWidgets(2));
@@ -26,13 +25,11 @@ void main() {
       expect(find.text('Sign In'), findsOneWidget);
     });
 
-    testWidgets('should have two text form fields', (WidgetTester tester) async {
+    testWidgets('should have two text form fields', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            home: LoginPage(),
-          ),
-        ),
+        ProviderScope(child: MaterialApp(home: LoginPage())),
       );
       await tester.pumpAndSettle();
 
@@ -42,11 +39,7 @@ void main() {
 
     testWidgets('should have Sign In button', (WidgetTester tester) async {
       await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            home: LoginPage(),
-          ),
-        ),
+        ProviderScope(child: MaterialApp(home: LoginPage())),
       );
       await tester.pumpAndSettle();
 
@@ -57,11 +50,7 @@ void main() {
 
     testWidgets('should have Sign Up button', (WidgetTester tester) async {
       await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            home: LoginPage(),
-          ),
-        ),
+        ProviderScope(child: MaterialApp(home: LoginPage())),
       );
       await tester.pumpAndSettle();
 
@@ -69,27 +58,30 @@ void main() {
       expect(find.text('Sign Up'), findsOneWidget);
     });
 
-    testWidgets('should display demo credentials', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            home: LoginPage(),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
+    testWidgets(
+      'should keep account details private and require manual entry',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(
+          ProviderScope(child: MaterialApp(home: LoginPage())),
+        );
+        await tester.pumpAndSettle();
 
-      // Verify demo credentials section
-      expect(find.text('Demo Credentials'), findsOneWidget);
-    });
+        expect(find.text('Demo Credentials'), findsNothing);
+        final fields = tester.widgetList<TextFormField>(
+          find.byType(TextFormField),
+        );
+        expect(fields, hasLength(2));
+        for (final field in fields) {
+          expect(field.controller!.text, isEmpty);
+        }
+      },
+    );
 
-    testWidgets('should be able to enter text in fields', (WidgetTester tester) async {
+    testWidgets('should be able to enter text in fields', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            home: LoginPage(),
-          ),
-        ),
+        ProviderScope(child: MaterialApp(home: LoginPage())),
       );
       await tester.pumpAndSettle();
 
@@ -110,13 +102,11 @@ void main() {
       expect(find.text('password123'), findsOneWidget);
     });
 
-    testWidgets('should have clickable Sign In button', (WidgetTester tester) async {
+    testWidgets('should have clickable Sign In button', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
-        ProviderScope(
-          child: MaterialApp(
-            home: LoginPage(),
-          ),
-        ),
+        ProviderScope(child: MaterialApp(home: LoginPage())),
       );
       await tester.pumpAndSettle();
 
@@ -125,8 +115,11 @@ void main() {
       expect(signInButton, findsOneWidget);
 
       // Tapping should not throw
+      await tester.ensureVisible(signInButton);
       await tester.tap(signInButton);
       await tester.pumpAndSettle();
+      expect(find.text('Please enter email'), findsOneWidget);
+      expect(find.text('Please enter password'), findsOneWidget);
     });
   });
 }

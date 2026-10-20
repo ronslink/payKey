@@ -47,11 +47,7 @@ class WorkerCard extends StatelessWidget {
   final WorkerCardData data;
   final VoidCallback onTap;
 
-  const WorkerCard({
-    super.key,
-    required this.data,
-    required this.onTap,
-  });
+  const WorkerCard({super.key, required this.data, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +64,10 @@ class WorkerCard extends StatelessWidget {
             _buildAvatar(context),
             const SizedBox(width: 14),
             Expanded(child: _buildInfo(context)),
-            Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant),
+            Icon(
+              Icons.chevron_right,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ],
         ),
       ),
@@ -83,7 +82,9 @@ class WorkerCard extends StatelessWidget {
           height: WorkersTheme.avatarSize,
           decoration: BoxDecoration(
             color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(WorkersTheme.avatarBorderRadius),
+            borderRadius: BorderRadius.circular(
+              WorkersTheme.avatarBorderRadius,
+            ),
           ),
           child: Center(
             child: Text(
@@ -96,11 +97,7 @@ class WorkerCard extends StatelessWidget {
             ),
           ),
         ),
-        Positioned(
-          right: 0,
-          bottom: 0,
-          child: _buildStatusIndicator(),
-        ),
+        Positioned(right: 0, bottom: 0, child: _buildStatusIndicator()),
       ],
     );
   }
@@ -110,7 +107,9 @@ class WorkerCard extends StatelessWidget {
       width: WorkersTheme.statusIndicatorSize,
       height: WorkersTheme.statusIndicatorSize,
       decoration: BoxDecoration(
-        color: data.isActive ? WorkersTheme.activeColor : WorkersTheme.inactiveColor,
+        color: data.isActive
+            ? WorkersTheme.activeColor
+            : WorkersTheme.inactiveColor,
         shape: BoxShape.circle,
         border: Border.all(color: Colors.white, width: 2),
       ),
@@ -126,8 +125,8 @@ class WorkerCard extends StatelessWidget {
         Text(
           data.jobTitle ?? 'Employee',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
         if (data.complianceStatus.hasIssues) _buildComplianceWarning(),
       ],
@@ -135,16 +134,16 @@ class WorkerCard extends StatelessWidget {
   }
 
   Widget _buildNameRow(BuildContext context) {
-    return Row(
+    return Wrap(
+      spacing: 8,
+      runSpacing: 6,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        Expanded(
-          child: Text(
-            data.name,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-            overflow: TextOverflow.ellipsis,
-          ),
+        Text(
+          data.name,
+          style: Theme.of(
+            context,
+          ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
         ),
         _buildStatusBadge(),
       ],
@@ -152,7 +151,9 @@ class WorkerCard extends StatelessWidget {
   }
 
   Widget _buildStatusBadge() {
-    final color = data.isActive ? WorkersTheme.activeColor : WorkersTheme.inactiveColor;
+    final color = data.isActive
+        ? WorkersTheme.activeColor
+        : WorkersTheme.inactiveColor;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -185,11 +186,13 @@ class WorkerCard extends StatelessWidget {
             color: WorkersTheme.warningColor.shade700,
           ),
           const SizedBox(width: 4),
-          Text(
-            issue,
-            style: TextStyle(
-              fontSize: 11,
-              color: WorkersTheme.warningColor.shade700,
+          Expanded(
+            child: Text(
+              issue,
+              style: TextStyle(
+                fontSize: 11,
+                color: WorkersTheme.warningColor.shade700,
+              ),
             ),
           ),
         ],

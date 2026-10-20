@@ -7,7 +7,8 @@ class AppInfo {
   static const String appName = 'payDome';
   static const String version = '1.1.6';
   static String get copyright => '© ${DateTime.now().year} payDome Kenya';
-  static const String tagline = 'Your all-in-one payroll solution for domestic workers.';
+  static const String tagline =
+      'Your all-in-one payroll solution for domestic workers.';
 
   static String get fullVersion => '$appName v$version';
   static String get aboutText => '$fullVersion\n\n$tagline\n\n$copyright';
@@ -35,11 +36,12 @@ class SettingsTheme {
   static Color backgroundColor(BuildContext context) =>
       Theme.of(context).scaffoldBackgroundColor;
   static Color cardBackground(BuildContext context) =>
-      Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface;
+      Theme.of(context).cardTheme.color ??
+      Theme.of(context).colorScheme.surface;
   static const Color dangerColor = Colors.red;
 
   // Dimensions
-  static const double cardBorderRadius = 12.0;
+  static const double cardBorderRadius = 16.0;
   static const double profileCardBorderRadius = 16.0;
   static const double bottomSheetBorderRadius = 20.0;
   static const double iconContainerSize = 56.0;
@@ -48,7 +50,7 @@ class SettingsTheme {
   static const double quickAccessIconSize = 22.0;
 
   // Padding
-  static const double pagePadding = 16.0;
+  static const double pagePadding = 20.0;
   static const double cardPadding = 20.0;
   static const double tilePaddingHorizontal = 16.0;
   static const double tilePaddingVertical = 14.0;
@@ -60,7 +62,8 @@ class SettingsTheme {
   static const double quickAccessSpacing = 12.0;
 
   // Bottom sheet decoration
-  static ShapeDecoration bottomSheetDecoration(BuildContext context) => ShapeDecoration(
+  static ShapeDecoration bottomSheetDecoration(BuildContext context) =>
+      ShapeDecoration(
         color: cardBackground(context),
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(
@@ -71,30 +74,19 @@ class SettingsTheme {
 
   // Card decoration
   static BoxDecoration cardDecoration(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return BoxDecoration(
       color: cardBackground(context),
       borderRadius: BorderRadius.circular(cardBorderRadius),
-      border: Border.all(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
-          blurRadius: 8,
-          offset: const Offset(0, 2),
-        ),
-      ],
+      border: Border.all(color: Theme.of(context).dividerColor),
     );
   }
 
   // Profile card gradient
   static LinearGradient profileGradient(Color primaryColor) => LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          primaryColor,
-          primaryColor.withValues(alpha: 0.85),
-        ],
-      );
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [primaryColor, primaryColor.withValues(alpha: 0.85)],
+  );
 }
 
 /// Frequency display names

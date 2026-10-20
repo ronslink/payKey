@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import '../providers/tax_submission_provider.dart';
 import '../../data/models/monthly_tax_summary.dart';
 import '../providers/tax_provider.dart';
-import '../../../../core/constants/app_colors.dart';
+import '../../../../core/theme/pay_colors.dart';
 import '../../../../core/utils/download_utils.dart';
 
 class ComprehensiveTaxPage extends ConsumerStatefulWidget {
@@ -28,16 +28,12 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        foregroundColor: AppColors.primary,
+        foregroundColor: context.textPrimary,
         elevation: 0,
-        centerTitle: true,
-        title: const Text(
-          'Tax Management',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        title: const Text('Tax Management'),
       ),
       body: Column(
         children: [
@@ -63,17 +59,11 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
 
   Widget _buildTabBar() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(25),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: context.surfacePrimary,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.borderDefault),
       ),
       child: Row(
         children: [
@@ -92,14 +82,18 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : Colors.transparent,
-          borderRadius: BorderRadius.circular(25),
+          color: isSelected
+              ? Theme.of(context).colorScheme.primary
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
           label,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: isSelected ? Colors.white : Colors.grey[600],
+            color: isSelected
+                ? Theme.of(context).colorScheme.onPrimary
+                : context.textSecondary,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
           ),
         ),
@@ -127,15 +121,19 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Monthly Returns',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              const Expanded(
+                child: Text(
+                  'Monthly Returns',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
               ),
               TextButton.icon(
                 onPressed: () => ref.refresh(monthlyTaxSummariesProvider),
                 icon: const Icon(Icons.refresh, size: 16),
                 label: const Text('Refresh'),
-                style: TextButton.styleFrom(foregroundColor: Colors.grey[600]),
+                style: TextButton.styleFrom(
+                  foregroundColor: context.textSecondary,
+                ),
               ),
             ],
           ),
@@ -190,20 +188,20 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.receipt_long_outlined, size: 48, color: Colors.grey[300]),
+          Icon(Icons.receipt_long_outlined, size: 48, color: context.iconMuted),
           const SizedBox(height: 16),
           Text(
             'No tax submissions yet',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Colors.grey[600],
+              color: context.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Process payroll to generate tax submissions',
-            style: TextStyle(color: Colors.grey[400]),
+            style: TextStyle(color: context.textSecondary),
             textAlign: TextAlign.center,
           ),
         ],
@@ -238,7 +236,10 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
                     ),
                     Text(
                       '${summary.submissions.length} pay periods',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -313,8 +314,6 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
                       icon: const Icon(Icons.check_circle_outline, size: 18),
                       label: const Text('Mark Filed'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF111827),
-                        foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
                     ),
@@ -334,7 +333,7 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(color: Colors.grey[700])),
+          Text(label, style: TextStyle(color: context.textSecondary)),
           Text(
             'KES ${formatter.format(amount)}',
             style: const TextStyle(fontWeight: FontWeight.w500),
@@ -361,20 +360,20 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.history, size: 64, color: Colors.grey[300]),
+                Icon(Icons.history, size: 64, color: context.iconMuted),
                 const SizedBox(height: 16),
                 Text(
                   'No filed returns yet',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.grey[600],
+                    color: context.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Your filed returns will appear here',
-                  style: TextStyle(color: Colors.grey[400]),
+                  style: TextStyle(color: context.textSecondary),
                 ),
               ],
             ),
@@ -424,7 +423,7 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
                 ),
                 Text(
                   'Total: KES ${formatter.format(summary.totalTax)}',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                  style: TextStyle(color: context.textSecondary, fontSize: 13),
                 ),
               ],
             ),
@@ -573,7 +572,10 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
                     const SizedBox(height: 4),
                     Text(
                       nextDeadline['desc'],
-                      style: TextStyle(color: Colors.grey[600], fontSize: 13),
+                      style: TextStyle(
+                        color: context.textSecondary,
+                        fontSize: 13,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -603,15 +605,9 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
   // ---------------------------------------------------------------------------
   BoxDecoration _buildCardDecoration() {
     return BoxDecoration(
-      color: Colors.white,
+      color: context.surfacePrimary,
       borderRadius: BorderRadius.circular(16),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.05),
-          blurRadius: 10,
-          offset: const Offset(0, 4),
-        ),
-      ],
+      border: Border.all(color: context.borderDefault),
     );
   }
 
@@ -703,7 +699,7 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: Colors.grey[700],
+            color: context.textSecondary,
           ),
         ),
       ],
@@ -728,9 +724,11 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
                 child: const Icon(Icons.calculate, color: Colors.blue),
               ),
               const SizedBox(width: 12),
-              const Text(
-                'Income Tax Calculator',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              const Expanded(
+                child: Text(
+                  'Income Tax Calculator',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
               ),
             ],
           ),
@@ -746,7 +744,7 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
                 borderRadius: BorderRadius.circular(12),
               ),
               filled: true,
-              fillColor: Colors.grey[50],
+              fillColor: context.surfaceMuted,
             ),
           ),
           const SizedBox(height: 24),
@@ -755,8 +753,6 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
             child: ElevatedButton(
               onPressed: _calculateTax,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF111827),
-                foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -836,9 +832,9 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
         constraints: BoxConstraints(
           maxHeight: MediaQuery.of(context).size.height * 0.8,
         ),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+        decoration: BoxDecoration(
+          color: context.surfacePrimary,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(25)),
         ),
         padding: const EdgeInsets.all(24),
         child: SingleChildScrollView(
@@ -851,7 +847,7 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey[300],
+                    color: context.borderStrong,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -908,8 +904,8 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
                 child: ElevatedButton(
                   onPressed: () => Navigator.pop(context),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey[200],
-                    foregroundColor: Colors.black,
+                    backgroundColor: context.surfaceAlt,
+                    foregroundColor: context.textPrimary,
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
@@ -938,14 +934,14 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
             label,
             style: TextStyle(
               fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
-              color: Colors.grey[800],
+              color: context.textSecondary,
             ),
           ),
           Text(
             'KES ${NumberFormat('#,##0').format(amount)}',
             style: TextStyle(
               fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
-              color: color ?? Colors.black,
+              color: color ?? context.textPrimary,
             ),
           ),
         ],
@@ -961,58 +957,60 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        decoration: BoxDecoration(
+          color: context.surfacePrimary,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: context.borderStrong,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Download Tax Returns',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              '${summary.monthName} ${summary.year}',
-              style: TextStyle(color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 20),
-            _buildDownloadOption(
-              'PAYE Supporting Schedule',
-              'Use with the current KRA/iTax return',
-              Icons.description_outlined,
-              Colors.blue,
-              () => _downloadStatutoryReturn('KRA_P10_CSV', summary),
-            ),
-            _buildDownloadOption(
-              'NSSF Contribution Schedule',
-              'Review before filing through NSSF',
-              Icons.table_chart_outlined,
-              Colors.green,
-              () => _downloadStatutoryReturn('NSSF_RETURN_EXCEL', summary),
-            ),
-            _buildDownloadOption(
-              'SHIF Contribution Schedule',
-              'Review before filing through SHA',
-              Icons.health_and_safety_outlined,
-              Colors.teal,
-              () => _downloadStatutoryReturn('SHIF_RETURN_EXCEL', summary),
-            ),
-            const SizedBox(height: 16),
-          ],
+              const SizedBox(height: 20),
+              const Text(
+                'Download Tax Returns',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                '${summary.monthName} ${summary.year}',
+                style: TextStyle(color: context.textSecondary),
+              ),
+              const SizedBox(height: 20),
+              _buildDownloadOption(
+                'PAYE Supporting Schedule',
+                'Use with the current KRA/iTax return',
+                Icons.description_outlined,
+                Colors.blue,
+                () => _downloadStatutoryReturn('KRA_P10_CSV', summary),
+              ),
+              _buildDownloadOption(
+                'NSSF Contribution Schedule',
+                'Review before filing through NSSF',
+                Icons.table_chart_outlined,
+                Colors.green,
+                () => _downloadStatutoryReturn('NSSF_RETURN_EXCEL', summary),
+              ),
+              _buildDownloadOption(
+                'SHIF Contribution Schedule',
+                'Review before filing through SHA',
+                Icons.health_and_safety_outlined,
+                Colors.teal,
+                () => _downloadStatutoryReturn('SHIF_RETURN_EXCEL', summary),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );
@@ -1042,9 +1040,9 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
       subtitle: Text(
         subtitle,
-        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+        style: TextStyle(fontSize: 12, color: context.textSecondary),
       ),
-      trailing: const Icon(Icons.download, color: Colors.grey),
+      trailing: Icon(Icons.download, color: context.iconDefault),
     );
   }
 
@@ -1104,7 +1102,7 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
               ),
             ),
             const SizedBox(width: 12),
-            const Text('Confirm Filing'),
+            const Expanded(child: Text('Confirm Filing')),
           ],
         ),
         content: Column(
@@ -1130,7 +1128,7 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
                   Expanded(
                     child: Text(
                       'Ensure you have submitted all returns to the respective government portals.',
-                      style: TextStyle(fontSize: 12),
+                      style: TextStyle(fontSize: 12, color: Color(0xFF78350F)),
                     ),
                   ),
                 ],
@@ -1176,9 +1174,12 @@ class _ComprehensiveTaxPageState extends ConsumerState<ComprehensiveTaxPage> {
       padding: const EdgeInsets.only(bottom: 4),
       child: Row(
         children: [
-          Icon(Icons.check_circle_outline, size: 16, color: Colors.grey[400]),
+          Icon(Icons.check_circle_outline, size: 16, color: context.iconMuted),
           const SizedBox(width: 8),
-          Text(title, style: TextStyle(fontSize: 13, color: Colors.grey[700])),
+          Text(
+            title,
+            style: TextStyle(fontSize: 13, color: context.textSecondary),
+          ),
         ],
       ),
     );

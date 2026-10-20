@@ -15,7 +15,7 @@ String formatKes(double amount) =>
 // SUMMARY CARD
 // =============================================================================
 
-/// Gradient summary card showing payroll totals
+/// Summary card showing payroll totals with the shared primary color pair.
 class PayrollSummaryCard extends StatelessWidget {
   final PayrollBreakdown totals;
   final int workerCount;
@@ -28,51 +28,45 @@ class PayrollSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primaryColor = Theme.of(context).primaryColor;
+    final colors = Theme.of(context).colorScheme;
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [primaryColor, primaryColor.withValues(alpha: 0.85)],
-        ),
+        color: colors.primary,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: primaryColor.withValues(alpha: 0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: Column(
         children: [
-          _buildHeader(),
-          const Divider(color: Colors.white24, height: 32),
+          _buildHeader(context),
+          Divider(color: colors.onPrimary.withValues(alpha: 0.24), height: 32),
           _buildDeductionsList(),
-          const Divider(color: Colors.white24, height: 24),
+          Divider(color: colors.onPrimary.withValues(alpha: 0.24), height: 24),
           _buildTotalDeductions(),
           const SizedBox(height: 12),
-          _buildWorkerCount(),
+          _buildWorkerCount(context),
         ],
       ),
     );
   }
 
-  Widget _buildHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _buildHeader(BuildContext context) {
+    return Wrap(
+      alignment: WrapAlignment.spaceBetween,
+      spacing: 16,
+      runSpacing: 8,
       children: [
-        const Text(
+        Text(
           'Total Net Pay',
-          style: TextStyle(color: Colors.white70, fontSize: 16),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onPrimary,
+            fontSize: 16,
+          ),
         ),
         Text(
           formatKes(totals.netSalary),
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onPrimary,
             fontSize: 24,
             fontWeight: FontWeight.bold,
           ),
@@ -125,21 +119,27 @@ class PayrollSummaryCard extends StatelessWidget {
     );
   }
 
-  Widget _buildWorkerCount() {
+  Widget _buildWorkerCount(BuildContext context) {
     return Row(
       children: [
-        const Icon(Icons.people, color: Colors.white70, size: 18),
+        Icon(
+          Icons.people,
+          color: Theme.of(context).colorScheme.onPrimary,
+          size: 18,
+        ),
         const SizedBox(width: 8),
-        Text(
-          '$workerCount workers',
-          style: const TextStyle(color: Colors.white70),
+        Flexible(
+          child: Text(
+            '$workerCount workers',
+            style: TextStyle(color: Theme.of(context).colorScheme.onPrimary),
+          ),
         ),
       ],
     );
   }
 }
 
-/// Summary row for the gradient card (white text)
+/// Summary row for the primary-colored summary card.
 class _SummaryRow extends StatelessWidget {
   final String label;
   final double amount;
@@ -158,20 +158,22 @@ class _SummaryRow extends StatelessWidget {
     // Hide zero amounts for cleaner UI
     if (amount.abs() < 0.01) return const SizedBox.shrink();
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Wrap(
+      alignment: WrapAlignment.spaceBetween,
+      spacing: 16,
+      runSpacing: 4,
       children: [
         Text(
           label,
           style: TextStyle(
-            color: isBold ? Colors.white : Colors.white70,
+            color: Theme.of(context).colorScheme.onPrimary,
             fontWeight: isBold ? FontWeight.w600 : FontWeight.normal,
           ),
         ),
         Text(
           '${isDeduction ? "- " : ""}${formatKes(amount)}',
           style: TextStyle(
-            color: isBold ? Colors.white : Colors.white70,
+            color: Theme.of(context).colorScheme.onPrimary,
             fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
           ),
         ),
@@ -224,19 +226,12 @@ class WorkerBreakdownCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: context.surfacePrimary,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isExpanded
                 ? Theme.of(context).primaryColor
                 : context.borderMuted,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
         ),
         child: Column(
           children: [
@@ -289,11 +284,12 @@ class WorkerBreakdownCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
+        Wrap(
+          spacing: 8,
+          runSpacing: 4,
           children: [
             Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
             if (paymentStatus != null) ...[
-              const SizedBox(width: 8),
               PaymentStatusBadge(status: paymentStatus!, compact: true),
             ],
           ],
@@ -445,16 +441,10 @@ class PayrollBottomActionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: context.surfacePrimary,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -4),
-          ),
-        ],
+        border: Border(top: BorderSide(color: context.borderDefault)),
       ),
       child: SafeArea(
         child: SizedBox(
@@ -462,20 +452,20 @@ class PayrollBottomActionBar extends StatelessWidget {
           child: ElevatedButton(
             onPressed: isProcessing ? null : onConfirm,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).primaryColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
+              padding: const EdgeInsets.all(16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              elevation: 2,
+              elevation: 0,
             ),
             child: isProcessing
-                ? const SizedBox(
+                ? SizedBox(
                     height: 20,
                     width: 20,
                     child: CircularProgressIndicator(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onPrimary,
                       strokeWidth: 2,
                     ),
                   )
@@ -484,11 +474,14 @@ class PayrollBottomActionBar extends StatelessWidget {
                     children: [
                       const Icon(Icons.payment, size: 20),
                       const SizedBox(width: 8),
-                      Text(
-                        'Confirm & Pay ${formatKes(totalAmount)}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                      Flexible(
+                        child: Text(
+                          'Confirm & Pay ${formatKes(totalAmount)}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
                         ),
                       ),
                     ],
