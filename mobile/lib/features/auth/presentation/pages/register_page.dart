@@ -28,6 +28,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   }
 
   void _register() {
+    if (ref.read(authStateProvider).isLoading) return;
     if (_formKey.currentState!.validate()) {
       ref
           .read(authStateProvider.notifier)
@@ -36,6 +37,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             _passwordController.text,
             _firstNameController.text,
             _lastNameController.text,
+            context: context,
           );
     }
   }
@@ -69,6 +71,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     final lower = message.toLowerCase();
 
     if (lower.contains('email already in use') ||
+        lower.contains('email already exists') ||
+        lower.contains('email already registered') ||
         lower.contains('email_exists') ||
         lower.contains('duplicate')) {
       return 'This email is already in use. Please sign in or use a different email.';

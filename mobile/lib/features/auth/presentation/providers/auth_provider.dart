@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +9,7 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../../data/repositories/auth_repository.dart';
 import 'package:mobile/core/config/app_environment.dart';
 import 'package:mobile/core/constants/api_constants.dart';
+import 'package:mobile/core/network/api_service.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository();
@@ -96,6 +98,11 @@ class AuthNotifier extends AsyncNotifier<void> {
           state = const AsyncValue.data(null);
 
           if (context != null && context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Account created. Complete your profile.'),
+              ),
+            );
             context.go('/onboarding');
           }
         } else {
@@ -112,6 +119,11 @@ class AuthNotifier extends AsyncNotifier<void> {
           StackTrace.current,
         );
       }
+    } on DioException catch (error, stackTrace) {
+      final message = error.response?.statusCode == 409
+          ? 'Email already exists'
+          : ApiService().getErrorMessage(error);
+      _setErrorIfCurrent(requestId, message, stackTrace);
     } catch (error, stackTrace) {
       _setErrorIfCurrent(requestId, error.toString(), stackTrace);
     }
