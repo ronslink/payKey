@@ -142,9 +142,9 @@ void main() {
       await _pump(tester, const OffCyclePayrollPage(), theme);
       final title = tester.widget<Text>(find.text('Period Details'));
       expect(title.style?.color, theme.colorScheme.onSurface);
-      final submit = find.widgetWithText(
-        ElevatedButton,
-        'Create & Run Off-Cycle Payroll',
+      final submit = find.ancestor(
+        of: find.text('Create & Run Off-Cycle Payroll'),
+        matching: find.byWidgetPredicate((widget) => widget is ElevatedButton),
       );
       await tester.ensureVisible(submit);
       final button = tester.widget<ElevatedButton>(submit);

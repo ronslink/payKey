@@ -13,9 +13,9 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository();
 });
 
-
 class AuthNotifier extends AsyncNotifier<void> {
   late AuthRepository _authRepository;
+  int _authRequestId = 0;
 
   @override
   FutureOr<void> build() {
@@ -23,21 +23,27 @@ class AuthNotifier extends AsyncNotifier<void> {
     return null;
   }
 
-  Future<void> login(String email, String password, {BuildContext? context}) async {
-    state = const AsyncValue.loading();
+  Future<void> login(
+    String email,
+    String password, {
+    BuildContext? context,
+  }) async {
+    final requestId = _beginAuthRequest();
     try {
       final response = await _authRepository.loginApi(email, password);
-      
+      if (!_isCurrentAuthRequest(requestId)) return;
+
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = response.data;
         final token = data['access_token'];
         if (token != null) {
-          await _authRepository.saveToken(token);
+          final saved = await _saveTokenForRequest(token, requestId);
+          if (!saved) return;
           state = const AsyncValue.data(null);
-          
+
           final user = data['user'];
           final isOnboardingCompleted = user?['isOnboardingCompleted'] ?? false;
-          
+
           if (context != null && context.mounted) {
             if (isOnboardingCompleted) {
               context.go('/home');
@@ -46,43 +52,73 @@ class AuthNotifier extends AsyncNotifier<void> {
             }
           }
         } else {
-          state = AsyncValue.error('Invalid response from server', StackTrace.current);
+          _setErrorIfCurrent(
+            requestId,
+            'Invalid response from server',
+            StackTrace.current,
+          );
         }
       } else {
-        state = AsyncValue.error('Login failed: ${response.data?['message'] ?? 'Unknown error'}', StackTrace.current);
+        _setErrorIfCurrent(
+          requestId,
+          'Login failed: ${response.data?['message'] ?? 'Unknown error'}',
+          StackTrace.current,
+        );
       }
     } catch (error, stackTrace) {
-      state = AsyncValue.error(error.toString(), stackTrace);
+      _setErrorIfCurrent(requestId, error.toString(), stackTrace);
     }
   }
 
-  Future<void> register(String email, String password, String firstName, String lastName, {BuildContext? context}) async {
-    state = const AsyncValue.loading();
+  Future<void> register(
+    String email,
+    String password,
+    String firstName,
+    String lastName, {
+    BuildContext? context,
+  }) async {
+    final requestId = _beginAuthRequest();
     try {
-      final response = await _authRepository.registerApi(email, password, firstName, lastName);
-      
+      final response = await _authRepository.registerApi(
+        email,
+        password,
+        firstName,
+        lastName,
+      );
+      if (!_isCurrentAuthRequest(requestId)) return;
+
       if (response.statusCode == 201) {
         final data = response.data;
         final token = data['access_token'];
         if (token != null) {
-          await _authRepository.saveToken(token);
+          final saved = await _saveTokenForRequest(token, requestId);
+          if (!saved) return;
           state = const AsyncValue.data(null);
-          
+
           if (context != null && context.mounted) {
             context.go('/onboarding');
           }
         } else {
-          state = AsyncValue.error('Invalid response from server', StackTrace.current);
+          _setErrorIfCurrent(
+            requestId,
+            'Invalid response from server',
+            StackTrace.current,
+          );
         }
       } else {
-        state = AsyncValue.error('Registration failed: ${response.data?['message'] ?? 'Unknown error'}', StackTrace.current);
+        _setErrorIfCurrent(
+          requestId,
+          'Registration failed: ${response.data?['message'] ?? 'Unknown error'}',
+          StackTrace.current,
+        );
       }
     } catch (error, stackTrace) {
-      state = AsyncValue.error(error.toString(), stackTrace);
+      _setErrorIfCurrent(requestId, error.toString(), stackTrace);
     }
   }
 
   Future<void> logout() async {
+    _authRequestId++;
     try {
       await _authRepository.clearToken();
       state = const AsyncValue.data(null);
@@ -95,11 +131,11 @@ class AuthNotifier extends AsyncNotifier<void> {
 
   Future<void> loginWithGoogle({BuildContext? context}) async {
     debugPrint('🔵 [Google Sign-In] Method called');
-    state = const AsyncValue.loading();
+    final requestId = _beginAuthRequest();
     try {
       debugPrint('🔵 [Google Sign-In] Accessing GoogleSignIn.instance...');
       final googleSignIn = GoogleSignIn.instance;
-      
+
       // Initialize if not already done
       if (!_googleSignInInitialized) {
         debugPrint('🔵 [Google Sign-In] Initializing (Singleton Pattern)...');
@@ -116,31 +152,32 @@ class AuthNotifier extends AsyncNotifier<void> {
       }
 
       // Authenticate the user
-      debugPrint('🔵 [Google Sign-In] Attempting authentication via authenticate()...');
-      
+      debugPrint(
+        '🔵 [Google Sign-In] Attempting authentication via authenticate()...',
+      );
+
       // scopeHint recommends scopes during the auth flow (if platform supports it)
       GoogleSignInAccount? account = await googleSignIn.authenticate(
-        scopeHint: [
-          'email',
-          'profile',
-          'openid',
-        ]
+        scopeHint: ['email', 'profile', 'openid'],
       );
-      
+      if (!_isCurrentAuthRequest(requestId)) return;
 
       debugPrint('🔵 [Google Sign-In] User authenticated: ${account.email}');
-      
+
       // Get authentication to retrieve ID Token
       final authentication = await account.authentication;
       final token = authentication.idToken;
-      
+
       if (token == null) {
         debugPrint('❌ [Google Sign-In] Failed to retrieve ID Token');
         throw Exception('Failed to retrieve ID Token from Google');
       }
 
-      debugPrint('🔵 [Google Sign-In] ID Token retrieved, sending to backend...');
+      debugPrint(
+        '🔵 [Google Sign-In] ID Token retrieved, sending to backend...',
+      );
       await _handleSocialLogin(
+        requestId: requestId,
         provider: 'GOOGLE',
         token: token,
         email: account.email,
@@ -159,11 +196,14 @@ class AuthNotifier extends AsyncNotifier<void> {
           errorStr.contains('sign_in_canceled') ||
           errorStr.contains('canceled') ||
           errorStr.contains('user_canceled')) {
-        state = const AsyncValue.data(null);
+        if (_isCurrentAuthRequest(requestId)) {
+          state = const AsyncValue.data(null);
+        }
         return;
       }
 
       // Show a user-friendly message for all other errors
+      if (!_isCurrentAuthRequest(requestId)) return;
       state = AsyncValue.error(
         'Google sign-in failed. Please try again.',
         stackTrace,
@@ -172,7 +212,7 @@ class AuthNotifier extends AsyncNotifier<void> {
   }
 
   Future<void> loginWithApple({BuildContext? context}) async {
-    state = const AsyncValue.loading();
+    final requestId = _beginAuthRequest();
     try {
       final credential = await SignInWithApple.getAppleIDCredential(
         scopes: [
@@ -197,10 +237,11 @@ class AuthNotifier extends AsyncNotifier<void> {
       // But for this simple implementation, we assume we get it or backend handles it from token
       // If email is empty, we must fail as our backend requires it for this implementation plan
       if (email == null && credential.identityToken == null) {
-         throw Exception('Email is required');
+        throw Exception('Email is required');
       }
 
       await _handleSocialLogin(
+        requestId: requestId,
         provider: 'APPLE',
         token: identityToken,
         email: email ?? '', // If null, backend must extract from token
@@ -209,27 +250,32 @@ class AuthNotifier extends AsyncNotifier<void> {
         context: context,
       );
       // Check for default configuration on Web
-      if (kIsWeb && (AppEnvironment.appleServiceId == 'com.paykey.app.service' || 
-          AppEnvironment.appleRedirectUri.contains('firebaseapp.com'))) {
-        debugPrint('WARNING: Apple Sign In may fail. Use --dart-define=APPLE_SERVICE_ID=... and APPLE_REDIRECT_URI=...');
+      if (kIsWeb &&
+          (AppEnvironment.appleServiceId == 'com.paykey.app.service' ||
+              AppEnvironment.appleRedirectUri.contains('firebaseapp.com'))) {
+        debugPrint(
+          'WARNING: Apple Sign In may fail. Use --dart-define=APPLE_SERVICE_ID=... and APPLE_REDIRECT_URI=...',
+        );
       }
-
     } catch (error, stackTrace) {
       debugPrint('Apple Sign In Error: $error');
       if (error is SignInWithAppleAuthorizationException) {
         debugPrint('Apple Error Code: ${error.code}');
         debugPrint('Apple Error Message: ${error.message}');
-        
+
         if (error.code == AuthorizationErrorCode.canceled) {
-          state = const AsyncValue.data(null);
+          if (_isCurrentAuthRequest(requestId)) {
+            state = const AsyncValue.data(null);
+          }
           return;
         }
       }
-      state = AsyncValue.error(error.toString(), stackTrace);
+      _setErrorIfCurrent(requestId, error.toString(), stackTrace);
     }
   }
 
   Future<void> _handleSocialLogin({
+    required int requestId,
     required String provider,
     required String token,
     required String email,
@@ -238,43 +284,79 @@ class AuthNotifier extends AsyncNotifier<void> {
     String? photoUrl,
     BuildContext? context,
   }) async {
-      debugPrint('🔵 [Google Sign-In] Sending API request to: ${ApiConstants.baseUrl}${ApiConstants.loginEndpoint.replaceFirst('login', 'social')}'); // Constructing social endpoint path manually for debug
-      debugPrint('🔵 [Google Sign-In] Token (prefix): ${token.substring(0, 10)}...');
-      
-      final response = await _authRepository.socialLoginApi(
-        provider: provider,
-        token: token,
-        email: email,
-        firstName: firstName,
-        lastName: lastName,
-        photoUrl: photoUrl,
-      );
-      
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = response.data;
-        final accessToken = data['access_token'];
-        
-        if (accessToken != null) {
-          await _authRepository.saveToken(accessToken);
-          state = const AsyncValue.data(null);
-          
-          final user = data['user'];
-          final isOnboardingCompleted = user?['isOnboardingCompleted'] ?? false;
-          
-          if (context != null && context.mounted) {
-            if (isOnboardingCompleted) {
-              context.go('/home');
-            } else {
-              context.go('/onboarding');
-            }
+    debugPrint(
+      '🔵 [Google Sign-In] Sending API request to: ${ApiConstants.baseUrl}${ApiConstants.loginEndpoint.replaceFirst('login', 'social')}',
+    ); // Constructing social endpoint path manually for debug
+    debugPrint(
+      '🔵 [Google Sign-In] Token (prefix): ${token.substring(0, 10)}...',
+    );
+
+    final response = await _authRepository.socialLoginApi(
+      provider: provider,
+      token: token,
+      email: email,
+      firstName: firstName,
+      lastName: lastName,
+      photoUrl: photoUrl,
+    );
+    if (!_isCurrentAuthRequest(requestId)) return;
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = response.data;
+      final accessToken = data['access_token'];
+
+      if (accessToken != null) {
+        final saved = await _saveTokenForRequest(accessToken, requestId);
+        if (!saved) return;
+        state = const AsyncValue.data(null);
+
+        final user = data['user'];
+        final isOnboardingCompleted = user?['isOnboardingCompleted'] ?? false;
+
+        if (context != null && context.mounted) {
+          if (isOnboardingCompleted) {
+            context.go('/home');
+          } else {
+            context.go('/onboarding');
           }
-        } else {
-           throw Exception('Invalid response from server');
         }
       } else {
-         throw Exception('Social login failed: ${response.data?['message'] ?? 'Unknown error'}');
+        throw Exception('Invalid response from server');
       }
+    } else {
+      throw Exception(
+        'Social login failed: ${response.data?['message'] ?? 'Unknown error'}',
+      );
+    }
+  }
+
+  int _beginAuthRequest() {
+    final requestId = ++_authRequestId;
+    state = const AsyncValue.loading();
+    return requestId;
+  }
+
+  bool _isCurrentAuthRequest(int requestId) => requestId == _authRequestId;
+
+  Future<bool> _saveTokenForRequest(String token, int requestId) async {
+    if (!_isCurrentAuthRequest(requestId)) return false;
+    await _authRepository.saveToken(token);
+    if (_isCurrentAuthRequest(requestId)) return true;
+
+    final currentToken = await _authRepository.getToken();
+    if (currentToken == token) {
+      await _authRepository.clearToken();
+    }
+    return false;
+  }
+
+  void _setErrorIfCurrent(int requestId, Object error, StackTrace stackTrace) {
+    if (_isCurrentAuthRequest(requestId)) {
+      state = AsyncValue.error(error, stackTrace);
+    }
   }
 }
 
-final authStateProvider = AsyncNotifierProvider<AuthNotifier, void>(AuthNotifier.new);
+final authStateProvider = AsyncNotifierProvider<AuthNotifier, void>(
+  AuthNotifier.new,
+);

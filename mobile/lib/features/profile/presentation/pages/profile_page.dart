@@ -10,11 +10,9 @@ class ProfilePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(profileProvider);
-    
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile'),
-      ),
+      appBar: AppBar(title: const Text('Profile')),
       body: profileAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(
@@ -36,7 +34,9 @@ class ProfilePage extends ConsumerWidget {
           // Extract values for null-safe access
           final firstName = profile.firstName ?? '';
           final lastName = profile.lastName ?? '';
-          final initials = '${firstName.isNotEmpty ? firstName[0] : ''}${lastName.isNotEmpty ? lastName[0] : ''}'.toUpperCase();
+          final initials =
+              '${firstName.isNotEmpty ? firstName[0] : ''}${lastName.isNotEmpty ? lastName[0] : ''}'
+                  .toUpperCase();
           final fullName = '$firstName $lastName'.trim();
           final email = profile.email;
           final phone = profile.phoneNumber ?? profile.mpesaPhone ?? 'Not set';
@@ -44,10 +44,10 @@ class ProfilePage extends ConsumerWidget {
           final bankAccount = profile.bankAccount ?? 'No account';
           final mpesaPhone = profile.mpesaPhone ?? '';
           final businessName = profile.businessName ?? '';
-          
+
           final hasBankDetails = bankName.isNotEmpty;
           final hasMpesa = mpesaPhone.isNotEmpty;
-          
+
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
@@ -56,17 +56,23 @@ class ProfilePage extends ConsumerWidget {
                 backgroundColor: Colors.blue.shade100,
                 child: Text(
                   initials.isEmpty ? '?' : initials,
-                  style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
               Text(
                 fullName.isEmpty ? 'User' : fullName,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 24),
-              
+
               // Email Card
               Card(
                 child: ListTile(
@@ -76,7 +82,7 @@ class ProfilePage extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              
+
               // Phone Card
               Card(
                 child: ListTile(
@@ -86,7 +92,7 @@ class ProfilePage extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              
+
               // Bank Details Card
               Card(
                 child: ListTile(
@@ -104,7 +110,7 @@ class ProfilePage extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              
+
               // M-Pesa Card
               Card(
                 child: ListTile(
@@ -118,7 +124,7 @@ class ProfilePage extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              
+
               // Business Details
               if (businessName.isNotEmpty)
                 Card(
@@ -129,7 +135,7 @@ class ProfilePage extends ConsumerWidget {
                   ),
                 ),
               const SizedBox(height: 24),
-              
+
               const Text(
                 'Settings',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -148,27 +154,10 @@ class ProfilePage extends ConsumerWidget {
               const SizedBox(height: 8),
               Card(
                 child: ListTile(
-                  leading: const Icon(Icons.notifications),
-                  title: const Text('Notifications'),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Notification settings coming soon')),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 8),
-              Card(
-                child: ListTile(
                   leading: const Icon(Icons.help),
                   title: const Text('Help & Support'),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Help & Support coming soon')),
-                    );
-                  },
+                  onTap: () => context.push('/support'),
                 ),
               ),
               const SizedBox(height: 24),

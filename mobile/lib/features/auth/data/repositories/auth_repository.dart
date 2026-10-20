@@ -12,12 +12,10 @@ class AuthRepository {
     try {
       final response = await _apiService.login(request.email, request.password);
       final data = response.data;
-      
+
       await _apiService.saveToken(data['access_token']);
-      
-      return LoginResponse(
-        accessToken: data['access_token'],
-      );
+
+      return LoginResponse(accessToken: data['access_token']);
     } on DioException catch (e) {
       throw Exception(_apiService.getErrorMessage(e));
     } catch (e) {
@@ -34,12 +32,10 @@ class AuthRepository {
         lastName: request.lastName,
       );
       final data = response.data;
-      
+
       await _apiService.saveToken(data['access_token']);
-      
-      return LoginResponse(
-        accessToken: data['access_token'],
-      );
+
+      return LoginResponse(accessToken: data['access_token']);
     } on DioException catch (e) {
       throw Exception(_apiService.getErrorMessage(e));
     } catch (e) {
@@ -56,8 +52,18 @@ class AuthRepository {
     return _apiService.login(email, password);
   }
 
-  Future<Response> registerApi(String email, String password, String firstName, String lastName) async {
-    return _apiService.register(email, password, firstName: firstName, lastName: lastName);
+  Future<Response> registerApi(
+    String email,
+    String password,
+    String firstName,
+    String lastName,
+  ) async {
+    return _apiService.register(
+      email,
+      password,
+      firstName: firstName,
+      lastName: lastName,
+    );
   }
 
   Future<Response> socialLoginApi({
@@ -84,5 +90,9 @@ class AuthRepository {
 
   Future<void> clearToken() async {
     await _apiService.clearToken();
+  }
+
+  Future<String?> getToken() async {
+    return _apiService.getToken();
   }
 }

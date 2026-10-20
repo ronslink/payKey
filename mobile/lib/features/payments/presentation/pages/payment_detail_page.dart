@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../data/models/transaction_model.dart';
 import '../../data/repositories/transactions_repository.dart';
 
@@ -39,7 +40,9 @@ class _PaymentDetailPageState extends ConsumerState<PaymentDetailPage> {
   Future<void> _loadTransactionDetails() async {
     try {
       final repository = ref.read(transactionsRepositoryProvider);
-      final transaction = await repository.getTransactionById(widget.transactionId);
+      final transaction = await repository.getTransactionById(
+        widget.transactionId,
+      );
       setState(() {
         _transaction = transaction;
         _isLoading = false;
@@ -56,6 +59,24 @@ class _PaymentDetailPageState extends ConsumerState<PaymentDetailPage> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _openInvoice(String invoiceUrl) async {
+    final uri = Uri.tryParse(invoiceUrl);
+    if (uri == null || !uri.hasScheme) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invoice link is unavailable')),
+      );
+      return;
+    }
+
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open invoice link')),
+      );
     }
   }
 
@@ -77,14 +98,10 @@ class _PaymentDetailPageState extends ConsumerState<PaymentDetailPage> {
         ),
       ),
       body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(),
-            )
+          ? const Center(child: CircularProgressIndicator())
           : _transaction == null
-              ? const Center(
-                  child: Text('Transaction not found'),
-                )
-              : _buildTransactionDetails(_transaction!),
+          ? const Center(child: Text('Transaction not found'))
+          : _buildTransactionDetails(_transaction!),
     );
   }
 
@@ -118,7 +135,7 @@ class _PaymentDetailPageState extends ConsumerState<PaymentDetailPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black .withValues(alpha: 0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -168,7 +185,10 @@ class _PaymentDetailPageState extends ConsumerState<PaymentDetailPage> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: _getStatusColor(transaction.status),
                   borderRadius: BorderRadius.circular(20),
@@ -197,7 +217,7 @@ class _PaymentDetailPageState extends ConsumerState<PaymentDetailPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black .withValues(alpha: 0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -216,11 +236,23 @@ class _PaymentDetailPageState extends ConsumerState<PaymentDetailPage> {
             ),
           ),
           const SizedBox(height: 16),
-          _buildDetailRow('Payment Method', _getPaymentMethodName(transaction.paymentMethod), Icons.payment),
+          _buildDetailRow(
+            'Payment Method',
+            _getPaymentMethodName(transaction.paymentMethod),
+            Icons.payment,
+          ),
           if (transaction.stripePaymentIntentId != null)
-            _buildDetailRow('Stripe Payment ID', transaction.stripePaymentIntentId!, Icons.credit_card),
+            _buildDetailRow(
+              'Stripe Payment ID',
+              transaction.stripePaymentIntentId!,
+              Icons.credit_card,
+            ),
           if (transaction.mpesaTransactionId != null)
-            _buildDetailRow('M-Pesa Transaction ID', transaction.mpesaTransactionId!, Icons.phone_android),
+            _buildDetailRow(
+              'M-Pesa Transaction ID',
+              transaction.mpesaTransactionId!,
+              Icons.phone_android,
+            ),
         ],
       ),
     );
@@ -234,7 +266,7 @@ class _PaymentDetailPageState extends ConsumerState<PaymentDetailPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black .withValues(alpha: 0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -254,11 +286,23 @@ class _PaymentDetailPageState extends ConsumerState<PaymentDetailPage> {
           ),
           const SizedBox(height: 16),
           _buildDetailRow('Transaction ID', transaction.id, Icons.receipt),
-          _buildDetailRow('Created', _formatDate(transaction.createdAt), Icons.calendar_today),
+          _buildDetailRow(
+            'Created',
+            _formatDate(transaction.createdAt),
+            Icons.calendar_today,
+          ),
           if (transaction.succeededAt != null)
-            _buildDetailRow('Completed', _formatDate(transaction.succeededAt!), Icons.check_circle),
+            _buildDetailRow(
+              'Completed',
+              _formatDate(transaction.succeededAt!),
+              Icons.check_circle,
+            ),
           _buildDetailRow('Currency', transaction.currency, Icons.attach_money),
-          _buildDetailRow('Amount', '${transaction.currency} ${transaction.amount.toStringAsFixed(2)}', Icons.payments),
+          _buildDetailRow(
+            'Amount',
+            '${transaction.currency} ${transaction.amount.toStringAsFixed(2)}',
+            Icons.payments,
+          ),
         ],
       ),
     );
@@ -272,7 +316,7 @@ class _PaymentDetailPageState extends ConsumerState<PaymentDetailPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black .withValues(alpha: 0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -294,10 +338,12 @@ class _PaymentDetailPageState extends ConsumerState<PaymentDetailPage> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: _getStatusColor(transaction.status) .withValues(alpha: 0.1),
+              color: _getStatusColor(transaction.status).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: _getStatusColor(transaction.status) .withValues(alpha: 0.3),
+                color: _getStatusColor(
+                  transaction.status,
+                ).withValues(alpha: 0.3),
                 width: 1,
               ),
             ),
@@ -341,6 +387,11 @@ class _PaymentDetailPageState extends ConsumerState<PaymentDetailPage> {
   }
 
   Widget _buildInvoiceCard(TransactionModel transaction) {
+    final invoiceUrl = transaction.invoiceUrl;
+    if (invoiceUrl == null || invoiceUrl.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -348,7 +399,7 @@ class _PaymentDetailPageState extends ConsumerState<PaymentDetailPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black .withValues(alpha: 0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -370,14 +421,7 @@ class _PaymentDetailPageState extends ConsumerState<PaymentDetailPage> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () {
-                // TODO: Open invoice URL
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Invoice functionality coming soon'),
-                  ),
-                );
-              },
+              onPressed: () => _openInvoice(invoiceUrl),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF3B82F6),
                 foregroundColor: Colors.white,
@@ -400,11 +444,7 @@ class _PaymentDetailPageState extends ConsumerState<PaymentDetailPage> {
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          Icon(
-            icon,
-            size: 20,
-            color: const Color(0xFF6B7280),
-          ),
+          Icon(icon, size: 20, color: const Color(0xFF6B7280)),
           const SizedBox(width: 12),
           Expanded(
             flex: 1,

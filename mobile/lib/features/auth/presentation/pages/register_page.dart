@@ -138,12 +138,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(authStateProvider, (previous, next) {
-      if (previous?.isLoading == true && !next.isLoading && !next.hasError) {
-        context.go('/onboarding');
-      }
-    });
-
     final authState = ref.watch(authStateProvider);
     return AuthPageScaffold(
       formKey: _formKey,

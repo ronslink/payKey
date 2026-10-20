@@ -594,8 +594,8 @@ class _SettingsContent extends ConsumerWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text(
-          'Your account has been scheduled for deletion. '
-          'Your account and data will be permanently deleted shortly.',
+          'Your account-deletion request has been submitted. '
+          'We will process it after any required verification and retention checks.',
         ),
         behavior: SnackBarBehavior.floating,
       ),

@@ -45,6 +45,7 @@ class PayrollConfirmPage extends ConsumerStatefulWidget {
 class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
   PayrollConfirmState _state = const PayrollConfirmState.initial();
   List<WorkerPayout>? _preparedPayouts;
+  String? _activeJobId;
 
   Map<String, String> _workerPhones = {};
   List<String> _cashWorkerNames = [];
@@ -302,6 +303,7 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
 
       // If we have a jobId, show the progress dialog
       if (response.isAsync && response.jobId != null && mounted) {
+        _activeJobId = response.jobId;
         final finalStatus = await showPayrollProcessingDialog(
           context: context,
           jobId: response.jobId!,
@@ -311,65 +313,20 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
         if (!mounted) return;
 
         if (finalStatus != null && finalStatus.isCompleted) {
-          ref.invalidate(transactionHistoryProvider);
-          ref.invalidate(payPeriodsProvider);
-
-          PayrollBatchResult batchResult;
-          if (finalStatus.result != null) {
-            final payoutData =
-                finalStatus.result!['payoutResults'] as Map<String, dynamic>? ??
-                finalStatus.result!;
-            final processResult = PayrollProcessingResult.fromJson(payoutData);
-            batchResult = PayrollBatchResult(
-              successCount: processResult.successCount,
-              failureCount: processResult.failureCount,
-              totalProcessed: processResult.totalCount,
-              failedWorkerIds: processResult.failedWorkerIds,
-              results: processResult.results
-                  .map(
-                    (r) => _workerResult(
-                      workerId: r.workerId,
-                      workerName: r.workerName,
-                      success: r.success,
-                      netPay: r.netPay,
-                      error: r.error,
-                    ),
-                  )
-                  .toList(),
-            );
-          } else {
-            // Fallback if result is missing
-            batchResult = PayrollBatchResult(
-              successCount: _preparedPayouts!.length,
-              failureCount: 0,
-              totalProcessed: _preparedPayouts!.length,
-              failedWorkerIds: [],
-              results: _preparedPayouts!
-                  .map(
-                    (p) => _workerResult(
-                      workerId: p.workerId,
-                      workerName: p.name,
-                      success: true,
-                      netPay: p.amount,
-                    ),
-                  )
-                  .toList(),
-            );
-          }
-
-          setState(() {
-            _state = _state.copyWith(
-              status: PayrollConfirmStatus.completed,
-              batchResult: batchResult,
-            );
-          });
+          _completePayroll(finalStatus);
         } else {
-          setState(() {
-            _state = _state.copyWith(
-              status: PayrollConfirmStatus.ready,
-              error: 'Payroll processing failed. Please try again.',
-            );
-          });
+          final recoveredStatus = await _recoverJobStatus(response.jobId!);
+          if (!mounted) return;
+          if (recoveredStatus != null && recoveredStatus.isCompleted) {
+            _completePayroll(recoveredStatus);
+          } else {
+            setState(() {
+              _state = _state.copyWith(
+                status: PayrollConfirmStatus.ready,
+                error: _statusRecoveryMessage(recoveredStatus),
+              );
+            });
+          }
         }
       } else {
         // Immediate completion (shouldn't happen with new async flow, but handle it)
@@ -394,10 +351,12 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
         );
 
         if (mounted) {
+          _activeJobId = null;
           setState(() {
             _state = _state.copyWith(
               status: PayrollConfirmStatus.completed,
               batchResult: batchResult,
+              clearError: true,
             );
           });
         }
@@ -455,7 +414,7 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_state.hasError) {
+    if (_state.status == PayrollConfirmStatus.error && _state.hasError) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -507,6 +466,10 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
               _buildCashPaymentBanner(context),
             ],
           ],
+          if (_state.hasError) ...[
+            const SizedBox(height: 16),
+            _buildProcessingStatusBanner(context),
+          ],
           const SizedBox(height: 24),
           _buildSummaryCard(context: context, verification: verification),
           if (!_isAllCash) ...[
@@ -514,6 +477,34 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
             const Center(child: IntaSendTrustBadge(width: 320)),
           ],
           const SizedBox(height: 40),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProcessingStatusBanner(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.blue.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blue.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              _state.error!,
+              style: TextStyle(
+                color: Colors.blue.shade900,
+                fontSize: 13,
+                height: 1.35,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -988,8 +979,8 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
     );
   }
 
-  /// Builds a result row. Cash workers are flagged, and their amount comes from
-  /// the payroll calculation because no payout (and so no payout amount) exists.
+  /// Builds a result row. Cash workers are flagged, and omitted payout amounts
+  /// fall back to the confirmed payroll calculation.
   PayrollWorkerResult _workerResult({
     required String workerId,
     required String workerName,
@@ -998,15 +989,7 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
     String? error,
   }) {
     final isCash = _cashWorkerIds.contains(workerId);
-    var amount = netPay ?? 0;
-    if (isCash) {
-      for (final calc in _calculations) {
-        if (calc.workerId == workerId) {
-          amount = calc.netPay;
-          break;
-        }
-      }
-    }
+    final amount = netPay ?? _confirmedNetPayFor(workerId);
     return PayrollWorkerResult(
       success: success,
       workerName: workerName,
@@ -1014,6 +997,131 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
       error: error,
       isCash: isCash,
     );
+  }
+
+  double _confirmedNetPayFor(String workerId) {
+    for (final calc in _calculations) {
+      if (calc.workerId == workerId) {
+        return calc.netPay;
+      }
+    }
+
+    final payouts = _preparedPayouts;
+    if (payouts != null) {
+      for (final payout in payouts) {
+        if (payout.workerId == workerId) {
+          return payout.amount;
+        }
+      }
+    }
+
+    return 0;
+  }
+
+  PayrollBatchResult _batchResultFromStatus(JobStatusResult finalStatus) {
+    final result = finalStatus.result;
+    if (result != null) {
+      final payoutData =
+          result['payoutResults'] as Map<String, dynamic>? ?? result;
+      final processResult = PayrollProcessingResult.fromJson(payoutData);
+      return PayrollBatchResult(
+        successCount: processResult.successCount,
+        failureCount: processResult.failureCount,
+        totalProcessed: processResult.totalCount,
+        failedWorkerIds: processResult.failedWorkerIds,
+        results: processResult.results
+            .map(
+              (r) => _workerResult(
+                workerId: r.workerId,
+                workerName: r.workerName,
+                success: r.success,
+                netPay: r.netPay,
+                error: r.error,
+              ),
+            )
+            .toList(),
+      );
+    }
+
+    final payouts = _preparedPayouts ?? [];
+    return PayrollBatchResult(
+      successCount: payouts.length,
+      failureCount: 0,
+      totalProcessed: payouts.length,
+      failedWorkerIds: [],
+      results: payouts
+          .map(
+            (p) => _workerResult(
+              workerId: p.workerId,
+              workerName: p.name,
+              success: true,
+              netPay: p.amount,
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  void _completePayroll(JobStatusResult finalStatus) {
+    ref.invalidate(transactionHistoryProvider);
+    ref.invalidate(payPeriodsProvider);
+
+    final batchResult = _batchResultFromStatus(finalStatus);
+    _activeJobId = null;
+    setState(() {
+      _state = _state.copyWith(
+        status: PayrollConfirmStatus.completed,
+        batchResult: batchResult,
+        clearError: true,
+      );
+    });
+  }
+
+  Future<JobStatusResult?> _recoverJobStatus(String jobId) async {
+    try {
+      return await ref.read(payrollRepositoryProvider).getJobStatus(jobId);
+    } catch (error) {
+      debugPrint('PAYROLL STATUS RECOVERY ERROR: $error');
+      return null;
+    }
+  }
+
+  Future<void> _checkActiveJobStatus() async {
+    final jobId = _activeJobId;
+    if (jobId == null) return;
+
+    setState(() {
+      _state = _state.copyWith(
+        status: PayrollConfirmStatus.processing,
+        clearError: true,
+      );
+    });
+
+    final status = await _recoverJobStatus(jobId);
+    if (!mounted) return;
+
+    if (status != null && status.isCompleted) {
+      _completePayroll(status);
+      return;
+    }
+
+    setState(() {
+      _state = _state.copyWith(
+        status: PayrollConfirmStatus.ready,
+        error: _statusRecoveryMessage(status),
+      );
+    });
+  }
+
+  String _statusRecoveryMessage(JobStatusResult? status) {
+    if (status == null) {
+      return 'We could not confirm whether this payroll finished. Check status before starting another payment.';
+    }
+    if (status.isFailed) {
+      return status.failedReason ??
+          'Payroll processing failed. Check status before starting another payment.';
+    }
+    return 'Payroll is still ${status.status}. Check status before starting another payment.';
   }
 
   bool get _isAllCash {
@@ -1041,25 +1149,44 @@ class _PayrollConfirmPageState extends ConsumerState<PayrollConfirmPage> {
         border: Border(top: BorderSide(color: context.borderDefault)),
       ),
       child: SafeArea(
-        child: ElevatedButton(
-          onPressed: canProceed && !isProcessing ? _processPayroll : null,
-          style: PayrollConfirmTheme.primaryButtonStyle(context),
-          child: isProcessing
-              ? SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    color: Theme.of(context).colorScheme.onPrimary,
-                    strokeWidth: 2,
-                  ),
-                )
-              : Text(
-                  buttonLabel,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_activeJobId != null && _state.hasError) ...[
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: isProcessing ? null : _checkActiveJobStatus,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Check Status'),
                 ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: canProceed && !isProcessing ? _processPayroll : null,
+                style: PayrollConfirmTheme.primaryButtonStyle(context),
+                child: isProcessing
+                    ? SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          color: Theme.of(context).colorScheme.onPrimary,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Text(
+                        buttonLabel,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+              ),
+            ),
+          ],
         ),
       ),
     );

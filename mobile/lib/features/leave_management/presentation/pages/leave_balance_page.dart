@@ -1,6 +1,7 @@
 import '../../../../core/config/store_policy.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../data/models/leave_request_model.dart';
 import '../../../subscriptions/presentation/providers/feature_access_provider.dart';
 import '../providers/leave_management_provider.dart';
@@ -8,10 +9,7 @@ import '../providers/leave_management_provider.dart';
 class LeaveBalancePage extends ConsumerStatefulWidget {
   final String? selectedWorkerId;
 
-  const LeaveBalancePage({
-    super.key,
-    this.selectedWorkerId,
-  });
+  const LeaveBalancePage({super.key, this.selectedWorkerId});
 
   @override
   ConsumerState<LeaveBalancePage> createState() => _LeaveBalancePageState();
@@ -27,7 +25,9 @@ class _LeaveBalancePageState extends ConsumerState<LeaveBalancePage> {
       return _buildNoWorkerSelectedState();
     }
 
-    final leaveBalance = ref.watch(leaveBalanceProvider(widget.selectedWorkerId!));
+    final leaveBalance = ref.watch(
+      leaveBalanceProvider(widget.selectedWorkerId!),
+    );
 
     return featureAccess.when(
       data: (access) => Column(
@@ -35,7 +35,7 @@ class _LeaveBalancePageState extends ConsumerState<LeaveBalancePage> {
           // Preview mode banner
           if (access.isPreview)
             _buildPreviewBanner(access.mockNotice ?? 'This is sample data'),
-          
+
           // Header
           Container(
             padding: const EdgeInsets.all(16),
@@ -45,14 +45,16 @@ class _LeaveBalancePageState extends ConsumerState<LeaveBalancePage> {
                 const SizedBox(width: 8),
                 Text(
                   'Leave Balance',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const Spacer(),
                 IconButton(
                   // ignore: unused_result
-                  onPressed: () => ref.refresh(leaveBalanceProvider(widget.selectedWorkerId!)),
+                  onPressed: () => ref.refresh(
+                    leaveBalanceProvider(widget.selectedWorkerId!),
+                  ),
                   icon: const Icon(Icons.refresh),
                   tooltip: 'Refresh Balance',
                 ),
@@ -78,14 +80,18 @@ class _LeaveBalancePageState extends ConsumerState<LeaveBalancePage> {
                     const SizedBox(height: 8),
                     Text(
                       error.toString(),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: Colors.grey),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: () {
                         // ignore: unused_result
-                        ref.refresh(leaveBalanceProvider(widget.selectedWorkerId!));
+                        ref.refresh(
+                          leaveBalanceProvider(widget.selectedWorkerId!),
+                        );
                       },
                       child: const Text('Retry'),
                     ),
@@ -107,13 +113,15 @@ class _LeaveBalancePageState extends ConsumerState<LeaveBalancePage> {
                 const SizedBox(width: 8),
                 Text(
                   'Leave Balance',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const Spacer(),
                 IconButton(
-                  onPressed: () => ref.refresh(leaveBalanceProvider(widget.selectedWorkerId!)),
+                  onPressed: () => ref.refresh(
+                    leaveBalanceProvider(widget.selectedWorkerId!),
+                  ),
                   icon: const Icon(Icons.refresh),
                   tooltip: 'Refresh Balance',
                 ),
@@ -152,13 +160,15 @@ class _LeaveBalancePageState extends ConsumerState<LeaveBalancePage> {
                 const SizedBox(width: 8),
                 Text(
                   'Leave Balance',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const Spacer(),
                 IconButton(
-                  onPressed: () => ref.refresh(leaveBalanceProvider(widget.selectedWorkerId!)),
+                  onPressed: () => ref.refresh(
+                    leaveBalanceProvider(widget.selectedWorkerId!),
+                  ),
                   icon: const Icon(Icons.refresh),
                   tooltip: 'Refresh Balance',
                 ),
@@ -194,25 +204,16 @@ class _LeaveBalancePageState extends ConsumerState<LeaveBalancePage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.person_outline,
-            size: 64,
-            color: Colors.grey.shade400,
-          ),
+          Icon(Icons.person_outline, size: 64, color: Colors.grey.shade400),
           const SizedBox(height: 16),
           Text(
             'Select a Worker',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey.shade600,
-            ),
+            style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
           ),
           const SizedBox(height: 8),
           Text(
             'Choose a worker from the dropdown above to view their leave balance',
-            style: TextStyle(
-              color: Colors.grey.shade500,
-            ),
+            style: TextStyle(color: Colors.grey.shade500),
             textAlign: TextAlign.center,
           ),
         ],
@@ -220,9 +221,13 @@ class _LeaveBalancePageState extends ConsumerState<LeaveBalancePage> {
     );
   }
 
-  Widget _buildBalanceContent(BuildContext context, WidgetRef ref, LeaveBalanceModel balance) {
+  Widget _buildBalanceContent(
+    BuildContext context,
+    WidgetRef ref,
+    LeaveBalanceModel balance,
+  ) {
     final theme = Theme.of(context);
-    
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -433,9 +438,7 @@ class _LeaveBalancePageState extends ConsumerState<LeaveBalancePage> {
                     '• Annual leave resets on January 1st each year\n'
                     '• Emergency leave can be requested for urgent situations\n'
                     '• Unused annual leave does not carry over to the next year',
-                    style: TextStyle(
-                      color: Colors.blue.shade800,
-                    ),
+                    style: TextStyle(color: Colors.blue.shade800),
                   ),
                 ],
               ),
@@ -471,14 +474,10 @@ class _LeaveBalancePageState extends ConsumerState<LeaveBalancePage> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: color .withValues(alpha: 0.1),
+                    color: color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(
-                    icon,
-                    color: color,
-                    size: 20,
-                  ),
+                  child: Icon(icon, color: color, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -522,7 +521,7 @@ class _LeaveBalancePageState extends ConsumerState<LeaveBalancePage> {
                 ),
               ],
             ),
-            
+
             if (showProgress && !isUnlimited) ...[
               const SizedBox(height: 12),
               LinearProgressIndicator(
@@ -537,13 +536,19 @@ class _LeaveBalancePageState extends ConsumerState<LeaveBalancePage> {
     );
   }
 
-  Widget _buildStatItem(BuildContext context, String label, String value, IconData icon, Color color) {
+  Widget _buildStatItem(
+    BuildContext context,
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Column(
       children: [
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: color .withValues(alpha: 0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, color: color, size: 24),
@@ -559,9 +564,9 @@ class _LeaveBalancePageState extends ConsumerState<LeaveBalancePage> {
         const SizedBox(height: 2),
         Text(
           label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Colors.grey.shade600,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
           textAlign: TextAlign.center,
         ),
       ],
@@ -587,18 +592,17 @@ class _LeaveBalancePageState extends ConsumerState<LeaveBalancePage> {
               ),
             ),
           ),
-          if (StorePolicy.purchasesAllowed) TextButton(
-            onPressed: () {
-              // TODO: Navigate to upgrade screen
-            },
-            child: const Text(
-              'Upgrade',
-              style: TextStyle(
-                color: Colors.black87,
-                fontWeight: FontWeight.bold,
+          if (StorePolicy.purchasesAllowed)
+            TextButton(
+              onPressed: () => context.push('/settings/subscription'),
+              child: const Text(
+                'Upgrade',
+                style: TextStyle(
+                  color: Colors.black87,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -609,7 +613,9 @@ class _LeaveBalancePageState extends ConsumerState<LeaveBalancePage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Quick Leave Request'),
-        content: const Text('This feature will open the leave request form for quick submission.'),
+        content: const Text(
+          'This feature will open the leave request form for quick submission.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -632,7 +638,9 @@ class _LeaveBalancePageState extends ConsumerState<LeaveBalancePage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Leave History'),
-        content: const Text('This will show the complete leave history for this worker.'),
+        content: const Text(
+          'This will show the complete leave history for this worker.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),

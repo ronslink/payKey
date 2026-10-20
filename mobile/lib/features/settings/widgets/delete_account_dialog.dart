@@ -63,8 +63,8 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
       final data = e.response?.data;
       final message = data is Map && data['message'] != null
           ? (data['message'] is List
-              ? (data['message'] as List).join('\n')
-              : data['message'].toString())
+                ? (data['message'] as List).join('\n')
+                : data['message'].toString())
           : 'Could not delete your account. Please try again.';
       setState(() {
         _submitting = false;
@@ -88,9 +88,10 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'This permanently deletes your PayDome account and all of its '
-              'data, including workers, payroll records, properties and '
-              'transactions. This cannot be undone.',
+              'This submits a request to delete your PayDome account and '
+              'associated personal data, including workers, payroll records, '
+              'properties and transactions. Some records may be retained where '
+              'required for legal, accounting, security or dispute purposes.',
             ),
             const SizedBox(height: 16),
             TextField(
@@ -120,7 +121,7 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
               onChanged: _submitting
                   ? null
                   : (v) => setState(() => _confirmed = v ?? false),
-              title: const Text('I understand this cannot be undone'),
+              title: const Text('I understand this closes my account'),
             ),
             if (_error != null) ...[
               const SizedBox(height: 8),
@@ -131,7 +132,9 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: _submitting ? null : () => Navigator.of(context).pop(false),
+          onPressed: _submitting
+              ? null
+              : () => Navigator.of(context).pop(false),
           child: const Text('Cancel'),
         ),
         FilledButton(

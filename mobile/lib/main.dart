@@ -73,32 +73,32 @@ import 'core/providers/storage_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize Firebase
-  if (kIsWeb) {
-    // On Web, minimize initialization or provide dummy options if necessary
-    // await Firebase.initializeApp(options: ...);
-    debugPrint('Firebase Web initialization skipped or needs options');
-  } else {
-    await Firebase.initializeApp();
-    
-    // Set up background message handler (Mobile only)
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-    
-    // Initialize notification service (Mobile only)
-    await NotificationService().initialize();
-  }
-  
+
   // Initialize SharedPreferences for token storage
   final prefs = await SharedPreferences.getInstance();
   final storageService = StorageService(prefs);
-  
+
   runApp(
-    SessionScope(
-      storageService: storageService,
-      child: const PaydomeApp(),
-    ),
+    SessionScope(storageService: storageService, child: const PaydomeApp()),
   );
+
+  unawaited(_initializeOptionalServices());
+}
+
+Future<void> _initializeOptionalServices() async {
+  if (kIsWeb) {
+    debugPrint('Firebase Web initialization skipped or needs options');
+    return;
+  }
+
+  try {
+    await Firebase.initializeApp();
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    await NotificationService().initialize();
+  } catch (error, stackTrace) {
+    debugPrint('Optional Firebase/notification initialization failed: $error');
+    debugPrintStack(stackTrace: stackTrace);
+  }
 }
 
 // =============================================================================
@@ -154,9 +154,7 @@ class _SessionScopeState extends State<SessionScope> {
   Widget build(BuildContext context) {
     return ProviderScope(
       key: ValueKey('session-$_session'),
-      overrides: [
-        storageProvider.overrideWithValue(widget.storageService),
-      ],
+      overrides: [storageProvider.overrideWithValue(widget.storageService)],
       child: widget.child,
     );
   }
@@ -182,8 +180,7 @@ class _PaydomeAppState extends ConsumerState<PaydomeApp> {
     super.initState();
     // Handle notification taps (background → foreground, terminated → open)
     if (!kIsWeb) {
-      _notificationTapSubscription = NotificationService()
-          .onMessageOpenedApp
+      _notificationTapSubscription = NotificationService().onMessageOpenedApp
           .listen(_handleNotificationTap);
     }
 
@@ -239,7 +236,6 @@ abstract class AppConfig {
   static const String appName = 'payDome';
   static const String initialRoute = AppRoutes.login;
 }
-
 
 // =============================================================================
 // ROUTES
@@ -312,7 +308,6 @@ abstract class AppRoutes {
   static const employeePaymentSettings = '/employee/payment-settings';
 }
 
-
 // =============================================================================
 // ROUTER PROVIDER
 // =============================================================================
@@ -370,9 +365,9 @@ Future<String?> _handleRedirect(
 }
 
 bool _isAuthRoute(String path) {
-  return path == AppRoutes.login || 
-         path == AppRoutes.register ||
-         path == AppRoutes.employeeLogin;
+  return path == AppRoutes.login ||
+      path == AppRoutes.register ||
+      path == AppRoutes.employeeLogin;
 }
 
 // =============================================================================
@@ -411,24 +406,17 @@ final _authRoutes = <RouteBase>[
 // Main Tab Routes
 // -----------------------------------------------------------------------------
 
-
-
 final _mainTabRoutes = <RouteBase>[
   GoRoute(
     path: AppRoutes.home,
     name: 'home',
-    builder: (_, _) => const MainLayoutNew(
-      currentIndex: 0,
-      child: HomePage(),
-    ),
+    builder: (_, _) => const MainLayoutNew(currentIndex: 0, child: HomePage()),
   ),
   GoRoute(
     path: AppRoutes.workers,
     name: 'workers',
-    builder: (_, _) => const MainLayoutNew(
-      currentIndex: 1,
-      child: WorkersPage(),
-    ),
+    builder: (_, _) =>
+        const MainLayoutNew(currentIndex: 1, child: WorkersPage()),
   ),
   GoRoute(
     path: AppRoutes.timeTracking,
@@ -447,10 +435,8 @@ final _mainTabRoutes = <RouteBase>[
   GoRoute(
     path: AppRoutes.payroll,
     name: 'payroll',
-    builder: (_, _) => const MainLayoutNew(
-      currentIndex: 2,
-      child: PayrollPage(),
-    ),
+    builder: (_, _) =>
+        const MainLayoutNew(currentIndex: 2, child: PayrollPage()),
   ),
   GoRoute(
     path: '/payroll/run',
@@ -471,10 +457,8 @@ final _mainTabRoutes = <RouteBase>[
   GoRoute(
     path: AppRoutes.finance,
     name: 'finance',
-    builder: (_, _) => const MainLayoutNew(
-      currentIndex: 3,
-      child: FinancePage(),
-    ),
+    builder: (_, _) =>
+        const MainLayoutNew(currentIndex: 3, child: FinancePage()),
   ),
   GoRoute(
     path: '/finance/top-up',
@@ -484,10 +468,8 @@ final _mainTabRoutes = <RouteBase>[
   GoRoute(
     path: AppRoutes.settings,
     name: 'settings',
-    builder: (_, _) => const MainLayoutNew(
-      currentIndex: 4,
-      child: SettingsPage(),
-    ),
+    builder: (_, _) =>
+        const MainLayoutNew(currentIndex: 4, child: SettingsPage()),
   ),
   GoRoute(
     path: AppRoutes.settingsSubscription,
@@ -540,7 +522,6 @@ final _workerRoutes = <RouteBase>[
       return TerminateWorkerPage(workerId: workerId);
     },
   ),
-
 ];
 
 // -----------------------------------------------------------------------------
@@ -548,7 +529,6 @@ final _workerRoutes = <RouteBase>[
 // -----------------------------------------------------------------------------
 
 final _payrollRoutes = <RouteBase>[
-
   GoRoute(
     path: '/payroll/run/:id',
     name: 'payrollRunWithId',
@@ -563,7 +543,10 @@ final _payrollRoutes = <RouteBase>[
     builder: (_, state) {
       final id = state.pathParameters['id']!;
       final selectedWorkers = state.extra as List<WorkerModel>? ?? [];
-      return PayrollReviewPage(payPeriodId: id, selectedWorkers: selectedWorkers);
+      return PayrollReviewPage(
+        payPeriodId: id,
+        selectedWorkers: selectedWorkers,
+      );
     },
   ),
   GoRoute(
@@ -699,10 +682,8 @@ final _otherRoutes = <RouteBase>[
   GoRoute(
     path: AppRoutes.reports,
     name: 'reports',
-    builder: (_, _) => const FeatureGate(
-      featureKey: 'basic_reports',
-      child: ReportsPage(),
-    ),
+    builder: (_, _) =>
+        const FeatureGate(featureKey: 'basic_reports', child: ReportsPage()),
   ),
   // GovSubmissionsPage route removed - using ComprehensiveTaxPage
   // Attendance (for employers)
@@ -798,6 +779,7 @@ extension NavigationExtensions on BuildContext {
   void pushWorkerEdit(String id, WorkerModel? worker) {
     push(AppRoutes.workerEdit(id), extra: worker);
   }
+
   void pushWorkerTerminate(String id) => push(AppRoutes.workerTerminate(id));
 
   // Payroll
@@ -808,6 +790,7 @@ extension NavigationExtensions on BuildContext {
       go(AppRoutes.payrollRun);
     }
   }
+
   void pushPayrollReview(String id) => push(AppRoutes.payrollReview(id));
   void pushPayslip(String id) => push(AppRoutes.payslip(id));
 

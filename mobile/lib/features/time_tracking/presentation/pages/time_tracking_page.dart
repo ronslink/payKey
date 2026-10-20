@@ -1,6 +1,7 @@
 import '../../../../core/config/store_policy.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../workers/presentation/providers/workers_provider.dart';
 import '../../../workers/data/models/worker_model.dart';
@@ -13,10 +14,7 @@ import 'worker_timesheet_page.dart';
 class TimeTrackingPage extends ConsumerStatefulWidget {
   final String? selectedWorkerId;
 
-  const TimeTrackingPage({
-    super.key,
-    this.selectedWorkerId,
-  });
+  const TimeTrackingPage({super.key, this.selectedWorkerId});
 
   @override
   ConsumerState<TimeTrackingPage> createState() => _TimeTrackingPageState();
@@ -33,7 +31,7 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _selectedLiveWorkerId = widget.selectedWorkerId;
-    
+
     // Default to current week if no pay period selected
     final now = DateTime.now();
     final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
@@ -44,14 +42,18 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchOverviewData();
       if (_selectedLiveWorkerId != null) {
-        ref.read(timeTrackingProvider.notifier).getActiveEntry(_selectedLiveWorkerId!);
+        ref
+            .read(timeTrackingProvider.notifier)
+            .getActiveEntry(_selectedLiveWorkerId!);
       }
     });
   }
 
   void _fetchOverviewData() {
     if (_selectedDateRange != null) {
-      ref.read(allTimeEntriesProvider.notifier).fetchTimeEntries(
+      ref
+          .read(allTimeEntriesProvider.notifier)
+          .fetchTimeEntries(
             startDate: _selectedDateRange!.start,
             endDate: _selectedDateRange!.end,
           );
@@ -98,10 +100,7 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
             Expanded(
               child: TabBarView(
                 controller: _tabController,
-                children: [
-                  _buildOverviewTab(),
-                  _buildLiveActionsTab(),
-                ],
+                children: [_buildOverviewTab(), _buildLiveActionsTab()],
               ),
             ),
           ],
@@ -111,10 +110,7 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
             Expanded(
               child: TabBarView(
                 controller: _tabController,
-                children: [
-                  _buildOverviewTab(),
-                  _buildLiveActionsTab(),
-                ],
+                children: [_buildOverviewTab(), _buildLiveActionsTab()],
               ),
             ),
           ],
@@ -124,10 +120,7 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
             Expanded(
               child: TabBarView(
                 controller: _tabController,
-                children: [
-                  _buildOverviewTab(),
-                  _buildLiveActionsTab(),
-                ],
+                children: [_buildOverviewTab(), _buildLiveActionsTab()],
               ),
             ),
           ],
@@ -155,18 +148,17 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
               ),
             ),
           ),
-          if (StorePolicy.purchasesAllowed) TextButton(
-            onPressed: () {
-              // TODO: Navigate to upgrade screen
-            },
-            child: const Text(
-              'Upgrade',
-              style: TextStyle(
-                color: Colors.black87,
-                fontWeight: FontWeight.bold,
+          if (StorePolicy.purchasesAllowed)
+            TextButton(
+              onPressed: () => context.push('/settings/subscription'),
+              child: const Text(
+                'Upgrade',
+                style: TextStyle(
+                  color: Colors.black87,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -199,7 +191,8 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
                     final workerList = workers;
                     return _buildOverviewContent(entries, workerList);
                   },
-                  loading: () => const Center(child: CircularProgressIndicator()),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
                   error: (e, s) => Text('Error loading workers: $e'),
                 );
               },
@@ -268,32 +261,52 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
     );
   }
 
-  Widget _buildOverviewContent(List<TimeEntryModel> entries, List<WorkerModel> workers) {
+  Widget _buildOverviewContent(
+    List<TimeEntryModel> entries,
+    List<WorkerModel> workers,
+  ) {
     // aggregation logic
     double totalHours = 0;
     int activeWorkersCount = 0;
-    
+
     // Map workerId -> details
     final Map<String, double> workerHours = {};
-    
+
     for (var entry in entries) {
       if (entry.totalHours != null) {
         totalHours += entry.totalHours!;
-        workerHours[entry.workerId] = (workerHours[entry.workerId] ?? 0) + entry.totalHours!;
+        workerHours[entry.workerId] =
+            (workerHours[entry.workerId] ?? 0) + entry.totalHours!;
       }
     }
-    
+
     // Determine active workers (those with hours)
-    final workersWithTime = workers.where((w) => workerHours.containsKey(w.id)).toList();
+    final workersWithTime = workers
+        .where((w) => workerHours.containsKey(w.id))
+        .toList();
     activeWorkersCount = workersWithTime.length;
 
     return Column(
       children: [
         Row(
           children: [
-            Expanded(child: _buildSummaryCard('Total Hours', totalHours.toStringAsFixed(1), Icons.access_time, Colors.blue)),
+            Expanded(
+              child: _buildSummaryCard(
+                'Total Hours',
+                totalHours.toStringAsFixed(1),
+                Icons.access_time,
+                Colors.blue,
+              ),
+            ),
             const SizedBox(width: 12),
-            Expanded(child: _buildSummaryCard('Active Workers', '$activeWorkersCount', Icons.people, Colors.green)),
+            Expanded(
+              child: _buildSummaryCard(
+                'Active Workers',
+                '$activeWorkersCount',
+                Icons.people,
+                Colors.green,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 24),
@@ -301,7 +314,9 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
           alignment: Alignment.centerLeft,
           child: Text(
             'Worker Summary',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
         ),
         const SizedBox(height: 12),
@@ -323,7 +338,12 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
     );
   }
 
-  Widget _buildSummaryCard(String title, String value, IconData icon, Color color) {
+  Widget _buildSummaryCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -340,10 +360,7 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
             value,
             style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
-          Text(
-            title,
-            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-          ),
+          Text(title, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
         ],
       ),
     );
@@ -352,30 +369,32 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
   Widget _buildWorkerListTile(WorkerModel worker, double hours) {
     final isSalaried = worker.employmentType == 'FIXED';
     final hasHours = hours > 0;
-    
+
     // Logic:
     // Salaried: Show ONLY Overtime (here assumed as all tracked hours for now, as verified).
     // Hourly: Show Total Hours.
     // If Salaried and no hours, don't show "0h" aggressively, maybe show "Salaried".
-    
+
     String hoursDisplay = '${hours.toStringAsFixed(1)}h';
     Color hoursColor = Colors.black;
     String subtext = 'Total Hours';
-    
+
     if (isSalaried) {
-        hoursColor = hasHours ? Colors.orange : Colors.grey;
-        subtext = hasHours ? 'Overtime Recorded' : 'Standard Salary';
+      hoursColor = hasHours ? Colors.orange : Colors.grey;
+      subtext = hasHours ? 'Overtime Recorded' : 'Standard Salary';
     }
 
     return InkWell(
       onTap: () {
-        Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => WorkerTimesheetPage(
-            worker: worker,
-            startDate: _selectedDateRange!.start,
-            endDate: _selectedDateRange!.end,
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => WorkerTimesheetPage(
+              worker: worker,
+              startDate: _selectedDateRange!.start,
+              endDate: _selectedDateRange!.end,
+            ),
           ),
-        ));
+        );
       },
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -393,7 +412,9 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
         child: Row(
           children: [
             CircleAvatar(
-              backgroundColor: isSalaried ? Colors.blue.withValues(alpha: 0.1) : Colors.purple.withValues(alpha: 0.1),
+              backgroundColor: isSalaried
+                  ? Colors.blue.withValues(alpha: 0.1)
+                  : Colors.purple.withValues(alpha: 0.1),
               child: Text(
                 worker.name.substring(0, 1).toUpperCase(),
                 style: TextStyle(
@@ -407,14 +428,22 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(worker.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(
+                    worker.name,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
-                          color: isSalaried ? Colors.blue.withValues(alpha: 0.1) : Colors.purple.withValues(alpha: 0.1),
+                          color: isSalaried
+                              ? Colors.blue.withValues(alpha: 0.1)
+                              : Colors.purple.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
@@ -492,10 +521,7 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
               children: [
                 const Text(
                   'Enter Time',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -513,19 +539,28 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
 
                     return InputDecorator(
                       decoration: InputDecoration(
-                        hintText: _selectedLiveWorkerId == null ? 'Select a worker' : null,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        hintText: _selectedLiveWorkerId == null
+                            ? 'Select a worker'
+                            : null,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         filled: true,
                         fillColor: const Color(0xFFF9FAFB),
                         prefixIcon: const Icon(Icons.person),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
                           value: _selectedLiveWorkerId,
                           isExpanded: true,
                           hint: const Text('Select a worker'),
-                          items: activeWorkers.map<DropdownMenuItem<String>>((worker) {
+                          items: activeWorkers.map<DropdownMenuItem<String>>((
+                            worker,
+                          ) {
                             return DropdownMenuItem<String>(
                               value: worker.id as String,
                               child: Text(worker.name as String),
@@ -534,7 +569,9 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
                           onChanged: (value) {
                             setState(() => _selectedLiveWorkerId = value);
                             if (value != null) {
-                              ref.read(timeTrackingProvider.notifier).getActiveEntry(value);
+                              ref
+                                  .read(timeTrackingProvider.notifier)
+                                  .getActiveEntry(value);
                             }
                           },
                         ),
@@ -666,9 +703,7 @@ class _TimeTrackingPageState extends ConsumerState<TimeTrackingPage>
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text(
-          'Time recorded. Approve it in payroll when you run it.',
-        ),
+        content: Text('Time recorded. Approve it in payroll when you run it.'),
       ),
     );
     _fetchOverviewData();

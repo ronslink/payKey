@@ -14,7 +14,9 @@ class NotificationService with WidgetsBindingObserver {
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  FirebaseMessaging? _messaging;
+  FirebaseMessaging get _firebaseMessaging =>
+      _messaging ??= FirebaseMessaging.instance;
   DeviceTokenSync? _tokenSync;
   StreamSubscription<String?>? _sessionSubscription;
   StreamSubscription<String>? _tokenSubscription;
@@ -62,7 +64,7 @@ class NotificationService with WidgetsBindingObserver {
     await _getToken();
 
     // Listen for token refresh
-    _tokenSubscription = _messaging.onTokenRefresh.listen((newToken) {
+    _tokenSubscription = _firebaseMessaging.onTokenRefresh.listen((newToken) {
       _fcmToken = newToken;
       unawaited(_safelySync(_tokenSync!.updateToken(newToken)));
     });
@@ -82,7 +84,7 @@ class NotificationService with WidgetsBindingObserver {
     });
 
     // Check if app was opened from a terminated state via notification
-    final initialMessage = await _messaging.getInitialMessage();
+    final initialMessage = await _firebaseMessaging.getInitialMessage();
     if (initialMessage != null) {
       debugPrint(
         'App opened from terminated state: ${initialMessage.notification?.title}',
@@ -92,7 +94,7 @@ class NotificationService with WidgetsBindingObserver {
   }
 
   Future<void> _requestPermission() async {
-    final settings = await _messaging.requestPermission(
+    final settings = await _firebaseMessaging.requestPermission(
       alert: true,
       announcement: false,
       badge: true,
@@ -111,10 +113,10 @@ class NotificationService with WidgetsBindingObserver {
     try {
       // For iOS, get APNS token first
       if (!kIsWeb && Platform.isIOS) {
-        await _messaging.getAPNSToken();
+        await _firebaseMessaging.getAPNSToken();
       }
 
-      _fcmToken = await _messaging.getToken();
+      _fcmToken = await _firebaseMessaging.getToken();
       unawaited(_safelySync(_tokenSync!.updateToken(_fcmToken)));
     } catch (e) {
       debugPrint('Error getting FCM token: $e');
@@ -142,13 +144,13 @@ class NotificationService with WidgetsBindingObserver {
 
   /// Subscribe to a topic for broadcast notifications.
   Future<void> subscribeToTopic(String topic) async {
-    await _messaging.subscribeToTopic(topic);
+    await _firebaseMessaging.subscribeToTopic(topic);
     debugPrint('Subscribed to topic: $topic');
   }
 
   /// Unsubscribe from a topic.
   Future<void> unsubscribeFromTopic(String topic) async {
-    await _messaging.unsubscribeFromTopic(topic);
+    await _firebaseMessaging.unsubscribeFromTopic(topic);
     debugPrint('Unsubscribed from topic: $topic');
   }
 

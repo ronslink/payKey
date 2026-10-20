@@ -97,12 +97,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(authStateProvider, (previous, next) {
-      if (!next.isLoading && !next.hasError && previous?.isLoading == true) {
-        context.go('/home');
-      }
-    });
-
     final authState = ref.watch(authStateProvider);
     return AuthPageScaffold(
       formKey: _formKey,

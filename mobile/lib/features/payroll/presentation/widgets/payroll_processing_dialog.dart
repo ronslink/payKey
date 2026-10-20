@@ -6,7 +6,7 @@ import '../../data/repositories/payroll_repository.dart';
 import '../../data/models/payroll_model.dart';
 
 /// A dialog that shows real-time payroll processing progress.
-/// 
+///
 /// Polls the backend for job status updates and displays:
 /// - Progress indicator
 /// - Current status message
@@ -165,8 +165,8 @@ class _PayrollProcessingDialogState
                 _hasError
                     ? 'Processing Failed'
                     : _isComplete
-                        ? 'Payroll Complete'
-                        : 'Processing Payroll',
+                    ? 'Payroll Complete'
+                    : 'Processing Payroll',
                 style: const TextStyle(fontSize: 18),
               ),
             ),
@@ -179,10 +179,7 @@ class _PayrollProcessingDialogState
             // Status message
             Text(
               _statusMessage,
-              style: TextStyle(
-                color: context.textSecondary,
-                fontSize: 14,
-              ),
+              style: TextStyle(color: context.textSecondary, fontSize: 14),
             ),
             const SizedBox(height: 20),
 
@@ -192,7 +189,9 @@ class _PayrollProcessingDialogState
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: LinearProgressIndicator(
-                  value: _isComplete ? 1.0 : (_progress > 0 ? _progress / 100 : null),
+                  value: _isComplete
+                      ? 1.0
+                      : (_progress > 0 ? _progress / 100 : null),
                   minHeight: 8,
                   backgroundColor: context.borderMuted,
                   valueColor: AlwaysStoppedAnimation<Color>(
@@ -252,10 +251,7 @@ class _PayrollProcessingDialogState
                     Expanded(
                       child: Text(
                         'Please try again or contact support if the issue persists.',
-                        style: TextStyle(
-                          color: _errorColor,
-                          fontSize: 12,
-                        ),
+                        style: TextStyle(color: _errorColor, fontSize: 12),
                       ),
                     ),
                   ],
@@ -274,13 +270,13 @@ class _PayrollProcessingDialogState
                 ),
               ]
             : _isComplete && _finalStatus != null
-                ? [
-                    FilledButton(
-                      onPressed: () => widget.onComplete(_finalStatus!),
-                      child: const Text('Done'),
-                    ),
-                  ]
-                : null, // No actions while processing
+            ? [
+                FilledButton(
+                  onPressed: () => widget.onComplete(_finalStatus!),
+                  child: const Text('Done'),
+                ),
+              ]
+            : null, // No actions while processing
       ),
     );
   }
@@ -357,7 +353,7 @@ class _PayrollProcessingDialogState
 }
 
 /// Shows the payroll processing dialog and returns when complete or failed.
-/// 
+///
 /// Returns `JobStatusResult` if processing completed successfully, `null` otherwise.
 Future<JobStatusResult?> showPayrollProcessingDialog({
   required BuildContext context,
@@ -370,8 +366,12 @@ Future<JobStatusResult?> showPayrollProcessingDialog({
     context: context,
     jobId: jobId,
     workerCount: workerCount,
-    onComplete: (status) => completer.complete(status),
-    onError: (reason) => completer.complete(null),
+    onComplete: (status) {
+      if (!completer.isCompleted) completer.complete(status);
+    },
+    onError: (reason) {
+      if (!completer.isCompleted) completer.complete(null);
+    },
   );
 
   return completer.future;

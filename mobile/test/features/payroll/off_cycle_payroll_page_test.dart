@@ -67,9 +67,9 @@ void main() {
 }
 
 Future<void> _submit(WidgetTester tester) async {
-  final submit = find.widgetWithText(
-    ElevatedButton,
-    'Create & Run Off-Cycle Payroll',
+  final submit = find.ancestor(
+    of: find.text('Create & Run Off-Cycle Payroll'),
+    matching: find.byWidgetPredicate((widget) => widget is ElevatedButton),
   );
   await tester.ensureVisible(submit);
   await tester.tap(submit);
