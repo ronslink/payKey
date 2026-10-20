@@ -6,7 +6,7 @@ export default function PrivacyPolicy() {
           <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">
             Privacy Policy
           </h1>
-          <p className="text-slate-400 mb-12">Last updated: 18 September 2026</p>
+          <p className="text-slate-400 mb-12">Last updated: 9 October 2026</p>
 
           <div className="flex flex-col gap-10 text-slate-300 leading-relaxed">
             <section>
@@ -16,8 +16,8 @@ export default function PrivacyPolicy() {
               <p>
                 This notice explains how Paydome collects, uses, shares, and
                 protects personal data when you use our website, mobile
-                application, and payroll services. Paydome is a PayGlobus
-                product, and PayGlobus GmbH is the contact for this notice.
+                application, and payroll services. Paydome is operated by Surf
+                dala Limited, which is the contact for this notice.
               </p>
               <p className="mt-4">
                 Employers may add information about their workers to Paydome.
@@ -172,7 +172,7 @@ export default function PrivacyPolicy() {
                 6. International Processing
               </h2>
               <p>
-                PayGlobus GmbH and some service providers may process data
+                Surf dala Limited and some service providers may process data
                 outside Kenya. Where personal data is transferred
                 internationally, we use safeguards required by applicable
                 data-protection law and limit access to the purposes described
@@ -237,7 +237,7 @@ export default function PrivacyPolicy() {
               <p>Contact us with privacy questions, complaints, or requests:</p>
               <div className="mt-4 p-6 bg-white/5 rounded-xl border border-white/10">
                 <p className="font-semibold text-white">
-                  Paydome / PayGlobus GmbH
+                  Paydome / Surf dala Limited
                 </p>
                 <p className="mt-1">
                   Email:{" "}
@@ -247,9 +247,6 @@ export default function PrivacyPolicy() {
                   >
                     support@paydome.co
                   </a>
-                </p>
-                <p className="mt-1">
-                  Address: Lange Str. 13, 71686 Remseck am Neckar, Germany
                 </p>
               </div>
             </section>

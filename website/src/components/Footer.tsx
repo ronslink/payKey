@@ -36,7 +36,7 @@ export default function Footer() {
                   Paydome
                 </span>
                 <span className="text-[10px] text-muted-foreground tracking-wide">
-                  by PayGlobus
+                  by Surf dala
                 </span>
               </div>
             </Link>
@@ -130,7 +130,7 @@ export default function Footer() {
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1.5 text-xs text-slate-500">
               <Globe className="w-3.5 h-3.5" />
-              PayGlobus Group
+              Surf dala Limited
             </span>
           </div>
           <div className="flex items-center gap-4">
@@ -145,7 +145,7 @@ export default function Footer() {
             </span>
           </div>
           <p className="text-xs text-slate-600">
-            © {new Date().getFullYear()} Paydome / PayGlobus GmbH. All rights
+            © {new Date().getFullYear()} Paydome / Surf dala Limited. All rights
             reserved.
           </p>
         </div>

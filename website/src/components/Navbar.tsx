@@ -25,7 +25,7 @@ export default function Navbar() {
             <img src="/app-icon.jpg" alt="Paydome" className="w-8 h-8 rounded-lg shadow-lg" />
             <div className="flex flex-col leading-none">
               <span className="text-base font-bold text-white tracking-tight">Paydome</span>
-              <span className="text-[10px] text-muted-foreground tracking-wide">by PayGlobus</span>
+              <span className="text-[10px] text-muted-foreground tracking-wide">by Surf dala</span>
             </div>
           </Link>
 

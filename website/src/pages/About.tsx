@@ -34,9 +34,9 @@ const values = [
   },
   {
     icon: Globe,
-    title: "German Precision",
+    title: "Engineering for Everyday Use",
     description:
-      "As part of the PayGlobus Group, we bring German engineering standards to a product made for everyday Kenyan life.",
+      "Surf dala Limited brings rigorous engineering standards to a product made for everyday Kenyan life.",
     color: "text-amber-400",
     bg: "bg-amber-500/10",
   },
@@ -50,14 +50,14 @@ export default function About() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium mb-6">
             <Globe className="w-3 h-3" />
-            PayGlobus Group
+            Surf dala Limited
           </div>
           <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4">
-            Built in Kenya, backed by{" "}
-            <span className="text-gradient">German precision</span>
+            Built in Kenya, for{" "}
+            <span className="text-gradient">Kenyan households</span>
           </h1>
           <p className="text-lg text-slate-400 max-w-3xl mx-auto">
-            Paydome is a product of PayGlobus GmbH, designed specifically for
+            Paydome is a product of Surf dala Limited, designed specifically for
             Kenyan households who want to pay their domestic staff fairly, on
             time, and with proper records.
           </p>
@@ -93,7 +93,7 @@ export default function About() {
                 income or social security contributions.
               </p>
               <p>
-                In 2021, a team at PayGlobus GmbH partnered with Kenyan
+                In 2021, the Surf dala Limited team partnered with Kenyan
                 developers and payroll specialists to build Paydome — a simple,
                 affordable app that lets any household pay staff via M-Pesa,
                 generate proper payslips, and keep the records needed for PAYE,
