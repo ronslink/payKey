@@ -15,7 +15,9 @@ website=(docker compose -p "$project" --env-file /dev/null -f "$release_dir/depl
 docker info >/dev/null
 docker network inspect paykey-network-prod >/dev/null
 [[ $(docker inspect --format '{{.State.Running}}' paykey_backend_prod) == true ]] || { echo 'Backend must be running before the website release'; exit 1; }
-[[ $(docker inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' paykey_backend_prod) == "$RELEASE_COMMIT" ]] || { echo 'Backend release does not match this website commit'; exit 1; }
+backend_commit=${EXPECTED_BACKEND_COMMIT:-$RELEASE_COMMIT}
+[[ "$backend_commit" =~ ^[a-f0-9]{40}$ ]] || { echo 'Invalid expected backend revision'; exit 1; }
+[[ $(docker inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' paykey_backend_prod) == "$backend_commit" ]] || { echo 'Backend release does not match the expected revision'; exit 1; }
 
 # These are read-only requests: no account, checkout, or payment is created.
 # Public HTTPS also checks that the reverse proxy reaches the ready backend.

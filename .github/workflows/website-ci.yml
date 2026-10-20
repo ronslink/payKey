@@ -2,6 +2,11 @@ name: Website CI/CD
 
 on:
   workflow_dispatch:
+    inputs:
+      expected_backend_sha:
+        description: Full SHA of the backend currently running in production
+        required: true
+        type: string
   # push:
   #   branches: [main, develop]
   #   paths:
@@ -15,6 +20,7 @@ jobs:
   # 1. Test & Lint
   website-test:
     name: Test & Lint
+    if: github.event_name != 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -99,3 +105,12 @@ jobs:
             
             docker image prune -f
             echo "✅ Website Deployment complete: $(date)"
+
+  website-only-release:
+    name: Release website without restarting the backend
+    if: github.event_name == 'workflow_dispatch'
+    uses: ./.github/workflows/deploy-website.yml
+    with:
+      release_sha: ${{ github.sha }}
+      expected_backend_sha: ${{ inputs.expected_backend_sha }}
+    secrets: inherit

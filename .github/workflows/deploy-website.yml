@@ -7,6 +7,11 @@ on:
         description: Exact commit already deployed by the backend release
         required: true
         type: string
+      expected_backend_sha:
+        description: Running backend revision for a website-only release
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -22,12 +27,27 @@ jobs:
       - name: Validate release commit
         env:
           RELEASE_COMMIT: ${{ inputs.release_sha }}
+          EXPECTED_BACKEND_COMMIT: ${{ inputs.expected_backend_sha }}
         run: |
           [[ "$RELEASE_COMMIT" =~ ^[a-f0-9]{40}$ ]]
           [[ "$RELEASE_COMMIT" == "$GITHUB_SHA" ]]
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+
+      - name: Verify website-only backend compatibility
+        if: inputs.expected_backend_sha != ''
+        env:
+          RELEASE_COMMIT: ${{ inputs.release_sha }}
+          EXPECTED_BACKEND_COMMIT: ${{ inputs.expected_backend_sha }}
+        run: |
+          [[ "$EXPECTED_BACKEND_COMMIT" =~ ^[a-f0-9]{40}$ ]]
+          git merge-base --is-ancestor "$EXPECTED_BACKEND_COMMIT" "$RELEASE_COMMIT"
+          if ! git diff --quiet "$EXPECTED_BACKEND_COMMIT" "$RELEASE_COMMIT" -- backend; then
+            echo 'Backend code changed; use the full backend release instead.' >&2
+            exit 1
+          fi
 
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -80,6 +100,7 @@ jobs:
     env:
       RELEASE_ID: ${{ inputs.release_sha }}-${{ github.run_id }}-${{ github.run_attempt }}
       RELEASE_COMMIT: ${{ inputs.release_sha }}
+      EXPECTED_BACKEND_COMMIT: ${{ inputs.expected_backend_sha }}
       WEBSITE_IMAGE: ${{ secrets.DOCKER_USERNAME }}/paykey-website@${{ needs.build-push.outputs.digest }}
 
     steps:
@@ -108,7 +129,7 @@ jobs:
           host: ${{ secrets.DO_HOST }}
           username: ${{ secrets.DO_USERNAME }}
           key: ${{ secrets.DO_SSH_KEY }}
-          envs: DOCKER_USERNAME,DOCKER_PASSWORD,RELEASE_ID,RELEASE_COMMIT,WEBSITE_IMAGE
+          envs: DOCKER_USERNAME,DOCKER_PASSWORD,RELEASE_ID,RELEASE_COMMIT,EXPECTED_BACKEND_COMMIT,WEBSITE_IMAGE
           command_timeout: 8m
           script: |
             set -eu
