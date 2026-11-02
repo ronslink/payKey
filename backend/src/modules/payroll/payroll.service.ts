@@ -493,6 +493,8 @@ export class PayrollService {
     const records = await this.payrollRepository.find({
       where: { userId, payPeriodId, status: PayrollStatus.DRAFT },
       relations: ['worker'],
+      // Legacy mobile review pairs rows by position with WorkersService.findAll.
+      order: { worker: { createdAt: 'DESC', id: 'DESC' } },
     });
 
     // Dynamically sync payment method so frontend always shows current worker preference
@@ -520,6 +522,8 @@ export class PayrollService {
     const records = await this.payrollRepository.find({
       where: { userId, payPeriodId },
       relations: ['worker'],
+      // Keep historical review in the same order as the worker picker.
+      order: { worker: { createdAt: 'DESC', id: 'DESC' } },
     });
 
     return this.transformRecords(records);
