@@ -68,7 +68,7 @@ export class WorkersService {
   async findAll(userId: string, includeInactive = false): Promise<Worker[]> {
     return this.workersRepository.find({
       where: includeInactive ? { userId } : { userId, isActive: true },
-      order: { createdAt: 'DESC' },
+      order: { createdAt: 'DESC', id: 'DESC' },
     });
   }
 

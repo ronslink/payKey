@@ -131,7 +131,7 @@ describe('WorkersService', () => {
 
       expect(mockWorkerRepository.find).toHaveBeenCalledWith({
         where: { userId: 'user-123', isActive: true },
-        order: { createdAt: 'DESC' },
+        order: { createdAt: 'DESC', id: 'DESC' },
       });
       expect(result).toEqual(mockWorkers);
     });
